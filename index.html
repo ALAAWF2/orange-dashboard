@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange | Executive Dashboard</title>
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            /* Orange Brand */
+            --bs-secondary: #6c757d;
+            --bg-light: #f8f9fa;
+            --card-radius: 12px;
+            --font-main: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-light);
+            color: #212529;
+        }
+
+        /* Navbar */
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: white !important;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #000 !important;
+        }
+
+        .brand-orange {
+            color: #fe7900;
+        }
+
+        /* KPI Cards */
+        .kpi-card {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s;
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .kpi-title {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .kpi-sub {
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .text-success-custom {
+            color: #198754;
+        }
+
+        .text-danger-custom {
+            color: #dc3545;
+        }
+
+        /* Sections */
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-right: 4px solid #fe7900;
+            padding-right: 10px;
+        }
+
+        /* Charts */
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            margin-bottom: 20px;
+            min-height: 350px;
+        }
+
+        /* Table */
+        .table-custom thead th {
+            background-color: #fe7900;
+            color: white;
+            font-weight: 500;
+            border: none;
+        }
+
+        .table-custom tbody tr:hover {
+            background-color: #fff3e0;
+        }
+
+        .rank-badge {
+            background: #fe7900;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Bar -->
+    <nav class="navbar mb-4 sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand"><span class="brand-orange">ORANGE</span> DASHBOARD</span>
+
+            <div class="d-flex gap-2">
+                <select id="yearFilter" class="form-select form-select-sm fw-bold" onchange="updateDashboard()"
+                    style="width: 100px;">
+                    <option value="2026">2026</option>
+                    <option value="2025" selected>2025</option>
+                    <option value="2024">2024</option>
+                </select>
+                <select id="monthFilter" class="form-select form-select-sm fw-bold" onchange="updateDashboard()"
+                    style="width: 120px;">
+                    <option value="all">كل السنة</option>
+                    <!-- JS -->
+                </select>
+                <span class="badge bg-light text-dark border d-flex align-items-center" id="lastUpdate">...</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+
+        <!-- Row 1: High Level KPIs (Current) -->
+        <h6 class="text-muted fw-bold mb-2">أداء العام الحالي (<span id="currYearTitle">...</span>)</h6>
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="kpi-card border-bottom border-4 border-warning">
+                    <div class="kpi-title">المبيعات (Sales)</div>
+                    <div class="kpi-value" id="totalSales">0</div>
+                    <div class="kpi-sub">
+                        <span id="salesGrowthVal">0%</span>
+                        vs <span id="prevYearLabel">Prev Year</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card border-bottom border-4 border-primary">
+                    <div class="kpi-title">الفواتير (Transactions)</div>
+                    <div class="kpi-value" id="totalTrans">0</div>
+                    <div class="kpi-sub text-muted">Avg Invoice: <span id="avgTicket" class="fw-bold">0</span></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card border-bottom border-4 border-info">
+                    <div class="kpi-title">الزوار (Visitors)</div>
+                    <div class="kpi-value" id="totalVisitors">0</div>
+                    <div class="kpi-sub text-muted">Conv. Rate: <span id="convRate" class="fw-bold">0%</span></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card border-bottom border-4 border-success">
+                    <div class="kpi-title">تحقيق الهدف (Target)</div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="kpi-value" id="targetPct">0%</span>
+                        <div style="width: 50px; height: 50px;">
+                            <canvas id="miniGauge"></canvas>
+                        </div>
+                    </div>
+                    <div class="kpi-sub text-muted">Target: <span id="targetVal">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Previous Year KPIs -->
+        <h6 class="text-muted fw-bold mb-2">أداء العام السابق (<span id="prevYearTitle">...</span>)</h6>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="kpi-card bg-light">
+                    <div class="kpi-title text-muted">مبيعات العام السابق</div>
+                    <div class="kpi-value text-secondary" id="prevSales" style="font-size: 1.5rem;">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card bg-light">
+                    <div class="kpi-title text-muted">فواتير العام السابق</div>
+                    <div class="kpi-value text-secondary" id="prevTrans" style="font-size: 1.5rem;">0</div>
+                    <div class="kpi-sub text-muted">Avg Invoice: <span id="prevAvgTicket">0</span></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card bg-light">
+                    <div class="kpi-title text-muted">زوار العام السابق</div>
+                    <div class="kpi-value text-secondary" id="prevVisitors" style="font-size: 1.5rem;">0</div>
+                    <div class="kpi-sub text-muted">Conv. Rate: <span id="prevConvRate">0%</span></div>
+                </div>
+            </div>
+            <!-- Growth Amount -->
+            <div class="col-md-3">
+                <div class="kpi-card bg-light d-flex align-items-center justify-content-center">
+                    <div class="text-center">
+                        <div class="kpi-title text-muted">قيمة النمو (Growth Value)</div>
+                        <div class="fw-bold fs-4" id="growthAbs">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Charts -->
+        <div class="row">
+            <!-- Monthly Trend -->
+            <div class="col-md-8">
+                <h5 class="section-title">الأداء الشهري (Monthly Trend)</h5>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <!-- Top 10 -->
+            <div class="col-md-4">
+                <h5 class="section-title">أعلى 10 فروع (Top 10)</h5>
+                <div class="chart-container">
+                    <canvas id="top10Chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Detailed Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h5 class="section-title">تفاصيل الفروع (Detailed Report)</h5>
+                <div class="card border-0 shadow-sm p-3">
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الفرع (Branch)</th>
+                                    <th>المبيعات (Sales)</th>
+                                    <th>الهدف (Target)</th>
+                                    <th>التحقيق (%)</th>
+                                    <th>النمو (Growth)</th>
+                                    <th>الفواتير (Trans)</th>
+                                    <th>متوسط الفاتورة (Inv Rate)</th>
+                                    <th>الزوار (Visitors)</th>
+                                    <th>التحويل (Vis Rate)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailsTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let rawData = null;
+        let charts = {};
+
+        async function init() {
+            // Init Month Filter
+            const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+            const mSelect = document.getElementById('monthFilter');
+            months.forEach((m, i) => {
+                let opt = document.createElement('option');
+                opt.value = i + 1;
+                opt.textContent = m;
+                mSelect.appendChild(opt);
+            });
+
+            try {
+                const res = await fetch('management_data.json?t=' + Date.now());
+                rawData = await res.json();
+                document.getElementById('lastUpdate').textContent = rawData.metadata.generated_at.split(' ')[0];
+                updateDashboard();
+            } catch (e) { console.error(e); }
+        }
+
+        function updateDashboard() {
+            if (!rawData) return;
+
+            const selYear = parseInt(document.getElementById('yearFilter').value);
+            const selMonth = document.getElementById('monthFilter').value;
+            const prevYear = selYear - 1;
+
+            document.getElementById('prevYearLabel').textContent = prevYear;
+            document.getElementById('currYearTitle').textContent = selYear;
+            document.getElementById('prevYearTitle').textContent = prevYear;
+
+            // --- 1. Aggregation Function ---
+            const calcStats = (year) => {
+                let sales = 0, trans = 0, visitors = 0, target = 0;
+                let monthly = {}; // 1..12 -> val
+                let branchSales = {}; // StoreID -> val
+                let branchTrans = {};
+                let branchVisitors = {};
+                let branchTarget = {};
+
+                const filterFn = (dStr, sId) => {
+                    let d = new Date(dStr);
+                    if (d.getFullYear() !== year) return false;
+                    if (selMonth !== 'all' && (d.getMonth() + 1) != selMonth) return false;
+                    return true;
+                };
+
+                // Sales
+                rawData.sales.forEach(([d, s, v]) => {
+                    if (filterFn(d, s)) {
+                        sales += v;
+                        let m = new Date(d).getMonth() + 1;
+                        monthly[m] = (monthly[m] || 0) + v;
+                        branchSales[s] = (branchSales[s] || 0) + v;
+                    }
+                });
+                // Targets
+                rawData.targets.forEach(([d, s, v]) => {
+                    if (filterFn(d, s)) {
+                        target += v;
+                        branchTarget[s] = (branchTarget[s] || 0) + v;
+                    }
+                });
+                // Visitors
+                rawData.visitors.forEach(([d, s, v]) => {
+                    if (filterFn(d, s)) {
+                        visitors += v;
+                        branchVisitors[s] = (branchVisitors[s] || 0) + v;
+                    }
+                });
+                // Trans
+                rawData.transactions.forEach(([d, s, v]) => {
+                    if (filterFn(d, s)) {
+                        trans += v;
+                        branchTrans[s] = (branchTrans[s] || 0) + v;
+                    }
+                });
+
+                return { sales, trans, visitors, target, monthly, branchSales, branchTrans, branchVisitors, branchTarget };
+            };
+
+            const curr = calcStats(selYear);
+            const prev = calcStats(prevYear);
+
+            // --- 2. Update KPI Cards (Current) ---
+            fmt(document.getElementById('totalSales'), curr.sales);
+            fmt(document.getElementById('totalTrans'), curr.trans);
+            fmt(document.getElementById('totalVisitors'), curr.visitors);
+            fmt(document.getElementById('targetVal'), curr.target);
+
+            // Growth
+            let growth = prev.sales > 0 ? ((curr.sales - prev.sales) / prev.sales) * 100 : 0;
+            let gEl = document.getElementById('salesGrowthVal');
+            gEl.textContent = (growth > 0 ? '+' : '') + growth.toFixed(1) + '%';
+            gEl.className = growth >= 0 ? 'text-success-custom fw-bold' : 'text-danger-custom fw-bold';
+
+            // Rates
+            let avgTicket = curr.trans > 0 ? curr.sales / curr.trans : 0;
+            document.getElementById('avgTicket').textContent = avgTicket.toFixed(0);
+
+            let convRate = curr.visitors > 0 ? (curr.trans / curr.visitors) * 100 : 0;
+            document.getElementById('convRate').textContent = convRate.toFixed(1) + '%';
+
+            // Target Pct
+            let targetPct = curr.target > 0 ? (curr.sales / curr.target) * 100 : 0;
+            document.getElementById('targetPct').textContent = targetPct.toFixed(1) + '%';
+            renderMiniGauge('miniGauge', targetPct);
+
+            // --- 3. Update KPI Cards (Previous) ---
+            fmt(document.getElementById('prevSales'), prev.sales);
+            fmt(document.getElementById('prevTrans'), prev.trans);
+            fmt(document.getElementById('prevVisitors'), prev.visitors);
+
+            // Prev Rates
+            let prevAvgTicket = prev.trans > 0 ? prev.sales / prev.trans : 0;
+            document.getElementById('prevAvgTicket').textContent = prevAvgTicket.toFixed(0);
+
+            let prevConvRate = prev.visitors > 0 ? (prev.trans / prev.visitors) * 100 : 0;
+            document.getElementById('prevConvRate').textContent = prevConvRate.toFixed(1) + '%';
+
+            // Absolute Growth
+            let absGrowth = curr.sales - prev.sales;
+            let absGEl = document.getElementById('growthAbs');
+            absGEl.textContent = valFmt(absGrowth);
+            absGEl.className = absGrowth >= 0 ? 'fw-bold fs-4 text-success' : 'fw-bold fs-4 text-danger';
+
+            // --- 4. Trend Chart ---
+            renderTrendChart(curr.monthly, prev.monthly, selYear, prevYear);
+
+            // --- 5. Top 10 Chart & Table ---
+            // Prepare Branch Data
+            let branchList = [];
+            let allStores = new Set([
+                ...Object.keys(curr.branchSales), ...Object.keys(prev.branchSales),
+                ...Object.keys(curr.branchTarget), ...Object.keys(curr.branchTrans), ...Object.keys(curr.branchVisitors)
+            ]);
+
+            allStores.forEach(sid => {
+                let name = rawData.stores[sid] || sid;
+
+                // Metrics
+                let val = curr.branchSales[sid] || 0;
+                let prevVal = prev.branchSales[sid] || 0;
+                let target = curr.branchTarget[sid] || 0;
+                let trans = curr.branchTrans[sid] || 0;
+                let visitors = curr.branchVisitors[sid] || 0;
+
+                // Calcs
+                let growth = prevVal > 0 ? ((val - prevVal) / prevVal) * 100 : 0;
+                let ach = target > 0 ? (val / target) * 100 : 0;
+                let avgInv = trans > 0 ? val / trans : 0;
+                let conv = visitors > 0 ? (trans / visitors) * 100 : 0;
+
+                branchList.push({
+                    name, val, prevVal, growth, target, trans, visitors, ach, avgInv, conv
+                });
+            });
+
+            // Sort by Sales DESC
+            branchList.sort((a, b) => b.val - a.val);
+
+            // Render Top 10 Chart
+            renderTop10(branchList.slice(0, 10));
+
+            // Render Table
+            const tbody = document.getElementById('detailsTableBody');
+            tbody.innerHTML = '';
+
+            branchList.forEach((b, i) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="rank-badge">${i + 1}</span></td>
+                    <td class="fw-bold fs-6">${b.name}</td>
+                    <td>${b.val.toLocaleString()}</td>
+                    <td>${b.target.toLocaleString()}</td>
+                    <td class="${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
+                    <td class="${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
+                    <td>${b.trans.toLocaleString()}</td>
+                    <td>${b.avgInv.toFixed(0)}</td>
+                    <td>${b.visitors.toLocaleString()}</td>
+                    <td>${b.conv.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        }
+
+        // --- Helpers ---
+        function fmt(el, v) { el.textContent = v.toLocaleString(undefined, { maximumFractionDigits: 0 }); }
+        function valFmt(v) { return v.toLocaleString(undefined, { maximumFractionDigits: 0 }); } // Explicit helper if needed
+
+        function renderMiniGauge(id, pct) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(ctx, {
+                type: 'doughnut',
+                data: { datasets: [{ data: [pct, Math.max(0, 100 - pct)], backgroundColor: ['#fe7900', '#eee'], borderWidth: 0 }] },
+                options: { cutout: '70%', events: [] }
+            });
+        }
+
+        function renderTrendChart(currM, prevM, y1, y2) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (charts['trend']) charts['trend'].destroy();
+
+            const labels = Array.from({ length: 12 }, (_, i) => i + 1);
+            charts['trend'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: y1, data: labels.map(m => currM[m] || 0), backgroundColor: '#fe7900', borderRadius: 4 },
+                        { label: y2, data: labels.map(m => prevM[m] || 0), backgroundColor: '#e9ecef', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [5, 5] } } },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+        }
+
+        function renderTop10(data) {
+            const ctx = document.getElementById('top10Chart').getContext('2d');
+            if (charts['top10']) charts['top10'].destroy();
+
+            charts['top10'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [{
+                        label: 'المبيعات',
+                        data: data.map(d => d.val),
+                        backgroundColor: '#198754',
+                        borderRadius: 4,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { display: false }, y: { grid: { display: false } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
