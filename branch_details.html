@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل الفرع | Orange Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --orange-primary: #fe7900;
+            --orange-dark: #cc6100;
+            --dark-bg: #1a1a1a;
+            --card-radius: 12px;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .navbar {
+            background-color: #000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            color: var(--orange-primary) !important;
+            font-weight: 800;
+            font-size: 1.5rem;
+        }
+
+        .card {
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+            border: none;
+        }
+
+        .card-header {
+            background: linear-gradient(45deg, var(--orange-primary), #ff9a3b);
+            color: white;
+            font-weight: 700;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+        }
+
+        .table thead th {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 700;
+            background-color: #f8f9fa;
+        }
+
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60vh;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <span style="color: white;">ORANGE</span> DASHBOARD
+            </span>
+            <a href="index.html" class="btn btn-outline-light btn-sm fw-bold">عودة للرئيسية</a>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-0" id="branchName">جاري التحميل...</h2>
+                <small class="text-muted" id="reportDate"></small>
+            </div>
+        </div>
+
+        <div id="loadingErrors" class="text-center my-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">جاري استدعاء البيانات...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="row">
+                <!-- Left: Yesterday -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header py-3">
+                            📅 مبيعات الأمس (<span id="dateYesterday">--</span>)
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>الموظف</th>
+                                            <th>المبيعات</th>
+                                            <th>مساهمة %</th>
+                                            <th>فواتير</th>
+                                            <th>Avg Inv</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyYest"></tbody>
+                                    <tfoot id="tfootYest" class="table-light fw-bold"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Month to Date -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header py-3 bg-secondary">
+                            📅 مبيعات الشهر (<span id="dateMonth">--</span>)
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>الموظف</th>
+                                            <th>المبيعات</th>
+                                            <th>مساهمة %</th>
+                                            <th>فواتير</th>
+                                            <th>Avg Inv</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyMonth"></tbody>
+                                    <tfoot id="tfootMonth" class="table-light fw-bold"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Get Params
+        const urlParams = new URLSearchParams(window.location.search);
+        const sid = urlParams.get('sid');
+        const branchName = urlParams.get('name');
+
+        if (branchName) {
+            document.title = `تفاصيل: ${branchName}`;
+            document.getElementById('branchName').textContent = branchName;
+        }
+
+        async function init() {
+            const errDiv = document.getElementById('loadingErrors');
+
+            if (!sid) {
+                errDiv.innerHTML = `<div class="alert alert-danger">رقم الفرع غير موجود (Store ID Missing)</div>`;
+                return;
+            }
+
+            try {
+                // Fetch Data
+                // Note: Assuming file is in same dir
+                const res = await fetch('employees_data.json');
+                if (!res.ok) throw new Error("File not found");
+                const allData = await res.json();
+
+                if (!allData[sid]) {
+                    errDiv.innerHTML = `<div class="alert alert-warning">لا توجد بيانات تفصيلية لهذا الفرع (ID: ${sid})</div>`;
+                    return;
+                }
+
+                renderData(allData[sid]);
+
+                errDiv.style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+            } catch (e) {
+                console.error(e);
+                errDiv.innerHTML = `<div class="alert alert-danger">خطأ في تحميل البيانات: ${e.message}</div>`;
+            }
+        }
+
+        function renderData(records) {
+            // records: [Date, Name, Sales, Trans, Items]
+
+            // Dates to Filter
+            let today = new Date();
+            let yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            const dateYest = yesterday.toISOString().split('T')[0];
+            const monthPrefix = dateYest.substring(0, 7); // YYYY-MM
+
+            // UI Dates
+            const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            document.getElementById('reportDate').textContent = `${dayNames[yesterday.getDay()]} ${dateYest}`;
+            document.getElementById('dateYesterday').textContent = dateYest;
+            document.getElementById('dateMonth').textContent = monthPrefix;
+
+            // Aggregation
+            let yestStats = {};
+            let monthStats = {};
+
+            records.forEach(r => {
+                let [d, rawName, sales, trans, items] = r;
+
+                // Clean Name (remove ID prefix if exists)
+                let name = rawName.includes('-') ? rawName.split('-')[1].trim() : rawName;
+                if (!name || name === 'null') name = "Unknown";
+
+                // Yesterday
+                if (d === dateYest) {
+                    if (!yestStats[name]) yestStats[name] = { s: 0, t: 0 };
+                    yestStats[name].s += sales;
+                    yestStats[name].t += trans;
+                }
+
+                // Month (accumulate)
+                if (d.startsWith(monthPrefix) && d <= dateYest) {
+                    if (!monthStats[name]) monthStats[name] = { s: 0, t: 0 };
+                    monthStats[name].s += sales;
+                    monthStats[name].t += trans;
+                }
+            });
+
+            renderTable(yestStats, 'tbodyYest', 'tfootYest');
+            renderTable(monthStats, 'tbodyMonth', 'tfootMonth');
+        }
+
+        function renderTable(stats, bodyId, footId) {
+            const list = Object.keys(stats).map(k => ({ name: k, ...stats[k] }));
+
+            // Sort by Sales DESC
+            list.sort((a, b) => b.s - a.s);
+
+            // Totals
+            let totalS = 0, totalT = 0;
+            list.forEach(item => { totalS += item.s; totalT += item.t; });
+
+            const tbody = document.getElementById(bodyId);
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">لا توجد مبيعات مسجلة</td></tr>';
+                document.getElementById(footId).innerHTML = '';
+                return;
+            }
+
+            list.forEach(item => {
+                let avg = item.t > 0 ? item.s / item.t : 0;
+                let contrib = totalS > 0 ? (item.s / totalS) * 100 : 0;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold text-dark">${item.name}</td>
+                    <td class="fw-bold">${item.s.toLocaleString()}</td>
+                    <td class="text-primary">${contrib.toFixed(1)}%</td>
+                    <td>${item.t}</td>
+                    <td>${avg.toFixed(0)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Footer
+            document.getElementById(footId).innerHTML = `
+                <tr>
+                    <td>الإجمالي</td>
+                    <td>${totalS.toLocaleString()}</td>
+                    <td>100%</td>
+                    <td>${totalT}</td>
+                    <td>${totalT > 0 ? (totalS / totalT).toFixed(0) : 0}</td>
+                </tr>
+            `;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

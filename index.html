@@ -231,6 +231,45 @@
             </div>
         </div>
 
+        <!-- Row 2.5: Daily Report (Accordion) -->
+        <div class="accordion mb-4 text-center" id="dailyAccordion">
+            <div class="accordion-item border-0 shadow-sm" style="border-radius: var(--card-radius); overflow: hidden;">
+                <h2 class="accordion-header" id="headingDaily">
+                    <button class="accordion-button collapsed fw-bold text-primary bg-white" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseDaily" aria-expanded="false"
+                        aria-controls="collapseDaily">
+                        📊 التقرير اليومي: &nbsp;<span id="dailyReportTitle" class="text-dark">جار التحميل...</span>
+                    </button>
+                </h2>
+                <div id="collapseDaily" class="accordion-collapse collapse" aria-labelledby="headingDaily"
+                    data-bs-parent="#dailyAccordion">
+                    <div class="accordion-body p-0">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Daily Table -->
+                            <table class="table table-striped table-hover mb-0 align-middle">
+                                <thead class="table-light sticky-top" style="z-index: 1;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الفرع</th>
+                                        <th>مبيعات الأمس</th>
+                                        <th class="text-muted" style="font-size: 0.9em;">العام الماضي</th>
+                                        <th>النمو %</th>
+                                        <th>فواتير</th>
+                                        <th>متوسط الفاتورة (Inv Rate)</th>
+                                        <th>زوار</th>
+                                        <th>تحويل %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailyTableBody">
+                                    <!-- JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Row 3: Charts -->
         <div class="row">
             <!-- Monthly Trend -->
@@ -279,8 +318,79 @@
             </div>
         </div>
 
+        <!-- Branch Details Modal -->
+        <div class="modal fade" id="branchModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-light">
+                        <h5 class="modal-title fw-bold" id="branchModalTitle">تفاصيل الفرع</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="modalSpinner" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">جار تحميل بيانات الموظفين...</p>
+                        </div>
+
+                        <div id="modalContent" style="display: none;">
+                            <div class="row">
+                                <!-- Left: Yesterday -->
+                                <div class="col-lg-6 mb-3">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-header bg-white fw-bold text-center border-bottom-0">
+                                            📅 مبيعات الأمس (<span id="modalDateYesterday"></span>)
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover mb-0" style="font-size: 0.9rem;">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>الموظف</th>
+                                                        <th>المبيعات</th>
+                                                        <th>مساهمة %</th>
+                                                        <th>فواتير</th>
+                                                        <th>Avg Inv</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbodyYest"></tbody>
+                                                <tfoot id="tfootYest" class="fw-bold table-light"></tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Month to Date -->
+                                <div class="col-lg-6 mb-3">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-header bg-white fw-bold text-center border-bottom-0">
+                                            📅 مبيعات الشهر (<span id="modalDateMonth"></span>)
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover mb-0" style="font-size: 0.9rem;">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>الموظف</th>
+                                                        <th>المبيعات</th>
+                                                        <th>مساهمة %</th>
+                                                        <th>فواتير</th>
+                                                        <th>Avg Inv</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbodyMonth"></tbody>
+                                                <tfoot id="tfootMonth" class="fw-bold table-light"></tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let rawData = null;
@@ -470,6 +580,235 @@
                 tbody.appendChild(tr);
             });
 
+            // --- 6. Render Daily Report ---
+            renderDailyReport();
+        }
+
+        // --- Daily Report Logic (Yesterday vs Last Year) ---
+        function renderDailyReport() {
+            if (!rawData) return;
+
+            // 1. Determine "Yesterday"
+            let today = new Date();
+            let yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            let lastYear = new Date(yesterday);
+            lastYear.setFullYear(yesterday.getFullYear() - 1);
+
+            // Format YYYY-MM-DD
+            const fmtDate = (d) => {
+                let year = d.getFullYear();
+                let month = (d.getMonth() + 1).toString().padStart(2, '0');
+                let day = d.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            const dateYest = fmtDate(yesterday);
+            const dateLastY = fmtDate(lastYear);
+
+            // UI Label
+            const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            document.getElementById('dailyReportTitle').textContent = `تقرير الأمس (${dayNames[yesterday.getDay()]} ${dateYest}) مقارنة بـ (${dateLastY})`;
+
+            // 2. Aggregate Data
+            let stats = {}; // StoreID -> { salesY, salesLY, transY, visitY }
+
+            // Initialize all stores
+            Object.keys(rawData.stores).forEach(sid => {
+                if (sid !== '0' && sid !== '9999') { // Skip Warehouse/Unknown if desired
+                    stats[sid] = { salesY: 0, salesLY: 0, transY: 0, visitY: 0 };
+                }
+            });
+
+            // Sales
+            rawData.sales.forEach(([d, s, v]) => {
+                if (!stats[s]) return;
+                if (d === dateYest) stats[s].salesY += v;
+                if (d === dateLastY) stats[s].salesLY += v;
+            });
+            // Trans
+            rawData.transactions.forEach(([d, s, v]) => {
+                if (!stats[s]) return;
+                if (d === dateYest) stats[s].transY += v;
+            });
+            // Visitors
+            rawData.visitors.forEach(([d, s, v]) => {
+                if (!stats[s]) return;
+                if (d === dateYest) stats[s].visitY += v;
+            });
+
+            // 3. Convert to Array and Sort
+            let dailyList = [];
+            Object.keys(stats).forEach(sid => {
+                let d = stats[sid];
+                if (d.salesY === 0 && d.salesLY === 0 && d.transY === 0) return;
+
+                let name = rawData.stores[sid] || sid;
+                let growth = d.salesLY > 0 ? ((d.salesY - d.salesLY) / d.salesLY) * 100 : 0;
+                if (d.salesLY === 0 && d.salesY > 0) growth = 100;
+
+                let avgInv = d.transY > 0 ? d.salesY / d.transY : 0;
+                let conv = d.visitY > 0 ? (d.transY / d.visitY) * 100 : 0;
+
+                dailyList.push({ name, ...d, growth, avgInv, conv });
+            });
+
+            dailyList.sort((a, b) => b.salesY - a.salesY);
+
+            // 4. Render Table
+            const tbody = document.getElementById('dailyTableBody');
+            tbody.innerHTML = '';
+
+            dailyList.forEach((r, i) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td class="fw-bold fs-6">
+                        <a href="#" class="text-decoration-none text-dark" onclick="openBranchDetails('${stats[r.name] ? 'ERROR_use_SID' : i}', '${r.name}'); return false;">${r.name}</a>
+                    </td>
+                    <td class="fw-bold">${r.salesY.toLocaleString()}</td>
+                    <td class="text-secondary">${r.salesLY.toLocaleString()}</td>
+                    <td class="${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
+                    <td>${r.transY.toLocaleString()}</td>
+                    <td>${r.avgInv.toFixed(0)}</td>
+                    <td>${r.visitY.toLocaleString()}</td>
+                    <td>${r.conv.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Branch Details Logic (Modal) ---
+        let empData = null;
+        let empDataLoading = false;
+
+        async function loadEmpData() {
+            if (empData) return true;
+            if (empDataLoading) return false; // Simple debounce
+            empDataLoading = true;
+            try {
+                const res = await fetch('employees_data.json');
+                if (!res.ok) throw new Error("Failed to load");
+                empData = await res.json();
+                return true;
+            } catch (e) {
+                console.error(e);
+                alert("تعذر تحميل بيانات الموظفين (Employees Data not found)");
+                empDataLoading = false;
+                return false;
+            }
+        }
+
+        function openBranchDetails(sid, name) {
+            // Show Modal
+            const modal = new bootstrap.Modal(document.getElementById('branchModal'));
+            modal.show();
+
+            document.getElementById('branchModalTitle').textContent = `تفاصيل الفرع: ${name}`;
+            document.getElementById('modalSpinner').style.display = 'block';
+            document.getElementById('modalContent').style.display = 'none';
+
+            loadEmpData().then(success => {
+                if (!success) {
+                    if (!empData) return; // Still loading or failed
+                }
+                renderBranchDetails(sid);
+                document.getElementById('modalSpinner').style.display = 'none';
+                document.getElementById('modalContent').style.display = 'block';
+            });
+        }
+
+        function renderBranchDetails(sid) {
+            if (!empData || !empData[sid]) {
+                document.getElementById('tbodyYest').innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>';
+                document.getElementById('tbodyMonth').innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>';
+                return;
+            }
+
+            const records = empData[sid]; // Array: [Date, Name, Sales, Trans, Items]
+
+            // Dates to Filter
+            // Yesterday
+            let today = new Date();
+            let yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            const dateYest = yesterday.toISOString().split('T')[0];
+
+            // Month Start (Using existing global 'selYear' if possible, or just current month)
+            // The request implies "Current Month to Date". Let's use the Dashboard's current filtered month if applicable, or just generic month.
+            // Safe bet: Use the month from "Yesterday" to be consistent.
+            const monthPrefix = dateYest.substring(0, 7); // YYYY-MM
+
+            // Update Headers
+            document.getElementById('modalDateYesterday').textContent = dateYest;
+            document.getElementById('modalDateMonth').textContent = monthPrefix;
+
+            // Aggregators
+            let yestStats = {};
+            let monthStats = {};
+
+            records.forEach(r => {
+                let [d, name, sales, trans, items] = r;
+                // Normalize Name (remove ID if present e.g. "4681-Name")
+                let cleanName = name.includes('-') ? name.split('-')[1] : name;
+                cleanName = cleanName.trim();
+
+                // Yesterday
+                if (d === dateYest) {
+                    if (!yestStats[cleanName]) yestStats[cleanName] = { s: 0, t: 0, i: 0 };
+                    yestStats[cleanName].s += sales;
+                    yestStats[cleanName].t += trans;
+                    yestStats[cleanName].i += items;
+                }
+
+                // Month (Prefix Match)
+                if (d.startsWith(monthPrefix) && d <= dateYest) { // Up to yesterday
+                    if (!monthStats[cleanName]) monthStats[cleanName] = { s: 0, t: 0, i: 0 };
+                    monthStats[cleanName].s += sales;
+                    monthStats[cleanName].t += trans;
+                    monthStats[cleanName].i += items;
+                }
+            });
+
+            // Helper Render
+            const renderRows = (stats, tbodyId, tfootId) => {
+                let list = Object.keys(stats).map(k => ({ name: k, ...stats[k] }));
+                list.sort((a, b) => b.s - a.s);
+
+                let totalS = 0, totalT = 0;
+                list.forEach(x => { totalS += x.s; totalT += x.t; });
+
+                const tbody = document.getElementById(tbodyId);
+                tbody.innerHTML = '';
+
+                list.forEach(x => {
+                    let avg = x.t > 0 ? x.s / x.t : 0;
+                    let contrib = totalS > 0 ? (x.s / totalS) * 100 : 0;
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${x.name}</td>
+                        <td class="fw-bold">${x.s.toLocaleString()}</td>
+                        <td class="text-primary">${contrib.toFixed(1)}%</td>
+                        <td>${x.t}</td>
+                        <td>${avg.toFixed(0)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                // Footer
+                document.getElementById(tfootId).innerHTML = `
+                    <tr>
+                        <td>TOTAL</td>
+                        <td>${totalS.toLocaleString()}</td>
+                        <td>100%</td>
+                        <td>${totalT}</td>
+                        <td>${totalT > 0 ? (totalS / totalT).toFixed(0) : 0}</td>
+                    </tr>
+                `;
+            };
+
+            renderRows(yestStats, 'tbodyYest', 'tfootYest');
+            renderRows(monthStats, 'tbodyMonth', 'tfootMonth');
         }
 
         // --- Helpers ---
