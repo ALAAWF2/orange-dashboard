@@ -301,7 +301,9 @@
                                     <th>الفرع (Branch)</th>
                                     <th>المبيعات (Sales)</th>
                                     <th>الهدف (Target)</th>
-                                    <th>التحقيق (%)</th>
+                                    <th onclick="setSort('ach')" style="cursor: pointer; text-decoration: underline;">
+                                        التحقيق (%)
+                                        ↕</th>
                                     <th>النمو (Growth)</th>
                                     <th>الفواتير (Trans)</th>
                                     <th>متوسط الفاتورة (Inv Rate)</th>
@@ -395,6 +397,19 @@
     <script>
         let rawData = null;
         let charts = {};
+
+        // Sorting State
+        let currentSort = { col: 'val', asc: false }; // Default: Sales Desc
+
+        function setSort(col) {
+            if (currentSort.col === col) {
+                currentSort.asc = !currentSort.asc;
+            } else {
+                currentSort.col = col;
+                currentSort.asc = false; // Default desc for new col
+            }
+            updateDashboard();
+        }
 
         async function init() {
             // Init Month Filter
@@ -553,8 +568,15 @@
                 });
             });
 
-            // Sort by Sales DESC
-            branchList.sort((a, b) => b.val - a.val);
+            // Sort Logic
+            branchList.sort((a, b) => {
+                let valA = a[currentSort.col];
+                let valB = b[currentSort.col];
+                // Handle names (strings) just in case, though usually numbers
+                if (valA < valB) return currentSort.asc ? -1 : 1;
+                if (valA > valB) return currentSort.asc ? 1 : -1;
+                return 0;
+            });
 
             // Render Top 10 Chart
             renderTop10(branchList.slice(0, 10));
