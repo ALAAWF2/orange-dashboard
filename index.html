@@ -137,24 +137,88 @@
         <div class="container-fluid">
             <span class="navbar-brand"><span class="brand-orange">ORANGE</span> DASHBOARD</span>
 
-            <div class="d-flex gap-2">
-                <select id="yearFilter" class="form-select form-select-sm fw-bold" onchange="updateDashboard()"
-                    style="width: 100px;">
-                    <option value="2026">2026</option>
-                    <option value="2025" selected>2025</option>
-                    <option value="2024">2024</option>
-                </select>
-                <select id="monthFilter" class="form-select form-select-sm fw-bold" onchange="updateDashboard()"
-                    style="width: 120px;">
-                    <option value="all">كل السنة</option>
-                    <!-- JS -->
-                </select>
-                <span class="badge bg-light text-dark border d-flex align-items-center" id="lastUpdate">...</span>
-            </div>
+            <!-- Filters Removed (Moved to Main Body) -->
+            <span class="badge bg-light text-dark border d-flex align-items-center" id="lastUpdate">...</span>
         </div>
     </nav>
 
     <div class="container-fluid px-4">
+
+        <!-- Advanced Filter Bar -->
+        <div class="card border-0 shadow-sm p-3 mb-4">
+            <div class="row align-items-center g-3">
+
+                <!-- Filter Mode -->
+                <div class="col-md-auto">
+                    <label class="form-label small text-muted fw-bold">نوع التقرير</label>
+                    <select id="filterMode" class="form-select form-select-sm" onchange="toggleFilterMode()">
+                        <option value="standard">سنوي / شهري</option>
+                        <option value="custom">فترة مخصصة (Custom Range)</option>
+                    </select>
+                </div>
+
+                <!-- Standard Filters (Year/Month) -->
+                <div id="stdFilters" class="col-md-auto d-flex gap-2">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">السنة</label>
+                        <select id="yearFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                            <option value="2026" selected>2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">الشهر</label>
+                        <select id="monthFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                            <option value="all">كل السنة</option>
+                            <!-- JS Populated -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom Filters (Date Range) -->
+                <div id="customFilters" class="col-md-auto gap-2" style="display: none;">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">من تاريخ</label>
+                        <input type="date" id="startDate" class="form-control form-control-sm">
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">إلى تاريخ</label>
+                        <input type="date" id="endDate" class="form-control form-control-sm">
+                    </div>
+                </div>
+
+                <!-- Manager Filter -->
+                <div class="col-md">
+                    <label class="form-label small text-muted fw-bold">مدير المنطقة (Manager)</label>
+                    <select id="managerFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                        <option value="all">الكل</option>
+                    </select>
+                </div>
+
+                <!-- City Filter -->
+                <div class="col-md">
+                    <label class="form-label small text-muted fw-bold">المدينة (City)</label>
+                    <select id="cityFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                        <option value="all">الكل</option>
+                    </select>
+                </div>
+
+                <!-- Branch Filter -->
+                <div class="col-md">
+                    <label class="form-label small text-muted fw-bold">المعرض / الفرع</label>
+                    <select id="branchFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                        <option value="all">كافة الفروع</option>
+                        <!-- JS Populated -->
+                    </select>
+                </div>
+
+                <div class="col-md-auto align-self-end">
+                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="updateDashboard()">عرض التقرير
+                        🔄</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Row 1: High Level KPIs (Current) -->
         <h6 class="text-muted fw-bold mb-2">أداء العام الحالي (<span id="currYearTitle">...</span>)</h6>
@@ -426,35 +490,139 @@
                 const res = await fetch('management_data.json?t=' + Date.now());
                 rawData = await res.json();
                 document.getElementById('lastUpdate').textContent = rawData.metadata.generated_at.split(' ')[0];
+
+                // Populate Branch Filter
+                const bSelect = document.getElementById('branchFilter');
+                // Use a Set to handle potential duplicates or just object keys
+                const storeIds = Object.keys(rawData.stores);
+                // Sort by Name
+                storeIds.sort((a, b) => (rawData.stores[a] || '').localeCompare(rawData.stores[b] || ''));
+
+                storeIds.forEach(sid => {
+                    let opt = document.createElement('option');
+                    opt.value = sid;
+                    opt.textContent = rawData.stores[sid] || sid;
+                    bSelect.appendChild(opt);
+                });
+
+                // Set Dates Default for Custom Range (Today)
+                let today = new Date().toISOString().split('T')[0];
+                document.getElementById('endDate').value = today;
+                // Start date: Start of this month
+                let firstDay = new Date();
+                firstDay.setDate(1);
+                document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+
                 updateDashboard();
             } catch (e) { console.error(e); }
         }
 
+        // Toggle UI
+        function toggleFilterMode() {
+            const mode = document.getElementById('filterMode').value;
+            const std = document.getElementById('stdFilters');
+            const cust = document.getElementById('customFilters');
+
+            if (mode === 'custom') {
+                std.style.display = 'none';
+                cust.style.display = 'flex';
+            } else {
+                std.style.display = 'flex';
+                cust.style.display = 'none';
+            }
+        }
+
+        // Helper: Format Date YYYY-MM-DD
+        const toYMD = (d) => d.toISOString().split('T')[0];
+
         function updateDashboard() {
             if (!rawData) return;
 
-            const selYear = parseInt(document.getElementById('yearFilter').value);
-            const selMonth = document.getElementById('monthFilter').value;
-            const prevYear = selYear - 1;
+            const mode = document.getElementById('filterMode').value;
+            const selBranch = document.getElementById('branchFilter').value;
 
-            document.getElementById('prevYearLabel').textContent = prevYear;
-            document.getElementById('currYearTitle').textContent = selYear;
-            document.getElementById('prevYearTitle').textContent = prevYear;
+            let currentStart, currentEnd;
+            let prevStart, prevEnd;
 
-            // --- 1. Aggregation Function ---
-            const calcStats = (year) => {
+            // 1. Determine Date Ranges
+            if (mode === 'custom') {
+                // Custom Range
+                let s = document.getElementById('startDate').value;
+                let e = document.getElementById('endDate').value;
+                if (!s || !e) return; // Alert user?
+
+                currentStart = new Date(s);
+                currentEnd = new Date(e);
+
+                // Prev: Same dates, 1 year ago
+                prevStart = new Date(currentStart);
+                prevStart.setFullYear(prevStart.getFullYear() - 1);
+
+                prevEnd = new Date(currentEnd);
+                prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+
+            } else {
+                // Standard (Year/Month)
+                const selYear = parseInt(document.getElementById('yearFilter').value);
+                const selMonth = document.getElementById('monthFilter').value;
+
+                // Current Range
+                currentStart = new Date(selYear, 0, 1); // Jan 1
+
+                if (selMonth === 'all') {
+                    // YTD Logic: If viewing current year (2026), limit to Today
+                    let now = new Date();
+                    if (selYear === 2026) { // Hardcoded "Current Year" awareness or dynamic
+                        // Use "today" as end date for fair comparison
+                        currentEnd = now;
+                    } else {
+                        currentEnd = new Date(selYear, 11, 31); // Dec 31
+                    }
+                } else {
+                    currentStart = new Date(selYear, selMonth - 1, 1);
+                    // End of Month
+                    currentEnd = new Date(selYear, selMonth, 0);
+                    // Cap at today if future
+                    let now = new Date();
+                    if (currentEnd > now) currentEnd = now;
+                }
+
+                // Previous Range (Fair Comparison)
+                prevStart = new Date(currentStart);
+                prevStart.setFullYear(prevStart.getFullYear() - 1);
+
+                prevEnd = new Date(currentEnd);
+                prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+            }
+
+            // Debug Dates
+            // console.log("Curr", currentStart, currentEnd);
+            // console.log("Prev", prevStart, prevEnd);
+
+            // Update Titles
+            document.getElementById('currYearTitle').textContent = `(${toYMD(currentStart)} - ${toYMD(currentEnd)})`;
+            document.getElementById('prevYearTitle').textContent = `(${toYMD(prevStart)} - ${toYMD(prevEnd)})`;
+
+            // --- 2. Aggregation Function ---
+            const calcStats = (start, end) => {
                 let sales = 0, trans = 0, visitors = 0, target = 0;
-                let monthly = {}; // 1..12 -> val
-                let branchSales = {}; // StoreID -> val
+                let monthly = {};
+                let branchSales = {};
                 let branchTrans = {};
                 let branchVisitors = {};
                 let branchTarget = {};
 
+                // Convert to comparable value
+                let sTime = start.getTime();
+                let eTime = end.getTime();
+
                 const filterFn = (dStr, sId) => {
-                    let d = new Date(dStr);
-                    if (d.getFullYear() !== year) return false;
-                    if (selMonth !== 'all' && (d.getMonth() + 1) != selMonth) return false;
-                    return true;
+                    // Branch Filter
+                    if (selBranch !== 'all' && sId !== selBranch) return false;
+
+                    // Date Filter
+                    let dTime = new Date(dStr).getTime();
+                    return dTime >= sTime && dTime <= eTime;
                 };
 
                 // Sales
@@ -491,10 +659,10 @@
                 return { sales, trans, visitors, target, monthly, branchSales, branchTrans, branchVisitors, branchTarget };
             };
 
-            const curr = calcStats(selYear);
-            const prev = calcStats(prevYear);
+            const curr = calcStats(currentStart, currentEnd);
+            const prev = calcStats(prevStart, prevEnd);
 
-            // --- 2. Update KPI Cards (Current) ---
+            // --- 3. Update KPI Cards (Current) ---
             fmt(document.getElementById('totalSales'), curr.sales);
             fmt(document.getElementById('totalTrans'), curr.trans);
             fmt(document.getElementById('totalVisitors'), curr.visitors);
@@ -518,7 +686,7 @@
             document.getElementById('targetPct').textContent = targetPct.toFixed(1) + '%';
             renderMiniGauge('miniGauge', targetPct);
 
-            // --- 3. Update KPI Cards (Previous) ---
+            // --- 4. Update KPI Cards (Previous) ---
             fmt(document.getElementById('prevSales'), prev.sales);
             fmt(document.getElementById('prevTrans'), prev.trans);
             fmt(document.getElementById('prevVisitors'), prev.visitors);
@@ -537,7 +705,10 @@
             absGEl.className = absGrowth >= 0 ? 'fw-bold fs-4 text-success' : 'fw-bold fs-4 text-danger';
 
             // --- 4. Trend Chart ---
-            renderTrendChart(curr.monthly, prev.monthly, selYear, prevYear);
+            // Extract Year for Chart Labels from starts
+            let cYear = currentStart.getFullYear();
+            let pYear = prevStart.getFullYear();
+            renderTrendChart(curr.monthly, prev.monthly, cYear, pYear);
 
             // --- 5. Top 10 Chart & Table ---
             // Prepare Branch Data
@@ -700,138 +871,7 @@
             });
         }
 
-        // --- Branch Details Logic (Modal) ---
-        let empData = null;
-        let empDataLoading = false;
 
-        async function loadEmpData() {
-            if (empData) return true;
-            if (empDataLoading) return false; // Simple debounce
-            empDataLoading = true;
-            try {
-                const res = await fetch('employees_data.json');
-                if (!res.ok) throw new Error("Failed to load");
-                empData = await res.json();
-                return true;
-            } catch (e) {
-                console.error(e);
-                alert("تعذر تحميل بيانات الموظفين (Employees Data not found)");
-                empDataLoading = false;
-                return false;
-            }
-        }
-
-        function openBranchDetails(sid, name) {
-            // Show Modal
-            const modal = new bootstrap.Modal(document.getElementById('branchModal'));
-            modal.show();
-
-            document.getElementById('branchModalTitle').textContent = `تفاصيل الفرع: ${name}`;
-            document.getElementById('modalSpinner').style.display = 'block';
-            document.getElementById('modalContent').style.display = 'none';
-
-            loadEmpData().then(success => {
-                if (!success) {
-                    if (!empData) return; // Still loading or failed
-                }
-                renderBranchDetails(sid);
-                document.getElementById('modalSpinner').style.display = 'none';
-                document.getElementById('modalContent').style.display = 'block';
-            });
-        }
-
-        function renderBranchDetails(sid) {
-            if (!empData || !empData[sid]) {
-                document.getElementById('tbodyYest').innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>';
-                document.getElementById('tbodyMonth').innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>';
-                return;
-            }
-
-            const records = empData[sid]; // Array: [Date, Name, Sales, Trans, Items]
-
-            // Dates to Filter
-            // Yesterday
-            let today = new Date();
-            let yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            const dateYest = yesterday.toISOString().split('T')[0];
-
-            // Month Start (Using existing global 'selYear' if possible, or just current month)
-            // The request implies "Current Month to Date". Let's use the Dashboard's current filtered month if applicable, or just generic month.
-            // Safe bet: Use the month from "Yesterday" to be consistent.
-            const monthPrefix = dateYest.substring(0, 7); // YYYY-MM
-
-            // Update Headers
-            document.getElementById('modalDateYesterday').textContent = dateYest;
-            document.getElementById('modalDateMonth').textContent = monthPrefix;
-
-            // Aggregators
-            let yestStats = {};
-            let monthStats = {};
-
-            records.forEach(r => {
-                let [d, name, sales, trans, items] = r;
-                // Normalize Name (remove ID if present e.g. "4681-Name")
-                let cleanName = name.includes('-') ? name.split('-')[1] : name;
-                cleanName = cleanName.trim();
-
-                // Yesterday
-                if (d === dateYest) {
-                    if (!yestStats[cleanName]) yestStats[cleanName] = { s: 0, t: 0, i: 0 };
-                    yestStats[cleanName].s += sales;
-                    yestStats[cleanName].t += trans;
-                    yestStats[cleanName].i += items;
-                }
-
-                // Month (Prefix Match)
-                if (d.startsWith(monthPrefix) && d <= dateYest) { // Up to yesterday
-                    if (!monthStats[cleanName]) monthStats[cleanName] = { s: 0, t: 0, i: 0 };
-                    monthStats[cleanName].s += sales;
-                    monthStats[cleanName].t += trans;
-                    monthStats[cleanName].i += items;
-                }
-            });
-
-            // Helper Render
-            const renderRows = (stats, tbodyId, tfootId) => {
-                let list = Object.keys(stats).map(k => ({ name: k, ...stats[k] }));
-                list.sort((a, b) => b.s - a.s);
-
-                let totalS = 0, totalT = 0;
-                list.forEach(x => { totalS += x.s; totalT += x.t; });
-
-                const tbody = document.getElementById(tbodyId);
-                tbody.innerHTML = '';
-
-                list.forEach(x => {
-                    let avg = x.t > 0 ? x.s / x.t : 0;
-                    let contrib = totalS > 0 ? (x.s / totalS) * 100 : 0;
-                    let tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${x.name}</td>
-                        <td class="fw-bold">${x.s.toLocaleString()}</td>
-                        <td class="text-primary">${contrib.toFixed(1)}%</td>
-                        <td>${x.t}</td>
-                        <td>${avg.toFixed(0)}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-                // Footer
-                document.getElementById(tfootId).innerHTML = `
-                    <tr>
-                        <td>TOTAL</td>
-                        <td>${totalS.toLocaleString()}</td>
-                        <td>100%</td>
-                        <td>${totalT}</td>
-                        <td>${totalT > 0 ? (totalS / totalT).toFixed(0) : 0}</td>
-                    </tr>
-                `;
-            };
-
-            renderRows(yestStats, 'tbodyYest', 'tfootYest');
-            renderRows(monthStats, 'tbodyMonth', 'tfootMonth');
-        }
 
         // --- Helpers ---
         function fmt(el, v) { el.textContent = v.toLocaleString(undefined, { maximumFractionDigits: 0 }); }
@@ -851,20 +891,58 @@
             const ctx = document.getElementById('trendChart').getContext('2d');
             if (charts['trend']) charts['trend'].destroy();
 
+            const selectedM = document.getElementById('monthFilter').value;
+
             const labels = Array.from({ length: 12 }, (_, i) => i + 1);
             charts['trend'] = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
                     datasets: [
-                        { label: y1, data: labels.map(m => currM[m] || 0), backgroundColor: '#fe7900', borderRadius: 4 },
+                        {
+                            label: y1,
+                            data: labels.map(m => currM[m] || 0),
+                            // Selected: Dark Brand (#cc6100), Unselected: Faded (#ffd8a8), All: Brand (#fe7900)
+                            backgroundColor: (ctx) => {
+                                if (selectedM === 'all') return '#fe7900';
+                                return (ctx.dataIndex + 1) == selectedM ? '#cc6100' : '#ffd8a8';
+                            },
+                            borderRadius: 4
+                        },
                         { label: y2, data: labels.map(m => prevM[m] || 0), backgroundColor: '#e9ecef', borderRadius: 4 }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [5, 5] } } },
-                    plugins: { legend: { position: 'top' } }
+                    plugins: { legend: { position: 'top' } },
+                    onClick: (e, activeEls, chart) => {
+                        const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                        if (points.length) {
+                            const index = points[0].index;
+                            const month = index + 1;
+
+                            const mFilter = document.getElementById('monthFilter');
+                            const modeSelect = document.getElementById('filterMode');
+
+                            // Ensure we switch to Standard mode if currently Custom (logic edge case)
+                            // But usually chart is visible in both. Best to just set month filter.
+                            if (modeSelect.value === 'custom') {
+                                modeSelect.value = 'standard';
+                                toggleFilterMode();
+                            }
+
+                            if (mFilter.value == month) {
+                                mFilter.value = 'all';
+                            } else {
+                                mFilter.value = month;
+                            }
+                            updateDashboard();
+                        }
+                    },
+                    onHover: (event, chartElement) => {
+                        event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+                    }
                 }
             });
         }
