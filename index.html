@@ -204,6 +204,16 @@
                     </select>
                 </div>
 
+                <!-- Type Filter (Showroom/Online) -->
+                <div class="col-md">
+                    <label class="form-label small text-muted fw-bold">نوع المعرض (Type)</label>
+                    <select id="typeFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                        <option value="all">الكل</option>
+                        <option value="Showroom">معارض</option>
+                        <option value="Online">أونلاين</option>
+                    </select>
+                </div>
+
                 <!-- Branch Filter -->
                 <div class="col-md">
                     <label class="form-label small text-muted fw-bold">المعرض / الفرع</label>
@@ -572,6 +582,7 @@
             const selBranch = document.getElementById('branchFilter').value;
             const selCity = document.getElementById('cityFilter').value;
             const selManager = document.getElementById('managerFilter').value;
+            const selType = document.getElementById('typeFilter').value;
 
             let currentStart, currentEnd;
             let prevStart, prevEnd;
@@ -652,16 +663,19 @@
                     // Branch Filter
                     if (selBranch !== 'all' && sId !== selBranch) return false;
 
-                    // City & Manager Filter
+                    // City & Manager & Type Filter
                     if (rawData.store_meta && rawData.store_meta[sId]) {
                         let meta = rawData.store_meta[sId];
                         if (selCity !== 'all' && meta.city !== selCity) return false;
                         if (selManager !== 'all' && meta.manager !== selManager) return false;
+                        if (selType !== 'all' && meta.type !== selType) return false;
                     } else {
-                        // If metadata missing but filter active, hide? 
-                        // Or if filter active, and no meta, it doesn't match 'Jeddah', so exclude.
+                        // Logic for missing metadata (fallback)
                         if (selCity !== 'all') return false;
                         if (selManager !== 'all') return false;
+
+                        // Default assumption if meta missing? exclude from both specifics
+                        if (selType !== 'all') return false;
                     }
 
                     // Date Filter
