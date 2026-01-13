@@ -361,18 +361,19 @@
                         <table class="table table-custom align-middle">
                             <thead>
                                 <tr>
-                                    <th>#</th>
+                                    <th class="text-center">#</th>
                                     <th>الفرع (Branch)</th>
-                                    <th>المبيعات (Sales)</th>
-                                    <th>الهدف (Target)</th>
-                                    <th onclick="setSort('ach')" style="cursor: pointer; text-decoration: underline;">
+                                    <th class="text-center" onclick="setSort('val')" style="cursor: pointer;">المبيعات
+                                        (Sales) ↕</th>
+                                    <th class="text-center">الهدف (Target)</th>
+                                    <th class="text-center" onclick="setSort('ach')" style="cursor: pointer;">
                                         التحقيق (%)
                                         ↕</th>
-                                    <th>النمو (Growth)</th>
-                                    <th>الفواتير (Trans)</th>
-                                    <th>متوسط الفاتورة (Inv Rate)</th>
-                                    <th>الزوار (Visitors)</th>
-                                    <th>التحويل (Vis Rate)</th>
+                                    <th class="text-center">النمو (Growth)</th>
+                                    <th class="text-center">الفواتير (Trans)</th>
+                                    <th class="text-center">متوسط الفاتورة (Inv Rate)</th>
+                                    <th class="text-center">الزوار (Visitors)</th>
+                                    <th class="text-center">التحويل (Vis Rate)</th>
                                 </tr>
                             </thead>
                             <tbody id="detailsTableBody">
@@ -491,18 +492,47 @@
                 rawData = await res.json();
                 document.getElementById('lastUpdate').textContent = rawData.metadata.generated_at.split(' ')[0];
 
-                // Populate Branch Filter
+                // Populate Filters (Branch, City, Manager)
                 const bSelect = document.getElementById('branchFilter');
-                // Use a Set to handle potential duplicates or just object keys
+                const cSelect = document.getElementById('cityFilter');
+                const mSelect = document.getElementById('managerFilter');
+
                 const storeIds = Object.keys(rawData.stores);
+                const cities = new Set();
+                const managers = new Set();
+
                 // Sort by Name
                 storeIds.sort((a, b) => (rawData.stores[a] || '').localeCompare(rawData.stores[b] || ''));
 
                 storeIds.forEach(sid => {
+                    // Branch
                     let opt = document.createElement('option');
                     opt.value = sid;
                     opt.textContent = rawData.stores[sid] || sid;
                     bSelect.appendChild(opt);
+
+                    // Collect Meta
+                    let meta = rawData.store_meta ? rawData.store_meta[sid] : null;
+                    if (meta) {
+                        if (meta.city && meta.city !== 'Unknown') cities.add(meta.city);
+                        if (meta.manager && meta.manager !== 'Unknown') managers.add(meta.manager);
+                    }
+                });
+
+                // Populate City
+                [...cities].sort().forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    cSelect.appendChild(opt);
+                });
+
+                // Populate Manager
+                [...managers].sort().forEach(m => {
+                    let opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    mSelect.appendChild(opt);
                 });
 
                 // Set Dates Default for Custom Range (Today)
@@ -540,6 +570,8 @@
 
             const mode = document.getElementById('filterMode').value;
             const selBranch = document.getElementById('branchFilter').value;
+            const selCity = document.getElementById('cityFilter').value;
+            const selManager = document.getElementById('managerFilter').value;
 
             let currentStart, currentEnd;
             let prevStart, prevEnd;
@@ -619,6 +651,18 @@
                 const filterFn = (dStr, sId) => {
                     // Branch Filter
                     if (selBranch !== 'all' && sId !== selBranch) return false;
+
+                    // City & Manager Filter
+                    if (rawData.store_meta && rawData.store_meta[sId]) {
+                        let meta = rawData.store_meta[sId];
+                        if (selCity !== 'all' && meta.city !== selCity) return false;
+                        if (selManager !== 'all' && meta.manager !== selManager) return false;
+                    } else {
+                        // If metadata missing but filter active, hide? 
+                        // Or if filter active, and no meta, it doesn't match 'Jeddah', so exclude.
+                        if (selCity !== 'all') return false;
+                        if (selManager !== 'all') return false;
+                    }
 
                     // Date Filter
                     let dTime = new Date(dStr).getTime();
@@ -759,16 +803,16 @@
             branchList.forEach((b, i) => {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><span class="rank-badge">${i + 1}</span></td>
+                    <td class="text-center"><span class="rank-badge">${i + 1}</span></td>
                     <td class="fw-bold fs-6">${b.name}</td>
-                    <td>${b.val.toLocaleString()}</td>
-                    <td>${b.target.toLocaleString()}</td>
-                    <td class="${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
-                    <td class="${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
-                    <td>${b.trans.toLocaleString()}</td>
-                    <td>${b.avgInv.toFixed(0)}</td>
-                    <td>${b.visitors.toLocaleString()}</td>
-                    <td>${b.conv.toFixed(1)}%</td>
+                    <td class="text-center">${b.val.toLocaleString()}</td>
+                    <td class="text-center">${b.target.toLocaleString()}</td>
+                    <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
+                    <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
+                    <td class="text-center">${b.trans.toLocaleString()}</td>
+                    <td class="text-center">${b.avgInv.toFixed(0)}</td>
+                    <td class="text-center">${b.visitors.toLocaleString()}</td>
+                    <td class="text-center">${b.conv.toFixed(1)}%</td>
                 `;
                 tbody.appendChild(tr);
             });
