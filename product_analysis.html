@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange | تحليل المنتجات</title>
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            --bs-secondary: #6c757d;
+            --bg-light: #f8f9fa;
+            --card-radius: 12px;
+            --font-main: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-light);
+            color: #212529;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: white !important;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #000 !important;
+        }
+
+        .brand-orange {
+            color: #fe7900;
+        }
+
+        .card-custom {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-right: 4px solid #fe7900;
+            padding-right: 10px;
+        }
+
+        .table-custom thead th {
+            background-color: #fe7900;
+            color: white;
+            font-weight: 500;
+            border: none;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #fff3e0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar mb-4 sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand"><span class="brand-orange">ORANGE</span> PRODUCT ANALYSIS</span>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-light text-dark border" id="periodDisplay">...</span>
+                <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">
+                    🏠 الرئيسية
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+
+        <!-- Controls -->
+        <div class="row align-items-center mb-4">
+            <div class="col-md-6">
+                <!-- Period Toggle -->
+                <div class="btn-group" role="group" aria-label="Period Toggle">
+                    <input type="radio" class="btn-check" name="periodbtn" id="btnMtd" autocomplete="off" checked
+                        onchange="switchPeriod('mtd')">
+                    <label class="btn btn-outline-primary fw-bold" for="btnMtd">📅 الشهر الحالي (MTD)</label>
+
+                    <input type="radio" class="btn-check" name="periodbtn" id="btnYest" autocomplete="off"
+                        onchange="switchPeriod('yest')">
+                    <label class="btn btn-outline-primary fw-bold" for="btnYest">⏳ يوم أمس (Yesterday)</label>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <h5 class="section-title mb-0" id="currentPeriodLabel">...</h5>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <h5 class="section-title">ملخص أداء الفئات والمنتجات (Category & Product Performance)</h5>
+        <div class="row mb-4">
+            <!-- Top Products per Category -->
+            <div class="col-md-6">
+                <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
+                    <h6 class="text-muted fw-bold mb-3">المنتج الأكثر مبيعاً حسب الفئة (Top Product by Category)</h6>
+                    <table class="table table-sm align-middle table-hover">
+                        <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                            <tr>
+                                <th>التصنيف</th>
+                                <th>رقم المنتج (Item ID)</th>
+                                <th>الكمية</th>
+                                <th>القيمة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topProductsBody">
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top Categories List (Existing) -->
+            <div class="col-md-6">
+                <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
+                    <h6 class="text-muted fw-bold mb-3">أداء الفئات (Category Performance) - <span
+                            id="topCatLabel"></span></h6>
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                            <tr>
+                                <th>#</th>
+                                <th>التصنيف</th>
+                                <th>الكمية</th>
+                                <th>المبيعات</th>
+                                <th>مساهمة %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topCategoriesBody">
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outlets Table -->
+        <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
+        <div class="card-custom p-3">
+            <div class="table-responsive">
+                <table class="table table-custom table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الفرع (Outlet)</th>
+                            <th>إجمالي المبيعات (Total Sales)</th>
+                            <th>أعلى تصنيف مبيعاً (Top Category)</th>
+                            <th>إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="outletsTableBody">
+                        <!-- JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalTitle">تفاصيل المبيعات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center">التصنيف (Category)</th>
+                                    <th class="text-center">الكمية (Qty)</th>
+                                    <th class="text-center">المبيعات (Amount)</th>
+                                    <th class="text-center" style="width: 30%;">أعلى منتج (Top Product)</th>
+                                    <th class="text-center">Q</th>
+                                    <th class="text-center">V</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let rawData = null;
+        let currentData = null; // Filtered subset (analysis_mtd or analysis_yest)
+        let currentMode = 'mtd'; // Track active mode
+        let chartInstance = null;
+
+        async function init() {
+            try {
+                const res = await fetch('product_analysis_data.json?t=' + Date.now());
+                if (!res.ok) throw new Error("Failed to load data");
+
+                rawData = await res.json();
+
+                // Update Badge for period
+                const meta = rawData.metadata || {};
+                const periodText = `${meta.period_start} إلى ${meta.period_end}`;
+                document.getElementById('periodDisplay').textContent = periodText;
+
+                // Default to MTD
+                switchPeriod('mtd');
+
+            } catch (e) {
+                console.error(e);
+                alert("تعذر تحميل البيانات. الرجاء التأكد من تشغيل التحديث.");
+            }
+        }
+
+        function switchPeriod(mode) {
+            currentMode = mode; // Update global mode
+            const meta = rawData.metadata || {};
+
+            if (mode === 'mtd') {
+                currentData = rawData.analysis_mtd;
+                document.getElementById('currentPeriodLabel').textContent = `الفترة: ${meta.period_start} إلى ${meta.period_end}`;
+                document.getElementById('topCatLabel').textContent = "الشهر الحالي";
+            } else {
+                currentData = rawData.analysis_yest;
+                document.getElementById('currentPeriodLabel').textContent = `الفترة: ${meta.yesterday_date} (يوم أمس فقط)`;
+                document.getElementById('topCatLabel').textContent = "يوم أمس";
+            }
+
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            processGlobalStats(currentMode); // Pass current mode
+            renderOutletsTable();
+        }
+
+        function processGlobalStats(mode) {
+            // mode is 'mtd' or 'yest'
+            let globalTopItems = [];
+            if (mode === 'mtd') {
+                globalTopItems = rawData.global_mtd || [];
+            } else {
+                globalTopItems = rawData.global_yest || [];
+            }
+
+            // 1. Render Top Products per Category
+            const prodBody = document.getElementById('topProductsBody');
+            prodBody.innerHTML = '';
+
+            if (globalTopItems.length === 0) {
+                prodBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>';
+            } else {
+                globalTopItems.forEach(item => {
+                    let row = `
+                        <tr>
+                            <td class="fw-bold text-center">${item.category}</td>
+                            <td class="text-center">
+                                <div class="fw-bold text-dark">${item.top_item_name}</div>
+                                <small class="text-muted">${item.top_item_id}</small>
+                            </td>
+                            <td dir="ltr" class="text-center">${item.top_item_qty}</td>
+                            <td class="fw-bold text-center">${Math.round(item.top_item_amount).toLocaleString()}</td>
+                        </tr>
+                    `;
+                    prodBody.innerHTML += row;
+                });
+            }
+
+            // 2. Render Top Categories List (Existing Logic)
+            const globalCats = {};
+            let totalSales = 0;
+
+            if (currentData) {
+                Object.values(currentData).forEach(store => {
+                    store.categories.forEach(cat => {
+                        if (!globalCats[cat.category]) {
+                            globalCats[cat.category] = { qty: 0, amount: 0 };
+                        }
+                        globalCats[cat.category].qty += cat.qty;
+                        globalCats[cat.category].amount += cat.amount;
+                        totalSales += cat.amount;
+                    });
+                });
+            }
+
+            // Convert to Array
+            const sortedCats = Object.entries(globalCats).map(([name, data]) => ({
+                name,
+                ...data,
+                share: totalSales > 0 ? (data.amount / totalSales * 100) : 0
+            })).sort((a, b) => b.amount - a.amount);
+
+            // Render Table
+            const catBody = document.getElementById('topCategoriesBody');
+            catBody.innerHTML = '';
+
+            if (sortedCats.length === 0) {
+                catBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>';
+            } else {
+                sortedCats.forEach((c, i) => {
+                    let row = `
+                        <tr>
+                            <td class="fw-bold text-center">${i + 1}</td>
+                            <td class="text-center">${c.name}</td>
+                            <td dir="ltr" class="text-center">${c.qty.toLocaleString()}</td>
+                            <td class="fw-bold text-center">${Math.round(c.amount).toLocaleString()}</td>
+                            <td>
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <span class="me-2">${c.share.toFixed(1)}%</span>
+                                    <div class="progress flex-grow-1" style="height: 6px; max-width: 100px;">
+                                        <div class="progress-bar bg-warning" style="width: ${c.share}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    catBody.innerHTML += row;
+                });
+            }
+
+            // Pie Chart Logic Removed
+        }
+
+        function renderOutletsTable() {
+            const tbody = document.getElementById('outletsTableBody');
+            tbody.innerHTML = '';
+
+            if (!currentData || Object.keys(currentData).length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات لهذه الفترة</td></tr>`;
+                return;
+            }
+
+            // Convert to array and sort by Total Sales
+            const outlets = Object.entries(currentData).map(([id, data]) => ({
+                id, ...data
+            })).sort((a, b) => b.total_sales - a.total_sales);
+
+            outlets.forEach((o, i) => {
+                // Find top category
+                let topCat = o.categories.length > 0 ? o.categories[0] : null;
+                let topCatStr = topCat ? `${topCat.category} (${Math.round(topCat.amount).toLocaleString()})` : '-';
+
+                let row = `
+                    <tr onclick="showStoreDetails('${o.id}')">
+                        <td>${i + 1}</td>
+                        <td class="fw-bold">${o.store_name}</td>
+                        <td class="text-success fw-bold">${o.total_sales.toLocaleString()}</td>
+                        <td class="text-muted small">${topCatStr}</td>
+                        <td><button class="btn btn-sm btn-outline-primary">عرض التفاصيل</button></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function showStoreDetails(storeId) {
+            const store = currentData[storeId];
+            if (!store) return;
+
+            document.getElementById('modalTitle').textContent = `تفاصيل: ${store.store_name}`;
+            const tbody = document.getElementById('modalTableBody');
+            tbody.innerHTML = '';
+
+            store.categories.forEach(cat => {
+                let row = `
+                    <tr>
+                        <td class="fw-bold text-center">${cat.category}</td>
+                        <td dir="ltr" class="text-center">${cat.qty}</td>
+                        <td class="text-center">${cat.amount.toLocaleString()}</td>
+                        <td class="text-center">
+                            <div class="fw-bold text-dark small" style="max-width: 200px; margin: 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${cat.top_item_name}">${cat.top_item_name}</div>
+                            <small class="text-muted d-block" style="font-size: 0.75em;">${cat.top_item_id}</small>
+                        </td>
+                        <td dir="ltr" class="text-center small">${cat.top_item_qty}</td>
+                        <td class="text-center small fw-bold">${cat.top_item_amount.toLocaleString()}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+            new bootstrap.Modal(document.getElementById('detailsModal')).show();
+        }
+
+        // Run
+        init();
+
+    </script>
+</body>
+
+</html>
