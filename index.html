@@ -139,7 +139,7 @@
 
             <div class="d-flex gap-2">
                 <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
-                    📦 تحليل المنتجات 
+                    📦 تحليل المنتجات
                 </a>
                 <!-- Filters Removed (Moved to Main Body) -->
                 <span class="badge bg-light text-dark border d-flex align-items-center" id="lastUpdate">...</span>
@@ -238,7 +238,7 @@
         <!-- Row 1: High Level KPIs (Current) -->
         <h6 class="text-muted fw-bold mb-2">أداء العام الحالي (<span id="currYearTitle">...</span>)</h6>
         <div class="row g-3 mb-3">
-            <div class="col-md-3">
+            <div class="col">
                 <div class="kpi-card border-bottom border-4 border-warning">
                     <div class="kpi-title">المبيعات (Sales)</div>
                     <div class="kpi-value" id="totalSales">0</div>
@@ -248,21 +248,28 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col">
+                <div class="kpi-card border-bottom border-4 border-dark">
+                    <div class="kpi-title">قيمة العميل (Cust Value)</div>
+                    <div class="kpi-value" id="totalCustValue">0</div>
+                    <div class="kpi-sub text-muted">Sales / Visitors</div>
+                </div>
+            </div>
+            <div class="col">
                 <div class="kpi-card border-bottom border-4 border-primary">
                     <div class="kpi-title">الفواتير (Transactions)</div>
                     <div class="kpi-value" id="totalTrans">0</div>
                     <div class="kpi-sub text-muted">Avg Invoice: <span id="avgTicket" class="fw-bold">0</span></div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col">
                 <div class="kpi-card border-bottom border-4 border-info">
                     <div class="kpi-title">الزوار (Visitors)</div>
                     <div class="kpi-value" id="totalVisitors">0</div>
                     <div class="kpi-sub text-muted">Conv. Rate: <span id="convRate" class="fw-bold">0%</span></div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col">
                 <div class="kpi-card border-bottom border-4 border-success">
                     <div class="kpi-title">تحقيق الهدف (Target)</div>
                     <div class="d-flex align-items-center justify-content-between">
@@ -387,8 +394,12 @@
                                     <th class="text-center">النمو (Growth)</th>
                                     <th class="text-center">الفواتير (Trans)</th>
                                     <th class="text-center">متوسط الفاتورة (Inv Rate)</th>
-                                    <th class="text-center">الزوار (Visitors)</th>
-                                    <th class="text-center">التحويل (Vis Rate)</th>
+                                    <th class="text-center" onclick="setSort('visitors')" style="cursor: pointer;">
+                                        الزوار (Visitors) ↕</th>
+                                    <th class="text-center" onclick="setSort('custVal')" style="cursor: pointer;">قيمة
+                                        العميل (Val) ↕</th>
+                                    <th class="text-center" onclick="setSort('conv')" style="cursor: pointer;">التحويل
+                                        (Vis Rate) ↕</th>
                                 </tr>
                             </thead>
                             <tbody id="detailsTableBody">
@@ -749,6 +760,10 @@
             document.getElementById('targetPct').textContent = targetPct.toFixed(1) + '%';
             renderMiniGauge('miniGauge', targetPct);
 
+            // Cust Value
+            let custValue = curr.visitors > 0 ? curr.sales / curr.visitors : 0;
+            document.getElementById('totalCustValue').textContent = custValue.toFixed(0);
+
             // --- 4. Update KPI Cards (Previous) ---
             fmt(document.getElementById('prevSales'), prev.sales);
             fmt(document.getElementById('prevTrans'), prev.trans);
@@ -796,9 +811,10 @@
                 let ach = target > 0 ? (val / target) * 100 : 0;
                 let avgInv = trans > 0 ? val / trans : 0;
                 let conv = visitors > 0 ? (trans / visitors) * 100 : 0;
+                let custVal = visitors > 0 ? val / visitors : 0;
 
                 branchList.push({
-                    name, val, prevVal, growth, target, trans, visitors, ach, avgInv, conv
+                    name, val, prevVal, growth, target, trans, visitors, ach, avgInv, conv, custVal
                 });
             });
 
@@ -831,6 +847,7 @@
                     <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center">${b.avgInv.toFixed(0)}</td>
                     <td class="text-center">${b.visitors.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
                     <td class="text-center">${b.conv.toFixed(1)}%</td>
                 `;
                 tbody.appendChild(tr);
