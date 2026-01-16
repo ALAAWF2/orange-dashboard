@@ -134,9 +134,23 @@
 
     <!-- Top Bar -->
     <nav class="navbar mb-4 sticky-top">
-        <div class="container-fluid">
+        <div class="container-fluid position-relative">
+            <!-- Left: Brand -->
             <span class="navbar-brand"><span class="brand-orange">ORANGE</span> DASHBOARD</span>
 
+            <!-- Center: Today's Sales (Clickable) -->
+            <div class="position-absolute top-50 start-50 translate-middle d-none d-md-block">
+                <button onclick="filterToday()"
+                    class="btn btn-white border shadow-sm d-flex align-items-center gap-2 px-3 py-2"
+                    title="اضغط لعرض مبيعات اليوم" style="border-radius: 50px;">
+                    <span class="fw-bold text-dark" style="font-size: 0.95rem;">
+                        🛒 مبيعات اليوم: <span id="headerTodaySales" class="text-primary">0</span>
+                    </span>
+                    <span class="text-muted border-start ps-2" style="font-size: 0.85rem;" id="lastUpdate">...</span>
+                </button>
+            </div>
+
+            <!-- Right: Actions -->
             <div class="d-flex gap-2">
                 <a href="employees.html" class="btn btn-outline-primary btn-sm fw-bold">
                     👥 أداء الموظفين
@@ -148,8 +162,6 @@
                     📄 تصدير PDF
                 </button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">تسجيل خروج</button>
-                <!-- Filters Removed (Moved to Main Body) -->
-                <span class="badge bg-light text-dark border d-flex align-items-center" id="lastUpdate">...</span>
             </div>
         </div>
     </nav>
@@ -543,7 +555,18 @@
             try {
                 const res = await fetch('management_data.json?t=' + Date.now());
                 rawData = await res.json();
-                document.getElementById('lastUpdate').textContent = rawData.metadata.generated_at.split(' ')[0];
+
+                // 1. Update Time (Show Time Only or Date+Time)
+                // User asked for "Time of last update"
+                let genTime = rawData.metadata.generated_at.split(' ')[1]; // HH:MM:SS
+                // Remove seconds if desired, but seconds are fine. 
+                // Let's format it nicer: HH:MM
+                let shortTime = genTime.split(':').slice(0, 2).join(':');
+                document.getElementById('lastUpdate').textContent = shortTime;
+
+                // 2. Calculate Today's Sales (Global or Filtered?)
+                // Usually Header KPI is Global (for the logged in user's scope)
+                calculateTodayHeader();
 
                 // Populate Filters (Branch, City, Manager)
                 const bSelect = document.getElementById('branchFilter');
@@ -632,6 +655,53 @@
 
         // Helper: Format Date YYYY-MM-DD
         const toYMD = (d) => d.toLocaleDateString('en-CA');
+
+        function filterToday() {
+            const today = toYMD(new Date());
+
+            // Set Filter Mode to Custom
+            const modeSelect = document.getElementById('filterMode');
+            modeSelect.value = 'custom';
+            toggleFilterMode(); // Update UI
+
+            // Set Dates
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+
+            // Trigger Update
+            updateDashboard();
+        }
+
+        function calculateTodayHeader() {
+            if (!rawData) return;
+
+            // Get today's date string YYYY-MM-DD
+            // Note: rawData uses local time dates usually. 
+            // Ensure we match the timezone logic of the system.
+            let todayStr = toYMD(new Date());
+
+            let totalToday = 0;
+
+            // Respect Manager Filter (Security)
+            let selManager = 'all';
+            if (currentUser.role !== 'Admin') {
+                selManager = currentUser.name;
+            }
+
+            rawData.sales.forEach(([d, s, v]) => {
+                if (d === todayStr) {
+                    // Check Manager Permission
+                    if (selManager !== 'all') {
+                        let meta = rawData.store_meta ? rawData.store_meta[s] : null;
+                        if (!meta || meta.manager !== selManager) return;
+                    }
+                    totalToday += v;
+                }
+            });
+
+            // Update UI
+            document.getElementById('headerTodaySales').textContent = totalToday.toLocaleString();
+        }
 
         function updateDashboard() {
             if (!rawData) return;
