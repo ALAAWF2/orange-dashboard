@@ -176,6 +176,7 @@
                 // NEW: Logic for handling both old and new data structures
                 let records = [];
                 let targets = {};
+                let employeeNames = {};
 
                 if (allData.history && allData.targets) {
                     // New Structure
@@ -185,6 +186,7 @@
                     }
                     records = allData.history[sid];
                     targets = allData.targets;
+                    employeeNames = allData.employee_names || {};
                 } else {
                     // Old Structure Fallback (for backwards compatibility if file not regenerated yet)
                     if (!allData[sid]) {
@@ -194,7 +196,7 @@
                     records = allData[sid];
                 }
 
-                renderData(records, targets);
+                renderData(records, targets, employeeNames);
 
                 errDiv.style.display = 'none';
                 document.getElementById('content').style.display = 'block';
@@ -205,7 +207,7 @@
             }
         }
 
-        function renderData(records, targets = {}) {
+        function renderData(records, targets = {}, employeeNames = {}) {
             // records: [Date, Name, Sales, Trans, Items]
 
             // Dates to Filter
@@ -228,9 +230,22 @@
             records.forEach(r => {
                 let [d, rawName, sales, trans, items] = r;
 
-                // Clean Name (remove ID prefix if exists)
-                let name = rawName.includes('-') ? rawName.split('-')[1].trim() : rawName;
-                if (!name || name === 'null') name = "Unknown";
+                // Extract ID and Name
+                let empId = rawName;
+                let name = rawName;
+
+                if (rawName.includes('-')) {
+                    const parts = rawName.split('-');
+                    empId = parts[0].trim();
+                    name = parts[1].trim();
+                }
+
+                // Use Arabic Name Override
+                if (employeeNames[empId]) {
+                    name = employeeNames[empId];
+                }
+
+                if (!name || name === 'null') name = "Unknown"; // Fallback
 
                 // Yesterday
                 if (d === dateYest) {
@@ -243,9 +258,6 @@
                 if (d.startsWith(monthPrefix) && d <= dateYest) {
                     if (!monthStats[name]) {
                         // Lookup Target
-                        // Parse ID from rawName (e.g., "4681-Jana Ali") -> "4681"
-                        // If no hyphen (e.g. "Unknown 3727"), use the full string as the ID lookup
-                        let empId = rawName.includes('-') ? rawName.split('-')[0].trim() : rawName.trim();
                         let target = (empId && targets[empId]) ? targets[empId] : 0;
 
                         monthStats[name] = { s: 0, t: 0, target: target };
