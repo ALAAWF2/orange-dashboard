@@ -138,13 +138,13 @@
             <!-- Left: Brand -->
             <span class="navbar-brand"><span class="brand-orange">ORANGE</span> DASHBOARD</span>
 
-            <!-- Center: Today's Sales (Clickable) -->
+            <!-- Center: Today's Sales (Clickable) - DESKTOP ONLY -->
             <div class="position-absolute top-50 start-50 translate-middle d-none d-md-block">
                 <button onclick="filterToday()"
                     class="btn btn-white border shadow-sm d-flex align-items-center gap-2 px-3 py-2"
                     title="اضغط لعرض مبيعات اليوم" style="border-radius: 50px;">
                     <span class="fw-bold text-dark" style="font-size: 0.95rem;">
-                        🛒 مبيعات اليوم: <span id="headerTodaySales" class="text-primary">0</span>
+                        🛒 مبيعات اليوم: <span class="text-primary today-sales-val">0</span>
                     </span>
                     <span class="text-muted border-start ps-2" style="font-size: 0.85rem;" id="lastUpdate">...</span>
                 </button>
@@ -152,16 +152,22 @@
 
             <!-- Right: Actions -->
             <div class="d-flex gap-2">
+                <!-- Mobile Today's Sales (Hidden on Desktop) -->
+                <button onclick="filterToday()"
+                    class="btn btn-light border btn-sm d-md-none fw-bold text-primary d-flex align-items-center gap-1">
+                    🛒 <span class="today-sales-val">0</span>
+                </button>
+
                 <a href="employees.html" class="btn btn-outline-primary btn-sm fw-bold">
-                    👥 أداء الموظفين
+                    👥 <span class="d-none d-lg-inline">أداء الموظفين</span>
                 </a>
                 <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
-                    📦 تحليل المنتجات
+                    📦 <span class="d-none d-lg-inline">تحليل المنتجات</span>
                 </a>
                 <button onclick="generatePDF()" class="btn btn-warning btn-sm fw-bold text-white">
-                    📄 تصدير PDF
+                    📄 <span class="d-none d-lg-inline">PDF</span>
                 </button>
-                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">تسجيل خروج</button>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
     </nav>
@@ -699,8 +705,11 @@
                 }
             });
 
-            // Update UI
-            document.getElementById('headerTodaySales').textContent = totalToday.toLocaleString();
+            // Update UI (All instances)
+            const els = document.querySelectorAll('.today-sales-val');
+            els.forEach(el => {
+                el.textContent = totalToday.toLocaleString();
+            });
         }
 
         function updateDashboard() {
