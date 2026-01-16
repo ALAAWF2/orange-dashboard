@@ -100,6 +100,8 @@
                                         <tr>
                                             <th>الموظف</th>
                                             <th>المبيعات</th>
+                                            <th>الهدف (Target)</th>
+                                            <th>نسبة التحقيق %</th>
                                             <th>مساهمة %</th>
                                             <th>فواتير</th>
                                             <th>Avg Inv</th>
@@ -126,6 +128,8 @@
                                         <tr>
                                             <th>الموظف</th>
                                             <th>المبيعات</th>
+                                            <th>الهدف (Target)</th>
+                                            <th>نسبة التحقيق %</th>
                                             <th>مساهمة %</th>
                                             <th>فواتير</th>
                                             <th>Avg Inv</th>
@@ -169,12 +173,28 @@
                 if (!res.ok) throw new Error("File not found");
                 const allData = await res.json();
 
-                if (!allData[sid]) {
-                    errDiv.innerHTML = `<div class="alert alert-warning">لا توجد بيانات تفصيلية لهذا الفرع (ID: ${sid})</div>`;
-                    return;
+                // NEW: Logic for handling both old and new data structures
+                let records = [];
+                let targets = {};
+
+                if (allData.history && allData.targets) {
+                    // New Structure
+                    if (!allData.history[sid]) {
+                        errDiv.innerHTML = `<div class="alert alert-warning">لا توجد بيانات تفصيلية لهذا الفرع (ID: ${sid})</div>`;
+                        return;
+                    }
+                    records = allData.history[sid];
+                    targets = allData.targets;
+                } else {
+                    // Old Structure Fallback (for backwards compatibility if file not regenerated yet)
+                    if (!allData[sid]) {
+                        errDiv.innerHTML = `<div class="alert alert-warning">لا توجد بيانات تفصيلية لهذا الفرع (ID: ${sid})</div>`;
+                        return;
+                    }
+                    records = allData[sid];
                 }
 
-                renderData(allData[sid]);
+                renderData(records, targets);
 
                 errDiv.style.display = 'none';
                 document.getElementById('content').style.display = 'block';
@@ -185,7 +205,7 @@
             }
         }
 
-        function renderData(records) {
+        function renderData(records, targets = {}) {
             // records: [Date, Name, Sales, Trans, Items]
 
             // Dates to Filter
@@ -221,31 +241,43 @@
 
                 // Month (accumulate)
                 if (d.startsWith(monthPrefix) && d <= dateYest) {
-                    if (!monthStats[name]) monthStats[name] = { s: 0, t: 0 };
+                    if (!monthStats[name]) {
+                        // Lookup Target
+                        // Parse ID from rawName (e.g., "4681-Jana Ali") -> "4681"
+                        // If no hyphen (e.g. "Unknown 3727"), use the full string as the ID lookup
+                        let empId = rawName.includes('-') ? rawName.split('-')[0].trim() : rawName.trim();
+                        let target = (empId && targets[empId]) ? targets[empId] : 0;
+
+                        monthStats[name] = { s: 0, t: 0, target: target };
+                    }
                     monthStats[name].s += sales;
                     monthStats[name].t += trans;
                 }
             });
 
-            renderTable(yestStats, 'tbodyYest', 'tfootYest');
-            renderTable(monthStats, 'tbodyMonth', 'tfootMonth');
+            renderTable(yestStats, 'tbodyYest', 'tfootYest', false);
+            renderTable(monthStats, 'tbodyMonth', 'tfootMonth', true);
         }
 
-        function renderTable(stats, bodyId, footId) {
+        function renderTable(stats, bodyId, footId, showTarget = false) {
             const list = Object.keys(stats).map(k => ({ name: k, ...stats[k] }));
 
             // Sort by Sales DESC
             list.sort((a, b) => b.s - a.s);
 
             // Totals
-            let totalS = 0, totalT = 0;
-            list.forEach(item => { totalS += item.s; totalT += item.t; });
+            let totalS = 0, totalT = 0, totalTarget = 0;
+            list.forEach(item => {
+                totalS += item.s;
+                totalT += item.t;
+                if (showTarget && item.target) totalTarget += item.target;
+            });
 
             const tbody = document.getElementById(bodyId);
             tbody.innerHTML = '';
 
             if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">لا توجد مبيعات مسجلة</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">لا توجد مبيعات مسجلة</td></tr>';
                 document.getElementById(footId).innerHTML = '';
                 return;
             }
@@ -254,10 +286,29 @@
                 let avg = item.t > 0 ? item.s / item.t : 0;
                 let contrib = totalS > 0 ? (item.s / totalS) * 100 : 0;
 
+                // Target Logic
+                let targetCell = '-';
+                let achCell = '-';
+                let achClass = '';
+
+                if (showTarget) {
+                    let t = item.target || 0;
+                    targetCell = t > 0 ? t.toLocaleString() : '0';
+
+                    let ach = t > 0 ? (item.s / t) * 100 : 0;
+                    achCell = ach.toFixed(1) + '%';
+
+                    if (ach >= 100) achClass = 'text-success fw-bold';
+                    else if (ach >= 80) achClass = 'text-warning fw-bold';
+                    else achClass = 'text-danger';
+                }
+
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="fw-bold text-dark">${item.name}</td>
                     <td class="fw-bold">${item.s.toLocaleString()}</td>
+                    <td class="text-center">${targetCell}</td>
+                    <td class="text-center ${achClass}" dir="ltr">${achCell}</td>
                     <td class="text-primary">${contrib.toFixed(1)}%</td>
                     <td>${item.t}</td>
                     <td>${avg.toFixed(0)}</td>
@@ -266,10 +317,14 @@
             });
 
             // Footer
+            let totalAch = (showTarget && totalTarget > 0) ? (totalS / totalTarget) * 100 : 0;
+
             document.getElementById(footId).innerHTML = `
                 <tr>
                     <td>الإجمالي</td>
                     <td>${totalS.toLocaleString()}</td>
+                    <td>${showTarget ? totalTarget.toLocaleString() : '-'}</td>
+                    <td dir="ltr">${showTarget ? totalAch.toFixed(1) + '%' : '-'}</td>
                     <td>100%</td>
                     <td>${totalT}</td>
                     <td>${totalT > 0 ? (totalS / totalT).toFixed(0) : 0}</td>
