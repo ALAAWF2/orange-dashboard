@@ -1,14 +1,14 @@
 const USERS = {
-    "Sales Manager": { pin: "1234", role: "Admin" },
-    "المنطقة الغربية": { pin: "1234", role: "Manager" },
-    "اماني عسيري": { pin: "1234", role: "Manager" },
-    "جهاد ايوبي": { pin: "1234", role: "Manager" },
-    "خليل الصانع": { pin: "1234", role: "Manager" },
-    "رضوان عطيوي": { pin: "1234", role: "Manager" },
-    "شريفة العمري": { pin: "1234", role: "Manager" },
-    "عبد الجليل الحبال": { pin: "1234", role: "Manager" },
-    "عبدالله السرداح": { pin: "1234", role: "Manager" },
-    "عبيدة السباعي": { pin: "1234", role: "Manager" },
-    "محمدكلو": { pin: "1234", role: "Manager" },
-    "منطقة الطائف": { pin: "1234", role: "Manager" }
+    "Sales Manager": { pin: "6587", role: "Admin" },
+    "المنطقة الغربية": { pin: "1478", role: "Manager" },
+    "اماني عسيري": { pin: "3698", role: "Manager" },
+    "جهاد ايوبي": { pin: "2587", role: "Manager" },
+    "خليل الصانع": { pin: "2131", role: "Manager" },
+    "رضوان عطيوي": { pin: "7643", role: "Manager" },
+    "شريفة العمري": { pin: "8491", role: "Manager" },
+    "عبد الجليل الحبال": { pin: "1637", role: "Manager" },
+    "عبدالله السرداح": { pin: "4618", role: "Manager" },
+    "عبيدة السباعي": { pin: "1647", role: "Manager" },
+    "محمدكلو": { pin: "4891", role: "Manager" },
+    "منطقة الطائف": { pin: "6342", role: "Manager" }
 };
