@@ -147,34 +147,33 @@
 
         <!-- Filters -->
         <div class="card border-0 shadow-sm p-3 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col-md-2">
-                    <label class="form-label small text-muted fw-bold">مدير المنطقة</label>
+            <div class="row align-items-end g-2">
+                <!-- Manager -->
+                <div class="col-md-2 col-lg-2">
+                    <label class="form-label small text-muted fw-bold mb-1">مدير المنطقة</label>
                     <select id="managerFilter" class="form-select form-select-sm" onchange="updatePage()">
                         <option value="all">الكل</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted fw-bold">الفرع</label>
+                <!-- Branch -->
+                <div class="col-md-2 col-lg-2">
+                    <label class="form-label small text-muted fw-bold mb-1">الفرع</label>
                     <select id="branchFilter" class="form-select form-select-sm" onchange="updatePage()">
                         <option value="all">كافة الفروع</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted fw-bold">الفترة</label>
-                    <div class="d-flex gap-1">
-                        <select id="periodFilter" class="form-select form-select-sm"
-                            onchange="toggleDateInput(); updatePage()">
-                            <option value="mtd">من بداية الشهر</option>
-                            <option value="yesterday">أمس</option>
-                            <option value="custom">تاريخ معين</option>
-                        </select>
-                        <input type="date" id="customDate" class="form-control form-control-sm d-none"
-                            onchange="updatePage()">
-                    </div>
+                <!-- Period -->
+                <div class="col-md-3 col-lg-3">
+                    <label class="form-label small text-muted fw-bold mb-1">الفترة</label>
+                    <select id="periodFilter" class="form-select form-select-sm" onchange="updatePage()">
+                        <option value="mtd" selected>الشهر الحالي (MTD)</option>
+                        <option value="yesterday">يوم أمس (Yesterday)</option>
+                        <option value="today">اليوم (Today)</option>
+                    </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted fw-bold">ترتيب حسب</label>
+                <!-- Sort -->
+                <div class="col-md-2 col-lg-2">
+                    <label class="form-label small text-muted fw-bold mb-1">ترتيب حسب</label>
                     <select id="sortBy" class="form-select form-select-sm" onchange="updatePage()">
                         <option value="sales">المبيعات</option>
                         <option value="achievement">نسبة التحقيق (Target %)</option>
@@ -183,401 +182,424 @@
                         <option value="items_per_inv">متوسط القطع</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted fw-bold">بحث موظف</label>
+                <!-- Search -->
+                <div class="col-md-2 col-lg-2">
+                    <label class="form-label small text-muted fw-bold mb-1">بحث موظف</label>
                     <input type="text" id="searchEmp" class="form-control form-control-sm" placeholder="اسم الموظف..."
                         oninput="updatePage()">
                 </div>
-                <!-- Restored Update Button -->
-                <div class="col-md-2 align-self-end">
-                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="updatePage()">🔄 تحديث</button>
+                <!-- Update Button -->
+                <div class="col-md-1 col-lg-1">
+                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="updatePage()">
+                        <span class="d-none d-md-inline">🔄</span>
+                        <span class="d-md-none">تحديث</span>
+                    </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Summary KPIs -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="kpi-card border-bottom border-4 border-warning">
-                    <div class="text-muted small">إجمالي الموظفين</div>
-                    <div class="fs-3 fw-bold" id="totalEmployees">0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="kpi-card border-bottom border-4 border-success">
-                    <div class="text-muted small">إجمالي المبيعات</div>
-                    <div class="fs-3 fw-bold" id="totalSales">0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="kpi-card border-bottom border-4 border-primary">
-                    <div class="text-muted small" id="avgSalesPerEmpLabel">متوسط المبيعات/موظف</div>
-                    <div class="fs-3 fw-bold" id="avgSalesPerEmp">0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="kpi-card border-bottom border-4 border-info">
-                    <div class="text-muted small">أعلى موظف</div>
-                    <div class="fs-5 fw-bold text-truncate" id="topEmployee">-</div>
-                    <div class="small text-muted" id="topEmployeeSales">-</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top 10 Chart Section (Moved Up) -->
-        <div class="row g-3 mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="section-title mb-0">📊 تحليل الموظفين (Charts)</h5>
-                    <!-- Chart Controls -->
-                    <div class="d-flex gap-2">
-                        <select id="chartMetric" class="form-select form-select-sm" onchange="updatePage()"
-                            style="width: auto;">
-                            <option value="sales">المبيعات</option>
-                            <option value="achievement">نسبة التحقيق %</option>
-                            <option value="max_ticket">أعلى قيمة فاتورة</option>
-                            <option value="avg_ticket">معدل الفاتورة</option>
-                            <option value="items_per_inv">متوسط القطع</option>
-                        </select>
-                        <select id="chartSort" class="form-select form-select-sm" onchange="updatePage()"
-                            style="width: auto;">
-                            <option value="desc">الأعلى (Top 10)</option>
-                            <option value="asc">الأقل (Bottom 10)</option>
-                        </select>
+            <!-- Summary KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-card border-bottom border-4 border-warning">
+                        <div class="text-muted small">إجمالي الموظفين</div>
+                        <div class="fs-3 fw-bold" id="totalEmployees">0</div>
                     </div>
                 </div>
-                <div class="card border-0 shadow-sm" style="height: 300px;">
-                    <div class="table-responsive h-100">
-                        <table class="table table-sm table-striped table-hover mb-0 sticky-header">
-                            <thead class="table-light sticky-top" style="z-index: 1;">
-                                <tr>
-                                    <th style="width: 50px;">#</th>
-                                    <th>الموظف</th>
-                                    <th class="text-end">القيمة</th>
-                                </tr>
-                            </thead>
-                            <tbody id="top10Body">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                <div class="col-md-3">
+                    <div class="kpi-card border-bottom border-4 border-success">
+                        <div class="text-muted small">إجمالي المبيعات</div>
+                        <div class="fs-3 fw-bold" id="totalSales">0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card border-bottom border-4 border-primary">
+                        <div class="text-muted small" id="avgSalesPerEmpLabel">متوسط المبيعات/موظف</div>
+                        <div class="fs-3 fw-bold" id="avgSalesPerEmp">0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card border-bottom border-4 border-info">
+                        <div class="text-muted small">أعلى موظف</div>
+                        <div class="fs-5 fw-bold text-truncate" id="topEmployee">-</div>
+                        <div class="small text-muted" id="topEmployeeSales">-</div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row">
-            <!-- Leaderboard Table (Full Width) -->
-            <div class="col-12">
-                <h5 class="section-title">🏆 ترتيب الموظفين (Leaderboard)</h5>
-                <div class="card border-0 shadow-sm p-3">
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-custom table-hover align-middle mb-0">
-                            <thead class="sticky-top">
-                                <tr>
-                                    <th>#</th>
-                                    <th>الموظف</th>
-                                    <th class="d-none d-md-table-cell">الفرع</th>
-                                    <th>المبيعات</th>
-                                    <th class="text-center">الهدف</th>
-                                    <th class="text-center">التحقيق %</th>
-                                    <th class="d-none d-md-table-cell">الفواتير</th>
-                                    <th class="d-none d-md-table-cell">معدل الفاتورة</th>
-                                    <th class="d-none d-md-table-cell">متوسط القطع</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leaderboardBody">
-                            </tbody>
-                        </table>
+            <!-- Top 10 Chart Section (Moved Up) -->
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="section-title mb-0">📊 تحليل الموظفين (Charts)</h5>
+                        <!-- Chart Controls -->
+                        <div class="d-flex gap-2">
+                            <select id="chartMetric" class="form-select form-select-sm" onchange="updatePage()"
+                                style="width: auto;">
+                                <option value="sales">المبيعات</option>
+                                <option value="achievement">نسبة التحقيق %</option>
+                                <option value="max_ticket">أعلى قيمة فاتورة</option>
+                                <option value="avg_ticket">معدل الفاتورة</option>
+                                <option value="items_per_inv">متوسط القطع</option>
+                            </select>
+                            <select id="chartSort" class="form-select form-select-sm" onchange="updatePage()"
+                                style="width: auto;">
+                                <option value="desc">الأعلى (Top 10)</option>
+                                <option value="asc">الأقل (Bottom 10)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card border-0 shadow-sm" style="height: 300px;">
+                        <div class="table-responsive h-100">
+                            <table class="table table-sm table-striped table-hover mb-0 sticky-header">
+                                <thead class="table-light sticky-top" style="z-index: 1;">
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th>الموظف</th>
+                                        <th class="text-end">القيمة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top10Body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="row">
+                <!-- Leaderboard Table (Full Width) -->
+                <div class="col-12">
+                    <h5 class="section-title">🏆 ترتيب الموظفين (Leaderboard)</h5>
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-custom table-hover align-middle mb-0">
+                                <thead class="sticky-top">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الموظف</th>
+                                        <th class="d-none d-md-table-cell">الفرع</th>
+                                        <th>المبيعات</th>
+                                        <th class="text-center">الهدف</th>
+                                        <th class="text-center">التحقيق %</th>
+                                        <th class="d-none d-md-table-cell">الفواتير</th>
+                                        <th class="d-none d-md-table-cell">معدل الفاتورة</th>
+                                        <th class="d-none d-md-table-cell">متوسط القطع</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboardBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
-    </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Global Data
+            let historyData = {};
+            let targetsData = {};
+            let storesData = {};
+            let storeMeta = {}; // To store manager info
+            let employeeNames = {}; // New: Arabic names map
+            let top10Chart, branchChart;
 
-    <script>
-        // Global Data
-        let historyData = {};
-        let targetsData = {};
-        let storesData = {};
-        let storeMeta = {}; // To store manager info
-        let employeeNames = {}; // New: Arabic names map
-        let top10Chart, branchChart;
+            // Fetch Data
+            async function loadData() {
+                const timestamp = new Date().getTime();
+                try {
+                    const [empRes, mgmtRes] = await Promise.all([
+                        fetch('employees_data.json?v=' + timestamp),
+                        fetch('management_data.json?v=' + timestamp)
+                    ]);
 
-        // Fetch Data
-        async function loadData() {
-            const timestamp = new Date().getTime();
-            try {
-                const [empRes, mgmtRes] = await Promise.all([
-                    fetch('employees_data.json?v=' + timestamp),
-                    fetch('management_data.json?v=' + timestamp)
-                ]);
+                    const empJson = await empRes.json();
+                    historyData = empJson.history;
+                    targetsData = empJson.targets;
+                    employeeNames = empJson.employee_names || {};
 
-                const empJson = await empRes.json();
-                historyData = empJson.history;
-                targetsData = empJson.targets;
-                employeeNames = empJson.employee_names || {};
+                    const mgmtJson = await mgmtRes.json();
+                    storesData = mgmtJson.stores;
+                    storeMeta = mgmtJson.store_meta || {};
 
-                const mgmtJson = await mgmtRes.json();
-                storesData = mgmtJson.stores;
-                storeMeta = mgmtJson.store_meta || {};
+                    populateFilters();
+                    updatePage();
 
-                // Set default custom date to today
-                document.getElementById('customDate').valueAsDate = new Date();
-
-                populateFilters();
-                updatePage();
-
-                // Debug: Show record count
-                const totalStores = Object.keys(historyData).length;
-                document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('ar-SA') + ` (Stores:
+                    // Debug: Show record count
+                    const totalStores = Object.keys(historyData).length;
+                    document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('ar-SA') + ` (Stores:
     ${totalStores})`;
 
-            } catch (err) {
-                console.error("Error loading data:", err);
-                document.getElementById('lastUpdate').textContent = "Error loading data: " + err.message;
-                document.getElementById('lastUpdate').className = "badge bg-danger";
+                } catch (err) {
+                    console.error("Error loading data:", err);
+                    document.getElementById('lastUpdate').textContent = "Error loading data: " + err.message;
+                    document.getElementById('lastUpdate').className = "badge bg-danger";
+                }
             }
-        }
 
-        function toggleDateInput() {
-            const period = document.getElementById('periodFilter').value;
-            const customDateInput = document.getElementById('customDate');
-            if (period === 'custom') {
-                customDateInput.classList.remove('d-none');
-            } else {
-                customDateInput.classList.add('d-none');
-            }
-        }
-
-        function populateFilters() {
-            // Managers
-            const managerSelect = document.getElementById('managerFilter');
-            const managers = new Set();
-            Object.values(storeMeta).forEach(meta => {
-                if (meta.manager && meta.manager !== 'online') {
-                    managers.add(meta.manager);
-                }
-            });
-            Array.from(managers).sort().forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = m;
-                managerSelect.appendChild(opt);
-            });
-
-            // Branches
-            const branchSelect = document.getElementById('branchFilter');
-            const branches = Object.keys(historyData || {});
-            branches.forEach(code => {
-                const name = storesData[code] || code;
-                const opt = document.createElement('option');
-                opt.value = code;
-                opt.textContent = name;
-                branchSelect.appendChild(opt);
-            });
-        }
-
-        function updatePage() {
-            const managerFilter = document.getElementById('managerFilter').value;
-            const branchFilter = document.getElementById('branchFilter').value;
-            const periodFilter = document.getElementById('periodFilter').value;
-            const customDateVal = document.getElementById('customDate').value;
-            const sortBy = document.getElementById('sortBy').value;
-            const searchTerm = document.getElementById('searchEmp').value.toLowerCase();
-
-            // Aggregate employee data
-            const empAgg = {};
-            const history = historyData || {};
-            const targets = targetsData || {};
-
-            // Date Filters
-            const now = new Date();
-            const currentMonthPrefix = now.toISOString().slice(0, 7); // YYYY-MM
-
-            // Calculate Yesterday
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().slice(0, 10);
-
-            const filterDate = (dateStr) => {
-                if (periodFilter === 'mtd') {
-                    return dateStr.startsWith(currentMonthPrefix);
-                } else if (periodFilter === 'yesterday') {
-                    return dateStr === yesterdayStr;
-                } else if (periodFilter === 'custom') {
-                    return dateStr === customDateVal;
-                }
-                return true;
-            };
-
-            Object.entries(history).forEach(([storeCode, records]) => {
-                // Filter by Branch
-                if (branchFilter !== 'all' && branchFilter !== storeCode) return;
-
-                // Filter by Manager
-                // If manager is selected, check if this store belongs to that manager
-                // Some stores might not use storeMeta, fallback safely
-                if (managerFilter !== 'all') {
-                    const meta = storeMeta[storeCode];
-                    if (!meta || meta.manager !== managerFilter) {
-                        return;
-                    }
-                }
-
-                records.forEach(rec => {
-                    // Data Format: [Date, Name, Sales, Trans, Items, MaxTicket]
-                    const [date, rawName, sales, trans, items, maxTicket] = rec;
-                    if (!filterDate(date)) return;
-
-                    // Clean Name & Extract ID
-                    let empName = rawName;
-                    let empId = rawName;
-
-                    if (rawName.includes('-')) {
-                        const parts = rawName.split('-');
-                        empId = parts[0].trim();
-                        empName = parts[1].trim();
-                    } else {
-                        // Fallback for names without ID prefix
-                        empId = rawName;
-                    }
-
-                    // Handle Unknown/System employees
-                    // User requested to show Unknown employees as is.
-                    // Only exclude 'merger' (returns aggregation) if desired.
-                    if (empName === 'مرتجع') return;
-
-                    // Use Arabic Name if available
-                    if (employeeNames[empId]) {
-                        empName = employeeNames[empId];
-                    }
-
-                    // Unique Key: ID preferred, else Name+Store
-                    const key = empId;
-
-                    if (!empAgg[key]) {
-                        // Lookup Target (Only relevant if MTD, but we store it anyway)
-                        let monthlyTarget = targets[empId] || 0;
-
-                        empAgg[key] = {
-                            id: empId,
-                            name: empName,
-                            storeCode: storeCode,
-                            storeName: storesData[storeCode] || storeCode,
-                            sales: 0,
-                            transactions: 0,
-                            items: 0,
-                            max_ticket: 0,
-                            target: monthlyTarget
-                        };
-                    }
-
-                    empAgg[key].sales += sales || 0;
-                    empAgg[key].transactions += trans || 0;
-                    empAgg[key].items += items || 0;
-                    if (maxTicket > empAgg[key].max_ticket) {
-                        empAgg[key].max_ticket = maxTicket;
+            function populateFilters() {
+                // Managers
+                const managerSelect = document.getElementById('managerFilter');
+                const managers = new Set();
+                Object.values(storeMeta).forEach(meta => {
+                    if (meta.manager && meta.manager !== 'online') {
+                        managers.add(meta.manager);
                     }
                 });
-            });
+                Array.from(managers).sort().forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    managerSelect.appendChild(opt);
+                });
 
-            // Convert to array
-            let empList = Object.values(empAgg).filter(e => e.sales > 0 || e.transactions > 0);
-
-            // Search filter
-            if (searchTerm) {
-                empList = empList.filter(e => e.name.toLowerCase().includes(searchTerm));
+                // Branches
+                const branchSelect = document.getElementById('branchFilter');
+                const branches = Object.keys(historyData || {});
+                branches.forEach(code => {
+                    const name = storesData[code] || code;
+                    const opt = document.createElement('option');
+                    opt.value = code;
+                    opt.textContent = name;
+                    branchSelect.appendChild(opt);
+                });
             }
 
-            // Calculate metrics
-            empList.forEach(e => {
-                e.avg_ticket = e.transactions > 0 ? e.sales / e.transactions : 0;
-                // Items per Basket (previously conversion)
-                // Items are stored negative for sales, positive for returns.
-                // We want strict "Activity Strength".
-                // Net items sold is Sum(Items) which will remain negative if sales > returns.
-                // We display absolute value.
-                e.items_per_inv = e.transactions > 0 ? Math.abs(e.items) / e.transactions : 0;
+            function updatePage() {
+                const managerFilter = document.getElementById('managerFilter').value;
+                const branchFilter = document.getElementById('branchFilter').value;
+                const periodFilter = document.getElementById('periodFilter').value;
+                const sortBy = document.getElementById('sortBy').value;
+                const searchTerm = document.getElementById('searchEmp').value.toLowerCase();
 
-                // Achievement (Only valid for MTD typically)
-                e.achievement = 0;
-                if (e.target > 0) {
+                // Aggregate employee data
+                const empAgg = {};
+                const history = historyData || {};
+                const targets = targetsData || {};
+
+                // Date Filters
+                const today = new Date();
+                // Local YYYY-MM-DD
+                const toLocalYMD = (d) => {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+
+                const todayStr = toLocalYMD(today);
+                const todayYear = today.getFullYear();
+                const todayMonth = today.getMonth(); // 0-11
+                const todayDay = today.getDate();
+                const todayVal = todayYear * 10000 + (todayMonth + 1) * 100 + todayDay; // YYYYMMDD numeric for comparison
+
+                const currentMonthPrefix = todayStr.slice(0, 7); // YYYY-MM
+
+                // Calculate Yesterday
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = toLocalYMD(yesterday);
+
+                const filterDate = (dateStr) => {
+                    const d = new Date(dateStr);
+                    const dYear = d.getFullYear();
+                    const dMonth = d.getMonth();
+                    const dDay = d.getDate();
+                    const dVal = dYear * 10000 + (dMonth + 1) * 100 + dDay;
+
                     if (periodFilter === 'mtd') {
-                        e.achievement = (e.sales / e.target) * 100;
-                    } else {
-                        // For other periods, showing monthly target achievement might be misleading.
-                        e.achievement = 0;
+                        // MTD Logic
+                        // Must be same month & year
+                        // Must be <= today
+                        if (dYear === todayYear && dMonth === todayMonth) {
+                            return dVal <= todayVal;
+                        }
+                        return false;
+                    } else if (periodFilter === 'mtd_yest') {
+                        // MTD until yesterday
+                        // Must be same month & year
+                        // Must be < today
+                        if (dYear === todayYear && dMonth === todayMonth) {
+                            return dVal < todayVal;
+                        }
+                        return false;
+                    } else if (periodFilter === 'yesterday') {
+                        return dateStr === yesterdayStr;
+                    } else if (periodFilter === 'today') {
+                        return dateStr === todayStr;
                     }
-                }
-            });
+                    return true; // Should not happen with current options
+                };
 
-            // Sort
-            if (sortBy === 'conversion') {
-                // Backward compatibility if someone had it cached
-                empList.sort((a, b) => b.items_per_inv - a.items_per_inv);
-            } else if (sortBy === 'items_per_inv') {
-                empList.sort((a, b) => b.items_per_inv - a.items_per_inv);
-            } else if (sortBy === 'achievement') {
-                empList.sort((a, b) => b.achievement - a.achievement);
-            } else {
-                empList.sort((a, b) => b[sortBy] - a[sortBy]);
-            }
+                Object.entries(history).forEach(([storeCode, records]) => {
+                    // Filter by Branch
+                    if (branchFilter !== 'all' && branchFilter !== storeCode) return;
 
-            // Update KPIs
-            const totalSales = empList.reduce((s, e) => s + e.sales, 0);
-            const totalTarget = empList.reduce((s, e) => s + (periodFilter === 'mtd' ? e.target : 0), 0);
+                    // Filter by Manager
+                    // If manager is selected, check if this store belongs to that manager
+                    // Some stores might not use storeMeta, fallback safely
+                    if (managerFilter !== 'all') {
+                        const meta = storeMeta[storeCode];
+                        if (!meta || meta.manager !== managerFilter) {
+                            return;
+                        }
+                    }
 
-            document.getElementById('totalEmployees').textContent = empList.length.toLocaleString();
-            document.getElementById('totalSales').textContent = totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })
-                ;
+                    records.forEach(rec => {
+                        // Data Format: [Date, Name, Sales, Trans, Items, MaxTicket]
+                        const [date, rawName, sales, trans, items, maxTicket] = rec;
+                        if (!filterDate(date)) return;
 
-            // KPI 3: Avg Achievement or Avg Sales
-            if (periodFilter === 'mtd' && totalTarget > 0) {
-                const totalAch = (totalSales / totalTarget) * 100;
-                document.getElementById('avgSalesPerEmpLabel').textContent = 'نسبة تحقيق الهدف';
-                document.getElementById('avgSalesPerEmp').textContent = totalAch.toFixed(1) + '%';
-                document.getElementById('avgSalesPerEmp').className = totalAch >= 80 ? 'fs-3 fw-bold text-success' : 'fs-3 fw-bold text-warning';
-            } else {
-                document.getElementById('avgSalesPerEmpLabel').textContent = 'متوسط مبيعات/موظف';
-                document.getElementById('avgSalesPerEmp').textContent = empList.length > 0
-                    ? (totalSales / empList.length).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '0';
-                document.getElementById('avgSalesPerEmp').className = 'fs-3 fw-bold';
-            }
+                        // Clean Name & Extract ID
+                        let empName = rawName;
+                        let empId = rawName;
 
-            if (empList.length > 0) {
-                // Find top by sales specifically for the card
-                const top = [...empList].sort((a, b) => b.sales - a.sales)[0];
-                document.getElementById('topEmployee').textContent = top.name;
-                document.getElementById('topEmployeeSales').textContent = top.sales.toLocaleString('en-US', {
-                    maximumFractionDigits:
-                        0
+                        if (rawName.includes('-')) {
+                            const parts = rawName.split('-');
+                            empId = parts[0].trim();
+                            empName = parts[1].trim();
+                        } else {
+                            // Fallback for names without ID prefix
+                            empId = rawName;
+                        }
+
+                        // Handle Unknown/System employees
+                        // User requested to show Unknown employees as is.
+                        // Only exclude 'merger' (returns aggregation) if desired.
+                        if (empName === 'مرتجع') return;
+
+                        // Use Arabic Name if available
+                        if (employeeNames[empId]) {
+                            empName = employeeNames[empId];
+                        }
+
+                        // Unique Key: ID preferred, else Name+Store
+                        const key = empId;
+
+                        if (!empAgg[key]) {
+                            // Lookup Target (Only relevant if MTD, but we store it anyway)
+                            let monthlyTarget = targets[empId] || 0;
+
+                            empAgg[key] = {
+                                id: empId,
+                                name: empName,
+                                storeCode: storeCode,
+                                storeName: storesData[storeCode] || storeCode,
+                                sales: 0,
+                                transactions: 0,
+                                items: 0,
+                                max_ticket: 0,
+                                target: monthlyTarget
+                            };
+                        }
+
+                        empAgg[key].sales += sales || 0;
+                        empAgg[key].transactions += trans || 0;
+                        empAgg[key].items += items || 0;
+                        if (maxTicket > empAgg[key].max_ticket) {
+                            empAgg[key].max_ticket = maxTicket;
+                        }
+                    });
                 });
-            }
 
-            // Update table
-            const tbody = document.getElementById('leaderboardBody');
-            tbody.innerHTML = empList.slice(0, 100).map((emp, idx) => {
-                const rank = idx + 1;
-                const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+                // Convert to array
+                let empList = Object.values(empAgg).filter(e => e.sales > 0 || e.transactions > 0);
 
-                // Target Display
-                const showTarget = periodFilter === 'mtd' && emp.target > 0;
-                const targetText = showTarget ? emp.target.toLocaleString() : '-';
-
-                let achBadge = '<span class="text-muted">-</span>';
-                if (showTarget) {
-                    let color = 'bg-secondary';
-                    if (emp.achievement >= 100) color = 'bg-success';
-                    else if (emp.achievement >= 80) color = 'bg-warning text-dark';
-                    else color = 'bg-danger';
-
-                    achBadge = `<span class="badge ${color}">${emp.achievement.toFixed(1)}%</span>`;
+                // Search filter
+                if (searchTerm) {
+                    empList = empList.filter(e => e.name.toLowerCase().includes(searchTerm));
                 }
 
-                return `
+                // Calculate metrics
+                empList.forEach(e => {
+                    e.avg_ticket = e.transactions > 0 ? e.sales / e.transactions : 0;
+                    // Items per Basket (previously conversion)
+                    // Items are stored negative for sales, positive for returns.
+                    // We want strict "Activity Strength".
+                    // Net items sold is Sum(Items) which will remain negative if sales > returns.
+                    // We display absolute value.
+                    e.items_per_inv = e.transactions > 0 ? Math.abs(e.items) / e.transactions : 0;
+
+                    // Achievement (Only valid for MTD typically)
+                    e.achievement = 0;
+                    if (e.target > 0) {
+                        if (periodFilter === 'mtd' || periodFilter === 'mtd_yest') {
+                            e.achievement = (e.sales / e.target) * 100;
+                        } else {
+                            // For other periods, showing monthly target achievement might be misleading.
+                            e.achievement = 0;
+                        }
+                    }
+                });
+
+                // Sort
+                if (sortBy === 'conversion') {
+                    // Backward compatibility if someone had it cached
+                    empList.sort((a, b) => b.items_per_inv - a.items_per_inv);
+                } else if (sortBy === 'items_per_inv') {
+                    empList.sort((a, b) => b.items_per_inv - a.items_per_inv);
+                } else if (sortBy === 'achievement') {
+                    empList.sort((a, b) => b.achievement - a.achievement);
+                } else {
+                    empList.sort((a, b) => b[sortBy] - a[sortBy]);
+                }
+
+                // Update KPIs
+                const totalSales = empList.reduce((s, e) => s + e.sales, 0);
+                const totalTarget = empList.reduce((s, e) => s + (periodFilter === 'mtd' ? e.target : 0), 0);
+
+                document.getElementById('totalEmployees').textContent = empList.length.toLocaleString();
+                document.getElementById('totalSales').textContent = totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })
+                    ;
+
+                // KPI 3: Avg Achievement or Avg Sales
+                if (periodFilter === 'mtd' && totalTarget > 0) {
+                    const totalAch = (totalSales / totalTarget) * 100;
+                    document.getElementById('avgSalesPerEmpLabel').textContent = 'نسبة تحقيق الهدف';
+                    document.getElementById('avgSalesPerEmp').textContent = totalAch.toFixed(1) + '%';
+                    document.getElementById('avgSalesPerEmp').className = totalAch >= 80 ? 'fs-3 fw-bold text-success' : 'fs-3 fw-bold text-warning';
+                } else {
+                    document.getElementById('avgSalesPerEmpLabel').textContent = 'متوسط مبيعات/موظف';
+                    document.getElementById('avgSalesPerEmp').textContent = empList.length > 0
+                        ? (totalSales / empList.length).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '0';
+                    document.getElementById('avgSalesPerEmp').className = 'fs-3 fw-bold';
+                }
+
+                if (empList.length > 0) {
+                    // Find top by sales specifically for the card
+                    const top = [...empList].sort((a, b) => b.sales - a.sales)[0];
+                    document.getElementById('topEmployee').textContent = top.name;
+                    document.getElementById('topEmployeeSales').textContent = top.sales.toLocaleString('en-US', {
+                        maximumFractionDigits:
+                            0
+                    });
+                }
+
+                // Update table
+                const tbody = document.getElementById('leaderboardBody');
+                tbody.innerHTML = empList.slice(0, 100).map((emp, idx) => {
+                    const rank = idx + 1;
+                    const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+
+                    // Target Display
+                    const showTarget = periodFilter === 'mtd' && emp.target > 0;
+                    const targetText = showTarget ? emp.target.toLocaleString() : '-';
+
+                    let achBadge = '<span class="text-muted">-</span>';
+                    if (showTarget) {
+                        let color = 'bg-secondary';
+                        if (emp.achievement >= 100) color = 'bg-success';
+                        else if (emp.achievement >= 80) color = 'bg-warning text-dark';
+                        else color = 'bg-danger';
+
+                        achBadge = `<span class="badge ${color}">${emp.achievement.toFixed(1)}%</span>`;
+                    }
+
+                    return `
     <tr>
         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
         <td>
@@ -586,8 +608,8 @@
         </td>
         <td class="d-none d-md-table-cell"><small class="text-muted">${emp.storeName}</small></td>
         <td class="fw-bold text-success" style="font-size:1.1em">${emp.sales.toLocaleString('en-US', {
-                    maximumFractionDigits: 0
-                })}</td>
+                        maximumFractionDigits: 0
+                    })}</td>
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
@@ -595,60 +617,60 @@
         <td class="d-none d-md-table-cell">${emp.items_per_inv.toFixed(1)}</td>
     </tr>
     `;
-            }).join('');
+                }).join('');
 
-            // Update charts
-            updateCharts(empList);
-        }
+                // Update charts
+                updateCharts(empList);
+            }
 
-        function updateCharts(empList) {
-            const metric = document.getElementById('chartMetric').value;
-            const sortOrder = document.getElementById('chartSort').value;
+            function updateCharts(empList) {
+                const metric = document.getElementById('chartMetric').value;
+                const sortOrder = document.getElementById('chartSort').value;
 
-            // 1. Sort Data
-            let sortedList = [...empList];
-            sortedList.sort((a, b) => {
-                let valA = a[metric];
-                let valB = b[metric];
-                return sortOrder === 'desc' ? valB - valA : valA - valB;
-            });
+                // 1. Sort Data
+                let sortedList = [...empList];
+                sortedList.sort((a, b) => {
+                    let valA = a[metric];
+                    let valB = b[metric];
+                    return sortOrder === 'desc' ? valB - valA : valA - valB;
+                });
 
-            // 2. Slice Top 10
-            const top10 = sortedList.slice(0, 10);
+                // 2. Slice Top 10
+                const top10 = sortedList.slice(0, 10);
 
-            // 3. Populate Table
-            const tbody = document.getElementById('top10Body');
-            tbody.innerHTML = top10.map((e, index) => {
-                // Format Value
-                let valDisplay = e[metric];
-                if (metric === 'sales' || metric === 'avg_ticket' || metric === 'max_ticket') {
-                    valDisplay = valDisplay.toLocaleString('en-US', { maximumFractionDigits: 0 });
-                } else if (metric === 'achievement') {
-                    valDisplay = valDisplay.toFixed(1) + '%';
-                } else {
-                    valDisplay = Math.round(valDisplay);
-                }
+                // 3. Populate Table
+                const tbody = document.getElementById('top10Body');
+                tbody.innerHTML = top10.map((e, index) => {
+                    // Format Value
+                    let valDisplay = e[metric];
+                    if (metric === 'sales' || metric === 'avg_ticket' || metric === 'max_ticket') {
+                        valDisplay = valDisplay.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                    } else if (metric === 'achievement') {
+                        valDisplay = valDisplay.toFixed(1) + '%';
+                    } else {
+                        valDisplay = Math.round(valDisplay);
+                    }
 
-                return `
+                    return `
                     <tr>
                         <td class="text-muted small">${index + 1}</td>
                         <td class="fw-bold">${e.name}</td>
                         <td class="text-end fw-bold text-primary">${valDisplay}</td>
                     </tr>
                 `;
-            }).join('');
+                }).join('');
 
-            // Clean up Chart instance if exists (from previous load)
-            if (top10Chart) {
-                top10Chart.destroy();
-                top10Chart = null;
+                // Clean up Chart instance if exists (from previous load)
+                if (top10Chart) {
+                    top10Chart.destroy();
+                    top10Chart = null;
+                }
             }
-        }
 
 
-        // Initialize
-        loadData();
-    </script>
+            // Initialize
+            loadData();
+        </script>
 
 </body>
 
