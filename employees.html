@@ -139,9 +139,22 @@
             <div class="d-flex gap-2 align-items-center">
                 <span class="badge bg-light text-dark border" id="lastUpdate">...</span>
                 <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">🏠 الرئيسية</a>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
     </nav>
+
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+    </script>
 
     <div class="container-fluid px-4">
 
@@ -370,7 +383,19 @@
             }
 
             function updatePage() {
-                const managerFilter = document.getElementById('managerFilter').value;
+                let managerFilter = document.getElementById('managerFilter').value;
+
+                // Enforce Permissions
+                if (currentUser.role !== 'Admin') {
+                    managerFilter = currentUser.name;
+                    // Also lock UI
+                    const mf = document.getElementById('managerFilter');
+                    if (mf.value !== currentUser.name) {
+                        mf.value = currentUser.name;
+                        mf.parentElement.style.display = 'none';
+                    }
+                }
+
                 const branchFilter = document.getElementById('branchFilter').value;
                 const periodFilter = document.getElementById('periodFilter').value;
                 const sortBy = document.getElementById('sortBy').value;

@@ -80,9 +80,23 @@
                 <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">
                     🏠 الرئيسية
                 </a>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
     </nav>
+
+    <script src="users.js"></script>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+    </script>
 
     <div class="container-fluid px-4">
 
@@ -211,12 +225,21 @@
         let currentMode = 'mtd'; // Track active mode
         let chartInstance = null;
 
+        let storeMeta = {};
+
         async function init() {
             try {
-                const res = await fetch('product_analysis_data.json?t=' + Date.now());
-                if (!res.ok) throw new Error("Failed to load data");
+                // Fetch both data files
+                const [resAnalysis, resMgmt] = await Promise.all([
+                    fetch('product_analysis_data.json?t=' + Date.now()),
+                    fetch('management_data.json?t=' + Date.now())
+                ]);
 
-                rawData = await res.json();
+                if (!resAnalysis.ok || !resMgmt.ok) throw new Error("Failed to load data");
+
+                rawData = await resAnalysis.json();
+                const mgmtData = await resMgmt.json();
+                storeMeta = mgmtData.store_meta || {};
 
                 // Update Badge for period
                 const meta = rawData.metadata || {};
@@ -291,7 +314,15 @@
             let totalSales = 0;
 
             if (currentData) {
-                Object.values(currentData).forEach(store => {
+                Object.values(currentData).forEach((store, idx) => {
+                    const storeId = Object.keys(currentData)[idx]; // Need ID to check meta
+
+                    // Filter for Global Stats too
+                    if (currentUser.role !== 'Admin') {
+                        const meta = storeMeta[storeId];
+                        if (!meta || meta.manager !== currentUser.name) return;
+                    }
+
                     store.categories.forEach(cat => {
                         if (!globalCats[cat.category]) {
                             globalCats[cat.category] = { qty: 0, amount: 0 };
@@ -351,9 +382,19 @@
             }
 
             // Convert to array and sort by Total Sales
-            const outlets = Object.entries(currentData).map(([id, data]) => ({
+            let outlets = Object.entries(currentData).map(([id, data]) => ({
                 id, ...data
-            })).sort((a, b) => b.total_sales - a.total_sales);
+            }));
+
+            // Permission Filter
+            if (currentUser.role !== 'Admin') {
+                outlets = outlets.filter(o => {
+                    const meta = storeMeta[o.id];
+                    return meta && meta.manager === currentUser.name;
+                });
+            }
+
+            outlets.sort((a, b) => b.total_sales - a.total_sales);
 
             outlets.forEach((o, i) => {
                 // Find top category

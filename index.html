@@ -144,11 +144,25 @@
                 <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
                     📦 تحليل المنتجات
                 </a>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">تسجيل خروج</button>
                 <!-- Filters Removed (Moved to Main Body) -->
                 <span class="badge bg-light text-dark border d-flex align-items-center" id="lastUpdate">...</span>
             </div>
         </div>
     </nav>
+
+    <script>
+        // Session Check
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+    </script>
 
     <div class="container-fluid px-4">
 
@@ -578,6 +592,15 @@
                 // Ensure UI reflects Custom Mode
                 toggleFilterMode();
 
+                // Apply Permissions
+                if (currentUser.role !== 'Admin') {
+                    // Hide Manager Filter
+                    document.getElementById('managerFilter').parentElement.style.display = 'none';
+                    // Force Select (Visual)
+                    mSelect.value = currentUser.name;
+                    mSelect.disabled = true;
+                }
+
                 updateDashboard();
             } catch (e) { console.error(e); }
         }
@@ -606,7 +629,15 @@
             const mode = document.getElementById('filterMode').value;
             const selBranch = document.getElementById('branchFilter').value;
             const selCity = document.getElementById('cityFilter').value;
-            const selManager = document.getElementById('managerFilter').value;
+
+            // Manager Filter Logic (Security)
+            let selManager = document.getElementById('managerFilter').value;
+
+            if (currentUser.role !== 'Admin') {
+                // Enforce current user as manager
+                selManager = currentUser.name;
+            }
+
             const selType = document.getElementById('typeFilter').value;
 
             let currentStart, currentEnd;
