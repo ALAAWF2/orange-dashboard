@@ -209,7 +209,7 @@
 
                 <!-- Standard Filters (Year/Month) -->
                 <div id="stdFilters" class="col-md-auto d-flex gap-2">
-                    <div>
+                    <div id="yearFilterContainer">
                         <label class="form-label small text-muted fw-bold">السنة</label>
                         <select id="yearFilter" class="form-select form-select-sm" onchange="updateDashboard()">
                             <option value="2026" selected>2026</option>
@@ -217,7 +217,7 @@
                             <option value="2024">2024</option>
                         </select>
                     </div>
-                    <div>
+                    <div id="monthFilterContainer">
                         <label class="form-label small text-muted fw-bold">الشهر</label>
                         <select id="monthFilter" class="form-select form-select-sm" onchange="updateDashboard()">
                             <option value="all">كل السنة</option>
@@ -640,6 +640,22 @@
                     mSelect.disabled = true;
                 }
 
+                // [CUSTOM REQUEST] Add Ramadan Filter for Sales Manager ONLY
+                if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
+                    // Note: User asked for "Sales Manager" specifically, but Admin role check is safer/broader.
+                    // Adjusted to be strict on name if preferred, but usually Role is better. 
+                    // User said: "When sales manager logs in..."
+                    // The login for Sales Manager has role 'Admin' (see users.js).
+                    // So we can check for that, or specific name. Let's use specific name to be precise to the request.
+                    if (currentUser.name === 'Sales Manager') {
+                        const fm = document.getElementById('filterMode');
+                        const opt = document.createElement('option');
+                        opt.value = 'ramadan';
+                        opt.textContent = 'مقارنة رمضان (Ramadan)';
+                        fm.appendChild(opt);
+                    }
+                }
+
                 updateDashboard();
             } catch (e) { console.error(e); }
         }
@@ -649,13 +665,24 @@
             const mode = document.getElementById('filterMode').value;
             const std = document.getElementById('stdFilters');
             const cust = document.getElementById('customFilters');
+            const yearC = document.getElementById('yearFilterContainer');
+            const monthC = document.getElementById('monthFilterContainer');
 
             if (mode === 'custom') {
                 std.style.display = 'none';
                 cust.style.display = 'flex';
-            } else {
+            } else if (mode === 'ramadan') {
                 std.style.display = 'flex';
                 cust.style.display = 'none';
+                // Show Year, Hide Month
+                yearC.style.display = 'block';
+                monthC.style.display = 'none';
+            } else {
+                // Standard
+                std.style.display = 'flex';
+                cust.style.display = 'none';
+                yearC.style.display = 'block';
+                monthC.style.display = 'block';
             }
         }
 
@@ -749,6 +776,32 @@
                 prevEnd = new Date(currentEnd);
                 prevEnd.setFullYear(prevEnd.getFullYear() - 1);
 
+            } else if (mode === 'ramadan') {
+                // Ramadan Logic
+                const selYear = parseInt(document.getElementById('yearFilter').value);
+                const rDates = rawData.metadata.ramadan_dates || [];
+
+                // Find Current Ramadan
+                const currR = rDates.find(r => r.year === selYear);
+                const prevR = rDates.find(r => r.year === selYear - 1);
+
+                if (currR) {
+                    currentStart = new Date(currR.start);
+                    currentEnd = new Date(currR.end);
+                } else {
+                    currentStart = new Date(selYear, 0, 1);
+                    currentEnd = new Date(selYear, 0, 1);
+                }
+
+                if (prevR) {
+                    prevStart = new Date(prevR.start);
+                    prevEnd = new Date(prevR.end);
+                } else {
+                    prevStart = new Date(currentStart);
+                    prevStart.setFullYear(prevStart.getFullYear() - 1);
+                    prevEnd = new Date(currentEnd);
+                    prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+                }
             } else {
                 // Standard (Year/Month)
                 const selYear = parseInt(document.getElementById('yearFilter').value);
@@ -781,6 +834,9 @@
 
                 prevEnd = new Date(currentEnd);
                 prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+
+
+
             }
 
             // Debug Dates
