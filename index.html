@@ -380,15 +380,17 @@
                             <table class="table table-striped table-hover mb-0 align-middle">
                                 <thead class="table-light sticky-top" style="z-index: 1;">
                                     <tr>
-                                        <th>#</th>
+                                        <th class="text-center">#</th>
                                         <th>الفرع</th>
-                                        <th>مبيعات الأمس</th>
+                                        <th onclick="setDailySort('salesY')" style="cursor: pointer;">مبيعات الأمس ↕
+                                        </th>
                                         <th class="text-muted" style="font-size: 0.9em;">العام الماضي</th>
-                                        <th>النمو %</th>
-                                        <th>فواتير</th>
-                                        <th>متوسط الفاتورة (Inv Rate)</th>
-                                        <th>زوار</th>
-                                        <th>تحويل %</th>
+                                        <th onclick="setDailySort('growth')" style="cursor: pointer;">النمو % ↕</th>
+                                        <th onclick="setDailySort('transY')" style="cursor: pointer;">فواتير ↕</th>
+                                        <th onclick="setDailySort('avgInv')" style="cursor: pointer;">متوسط الفاتورة
+                                            (Inv Rate) ↕</th>
+                                        <th onclick="setDailySort('visitY')" style="cursor: pointer;">زوار ↕</th>
+                                        <th onclick="setDailySort('conv')" style="cursor: pointer;">تحويل % ↕</th>
                                     </tr>
                                 </thead>
                                 <tbody id="dailyTableBody">
@@ -535,7 +537,9 @@
         let charts = {};
 
         // Sorting State
+
         let currentSort = { col: 'val', asc: false }; // Default: Sales Desc
+        let dailySort = { col: 'salesY', asc: false }; // Daily Report Sort
 
         function setSort(col) {
             if (currentSort.col === col) {
@@ -545,6 +549,16 @@
                 currentSort.asc = false; // Default desc for new col
             }
             updateDashboard();
+        }
+
+        function setDailySort(col) {
+            if (dailySort.col === col) {
+                dailySort.asc = !dailySort.asc;
+            } else {
+                dailySort.col = col;
+                dailySort.asc = false;
+            }
+            renderDailyReport();
         }
 
         async function init() {
@@ -1071,9 +1085,21 @@
             // 2. Aggregate Data
             let stats = {}; // StoreID -> { salesY, salesLY, transY, visitY }
 
+            // Manager Filter Logic (Same as Dashboard)
+            let selManager = document.getElementById('managerFilter').value;
+            if (currentUser.role !== 'Admin') {
+                selManager = currentUser.name;
+            }
+
             // Initialize all stores
             Object.keys(rawData.stores).forEach(sid => {
                 if (sid !== '0' && sid !== '9999') { // Skip Warehouse/Unknown if desired
+                    // Check Manager Filter
+                    if (selManager !== 'all') {
+                        let meta = rawData.store_meta ? rawData.store_meta[sid] : null;
+                        if (!meta || meta.manager !== selManager) return;
+                    }
+
                     stats[sid] = { salesY: 0, salesLY: 0, transY: 0, visitY: 0 };
                 }
             });
@@ -1111,7 +1137,18 @@
                 dailyList.push({ sid, name, ...d, growth, avgInv, conv });
             });
 
-            dailyList.sort((a, b) => b.salesY - a.salesY);
+            // Sort Daily List
+            dailyList.sort((a, b) => {
+                let valA = a[dailySort.col];
+                let valB = b[dailySort.col];
+                // Handle strings (names) although mostly numbers
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                if (valA < valB) return dailySort.asc ? -1 : 1;
+                if (valA > valB) return dailySort.asc ? 1 : -1;
+                return 0;
+            });
 
             // 4. Render Table
             const tbody = document.getElementById('dailyTableBody');
