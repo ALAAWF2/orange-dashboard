@@ -33,8 +33,16 @@ async function generatePDF() {
 
     // --- Filter Stores ---
     let targetStores = [];
+    const selManager = document.getElementById('managerFilter') ? document.getElementById('managerFilter').value : 'all';
+
     if (currentUser.role === 'Admin') {
-        targetStores = Object.keys(storeMeta).filter(id => storeMeta[id].type === 'Showroom');
+        targetStores = Object.keys(storeMeta).filter(id => {
+            const meta = storeMeta[id];
+            if (meta.type !== 'Showroom') return false;
+            // Apply Manager Filter if selected
+            if (selManager !== 'all' && meta.manager !== selManager) return false;
+            return true;
+        });
     } else {
         targetStores = Object.keys(storeMeta).filter(id => {
             const meta = storeMeta[id];
@@ -76,6 +84,7 @@ async function generatePDF() {
         // --- Table ---
         let rows = [];
         let grandTotalSales = 0;
+        let grandSalesLY = 0; // Track Last Year Total
         let grandTarget = 0;
         let grandVisitors = 0;
         let grandTrans = 0;
@@ -115,6 +124,7 @@ async function generatePDF() {
             ]);
 
             grandTotalSales += sales;
+            grandSalesLY += salesLY; // Accumulate Last Year
             grandTarget += target;
             grandVisitors += visitors;
             grandTrans += trans;
@@ -124,14 +134,15 @@ async function generatePDF() {
 
         // Totals
         const grandAch = grandTarget > 0 ? ((grandTotalSales / grandTarget) * 100).toFixed(1) + '%' : '-';
+        const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100).toFixed(1) + '%' : '-';
         const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
         const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100).toFixed(1) + '%' : '-';
 
         rows.push([
-            "Total",
+            "الإجمالي",
             Math.round(grandTotalSales).toLocaleString(),
-            "-",
-            "-",
+            Math.round(grandSalesLY).toLocaleString(),
+            grandGrowth,
             Math.round(grandTarget).toLocaleString(),
             grandAch,
             grandTrans,
@@ -141,7 +152,7 @@ async function generatePDF() {
         ]);
 
         doc.autoTable({
-            head: [['Date', 'Sales 2026', 'Sales 2025', 'Growth %', 'Target', 'Ach %', 'Trans', 'Avg Inv', 'Visitors', 'Conv %']],
+            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'الهدف', 'التحقيق %', 'الفواتير', 'متوسط الفاتورة', 'الزوار', 'التحويل %']],
             body: rows,
             startY: 40,
             theme: 'grid',
@@ -162,7 +173,7 @@ async function generatePDF() {
                 cellPadding: 2
             },
             didParseCell: function (data) {
-                if (data.row.raw[0] === 'Total') {
+                if (data.row.raw[0] === 'الإجمالي') {
                     // Note: 'bold' might fail if we only loaded 'normal' font. 
                     // jsPDF might fake it or revert. Let's keep it safe.
                     data.cell.styles.fillColor = [240, 240, 240];
