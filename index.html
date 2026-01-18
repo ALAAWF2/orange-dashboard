@@ -385,9 +385,10 @@
                                         <th onclick="setDailySort('salesY')" style="cursor: pointer;">مبيعات الأمس ↕
                                         </th>
                                         <th class="text-muted" style="font-size: 0.9em;">العام الماضي</th>
-                                        <th onclick="setDailySort('targetAch')" style="cursor: pointer;">التحقيق % ↕
+                                        <th onclick="setDailySort('growth')" style="cursor: pointer;">النمو % ↕
                                         </th>
-                                        <th onclick="setDailySort('dailyReq')" style="cursor: pointer;">المطلوب يومياً ↕
+                                        <th onclick="setDailySort('dailyReq')" style="cursor: pointer;">اليومية المتبقية
+                                            (Rem. Daily) ↕
                                         </th>
                                         <th onclick="setDailySort('trans')" style="cursor: pointer;">عدد الفواتير ↕</th>
                                         <th onclick="setDailySort('avgInv')" style="cursor: pointer;">متوسط الفاتورة
@@ -1037,6 +1038,9 @@
                     dailyReq = (target - val) / remainingDays;
                 }
 
+                // Save to Global Map for Daily Report usage
+                globalDailyReq[sid] = dailyReq;
+
                 // New Metrics
                 let absGrowth = val - prevVal;
 
@@ -1091,11 +1095,17 @@
             renderDailyReport();
         }
 
-        // --- Daily Report Logic (Yesterday vs Last Year) ---
+        // Global Data for Daily Report
+        let globalDailyReq = {};
+
+        // Global Data for Daily Report
+        // let globalDailyReq = {}; // Already defined above? No, ensuring it's global.
+        // Actually line 1099 has it.
+
         function renderDailyReport() {
             if (!rawData) return;
+            // Removed incorrect updateDashboard logic from here
 
-            // 1. Determine "Yesterday"
             let today = new Date();
             let yesterday = new Date(today);
             yesterday.setDate(today.getDate() - 1);
@@ -1168,8 +1178,9 @@
 
                 let avgInv = d.transY > 0 ? d.salesY / d.transY : 0;
                 let conv = d.visitY > 0 ? (d.transY / d.visitY) * 100 : 0;
+                let dailyReq = globalDailyReq[sid] || 0;
 
-                dailyList.push({ sid, name, ...d, growth, avgInv, conv });
+                dailyList.push({ sid, name, ...d, growth, avgInv, conv, dailyReq });
             });
 
             // Sort Daily List
@@ -1191,6 +1202,8 @@
 
             dailyList.forEach((r, i) => {
                 let tr = document.createElement('tr');
+                let dReq = globalDailyReq[r.sid] || 0;
+
                 tr.innerHTML = `
                     <td>${i + 1}</td>
                     <td class="fw-bold fs-6">
@@ -1199,6 +1212,7 @@
                     <td class="fw-bold">${r.salesY.toLocaleString()}</td>
                     <td class="text-secondary">${r.salesLY.toLocaleString()}</td>
                     <td class="${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
+                    <td class="fw-bold text-danger">${dReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td>${r.transY.toLocaleString()}</td>
                     <td>${r.avgInv.toFixed(0)}</td>
                     <td>${r.visitY.toLocaleString()}</td>
