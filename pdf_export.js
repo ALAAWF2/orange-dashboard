@@ -152,7 +152,7 @@ async function generatePDF() {
         ]);
 
         doc.autoTable({
-            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'الهدف', 'التحقيق %', 'الفواتير', 'متوسط الفاتورة', 'الزوار', 'التحويل %']],
+            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'الهدف', 'التحقيق %', 'عدد الفواتير', 'متوسط الفاتورة', 'الزوار', 'التحويل %']],
             body: rows,
             startY: 40,
             theme: 'grid',
@@ -160,18 +160,22 @@ async function generatePDF() {
                 fillColor: [254, 121, 0],
                 textColor: 255,
                 halign: 'center',
+                valign: 'middle',
                 font: fontName // Arabic in Header
             },
             columnStyles: {
-                0: { halign: 'center' },
-                1: { halign: 'right', fontStyle: 'bold' },
-                5: { halign: 'center', textColor: [0, 128, 0] },
+                0: { halign: 'center', cellWidth: 25 }, // Date
+                1: { halign: 'center', fontStyle: 'bold' }, // Sales 2026
+                5: { halign: 'center', textColor: [0, 128, 0] }, // Ach
             },
             styles: {
                 font: fontName, // Arabic in body
-                fontSize: 10,
-                cellPadding: 2
+                fontSize: 8, // Smaller font to fit page
+                cellPadding: 1.5,
+                halign: 'center', // Global Center Align
+                valign: 'middle'
             },
+            margin: { top: 15, bottom: 15, left: 10, right: 10 },
             didParseCell: function (data) {
                 if (data.row.raw[0] === 'الإجمالي') {
                     // Note: 'bold' might fail if we only loaded 'normal' font. 
