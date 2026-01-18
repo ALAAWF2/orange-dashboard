@@ -77,8 +77,65 @@ async function generatePDF() {
         doc.setFontSize(18);
         doc.text(`${storeId} - ${storeName}`, 14, 20);
 
+        // Calculate Daily Required
+        const nowReq = new Date();
+        const lastDayOfMonth = new Date(nowReq.getFullYear(), nowReq.getMonth() + 1, 0).getDate();
+        let remainingDays = lastDayOfMonth - nowReq.getDate() + 1;
+        if (remainingDays < 1) remainingDays = 1;
+
+        let grandTgt = 0;
+        // We need total target to calc daily req? 
+        // Or can we get it from getDayData loop? 
+        // We iterate dates later. We need it NOW for header.
+        // We can pre-sum target? Or just fetch target for *month* from rawData (faster).
+        // Actually, logic inside loop sums it up.
+        // We can print the header *after* the loop? No, header is top.
+        // We have to pre-calc target.
+        // Let's iterate rawData.targets for this store/month?
+        // Or simpler: Just accept we print it at the end? No.
+
+        // Quick Pre-calc Target
+        let totalTargetForMonth = 0;
+        let totalSalesForMonth = 0;
+
+        // We need date range of report (startDate to endDate) or *Whole Month*?
+        // "Daily Required" implies "For the Whole Month Target".
+        // Our 'startDate' is 1st of month. 'endDate' is yesterday.
+        // 'target' usually exists for whole month in DB, but rawData.targets is daily breakdown?
+        // Let's sum daily targets for the full month range (1 to lastDay).
+
+        let mStart = new Date(startDate);
+        let mEnd = new Date(today.getFullYear(), today.getMonth(), lastDayOfMonth);
+
+        // Sum from rawData
+        // Optimization: rawData Is array of [date, store, val]. 
+        // filter is expensive if many records.
+        // But we are in a loop for PDF generation, user waits.
+        // Let's do a quick filter.
+
+        const sumVal = (dataset, sDate, eDate) => {
+            let sum = 0;
+            if (!dataset) return 0;
+            dataset.forEach(([d, s, v]) => {
+                if (s === storeId) {
+                    let dt = new Date(d);
+                    if (dt >= sDate && dt <= eDate) sum += v;
+                }
+            });
+            return sum;
+        };
+
+        totalTargetForMonth = sumVal(rawData.targets, mStart, mEnd);
+        totalSalesForMonth = sumVal(rawData.sales, mStart, mEnd); // Only up to 'today' effectively as future is 0
+
+        let dailyReq = 0;
+        if (totalTargetForMonth > totalSalesForMonth) {
+            dailyReq = (totalTargetForMonth - totalSalesForMonth) / remainingDays;
+        }
+
         doc.setFontSize(12);
         doc.text(`Manager: ${meta.manager}`, 14, 28);
+        doc.text(`Daily Required: ${Math.round(dailyReq).toLocaleString()}`, 100, 28); // Add nicely
         doc.text(`Date: ${startDate.toLocaleDateString('en-CA')} to ${endDate.toLocaleDateString('en-CA')}`, 14, 34);
 
         // --- Table ---

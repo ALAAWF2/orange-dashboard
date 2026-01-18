@@ -385,8 +385,11 @@
                                         <th onclick="setDailySort('salesY')" style="cursor: pointer;">مبيعات الأمس ↕
                                         </th>
                                         <th class="text-muted" style="font-size: 0.9em;">العام الماضي</th>
-                                        <th onclick="setDailySort('growth')" style="cursor: pointer;">النمو % ↕</th>
-                                        <th onclick="setDailySort('transY')" style="cursor: pointer;">فواتير ↕</th>
+                                        <th onclick="setDailySort('targetAch')" style="cursor: pointer;">التحقيق % ↕
+                                        </th>
+                                        <th onclick="setDailySort('dailyReq')" style="cursor: pointer;">المطلوب يومياً ↕
+                                        </th>
+                                        <th onclick="setDailySort('trans')" style="cursor: pointer;">عدد الفواتير ↕</th>
                                         <th onclick="setDailySort('avgInv')" style="cursor: pointer;">متوسط الفاتورة
                                             (Inv Rate) ↕</th>
                                         <th onclick="setDailySort('visitY')" style="cursor: pointer;">زوار ↕</th>
@@ -1003,6 +1006,12 @@
                 ...Object.keys(curr.branchTarget), ...Object.keys(curr.branchTrans), ...Object.keys(curr.branchVisitors)
             ]);
 
+            // Calculate Remaining Days
+            const nowForReq = new Date();
+            const lastDayOfMonth = new Date(nowForReq.getFullYear(), nowForReq.getMonth() + 1, 0).getDate();
+            let remainingDays = lastDayOfMonth - nowForReq.getDate() + 1;
+            if (remainingDays < 1) remainingDays = 1;
+
             allStores.forEach(sid => {
                 let name = rawData.stores[sid] || sid;
 
@@ -1020,11 +1029,17 @@
                 let conv = visitors > 0 ? (trans / visitors) * 100 : 0;
                 let custVal = visitors > 0 ? val / visitors : 0;
 
+                // Daily Required Calculation
+                let dailyReq = 0;
+                if (target > val) {
+                    dailyReq = (target - val) / remainingDays;
+                }
+
                 // New Metrics
                 let absGrowth = val - prevVal;
 
                 branchList.push({
-                    name, val, prevVal, growth, absGrowth, target, trans, visitors, ach, avgInv, conv, custVal
+                    name, val, prevVal, growth, absGrowth, target, trans, visitors, ach, avgInv, conv, custVal, dailyReq
                 });
             });
 
@@ -1063,6 +1078,9 @@
                     <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center">${b.avgInv.toFixed(0)}</td>
                     <td class="text-center">${b.visitors.toLocaleString()}</td>
+                    <td class="text-center ${(b.ach || 0) >= 100 ? 'text-success' : 'text-warning'} fw-bold" dir="ltr">${(b.ach || 0).toFixed(1)}%</td>
+                    <td class="text-center text-danger fw-bold">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
                     <td class="text-center">${b.conv.toFixed(1)}%</td>
                 `;
