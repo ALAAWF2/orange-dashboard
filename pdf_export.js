@@ -94,57 +94,49 @@ async function generatePDF() {
         // Let's iterate rawData.targets for this store/month?
         // Or simpler: Just accept we print it at the end? No.
 
-        // Quick Pre-calc Target
-        let totalTargetForMonth = 0;
-        let totalSalesForMonth = 0;
-
-        // We need date range of report (startDate to endDate) or *Whole Month*?
-        // "Daily Required" implies "For the Whole Month Target".
-        // Our 'startDate' is 1st of month. 'endDate' is yesterday.
-        // 'target' usually exists for whole month in DB, but rawData.targets is daily breakdown?
-        // Let's sum daily targets for the full month range (1 to lastDay).
+        // --- 1. Pre-calculate Totals for Header ---
+        let headerTotalTarget = 0;
+        let headerTotalSales = 0;
 
         let mStart = new Date(startDate);
-        let mEnd = new Date(today.getFullYear(), today.getMonth(), lastDayOfMonth);
+        let mEnd = new Date(endDate);
 
-        // Sum from rawData
-        // Optimization: rawData Is array of [date, store, val]. 
-        // filter is expensive if many records.
-        // But we are in a loop for PDF generation, user waits.
-        // Let's do a quick filter.
-
-        const sumVal = (dataset, sDate, eDate) => {
-            let sum = 0;
-            if (!dataset) return 0;
-            dataset.forEach(([d, s, v]) => {
-                if (s === storeId) {
-                    let dt = new Date(d);
-                    if (dt >= sDate && dt <= eDate) sum += v;
-                }
-            });
-            return sum;
-        };
-
-        totalTargetForMonth = sumVal(rawData.targets, mStart, mEnd);
-        totalSalesForMonth = sumVal(rawData.sales, mStart, mEnd); // Only up to 'today' effectively as future is 0
+        let preLoopDate = new Date(mStart);
+        while (preLoopDate <= mEnd) {
+            const dateStr = preLoopDate.toLocaleDateString('en-CA');
+            const dayData = getDayData(storeId, dateStr);
+            headerTotalTarget += dayData.target || 0;
+            headerTotalSales += dayData.sales || 0;
+            preLoopDate.setDate(preLoopDate.getDate() + 1);
+        }
 
         let dailyReq = 0;
-        if (totalTargetForMonth > totalSalesForMonth) {
-            dailyReq = (totalTargetForMonth - totalSalesForMonth) / remainingDays;
+        if (headerTotalTarget > headerTotalSales) {
+            dailyReq = (headerTotalTarget - headerTotalSales) / remainingDays;
         }
+
+        const achPct = headerTotalTarget > 0 ? ((headerTotalSales / headerTotalTarget) * 100).toFixed(1) : '0.0';
+
+        // --- 2. Draw Header ---
+        doc.setFontSize(18);
+        doc.text(`${storeId} - ${storeName}`, 14, 20);
 
         doc.setFontSize(12);
         doc.text(`Manager: ${meta.manager}`, 14, 28);
-        doc.text(`Daily Required: ${Math.round(dailyReq).toLocaleString()}`, 100, 28); // Add nicely
         doc.text(`Date: ${startDate.toLocaleDateString('en-CA')} to ${endDate.toLocaleDateString('en-CA')}`, 14, 34);
 
-        // --- Table ---
+        // Summary KPIs Line
+        // Format: "Remaining Daily: X | Achievement: Y% | Goal: Z"
+        const kpiText = `اليومية المتبقية: ${Math.round(dailyReq).toLocaleString()}   |   التحقيق: ${achPct}%   |   الهدف: ${Math.round(headerTotalTarget).toLocaleString()}`;
+        doc.text(kpiText, 200, 28, { align: 'right' });
+
+        // --- 3. Build Table Rows ---
         let rows = [];
         let grandTotalSales = 0;
-        let grandSalesLY = 0; // Track Last Year Total
-        let grandTarget = 0;
+        let grandSalesLY = 0;
+        // let grandTarget = 0; // Not needed in table anymore
         let grandVisitors = 0;
-        let grandVisitorsLY = 0; // Track Last Year Visitors
+        let grandVisitorsLY = 0;
         let grandTrans = 0;
 
         let loopDate = new Date(startDate);
@@ -153,7 +145,7 @@ async function generatePDF() {
             const dayData = getDayData(storeId, dateStr);
 
             const sales = dayData.sales || 0;
-            const target = dayData.target || 0;
+            // const target = dayData.target || 0;
             const visitors = dayData.visitors || 0;
             const trans = dayData.trans || 0;
 
@@ -165,7 +157,6 @@ async function generatePDF() {
             const visitorsLY = lyData.visitors || 0;
 
             const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100).toFixed(1) + '%' : '-';
-            const ach = target > 0 ? ((sales / target) * 100).toFixed(1) + '%' : '-';
             const avgInv = trans > 0 ? Math.round(sales / trans) : 0;
             const conv = visitors > 0 ? ((trans / visitors) * 100).toFixed(1) + '%' : '-';
 
@@ -174,8 +165,6 @@ async function generatePDF() {
                 Math.round(sales).toLocaleString(),
                 Math.round(salesLY).toLocaleString(),
                 growth,
-                Math.round(target).toLocaleString(),
-                ach,
                 trans,
                 avgInv,
                 visitors,
@@ -184,17 +173,16 @@ async function generatePDF() {
             ]);
 
             grandTotalSales += sales;
-            grandSalesLY += salesLY; // Accumulate Last Year
-            grandTarget += target;
+            grandSalesLY += salesLY;
+            // grandTarget += target;
             grandVisitors += visitors;
-            grandVisitorsLY += visitorsLY; // Accumulate Last Year Visitors
+            grandVisitorsLY += visitorsLY;
             grandTrans += trans;
 
             loopDate.setDate(loopDate.getDate() + 1);
         }
 
-        // Totals
-        const grandAch = grandTarget > 0 ? ((grandTotalSales / grandTarget) * 100).toFixed(1) + '%' : '-';
+        // Totals Row
         const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100).toFixed(1) + '%' : '-';
         const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
         const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100).toFixed(1) + '%' : '-';
@@ -204,8 +192,6 @@ async function generatePDF() {
             Math.round(grandTotalSales).toLocaleString(),
             Math.round(grandSalesLY).toLocaleString(),
             grandGrowth,
-            Math.round(grandTarget).toLocaleString(),
-            grandAch,
             grandTrans,
             grandAvgInv,
             grandVisitors,
@@ -214,7 +200,7 @@ async function generatePDF() {
         ]);
 
         doc.autoTable({
-            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'الهدف', 'التحقيق %', 'عدد الفواتير', 'متوسط الفاتورة', 'زوار 2026', 'زوار 2025', 'التحويل %']],
+            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'زوار 2026', 'زوار 2025', 'التحويل %']],
             body: rows,
             startY: 40,
             theme: 'grid',
@@ -223,25 +209,22 @@ async function generatePDF() {
                 textColor: 255,
                 halign: 'center',
                 valign: 'middle',
-                font: fontName // Arabic in Header
+                font: fontName
             },
             columnStyles: {
-                0: { halign: 'center', cellWidth: 25 }, // Date
-                1: { halign: 'center', fontStyle: 'bold' }, // Sales 2026
-                5: { halign: 'center', textColor: [0, 128, 0] }, // Ach
+                0: { halign: 'center', cellWidth: 25 },
+                1: { halign: 'center', fontStyle: 'bold' },
             },
             styles: {
-                font: fontName, // Arabic in body
-                fontSize: 8, // Smaller font to fit page
+                font: fontName,
+                fontSize: 8,
                 cellPadding: 1.5,
-                halign: 'center', // Global Center Align
+                halign: 'center',
                 valign: 'middle'
             },
             margin: { top: 15, bottom: 15, left: 10, right: 10 },
             didParseCell: function (data) {
                 if (data.row.raw[0] === 'الإجمالي') {
-                    // Note: 'bold' might fail if we only loaded 'normal' font. 
-                    // jsPDF might fake it or revert. Let's keep it safe.
                     data.cell.styles.fillColor = [240, 240, 240];
                 }
             }
