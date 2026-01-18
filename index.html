@@ -431,16 +431,24 @@
                             <thead>
                                 <tr>
                                     <th class="text-center">#</th>
-                                    <th>الفرع (Branch)</th>
+                                    <th onclick="setSort('name')" style="cursor: pointer;">الفرع (Branch) ↕</th>
                                     <th class="text-center" onclick="setSort('val')" style="cursor: pointer;">المبيعات
                                         (Sales) ↕</th>
-                                    <th class="text-center">الهدف (Target)</th>
+                                    <th class="text-center" onclick="setSort('prevVal')" style="cursor: pointer;">مبيعات
+                                        العام السابق (Last Year) ↕</th>
+                                    <th class="text-center" onclick="setSort('target')" style="cursor: pointer;">الهدف
+                                        (Target) ↕</th>
                                     <th class="text-center" onclick="setSort('ach')" style="cursor: pointer;">
                                         التحقيق (%)
                                         ↕</th>
-                                    <th class="text-center">النمو (Growth)</th>
-                                    <th class="text-center">الفواتير (Trans)</th>
-                                    <th class="text-center">متوسط الفاتورة (Inv Rate)</th>
+                                    <th class="text-center" onclick="setSort('growth')" style="cursor: pointer;">النمو
+                                        (Growth %) ↕</th>
+                                    <th class="text-center" onclick="setSort('absGrowth')" style="cursor: pointer;">قيمة
+                                        النمو (Growth Val) ↕</th>
+                                    <th class="text-center" onclick="setSort('trans')" style="cursor: pointer;">الفواتير
+                                        (Trans) ↕</th>
+                                    <th class="text-center" onclick="setSort('avgInv')" style="cursor: pointer;">متوسط
+                                        الفاتورة (Inv Rate) ↕</th>
                                     <th class="text-center" onclick="setSort('visitors')" style="cursor: pointer;">
                                         الزوار (Visitors) ↕</th>
                                     <th class="text-center" onclick="setSort('custVal')" style="cursor: pointer;">قيمة
@@ -1012,8 +1020,11 @@
                 let conv = visitors > 0 ? (trans / visitors) * 100 : 0;
                 let custVal = visitors > 0 ? val / visitors : 0;
 
+                // New Metrics
+                let absGrowth = val - prevVal;
+
                 branchList.push({
-                    name, val, prevVal, growth, target, trans, visitors, ach, avgInv, conv, custVal
+                    name, val, prevVal, growth, absGrowth, target, trans, visitors, ach, avgInv, conv, custVal
                 });
             });
 
@@ -1021,7 +1032,11 @@
             branchList.sort((a, b) => {
                 let valA = a[currentSort.col];
                 let valB = b[currentSort.col];
-                // Handle names (strings) just in case, though usually numbers
+
+                // Handle strings (names) although mostly numbers
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
                 if (valA < valB) return currentSort.asc ? -1 : 1;
                 if (valA > valB) return currentSort.asc ? 1 : -1;
                 return 0;
@@ -1040,9 +1055,11 @@
                     <td class="text-center"><span class="rank-badge">${i + 1}</span></td>
                     <td class="fw-bold fs-6">${b.name}</td>
                     <td class="text-center">${b.val.toLocaleString()}</td>
+                    <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
                     <td class="text-center">${b.target.toLocaleString()}</td>
                     <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
                     <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
+                    <td class="text-center ${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.absGrowth.toLocaleString()}</td>
                     <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center">${b.avgInv.toFixed(0)}</td>
                     <td class="text-center">${b.visitors.toLocaleString()}</td>
