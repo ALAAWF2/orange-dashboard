@@ -87,6 +87,7 @@ async function generatePDF() {
         let grandSalesLY = 0; // Track Last Year Total
         let grandTarget = 0;
         let grandVisitors = 0;
+        let grandVisitorsLY = 0; // Track Last Year Visitors
         let grandTrans = 0;
 
         let loopDate = new Date(startDate);
@@ -104,6 +105,7 @@ async function generatePDF() {
             const lyDateStr = lyDate.toLocaleDateString('en-CA');
             const lyData = getDayData(storeId, lyDateStr);
             const salesLY = lyData.sales || 0;
+            const visitorsLY = lyData.visitors || 0;
 
             const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100).toFixed(1) + '%' : '-';
             const ach = target > 0 ? ((sales / target) * 100).toFixed(1) + '%' : '-';
@@ -120,6 +122,7 @@ async function generatePDF() {
                 trans,
                 avgInv,
                 visitors,
+                visitorsLY,
                 conv
             ]);
 
@@ -127,6 +130,7 @@ async function generatePDF() {
             grandSalesLY += salesLY; // Accumulate Last Year
             grandTarget += target;
             grandVisitors += visitors;
+            grandVisitorsLY += visitorsLY; // Accumulate Last Year Visitors
             grandTrans += trans;
 
             loopDate.setDate(loopDate.getDate() + 1);
@@ -148,11 +152,12 @@ async function generatePDF() {
             grandTrans,
             grandAvgInv,
             grandVisitors,
+            grandVisitorsLY,
             grandConv
         ]);
 
         doc.autoTable({
-            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'الهدف', 'التحقيق %', 'عدد الفواتير', 'متوسط الفاتورة', 'الزوار', 'التحويل %']],
+            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'الهدف', 'التحقيق %', 'عدد الفواتير', 'متوسط الفاتورة', 'زوار 2026', 'زوار 2025', 'التحويل %']],
             body: rows,
             startY: 40,
             theme: 'grid',
