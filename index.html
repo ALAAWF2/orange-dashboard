@@ -394,6 +394,8 @@
                                         <th onclick="setDailySort('avgInv')" style="cursor: pointer;">متوسط الفاتورة
                                             (Inv Rate) ↕</th>
                                         <th onclick="setDailySort('visitY')" style="cursor: pointer;">زوار ↕</th>
+                                        <th class="text-muted" onclick="setDailySort('visitLY')"
+                                            style="font-size: 0.9em; cursor: pointer;">زوار (LY)</th>
                                         <th onclick="setDailySort('conv')" style="cursor: pointer;">تحويل % ↕</th>
                                     </tr>
                                 </thead>
@@ -456,7 +458,10 @@
                                     <th class="text-center" onclick="setSort('avgInv')" style="cursor: pointer;">متوسط
                                         الفاتورة (Inv Rate) ↕</th>
                                     <th class="text-center" onclick="setSort('visitors')" style="cursor: pointer;">
-                                        الزوار (Visitors) ↕</th>
+                                        الزوار (Vis) ↕</th>
+                                    <th class="text-center text-muted" onclick="setSort('prevVisitors')"
+                                        style="cursor: pointer;">
+                                        زوار العام السابق (Vis LY) ↕</th>
                                     <th class="text-center" onclick="setSort('custVal')" style="cursor: pointer;">قيمة
                                         العميل (Val) ↕</th>
                                     <th class="text-center" onclick="setSort('conv')" style="cursor: pointer;">التحويل
@@ -1024,6 +1029,7 @@
                 let target = curr.branchTarget[sid] || 0;
                 let trans = curr.branchTrans[sid] || 0;
                 let visitors = curr.branchVisitors[sid] || 0;
+                let prevVisitors = prev.branchVisitors[sid] || 0;
 
                 // Calcs
                 let growth = prevVal > 0 ? ((val - prevVal) / prevVal) * 100 : 0;
@@ -1045,7 +1051,7 @@
                 let absGrowth = val - prevVal;
 
                 branchList.push({
-                    name, val, prevVal, growth, absGrowth, target, trans, visitors, ach, avgInv, conv, custVal, dailyReq
+                    name, val, prevVal, growth, absGrowth, target, trans, visitors, prevVisitors, ach, avgInv, conv, custVal, dailyReq
                 });
             });
 
@@ -1085,6 +1091,7 @@
                     <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center">${b.avgInv.toFixed(0)}</td>
                     <td class="text-center">${b.visitors.toLocaleString()}</td>
+                    <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
                     <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
                     <td class="text-center">${b.conv.toFixed(1)}%</td>
                 `;
@@ -1145,7 +1152,7 @@
                         if (!meta || meta.manager !== selManager) return;
                     }
 
-                    stats[sid] = { salesY: 0, salesLY: 0, transY: 0, visitY: 0 };
+                    stats[sid] = { salesY: 0, salesLY: 0, transY: 0, visitY: 0, visitLY: 0 };
                 }
             });
 
@@ -1164,6 +1171,7 @@
             rawData.visitors.forEach(([d, s, v]) => {
                 if (!stats[s]) return;
                 if (d === dateYest) stats[s].visitY += v;
+                if (d === dateLastY) stats[s].visitLY += v;
             });
 
             // 3. Convert to Array and Sort
@@ -1216,6 +1224,7 @@
                     <td>${r.transY.toLocaleString()}</td>
                     <td>${r.avgInv.toFixed(0)}</td>
                     <td>${r.visitY.toLocaleString()}</td>
+                    <td class="text-secondary">${r.visitLY.toLocaleString()}</td>
                     <td>${r.conv.toFixed(1)}%</td>
                 `;
                 tbody.appendChild(tr);
