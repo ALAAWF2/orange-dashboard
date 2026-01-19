@@ -131,8 +131,8 @@
                             <tr>
                                 <th>التصنيف</th>
                                 <th>رقم المنتج (Item ID)</th>
-                                <th>الكمية</th>
-                                <th>القيمة</th>
+                                <th onclick="setSort('topProd', 'qty')" style="cursor: pointer;">الكمية ↕</th>
+                                <th onclick="setSort('topProd', 'val')" style="cursor: pointer;">القيمة ↕</th>
                             </tr>
                         </thead>
                         <tbody id="topProductsBody">
@@ -152,8 +152,8 @@
                             <tr>
                                 <th>#</th>
                                 <th>التصنيف</th>
-                                <th>الكمية</th>
-                                <th>المبيعات</th>
+                                <th onclick="setSort('catPerf', 'qty')" style="cursor: pointer;">الكمية ↕</th>
+                                <th onclick="setSort('catPerf', 'val')" style="cursor: pointer;">المبيعات ↕</th>
                                 <th>مساهمة %</th>
                             </tr>
                         </thead>
@@ -174,7 +174,10 @@
                         <tr>
                             <th>#</th>
                             <th>الفرع (Outlet)</th>
-                            <th>إجمالي المبيعات (Total Sales)</th>
+                            <th onclick="setSort('outlets', 'qty')" style="cursor: pointer;">إجمالي الكمية (Total Qty) ↕
+                            </th>
+                            <th onclick="setSort('outlets', 'val')" style="cursor: pointer;">إجمالي المبيعات (Total
+                                Sales) ↕</th>
                             <th>أعلى تصنيف مبيعاً (Top Category)</th>
                             <th>إجراء</th>
                         </tr>
@@ -202,8 +205,10 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="text-center">التصنيف (Category)</th>
-                                    <th class="text-center">الكمية (Qty)</th>
-                                    <th class="text-center">المبيعات (Amount)</th>
+                                    <th class="text-center" onclick="setSort('modal', 'qty')" style="cursor: pointer;">
+                                        الكمية (Qty) ↕</th>
+                                    <th class="text-center" onclick="setSort('modal', 'val')" style="cursor: pointer;">
+                                        المبيعات (Amount) ↕</th>
                                     <th class="text-center" style="width: 30%;">أعلى منتج (Top Product)</th>
                                     <th class="text-center">Q</th>
                                     <th class="text-center">V</th>
@@ -226,6 +231,30 @@
         let chartInstance = null;
 
         let storeMeta = {};
+        let currentOpenStoreId = null; // Track open modal
+
+        // Sorting State
+        let sortState = {
+            topProd: { col: 'val', asc: false },
+            catPerf: { col: 'val', asc: false },
+            outlets: { col: 'val', asc: false },
+            modal: { col: 'val', asc: false }
+        };
+
+        function setSort(table, col) {
+            if (sortState[table].col === col) {
+                sortState[table].asc = !sortState[table].asc;
+            } else {
+                sortState[table].col = col;
+                sortState[table].asc = false;
+            }
+
+            if (table === 'modal') {
+                if (currentOpenStoreId) showStoreDetails(currentOpenStoreId);
+            } else {
+                renderDashboard();
+            }
+        }
 
         async function init() {
             try {
@@ -286,6 +315,13 @@
                 globalTopItems = rawData.global_yest || [];
             }
 
+            // SORT Top Products
+            globalTopItems.sort((a, b) => {
+                let valA = sortState.topProd.col === 'qty' ? a.top_item_qty : a.top_item_amount;
+                let valB = sortState.topProd.col === 'qty' ? b.top_item_qty : b.top_item_amount;
+                return sortState.topProd.asc ? valA - valB : valB - valA;
+            });
+
             // 1. Render Top Products per Category
             const prodBody = document.getElementById('topProductsBody');
             prodBody.innerHTML = '';
@@ -339,7 +375,11 @@
                 name,
                 ...data,
                 share: totalSales > 0 ? (data.amount / totalSales * 100) : 0
-            })).sort((a, b) => b.amount - a.amount);
+            })).sort((a, b) => {
+                let valA = sortState.catPerf.col === 'qty' ? a.qty : a.amount;
+                let valB = sortState.catPerf.col === 'qty' ? b.qty : b.amount;
+                return sortState.catPerf.asc ? valA - valB : valB - valA;
+            });
 
             // Render Table
             const catBody = document.getElementById('topCategoriesBody');
@@ -394,7 +434,19 @@
                 });
             }
 
-            outlets.sort((a, b) => b.total_sales - a.total_sales);
+            // Calculate Totals (Qty needed for sort)
+            outlets.forEach(o => {
+                let tQty = 0;
+                o.categories.forEach(c => tQty += c.qty);
+                o.total_qty = tQty;
+            });
+
+            // Sort
+            outlets.sort((a, b) => {
+                let valA = sortState.outlets.col === 'qty' ? a.total_qty : a.total_sales;
+                let valB = sortState.outlets.col === 'qty' ? b.total_qty : b.total_sales;
+                return sortState.outlets.asc ? valA - valB : valB - valA;
+            });
 
             outlets.forEach((o, i) => {
                 // Find top category
@@ -405,6 +457,7 @@
                     <tr onclick="showStoreDetails('${o.id}')">
                         <td>${i + 1}</td>
                         <td class="fw-bold">${o.store_name}</td>
+                        <td dir="ltr" class="text-center">${o.total_qty.toLocaleString()}</td>
                         <td class="text-success fw-bold">${o.total_sales.toLocaleString()}</td>
                         <td class="text-muted small">${topCatStr}</td>
                         <td><button class="btn btn-sm btn-outline-primary">عرض التفاصيل</button></td>
@@ -417,12 +470,21 @@
         function showStoreDetails(storeId) {
             const store = currentData[storeId];
             if (!store) return;
+            currentOpenStoreId = storeId; // Track
 
             document.getElementById('modalTitle').textContent = `تفاصيل: ${store.store_name}`;
             const tbody = document.getElementById('modalTableBody');
             tbody.innerHTML = '';
 
-            store.categories.forEach(cat => {
+            // Sort Categories
+            let cats = [...store.categories]; // Copy
+            cats.sort((a, b) => {
+                let valA = sortState.modal.col === 'qty' ? a.qty : a.amount;
+                let valB = sortState.modal.col === 'qty' ? b.qty : b.amount;
+                return sortState.modal.asc ? valA - valB : valB - valA;
+            });
+
+            cats.forEach(cat => {
                 let row = `
                     <tr>
                         <td class="fw-bold text-center">${cat.category}</td>
