@@ -104,34 +104,49 @@
         <div class="row align-items-center mb-4">
             <div class="col-md-6">
                 <!-- Period Toggle -->
-                <div class="btn-group" role="group" aria-label="Period Toggle">
-                    <input type="radio" class="btn-check" name="periodbtn" id="btnMtd" autocomplete="off" checked
-                        onchange="switchPeriod('mtd')">
-                    <label class="btn btn-outline-primary fw-bold" for="btnMtd">📅 الشهر الحالي</label>
+                <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+                    <div class="btn-group" role="group" aria-label="Period Toggle">
+                        <input type="radio" class="btn-check" name="periodbtn" id="btnMtd" autocomplete="off" checked
+                            onchange="switchPeriod('mtd')">
+                        <label class="btn btn-outline-primary fw-bold" for="btnMtd">📅 الشهر الحالي</label>
 
-                    <input type="radio" class="btn-check" name="periodbtn" id="btn7" autocomplete="off"
-                        onchange="switchPeriod('7d')">
-                    <label class="btn btn-outline-primary fw-bold" for="btn7">7 أيام</label>
+                        <input type="radio" class="btn-check" name="periodbtn" id="btn7" autocomplete="off"
+                            onchange="switchPeriod('7d')">
+                        <label class="btn btn-outline-primary fw-bold" for="btn7">7 أيام</label>
 
-                    <input type="radio" class="btn-check" name="periodbtn" id="btn14" autocomplete="off"
-                        onchange="switchPeriod('14d')">
-                    <label class="btn btn-outline-primary fw-bold" for="btn14">14 يوم</label>
+                        <input type="radio" class="btn-check" name="periodbtn" id="btn14" autocomplete="off"
+                            onchange="switchPeriod('14d')">
+                        <label class="btn btn-outline-primary fw-bold" for="btn14">14 يوم</label>
 
-                    <input type="radio" class="btn-check" name="periodbtn" id="btn30" autocomplete="off"
-                        onchange="switchPeriod('30d')">
-                    <label class="btn btn-outline-primary fw-bold" for="btn30">30 يوم</label>
+                        <input type="radio" class="btn-check" name="periodbtn" id="btn30" autocomplete="off"
+                            onchange="switchPeriod('30d')">
+                        <label class="btn btn-outline-primary fw-bold" for="btn30">30 يوم</label>
 
-                    <input type="radio" class="btn-check" name="periodbtn" id="btnYest" autocomplete="off"
-                        onchange="switchPeriod('yest')">
-                    <label class="btn btn-outline-primary fw-bold" for="btnYest">⏳ أمس</label>
+                        <input type="radio" class="btn-check" name="periodbtn" id="btnYest" autocomplete="off"
+                            onchange="switchPeriod('yest')">
+                        <label class="btn btn-outline-primary fw-bold" for="btnYest">⏳ أمس</label>
+                    </div>
+
+                    <div class="d-inline-flex align-items-center p-1 border rounded bg-white">
+                        <span class="me-2 small fw-bold text-muted">العرض:</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="metricToggle" onchange="toggleMetric()">
+                            <label class="form-check-label fw-bold" for="metricToggle" id="metricLabel">💰
+                                القيمة</label>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="d-inline-flex align-items-center ms-3 p-1 border rounded bg-white">
-                    <span class="me-2 small fw-bold text-muted">العرض:</span>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="metricToggle" onchange="toggleMetric()">
-                        <label class="form-check-label fw-bold" for="metricToggle" id="metricLabel">💰 القيمة</label>
-                    </div>
+                <!-- Filters Row -->
+                <div class="d-flex gap-2">
+                    <select class="form-select form-select-sm fw-bold" id="regionFilter"
+                        style="width: 150px; display:none;" onchange="applyFilters()">
+                        <option value="all">📍 كل المناطق</option>
+                    </select>
+                    <select class="form-select form-select-sm fw-bold" id="storeFilter"
+                        style="width: 180px; display:none;" onchange="applyFilters()">
+                        <option value="all">🏪 كل المعارض</option>
+                    </select>
                 </div>
             </div>
             <div class="col-md-6 text-end">
@@ -346,10 +361,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let rawData = null;
-        let currentData = null; // Filtered subset (analysis_mtd or analysis_yest)
-        let currentMode = 'mtd'; // Track active mode
-        let currentMetric = 'val'; // 'val' (Value) or 'qty' (Quantity)
+        let currentData = null;
+        let currentMode = 'mtd';
+        let currentMetric = 'val';
         let chartInstance = null;
+
+        // Log Auth for debugging
+        console.log("Current User:", currentUser);
+
+        // Modal Instances
+        let detailsModalObj = null;
+        let productModalObj = null;
+        let catalogModalObj = null;
+
+        // Filter Scope
+        let activeRegion = 'all';
+        let activeStore = 'all';
 
         // Mock Data for History (Temporary until backend is ready)
         const mockHistoryCache = {};
@@ -402,10 +429,88 @@
                 // Default to MTD
                 switchPeriod('mtd');
 
+                // Check Role & Init Filters
+                setupFilters(mgmtData);
+
             } catch (e) {
                 console.error(e);
                 alert("تعذر تحميل البيانات. الرجاء التأكد من تشغيل التحديث.");
             }
+        }
+
+        function setupFilters(mgmtData) {
+            const role = (currentUser.role || 'guest').toLowerCase().replace(' ', '_');
+            // Normalize: 'Sales Manager' -> 'sales_manager', 'Admin' -> 'admin'
+            console.log("Normalized Role:", role);
+
+            // Check aliases
+            const allowed = ['admin', 'sales_manager', 'manager', 'salesmanager'];
+
+            if (allowed.includes(role) || role.includes('admin') || role.includes('manager')) {
+                const regSel = document.getElementById('regionFilter');
+                const storeSel = document.getElementById('storeFilter');
+
+                regSel.style.display = 'inline-block';
+                storeSel.style.display = 'inline-block';
+
+                // Populate Regions
+                const regions = new Set();
+                const stores = [];
+
+                // Use Analysis MTD as the source of truth for "Active Stores"
+                // storeMeta might contain IDs with no names, or old stores.
+                // data.analysis_mtd contains { storeId: { store_name: "..." } }
+
+                const sourceData = rawData.analysis_mtd || {};
+
+                Object.keys(sourceData).forEach(sid => {
+                    const storeObj = sourceData[sid];
+                    const m = storeMeta[sid] || {};
+
+                    // Prefer name from data (it's usually correct), then meta, then ID
+                    const sName = storeObj.store_name || m.name_ar || m.name || sid;
+
+                    const region = m.region; // Region usually comes from meta
+
+                    if (region) regions.add(region);
+
+                    stores.push({ id: sid, name: sName, region: region });
+                });
+
+                // Fill Region
+                const sortedRegions = Array.from(regions).sort();
+                sortedRegions.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r;
+                    opt.textContent = `📍 ${r}`;
+                    regSel.appendChild(opt);
+                });
+
+                // Fill Store
+                populateStoreFilter(stores);
+            }
+        }
+
+        function populateStoreFilter(stores) {
+            const storeSel = document.getElementById('storeFilter');
+            storeSel.innerHTML = '<option value="all">🏪 كل المعارض</option>';
+
+            stores.sort((a, b) => a.name.localeCompare(b.name));
+            stores.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                storeSel.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            activeRegion = document.getElementById('regionFilter').value;
+            activeStore = document.getElementById('storeFilter').value;
+
+            // If Region changed, maybe filter stores? optional UX improvement
+            // For now specific Logic:
+            renderDashboard();
         }
 
         function switchPeriod(mode) {
@@ -477,104 +582,54 @@
         }
 
         function processGlobalStats(mode) {
-            // mode is 'mtd' or 'yest'
-            let globalTopItems = [];
-            if (mode === 'mtd') {
-                globalTopItems = rawData.global_mtd || [];
-            } else {
-                globalTopItems = rawData.global_yest || [];
-            }
+            // 0. Filter Data based on Filters (Region/Store)
+            let filteredKeys = Object.keys(currentData); // specific store IDs
 
-            // SORT Top Products
-            globalTopItems.sort((a, b) => {
-                let valA = sortState.topProd.col === 'qty' ? a.top_item_qty : a.top_item_amount;
-                let valB = sortState.topProd.col === 'qty' ? b.top_item_qty : b.top_item_amount;
-                return sortState.topProd.asc ? valA - valB : valB - valA;
-            });
-
-            // 1. Render Top Products per Category
-            const prodBody = document.getElementById('topProductsBody');
-            prodBody.innerHTML = '';
-
-            if (globalTopItems.length === 0) {
-                prodBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>';
-            } else {
-                globalTopItems.forEach(item => {
-                    // Decide what value to show based on Metric Toggle
-                    let mainVal = currentMetric === 'qty' ? item.top_item_qty : Math.round(item.top_item_amount).toLocaleString();
-
-                    // Trend Simulation (Mock if missing)
-                    let trendIcon = '➖';
-                    let trendClass = 'text-muted';
-
-                    if (item.momentum) {
-                        // Real logic if field exists
-                    } else {
-                        // Demo Random
-                        const rnd = Math.random();
-                        if (rnd > 0.7) { trendIcon = '▲'; trendClass = 'text-success'; }
-                        else if (rnd < 0.3) { trendIcon = '▼'; trendClass = 'text-danger'; }
-                    }
-
-                    // Alert Badge (Mock)
-                    let alertBadge = '';
-                    if (Math.random() < 0.1) alertBadge = '<span class="badge bg-warning text-dark ms-1" style="font-size:0.6em">⚠</span>';
-
-                    let row = `
-                        <tr>
-                            <td class="fw-bold text-center">${item.category}</td>
-                            <td class="text-center">
-                                <a href="#" onclick="openProductDetails('${item.top_item_id}', '${item.top_item_name}', '${item.category}', ${item.top_item_qty}, ${item.top_item_amount}); return false;" class="text-decoration-none fw-bold text-dark hover-primary">${item.top_item_name}</a>
-                                <small class="text-muted d-block">${item.top_item_id} ${alertBadge}</small>
-                            </td>
-                            <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'fw-bold text-primary' : ''}">${item.top_item_qty}</td>
-                            <td class="text-center ${currentMetric === 'val' ? 'fw-bold text-primary' : ''}">
-                                ${Math.round(item.top_item_amount).toLocaleString()}
-                                <small class="${trendClass} ms-1">${trendIcon}</small>
-                            </td>
-                        </tr>
-                    `;
-                    prodBody.innerHTML += row;
+            if (activeStore !== 'all') {
+                filteredKeys = filteredKeys.filter(id => id === activeStore);
+            } else if (activeRegion !== 'all') {
+                filteredKeys = filteredKeys.filter(id => {
+                    const m = storeMeta[id];
+                    return m && m.region === activeRegion;
                 });
             }
 
-            // 2. Render Top Categories List (Existing Logic)
-            const globalCats = {};
-            let totalSales = 0;
-
-            if (currentData) {
-                Object.values(currentData).forEach((store, idx) => {
-                    const storeId = Object.keys(currentData)[idx]; // Need ID to check meta
-
-                    // Filter for Global Stats too
-                    if (currentUser.role !== 'Admin') {
-                        const meta = storeMeta[storeId];
-                        if (!meta || meta.manager !== currentUser.name) return;
-                    }
-
-                    store.categories.forEach(cat => {
-                        if (!globalCats[cat.category]) {
-                            globalCats[cat.category] = { qty: 0, amount: 0 };
-                        }
-                        globalCats[cat.category].qty += cat.qty;
-                        globalCats[cat.category].amount += cat.amount;
-                        totalSales += cat.amount;
-                    });
-                });
+            // If user has specific store access only (currentUser.stores), filter further
+            if (currentUser.stores && currentUser.stores.length > 0 && !currentUser.stores.includes('all')) {
+                filteredKeys = filteredKeys.filter(id => currentUser.stores.includes(id));
             }
 
-            // Convert to Array
-            const sortedCats = Object.entries(globalCats).map(([name, data]) => ({
-                name,
-                ...data,
-                share: totalSales > 0 ? (data.amount / totalSales * 100) : 0
-            })).sort((a, b) => {
-                let valA = sortState.catPerf.col === 'qty' ? a.qty : a.amount;
-                let valB = sortState.catPerf.col === 'qty' ? b.qty : b.amount;
-                return sortState.catPerf.asc ? valA - valB : valB - valA;
+            // 1. Calculate Category Performance (Aggregation)
+            const catMap = {}; // Cat -> {qty, amount}
+            let grandTotal = 0;
+
+            filteredKeys.forEach(storeId => {
+                const store = currentData[storeId];
+                if (!store) return;
+
+                store.categories.forEach(c => {
+                    if (!catMap[c.category]) {
+                        catMap[c.category] = { name: c.category, qty: 0, amount: 0, share: 0 };
+                    }
+                    catMap[c.category].qty += c.qty;
+                    catMap[c.category].amount += c.amount;
+                    grandTotal += c.amount;
+                });
             });
 
-            // Render Table
+            const sortedCats = Object.values(catMap).sort((a, b) => {
+                let valA = currentMetric === 'qty' ? a.qty : a.amount;
+                let valB = currentMetric === 'qty' ? b.qty : b.amount;
+                return valB - valA;
+            });
+
+            // Calculate share
+            sortedCats.forEach(c => {
+                c.share = grandTotal > 0 ? (c.amount / grandTotal * 100) : 0;
+            });
+
+
+            // 2. Render Categories Table
             const catBody = document.getElementById('topCategoriesBody');
             catBody.innerHTML = '';
 
@@ -610,8 +665,85 @@
                 });
             }
 
-            // Pie Chart Logic Removed
+            // 3. Recalculate Top Products (Global vs Filtered)
+            // Original code used 'global_mtd' pre-calculated from backend.
+            // PROBLEM: Backend 'global_mtd' is GLOBAL. If we filter by Region, we can't use it directly.
+            // We must re-aggregate Top Products from the filtered stores.
+            // BUT: currentData (analysis_mtd) only has "Top Item" per category per store.
+            // It does NOT have all items. So we can't perfectly re-calculate "Top Product globally in this region" 
+            // if the top product in the region wasn't the top product in any single store.
+            // However, usually the top product in a region IS top in many stores. 
+            // Approximation: We will collect all 'top_item's from the filtered stores and aggregate them.
+
+            const itemMap = {}; // ItemID -> {name, cat, qty, amount}
+
+            filteredKeys.forEach(storeId => {
+                const store = currentData[storeId];
+                if (!store) return;
+
+                store.categories.forEach(c => {
+                    // We only know the top item of this category in this store
+                    const tid = c.top_item_id;
+                    if (tid && tid !== '-') {
+                        if (!itemMap[tid]) itemMap[tid] = {
+                            id: tid,
+                            name: c.top_item_name,
+                            category: c.category,
+                            qty: 0,
+                            amount: 0
+                        };
+                        itemMap[tid].qty += c.top_item_qty;
+                        itemMap[tid].amount += c.top_item_amount;
+                    }
+                });
+            });
+
+            // Convert to list & Sort
+            const topItems = Object.values(itemMap).sort((a, b) => {
+                let valA = currentMetric === 'qty' ? a.qty : a.amount;
+                let valB = currentMetric === 'qty' ? b.qty : b.amount;
+                return valB - valA;
+            });
+
+            // Render Top Products
+            const prodBody = document.getElementById('topProductsBody');
+            prodBody.innerHTML = '';
+
+            if (topItems.length === 0) {
+                prodBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>';
+            } else {
+                // Show top 50?
+                topItems.slice(0, 100).forEach(item => {
+                    // Trend/Alert Simulation (Mock)
+                    let trendIcon = '➖';
+                    let trendClass = 'text-muted';
+                    const rnd = Math.random();
+                    if (rnd > 0.7) { trendIcon = '▲'; trendClass = 'text-success'; }
+                    else if (rnd < 0.3) { trendIcon = '▼'; trendClass = 'text-danger'; }
+
+                    let alertBadge = '';
+                    if (Math.random() < 0.1) alertBadge = '<span class="badge bg-warning text-dark ms-1" style="font-size:0.6em">⚠</span>';
+
+                    let row = `
+                        <tr>
+                            <td class="fw-bold text-center">${item.category}</td>
+                            <td class="text-center">
+                                <a href="#" onclick="openProductDetails('${item.id}', '${item.name}', '${item.category}', ${item.qty}, ${item.amount}); return false;" class="text-decoration-none fw-bold text-dark hover-primary">${item.name}</a>
+                                <small class="text-muted d-block">${item.id} ${alertBadge}</small>
+                            </td>
+                            <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'fw-bold text-primary' : ''}">${item.qty}</td>
+                            <td class="text-center ${currentMetric === 'val' ? 'fw-bold text-primary' : ''}">
+                                ${Math.round(item.amount).toLocaleString()}
+                                <small class="${trendClass} ms-1">${trendIcon}</small>
+                            </td>
+                        </tr>
+                    `;
+                    prodBody.innerHTML += row;
+                });
+            }
         }
+        // Pie Chart Logic Removed
+
 
         function renderOutletsTable() {
             const tbody = document.getElementById('outletsTableBody');
@@ -669,21 +801,30 @@
         }
 
         function showStoreDetails(storeId) {
-            const store = currentData[storeId];
-            if (!store) return;
-            currentOpenStoreId = storeId; // Track
+            currentOpenStoreId = storeId;
+            const meta = storeMeta[storeId] || {};
 
-            document.getElementById('modalTitle').textContent = `تفاصيل: ${store.store_name}`;
+            document.getElementById('modalTitle').textContent = `تفاصيل معرض: ${meta.name_ar || meta.name || storeId}`;
+
+            // Filter categories for this store
+            const storeData = currentData[storeId];
+            if (!storeData) return;
+
+            // Sort logic (same as before)
+            // ... (omitted for brevity, keeping existing sort logic is handled by renderDashboard usually, but here we do ad-hoc)
+            // Actually existing code does rendering here. Let's just fix the modal call.
+
+            // Copying existing logic briefly to ensure I don't break sorting/rendering:
             const tbody = document.getElementById('modalTableBody');
             tbody.innerHTML = '';
 
-            // Sort Categories
-            let cats = [...store.categories]; // Copy
-            cats.sort((a, b) => {
-                let valA = sortState.modal.col === 'qty' ? a.qty : a.amount;
-                let valB = sortState.modal.col === 'qty' ? b.qty : b.amount;
-                return sortState.modal.asc ? valA - valB : valB - valA;
-            });
+            let cats = [...storeData.categories];
+            // Sort
+            if (sortState.modal.col === 'qty') {
+                cats.sort((a, b) => sortState.modal.asc ? a.qty - b.qty : b.qty - a.qty);
+            } else {
+                cats.sort((a, b) => sortState.modal.asc ? a.amount - b.amount : b.amount - a.amount);
+            }
 
             cats.forEach(cat => {
                 let row = `
@@ -702,7 +843,8 @@
                 tbody.innerHTML += row;
             });
 
-            new bootstrap.Modal(document.getElementById('detailsModal')).show();
+            if (!detailsModalObj) detailsModalObj = new bootstrap.Modal(document.getElementById('detailsModal'));
+            detailsModalObj.show();
         }
 
         // ==========================================
@@ -757,7 +899,8 @@
             renderProductChart(history);
 
             // Show Modal
-            new bootstrap.Modal(document.getElementById('productModal')).show();
+            if (!productModalObj) productModalObj = new bootstrap.Modal(document.getElementById('productModal'));
+            productModalObj.show();
         }
 
         function generateMockHistory(totalQty, totalAmount) {
@@ -940,7 +1083,18 @@
 
         function openCatalogModal() {
             renderCatalog();
-            new bootstrap.Modal(document.getElementById('catalogModal')).show();
+            if (!catalogModalObj) catalogModalObj = new bootstrap.Modal(document.getElementById('catalogModal'));
+            catalogModalObj.show();
+        }
+
+        function closeCatalogAndOpenProduct(id, name, cat, qty, amt) {
+            // Close catalog first
+            if (catalogModalObj) catalogModalObj.hide();
+
+            // Small delay to allow transition? Bootstrap usually handles swapping fine, but safe side.
+            setTimeout(() => {
+                openProductDetails(id, name, cat, qty, amt);
+            }, 150);
         }
 
         function renderCatalog(filter = '') {
@@ -998,19 +1152,19 @@
                 showItems.forEach(item => {
                     // Item Row
                     itemsHtml += `
-                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-                            role="button"
-                            onclick="new bootstrap.Modal(document.getElementById('catalogModal')).hide(); openProductDetails('${item.id}', '${item.name}', '${cat}', ${item.qty}, ${item.amount});">
-                            <div>
-                                <div class="fw-bold text-dark">${item.name}</div>
-                                <small class="text-muted">${item.id}</small>
-                            </div>
-                            <div class="text-end">
-                                <div class="badge bg-light text-dark border">${item.qty} pcs</div>
-                                <div class="fw-bold small text-primary">${Math.round(item.amount).toLocaleString()}</div>
-                            </div>
-                        </li>
-                    `;
+                    <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
+                        role="button"
+                        onclick="closeCatalogAndOpenProduct('${item.id}', '${item.name}', '${cat}', ${item.qty}, ${item.amount})">
+                        <div>
+                            <div class="fw-bold text-dark">${item.name}</div>
+                            <small class="text-muted">${item.id}</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="badge bg-light text-dark border">${item.qty} pcs</div>
+                            <div class="fw-bold small text-primary">${Math.round(item.amount).toLocaleString()}</div>
+                        </div>
+                    </li>
+                `;
                 });
                 itemsHtml += '</ul>';
 
