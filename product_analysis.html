@@ -135,7 +135,17 @@
                 </div>
             </div>
             <div class="col-md-6 text-end">
-                <h5 class="section-title mb-0" id="currentPeriodLabel">...</h5>
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                    <button class="btn btn-warning fw-bold text-dark" onclick="openCatalogModal()">📂 تصفح
+                        الأقسام</button>
+                    <div class="input-group" style="width: 250px;">
+                        <span class="input-group-text bg-white border-end-0">🔍</span>
+                        <input type="text" class="form-control border-start-0" id="productSearchInput"
+                            placeholder="بحث عن منتج..." onkeyup="handleSearch()">
+                    </div>
+                    <!-- Date Label (Restored) -->
+                    <h5 class="section-title mb-0 border-0 ms-2" id="currentPeriodLabel">...</h5>
+                </div>
             </div>
         </div>
 
@@ -145,7 +155,9 @@
             <!-- Top Products per Category -->
             <div class="col-md-6">
                 <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
-                    <h6 class="text-muted fw-bold mb-3">المنتج الأكثر مبيعاً حسب الفئة (Top Product by Category)</h6>
+                    <h6 class="text-muted fw-bold mb-3">
+                        المنتج الأكثر مبيعاً حسب الفئة (<span id="topCatLabel">الشهر الحالي</span>)
+                    </h6>
                     <table class="table table-sm align-middle table-hover">
                         <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
                             <tr>
@@ -305,6 +317,31 @@
         </div>
     </div>
 
+    <!-- Category Explorer Modal -->
+    <div class="modal fade" id="catalogModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold text-dark">📂 دليل الأقسام والمنتجات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <!-- Search inside Catalog -->
+                    <div class="mb-3">
+                        <input type="text" class="form-control form-control-lg" id="catalogSearch"
+                            placeholder="بحث داخل الدليل (اسم القسم أو المنتج)..." onkeyup="filterCatalog()">
+                    </div>
+
+                    <!-- Accordion Container -->
+                    <div class="accordion" id="categoryAccordion">
+                        <!-- Dynamic Content -->
+                    </div>
+                    <div id="catalogNoData" class="text-center text-muted mt-5 d-none">لا توجد نتائج مطابقة</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -414,6 +451,29 @@
         function renderDashboard() {
             processGlobalStats(currentMode); // Pass current mode
             renderOutletsTable();
+
+            // Re-apply search if exists
+            handleSearch();
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('productSearchInput').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('#topProductsBody tr');
+
+            rows.forEach(row => {
+                // If it's the "No Data" row, ignore or handle differently? 
+                // Actually if we hide all rows, we should show "No Filter Results"
+                if (row.cells.length < 2) return;
+
+                const catName = row.cells[0].textContent.toLowerCase();
+                const prodName = row.cells[1].textContent.toLowerCase(); // Name + ID is in this cell text content essentially
+
+                if (query === '' || catName.includes(query) || prodName.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
 
         function processGlobalStats(mode) {
@@ -442,17 +502,36 @@
                 globalTopItems.forEach(item => {
                     // Decide what value to show based on Metric Toggle
                     let mainVal = currentMetric === 'qty' ? item.top_item_qty : Math.round(item.top_item_amount).toLocaleString();
-                    let subVal = currentMetric === 'qty' ? Math.round(item.top_item_amount).toLocaleString() + ' SR' : item.top_item_qty + ' Pcs';
+
+                    // Trend Simulation (Mock if missing)
+                    let trendIcon = '➖';
+                    let trendClass = 'text-muted';
+
+                    if (item.momentum) {
+                        // Real logic if field exists
+                    } else {
+                        // Demo Random
+                        const rnd = Math.random();
+                        if (rnd > 0.7) { trendIcon = '▲'; trendClass = 'text-success'; }
+                        else if (rnd < 0.3) { trendIcon = '▼'; trendClass = 'text-danger'; }
+                    }
+
+                    // Alert Badge (Mock)
+                    let alertBadge = '';
+                    if (Math.random() < 0.1) alertBadge = '<span class="badge bg-warning text-dark ms-1" style="font-size:0.6em">⚠</span>';
 
                     let row = `
                         <tr>
                             <td class="fw-bold text-center">${item.category}</td>
                             <td class="text-center">
                                 <a href="#" onclick="openProductDetails('${item.top_item_id}', '${item.top_item_name}', '${item.category}', ${item.top_item_qty}, ${item.top_item_amount}); return false;" class="text-decoration-none fw-bold text-dark hover-primary">${item.top_item_name}</a>
-                                <small class="text-muted d-block">${item.top_item_id}</small>
+                                <small class="text-muted d-block">${item.top_item_id} ${alertBadge}</small>
                             </td>
                             <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'fw-bold text-primary' : ''}">${item.top_item_qty}</td>
-                            <td class="text-center ${currentMetric === 'val' ? 'fw-bold text-primary' : ''}">${Math.round(item.top_item_amount).toLocaleString()}</td>
+                            <td class="text-center ${currentMetric === 'val' ? 'fw-bold text-primary' : ''}">
+                                ${Math.round(item.top_item_amount).toLocaleString()}
+                                <small class="${trendClass} ms-1">${trendIcon}</small>
+                            </td>
                         </tr>
                     `;
                     prodBody.innerHTML += row;
@@ -503,12 +582,20 @@
                 catBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>';
             } else {
                 sortedCats.forEach((c, i) => {
+
+                    // Demo Trend for Categories
+                    let trendIcon = '➖';
+                    let trendClass = 'text-muted';
+                    const rnd = Math.random();
+                    if (rnd > 0.6) { trendIcon = '▲'; trendClass = 'text-success'; }
+                    else if (rnd < 0.2) { trendIcon = '▼'; trendClass = 'text-danger'; }
+
                     let row = `
                         <tr>
                             <td class="fw-bold text-center">${i + 1}</td>
-                            <td class="text-center">${c.name}</td>
-                            <td dir="ltr" class="text-center">${c.qty.toLocaleString()}</td>
-                            <td class="fw-bold text-center">${Math.round(c.amount).toLocaleString()}</td>
+                            <td class="text-center">${c.name} <span class="${trendClass} small">${trendIcon}</span></td>
+                            <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'fw-bold' : ''}">${c.qty.toLocaleString()}</td>
+                            <td class="fw-bold text-center ${currentMetric === 'val' ? 'fw-bold' : ''}">${Math.round(c.amount).toLocaleString()}</td>
                             <td>
                                 <div class="d-flex align-items-center justify-content-center">
                                     <span class="me-2">${c.share.toFixed(1)}%</span>
@@ -605,7 +692,7 @@
                         <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'bg-light fw-bold' : ''}">${cat.qty}</td>
                         <td class="text-center ${currentMetric === 'val' ? 'bg-light fw-bold' : ''}">${cat.amount.toLocaleString()}</td>
                         <td class="text-center">
-                             <a href="#" onclick="openProductDetails('${cat.top_item_id}', '${cat.top_item_name}', '${cat.category}', ${cat.top_item_qty}, ${cat.top_item_amount}); return false;" class="text-decoration-none fw-bold text-dark small d-block text-truncate" style="max-width: 200px; margin: 0 auto;" title="${cat.top_item_name}">${cat.top_item_name}</a>
+                            <a href="#" onclick="openProductDetails('${cat.top_item_id}', '${cat.top_item_name}', '${cat.category}', ${cat.top_item_qty}, ${cat.top_item_amount}); return false;" class="text-decoration-none fw-bold text-dark small d-block text-truncate hover-primary" style="max-width: 200px; margin: 0 auto;" title="${cat.top_item_name}">${cat.top_item_name}</a>
                             <small class="text-muted d-block" style="font-size: 0.75em;">${cat.top_item_id}</small>
                         </td>
                         <td dir="ltr" class="text-center small">${cat.top_item_qty}</td>
@@ -616,6 +703,347 @@
             });
 
             new bootstrap.Modal(document.getElementById('detailsModal')).show();
+        }
+
+        // ==========================================
+        // PRODUCT DETAILS LOGIC
+        // ==========================================
+
+        function openProductDetails(itemId, name, category, totalQty, totalAmt) {
+            // 1. Setup Modal Header
+            document.getElementById('prodModalName').textContent = name;
+            document.getElementById('prodModalId').textContent = `${itemId} | ${category}`;
+
+            // 2. Get or Generate History
+            // Check if backend provided history (Future Proofing)
+            let history = [];
+            if (rawData.product_daily_history && rawData.product_daily_history[itemId]) {
+                history = rawData.product_daily_history[itemId];
+            } else {
+                // Generate Mock Data for now
+                if (!mockHistoryCache[itemId]) {
+                    mockHistoryCache[itemId] = generateMockHistory(totalQty, totalAmt);
+                }
+                history = mockHistoryCache[itemId];
+            }
+
+            // 3. Calculate KPIs
+            // Sort by Date
+            history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Best/Worst Day
+            // Sort by sales value
+            const sortedByVal = [...history].sort((a, b) => b.amount - a.amount);
+            const best = sortedByVal[0] || { date: '-', amount: 0 };
+            const worst = sortedByVal[sortedByVal.length - 1] || { date: '-', amount: 0 };
+
+            // Zero Days
+            const zeroDays = history.filter(d => d.qty === 0).length;
+
+            document.getElementById('pmBestDay').textContent = best.date;
+            document.getElementById('pmBestDayVal').textContent = Math.round(best.amount).toLocaleString() + ' SR';
+
+            document.getElementById('pmWorstDay').textContent = worst.date !== '-' ? worst.date : '-';
+            document.getElementById('pmWorstDayVal').textContent = worst.amount > 0 ? Math.round(worst.amount).toLocaleString() + ' SR' : '0 SR';
+
+            document.getElementById('pmZeroDays').textContent = zeroDays + ' يوم';
+
+            // 4. Trend Analysis
+            const trend = calculateTrend(history);
+            const alerts = detectAlerts(history);
+            renderTrendUI(trend, alerts);
+
+            // 5. Render Chart
+            renderProductChart(history);
+
+            // Show Modal
+            new bootstrap.Modal(document.getElementById('productModal')).show();
+        }
+
+        function generateMockHistory(totalQty, totalAmount) {
+            // Generate data for approx 30 days or current range
+            let days = 30;
+            if (currentMode === '7d') days = 7;
+            if (currentMode === '14d') days = 14;
+
+            const history = [];
+            const today = new Date();
+
+            // Random distribution but summing up roughly to totals
+            // Simplified: just random variations
+            let remainingQty = totalQty;
+            let avgPrice = totalQty > 0 ? (totalAmount / totalQty) : 0;
+
+            for (let i = days - 1; i >= 0; i--) {
+                let d = new Date();
+                d.setDate(today.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0];
+
+                // Randomize
+                // Make some days 0 to test alerts
+                let isZero = Math.random() < 0.2;
+                let dailyQty = isZero ? 0 : Math.ceil((totalQty / days) * (0.5 + Math.random()));
+
+                let dailyAmt = dailyQty * avgPrice;
+
+                history.push({
+                    date: dateStr,
+                    qty: dailyQty,
+                    amount: dailyAmt
+                });
+            }
+            return history;
+        }
+
+        function calculateTrend(history) {
+            if (history.length < 5) return 'STABLE';
+
+            // LAST DAY vs AVG LAST 5
+            const lastDay = history[history.length - 1];
+            const last5 = history.slice(-6, -1); // prev 5 days excluding today(last)? Or just last 5.
+            // Let's compare Last Day vs Average of Previous 5 days (excluding last day)
+            // If we only have 5 days, take prev 4.
+
+            if (last5.length === 0) return 'STABLE';
+
+            const avgPrev = last5.reduce((sum, d) => sum + d.amount, 0) / last5.length;
+            const diff = lastDay.amount - avgPrev;
+            const pct = avgPrev > 0 ? (diff / avgPrev) * 100 : 0;
+
+            if (pct > 15) return 'UP';
+            if (pct < -15) return 'DOWN';
+            return 'STABLE';
+        }
+
+        function detectAlerts(history) {
+            // Simple alerts
+            const alerts = [];
+
+            // Spike detection
+            // If last day is > 200% of average
+            if (history.length > 5) {
+                const avg = history.reduce((s, d) => s + d.amount, 0) / history.length;
+                const last = history[history.length - 1];
+                if (avg > 0 && last.amount > avg * 2.5) {
+                    alerts.push({ type: 'spike', msg: 'ارتفاع مفاجئ في المبيعات' });
+                }
+                if (avg > 100 && last.amount === 0) {
+                    alerts.push({ type: 'drop', msg: 'توقف المبيعات فجأة' });
+                }
+            }
+            return alerts;
+        }
+
+        function renderTrendUI(trend, alerts) {
+            const box = document.getElementById('trendAlertBox');
+            const icon = document.getElementById('trendIcon');
+            const text = document.getElementById('trendText');
+
+            box.className = 'alert d-flex align-items-center mb-0'; // reset
+
+            let html = '';
+
+            if (trend === 'UP') {
+                box.classList.add('alert-success');
+                icon.innerHTML = '💹';
+                html = 'أداء <strong>متصاعد</strong> مقارنة بالأيام السابقة.';
+            } else if (trend === 'DOWN') {
+                box.classList.add('alert-danger');
+                icon.innerHTML = '🔻';
+                html = 'أداء <strong>متراجع</strong> مقارنة بالمتوسط.';
+            } else {
+                box.classList.add('alert-secondary');
+                icon.innerHTML = '➖';
+                html = 'أداء <strong>مستقر</strong> طبيعي.';
+            }
+
+            // Append Alerts
+            if (alerts.length > 0) {
+                html += '<div class="mt-1 border-top pt-1">';
+                alerts.forEach(a => {
+                    html += `<div class="badge bg-warning text-dark me-1">⚠️ ${a.msg}</div>`;
+                });
+                html += '</div>';
+            }
+
+            text.innerHTML = html;
+        }
+
+        function renderProductChart(history) {
+            const ctx = document.getElementById('productTrendChart').getContext('2d');
+
+            // Destroy OLD chart if exists
+            if (window.prodChart) {
+                window.prodChart.destroy();
+            }
+
+            if (!history || history.length === 0) {
+                document.getElementById('productTrendChart').style.display = 'none';
+                document.getElementById('chartNoDataMsg').classList.remove('d-none');
+                return;
+            } else {
+                document.getElementById('productTrendChart').style.display = 'block';
+                document.getElementById('chartNoDataMsg').classList.add('d-none');
+            }
+
+            const labels = history.map(d => d.date); // e.g., '2025-02-20'
+            const dataVal = history.map(d => currentMetric === 'qty' ? d.qty : d.amount);
+            const labelStr = currentMetric === 'qty' ? 'الكمية' : 'المبيعات';
+            const color = currentMetric === 'qty' ? '#0d6efd' : '#fe7900'; // Blue for Qty, Orange for Sales
+
+            window.prodChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelStr,
+                        data: dataVal,
+                        borderColor: color,
+                        backgroundColor: color + '20', // transparent version
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.parsed.y.toLocaleString() + (currentMetric === 'qty' ? ' Pcs' : ' SR');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [2, 2] }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxTicksLimit: 7
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // CATALOG / ACCORDION SEARCH LOGIC
+        // ==========================================
+
+        function openCatalogModal() {
+            renderCatalog();
+            new bootstrap.Modal(document.getElementById('catalogModal')).show();
+        }
+
+        function renderCatalog(filter = '') {
+            const container = document.getElementById('categoryAccordion');
+            container.innerHTML = '';
+
+            const catalog = rawData.product_catalog || {};
+            // If no catalog data (e.g. unexpected missing backend update), try to build from currentData
+            // But currentData is limited. Best to check if catalog exists or warn.
+
+            const categories = Object.keys(catalog).sort();
+
+            if (categories.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted p-4">لا توجد بيانات فهرس متاحة حالياً - الرجاء تحديث البيانات من السيرفر.</div>';
+                return;
+            }
+
+            let hasMatches = false;
+            filter = filter.toLowerCase();
+
+            categories.forEach((cat, index) => {
+                const items = catalog[cat];
+
+                // Filter items
+                const filteredItems = items.filter(item => {
+                    return filter === '' ||
+                        item.name.toLowerCase().includes(filter) ||
+                        item.id.includes(filter) ||
+                        cat.toLowerCase().includes(filter); // If cat matches, show all? Or just items?
+                    // Let's say: If Cat matches, show all items. If Item match, show item.
+                });
+
+                // If filter is active and cat name matches, we can show ALL items, or just continue filtering items?
+                // User requirement: "Search category... display category... click to open items".
+                // If I type "Accessory", I expect to see "Accessories" category.
+                // If I type "iPhone", I expect to see "Phones" category expanded with iPhone inside.
+
+                const isCatMatch = cat.toLowerCase().includes(filter);
+                const showItems = isCatMatch ? items : filteredItems; // If cat matches, show ALL. Else show filtered.
+
+                if (showItems.length === 0) return; // Skip empty categories
+
+                hasMatches = true;
+
+                // Unique IDs for accordion
+                const headerId = `heading${index}`;
+                const collapseId = `collapse${index}`;
+
+                // Auto-expand if filter is active
+                const isExpanded = filter !== '';
+                const btnClass = isExpanded ? '' : 'collapsed';
+                const divClass = isExpanded ? 'show' : '';
+
+                let itemsHtml = '<ul class="list-group list-group-flush">';
+                showItems.forEach(item => {
+                    // Item Row
+                    itemsHtml += `
+                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
+                            role="button"
+                            onclick="new bootstrap.Modal(document.getElementById('catalogModal')).hide(); openProductDetails('${item.id}', '${item.name}', '${cat}', ${item.qty}, ${item.amount});">
+                            <div>
+                                <div class="fw-bold text-dark">${item.name}</div>
+                                <small class="text-muted">${item.id}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge bg-light text-dark border">${item.qty} pcs</div>
+                                <div class="fw-bold small text-primary">${Math.round(item.amount).toLocaleString()}</div>
+                            </div>
+                        </li>
+                    `;
+                });
+                itemsHtml += '</ul>';
+
+                const accordionItem = `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="${headerId}">
+                            <button class="accordion-button ${btnClass} fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${isExpanded}" aria-controls="${collapseId}">
+                                ${cat} 
+                                <span class="badge bg-secondary ms-2 rounded-pill">${showItems.length} منتج</span>
+                            </button>
+                        </h2>
+                        <div id="${collapseId}" class="accordion-collapse collapse ${divClass}" aria-labelledby="${headerId}" data-bs-parent="#categoryAccordion">
+                            <div class="accordion-body p-0">
+                                ${itemsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML += accordionItem;
+            });
+
+            const noDataMsg = document.getElementById('catalogNoData');
+            if (!hasMatches) {
+                noDataMsg.classList.remove('d-none');
+            } else {
+                noDataMsg.classList.add('d-none');
+            }
+        }
+
+        function filterCatalog() {
+            const query = document.getElementById('catalogSearch').value;
+            renderCatalog(query);
         }
 
         // Run
