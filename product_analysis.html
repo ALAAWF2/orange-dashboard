@@ -659,13 +659,27 @@
             const tbody = document.getElementById('missedOppBody');
             tbody.innerHTML = '';
 
-            const allMissed = rawData.missed_opportunities || {};
+            const allMissedData = rawData.missed_opportunities || {};
+
+            // Determine dataset based on Period Mode
+            // currentMode can be 'mtd', 'yesterday', '7d', etc.
+            // Backend currently provides 'mtd' (Month to Date) and 'yest' (Yesterday).
+            // Fallback strategy:
+            // If mode is 'yesterday' -> use 'yest'
+            // Else -> use 'mtd' (covers mtd, 7d, 30d for now as approximation or until backend supports them)
+
+            let datasetKey = 'mtd';
+            if (currentMode === 'yesterday' || currentMode === 'yest') {
+                datasetKey = 'yest';
+            }
+
+            const missedByStore = allMissedData[datasetKey] || {};
 
             let data = [];
 
             if (activeStore === 'all') {
                 // Aggregate all stores
-                Object.values(allMissed).forEach(storeList => {
+                Object.values(missedByStore).forEach(storeList => {
                     data = data.concat(storeList);
                 });
                 // Sort aggregated by count desc
@@ -673,7 +687,7 @@
                 // Limit to 100
                 data = data.slice(0, 100);
             } else {
-                data = allMissed[activeStore] || [];
+                data = missedByStore[activeStore] || [];
             }
 
             if (data.length === 0) {
