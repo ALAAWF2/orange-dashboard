@@ -408,6 +408,29 @@
         </div>
     </div>
 
+    <!-- Missed Opportunities Details Modal -->
+    <div class="modal fade" id="missedDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold">تفاصيل الفرص الضائعة</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>الموظف:</strong> <span id="mdSalesman"></span><br>
+                        <strong>المنتج المباع:</strong> <span id="mdSoldItem" class="text-success fw-bold"></span>
+                    </div>
+                    <h6>المنتجات التي لم يتم عرضها/بيعها:</h6>
+                    <ul class="list-group" id="mdList">
+                        <!-- Items -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -424,6 +447,7 @@
         let detailsModalObj = null;
         let productModalObj = null;
         let catalogModalObj = null;
+        let missedDetailsModalObj = null;
 
         // Filter Scope
         let activeRegion = 'all';
@@ -683,7 +707,7 @@
                     data = data.concat(storeList);
                 });
                 // Sort aggregated by count desc
-                data.sort((a, b) => b.count - a.count);
+                data.sort((a, b) => b.total_count - a.total_count);
                 // Limit to 100
                 data = data.slice(0, 100);
             } else {
@@ -695,18 +719,57 @@
                 return;
             }
 
+            // Store for modal access
+            window.currentMissedData = data;
+
             data.forEach((row, i) => {
+                // row.missed_items is list of {name, count}
+                // Sort to get top 1
+                const missed = row.missed_items || [];
+                missed.sort((a, b) => b.count - a.count);
+
+                const topItem = missed.length > 0 ? missed[0].name : '-';
+                const othersCount = missed.length - 1;
+
+                let missedHtml = `<span class="fw-bold">${topItem}</span>`;
+                if (othersCount > 0) {
+                    missedHtml += `<br><a href="#" onclick="showMissedDetails(${i}); return false;" class="badge bg-secondary text-decoration-none mt-1">+${othersCount} منتجات أخرى</a>`;
+                }
+
                 let html = `
                     <tr>
                         <td>${i + 1}</td>
                         <td class="fw-bold text-dark">${row.employee_name} <br><small class="text-muted font-monospace">${row.employee_id}</small></td>
                         <td class="text-success">${row.sold_item}</td>
-                        <td class="text-danger fw-bold">${row.missed_item}</td>
-                        <td class="text-center fw-bold fs-5">${row.count}</td>
+                        <td class="text-danger">
+                           ${missedHtml}
+                        </td>
+                        <td class="text-center fw-bold fs-5">${row.total_count}</td>
                     </tr>
                 `;
                 tbody.innerHTML += html;
             });
+        }
+
+        function showMissedDetails(index) {
+            const row = window.currentMissedData[index];
+            if (!row) return;
+
+            document.getElementById('mdSalesman').textContent = row.employee_name;
+            document.getElementById('mdSoldItem').textContent = row.sold_item;
+
+            const list = document.getElementById('mdList');
+            list.innerHTML = '';
+
+            row.missed_items.forEach(m => {
+                list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${m.name}</span>
+                    <span class="badge bg-danger rounded-pill">${m.count} مرة</span>
+                 </li>`;
+            });
+
+            if (!missedDetailsModalObj) missedDetailsModalObj = new bootstrap.Modal(document.getElementById('missedDetailsModal'));
+            missedDetailsModalObj.show();
         }
 
         // ...
