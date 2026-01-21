@@ -212,6 +212,24 @@
             </div>
         </div>
 
+        <!-- Market Basket Analysis Section (NEW) -->
+        <h5 class="section-title">أكثر المنتجات التي تشترى معاً (Items Bought Together)</h5>
+        <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
+            <table class="table table-sm align-middle table-hover">
+                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج الأول</th>
+                        <th>المنتج الثاني</th>
+                        <th onclick="setSort('basket', 'freq')" style="cursor: pointer;">مرات الشراء معاً ↕</th>
+                    </tr>
+                </thead>
+                <tbody id="marketBasketBody">
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
+
         <!-- Outlets Table -->
         <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
         <div class="card-custom p-3">
@@ -320,11 +338,19 @@
                     </div>
 
                     <!-- Trend Analysis Badge -->
-                    <div class="alert alert-info d-flex align-items-center mb-0" role="alert" id="trendAlertBox">
+                    <div class="alert alert-info d-flex align-items-center mb-3" role="alert" id="trendAlertBox">
                         <span id="trendIcon" class="me-2 fs-4"></span>
                         <div>
                             <strong>تحليل الاتجاه:</strong> <span id="trendText">جاري التحليل...</span>
                         </div>
+                    </div>
+
+                    <!-- Frequently Bought Together (Modal) -->
+                    <div class="card border-0 shadow-sm p-3">
+                        <h6 class="fw-bold mb-3 border-bottom pb-2">غالباً يشترى مع (Frequently Bought With)</h6>
+                        <ul class="list-group list-group-flush" id="modalRelatedItems">
+                            <li class="list-group-item text-muted small">جاري التحميل...</li>
+                        </ul>
                     </div>
 
                 </div>
@@ -556,9 +582,132 @@
         function renderDashboard() {
             processGlobalStats(currentMode); // Pass current mode
             renderOutletsTable();
+            renderMarketBasketTable();
 
             // Re-apply search if exists
             handleSearch();
+        }
+
+        // ... (Existing Functions) ...
+
+        function renderMarketBasketTable() {
+            const tbody = document.getElementById('marketBasketBody');
+            tbody.innerHTML = '';
+
+            const allBasketData = rawData.market_basket || {};
+            let basketData = allBasketData[activeStore] || [];
+
+            // If activeStore is 'all', use global 'all' key
+            if (activeStore === 'all') {
+                basketData = allBasketData['all'] || [];
+            }
+
+            // If specific store selected but no data found (empty list or undefined)
+            if (activeStore !== 'all' && (!basketData || basketData.length === 0)) {
+                // Try falling back to global? No, user wants specific.
+                // Just show empty message
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد أنماط شرائية كافية لهذا المعرض تحديداً</td></tr>';
+                return;
+            }
+
+            if (basketData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات كافية للتحليل</td></tr>';
+                return;
+            }
+
+            // Show Top 20 for brevity
+            basketData.slice(0, 20).forEach((pair, i) => {
+                let row = `
+                    <tr>
+                        <td class="fw-bold">${i + 1}</td>
+                        <td class="fw-bold text-primary">${pair.item_a_name} <small class="text-muted d-block font-monospace">${pair.item_a_id}</small></td>
+                        <td class="fw-bold text-primary">${pair.item_b_name} <small class="text-muted d-block font-monospace">${pair.item_b_id}</small></td>
+                        <td class="text-center fw-bold fs-5">${pair.frequency}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // ...
+
+        function openProductDetails(itemId, name, category, totalQty, totalAmt) {
+            // 1. Setup Modal Header
+            document.getElementById('prodModalName').textContent = name;
+            document.getElementById('prodModalId').textContent = `${itemId} | ${category}`;
+
+            // ... (Existing History Logic) ...
+
+            // 2. Shortened Logic for brevity in replacement (keeping history generation same)
+            // Check if backend provided history (Future Proofing)
+            let history = [];
+            if (rawData.product_daily_history && rawData.product_daily_history[itemId]) {
+                history = rawData.product_daily_history[itemId];
+            } else {
+                // Generate Mock Data for now
+                if (!mockHistoryCache[itemId]) {
+                    mockHistoryCache[itemId] = generateMockHistory(totalQty, totalAmt);
+                }
+                history = mockHistoryCache[itemId];
+            }
+
+            // 3. Calculate KPIs (Same as before)
+            history.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const sortedByVal = [...history].sort((a, b) => b.amount - a.amount);
+            const best = sortedByVal[0] || { date: '-', amount: 0 };
+            const worst = sortedByVal[sortedByVal.length - 1] || { date: '-', amount: 0 };
+            const zeroDays = history.filter(d => d.qty === 0).length;
+
+            document.getElementById('pmBestDay').textContent = best.date;
+            document.getElementById('pmBestDayVal').textContent = Math.round(best.amount).toLocaleString() + ' SR';
+            document.getElementById('pmWorstDay').textContent = worst.date !== '-' ? worst.date : '-';
+            document.getElementById('pmWorstDayVal').textContent = worst.amount > 0 ? Math.round(worst.amount).toLocaleString() + ' SR' : '0 SR';
+            document.getElementById('pmZeroDays').textContent = zeroDays + ' يوم';
+
+            // 4. Trend Analysis
+            const trend = calculateTrend(history);
+            const alerts = detectAlerts(history);
+            renderTrendUI(trend, alerts);
+
+            // 5. Render Chart
+            renderProductChart(history);
+
+            // 6. Related Products (Market Basket)
+            const relatedList = document.getElementById('modalRelatedItems');
+            relatedList.innerHTML = '';
+
+            const basketData = rawData.market_basket || [];
+            // Find pairs containing this item
+            const related = basketData.filter(p => p.item_a_id == itemId || p.item_b_id == itemId);
+
+            if (related.length === 0) {
+                relatedList.innerHTML = '<li class="list-group-item text-muted text-center small">لا توجد بيانات ربط لهذا المنتج</li>';
+            } else {
+                // Sort by frequency
+                related.sort((a, b) => b.frequency - a.frequency);
+
+                // Show Top 5
+                related.slice(0, 5).forEach(p => {
+                    const isA = (p.item_a_id == itemId);
+                    const otherId = isA ? p.item_b_id : p.item_a_id;
+                    const otherName = isA ? p.item_b_name : p.item_a_name;
+
+                    let html = `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold">${otherName}</span>
+                                <small class="text-muted ms-2">${otherId}</small>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">${p.frequency} مرة</span>
+                        </li>
+                    `;
+                    relatedList.innerHTML += html;
+                });
+            }
+
+            // Show Modal
+            if (!productModalObj) productModalObj = new bootstrap.Modal(document.getElementById('productModal'));
+            productModalObj.show();
         }
 
         function handleSearch() {
@@ -897,6 +1046,46 @@
 
             // 5. Render Chart
             renderProductChart(history);
+
+            // 6. Related Products (Market Basket)
+            const relatedList = document.getElementById('modalRelatedItems');
+            relatedList.innerHTML = '';
+
+            const allBasketData = rawData.market_basket || {};
+            // Select Dataset based on Active Store Filter
+            let basketData = allBasketData[activeStore] || [];
+
+            if (activeStore === 'all') {
+                basketData = allBasketData['all'] || [];
+            }
+
+            // Find pairs containing this item
+            const related = basketData.filter(p => p.item_a_id == itemId || p.item_b_id == itemId);
+
+            if (related.length === 0) {
+                relatedList.innerHTML = '<li class="list-group-item text-muted text-center small">لا توجد بيانات ربط لهذا المنتج</li>';
+            } else {
+                // Sort by frequency
+                related.sort((a, b) => b.frequency - a.frequency);
+
+                // Show Top 5
+                related.slice(0, 5).forEach(p => {
+                    const isA = (p.item_a_id == itemId);
+                    const otherId = isA ? p.item_b_id : p.item_a_id;
+                    const otherName = isA ? p.item_b_name : p.item_a_name;
+
+                    let html = `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold">${otherName}</span>
+                                <small class="text-muted ms-2">${otherId}</small>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">${p.frequency} مرة</span>
+                        </li>
+                    `;
+                    relatedList.innerHTML += html;
+                });
+            }
 
             // Show Modal
             if (!productModalObj) productModalObj = new bootstrap.Modal(document.getElementById('productModal'));
