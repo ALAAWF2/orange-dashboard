@@ -230,6 +230,31 @@
             </table>
         </div>
 
+
+        <!-- Missed Opportunities Section (NEW) -->
+        <h5 class="section-title text-danger">فرص البيع الضائعة حسب الموظف (Missed Opportunities)</h5>
+        <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
+            <div class="alert alert-warning small py-2">
+                <i class="me-1">💡</i>
+                يعرض هذا الجدول الحالات التي قام فيها الموظف ببيع منتج مرتبط بمنتج آخر (حسب سلوك العملاء العام) ولكنه
+                <strong>لم يبع</strong> المنتج الآخر.
+            </div>
+            <table class="table table-sm align-middle table-hover">
+                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                    <tr>
+                        <th>#</th>
+                        <th>الموظف (Salesman)</th>
+                        <th>المنتج المباع (Trigger)</th>
+                        <th>الفرصة الضائعة (Missed Item)</th>
+                        <th class="text-center">عدد المرات</th>
+                    </tr>
+                </thead>
+                <tbody id="missedOppBody">
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
+
         <!-- Outlets Table -->
         <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
         <div class="card-custom p-3">
@@ -583,6 +608,7 @@
             processGlobalStats(currentMode); // Pass current mode
             renderOutletsTable();
             renderMarketBasketTable();
+            renderMissedOppTable();
 
             // Re-apply search if exists
             handleSearch();
@@ -626,6 +652,46 @@
                     </tr>
                 `;
                 tbody.innerHTML += row;
+            });
+        }
+
+        function renderMissedOppTable() {
+            const tbody = document.getElementById('missedOppBody');
+            tbody.innerHTML = '';
+
+            const allMissed = rawData.missed_opportunities || {};
+
+            let data = [];
+
+            if (activeStore === 'all') {
+                // Aggregate all stores
+                Object.values(allMissed).forEach(storeList => {
+                    data = data.concat(storeList);
+                });
+                // Sort aggregated by count desc
+                data.sort((a, b) => b.count - a.count);
+                // Limit to 100
+                data = data.slice(0, 100);
+            } else {
+                data = allMissed[activeStore] || [];
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات (أو فرص ضائعة) مسجلة لهذا النطاق</td></tr>';
+                return;
+            }
+
+            data.forEach((row, i) => {
+                let html = `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="fw-bold text-dark">${row.employee_name} <br><small class="text-muted font-monospace">${row.employee_id}</small></td>
+                        <td class="text-success">${row.sold_item}</td>
+                        <td class="text-danger fw-bold">${row.missed_item}</td>
+                        <td class="text-center fw-bold fs-5">${row.count}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += html;
             });
         }
 
