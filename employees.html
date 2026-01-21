@@ -303,6 +303,7 @@
                                         <th>المبيعات</th>
                                         <th class="text-center">الهدف</th>
                                         <th class="text-center">التحقيق %</th>
+                                        <th class="text-center">اليومية المتبقية</th>
                                         <th class="d-none d-md-table-cell">الفواتير</th>
                                         <th class="d-none d-md-table-cell">معدل الفاتورة</th>
                                         <th class="d-none d-md-table-cell">متوسط القطع</th>
@@ -618,9 +619,17 @@
                     const rank = idx + 1;
                     const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
 
-                    // Target Display
-                    const showTarget = periodFilter === 'mtd' && emp.target > 0;
-                    const targetText = showTarget ? emp.target.toLocaleString() : '-';
+                    // Daily Required Calculation
+                    const today = new Date();
+                    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                    const remainingDays = lastDayOfMonth - today.getDate() + 1;
+
+                    let dailyReq = 0;
+                    if (periodFilter === 'mtd' && emp.target > emp.sales && remainingDays > 0) {
+                        dailyReq = (emp.target - emp.sales) / remainingDays;
+                    }
+                    const dailyReqText = dailyReq > 0 ? dailyReq.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-';
+
 
                     let achBadge = '<span class="text-muted">-</span>';
                     if (showTarget) {
@@ -645,6 +654,7 @@
                     })}</td>
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
+        <td class="text-center fw-bold text-danger">${dailyReqText}</td>
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
         <td class="d-none d-md-table-cell">${emp.avg_ticket.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
         <td class="d-none d-md-table-cell">${emp.items_per_inv.toFixed(1)}</td>
