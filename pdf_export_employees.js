@@ -242,35 +242,36 @@ async function generateEmployeePDF() {
             startY: 25,
             head: [
                 [
-                    [
-                        { content: 'بيانات الموظف (Employee)', colSpan: 1, styles: { fillColor: [255, 255, 255], textColor: 0, halign: 'center' } },
-                        { content: `الأمس (Yesterday) - ${yestStrFinal}`, colSpan: 4, styles: { fillColor: [220, 220, 220], textColor: 0, halign: 'center' } },
-                        { content: `الشهر الحالي (MTD) - ${monthStartStr} إلى ${yestStrFinal}`, colSpan: 8, styles: { fillColor: [200, 200, 200], textColor: 0, halign: 'center' } }
-                    ],
-                    [
-                        'الموظف',
-                        'المبيعات', 'المساهمة %', 'الفواتير', 'متوسط الفاتورة',
-                        'المبيعات', 'المساهمة %', 'الفواتير', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
-                    ]
+                    { content: 'بيانات الموظف (Employee)', colSpan: 1, styles: { fillColor: [255, 255, 255], textColor: 0, halign: 'center' } },
+                    { content: `الأمس (Yesterday) - ${yestStrFinal}`, colSpan: 4, styles: { fillColor: [220, 220, 220], textColor: 0, halign: 'center' } },
+                    { content: `الشهر الحالي (MTD) - ${monthStartStr} إلى ${yestStrFinal}`, colSpan: 8, styles: { fillColor: [200, 200, 200], textColor: 0, halign: 'center' } }
                 ],
-                body: tableRows,
-                theme: 'grid',
-                styles: {
-                    font: fontName,
-                    fontSize: 8,
-                    cellPadding: 1,
-                    halign: 'center'
-                },
-                columnStyles: {
-                    0: { halign: 'right', fontStyle: 'bold', minCellWidth: 30 },
-                    10: { textColor: [0, 128, 0], fontStyle: 'bold' }
-                },
-                didParseCell: function (data) {
-                    if (data.row.raw[0] === 'TOTAL') {
-                        data.cell.styles.fillColor = [240, 240, 240];
-                        data.cell.styles.fontStyle = 'bold';
-                    }
+                [
+                    'الموظف',
+                    'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة',
+                    'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
+                ]
+            ],
+            body: tableRows,
+            theme: 'grid',
+            styles: {
+                font: fontName,
+                fontSize: 8,
+                cellPadding: 1,
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { halign: 'right', fontStyle: 'bold', minCellWidth: 30 },
+                3: { minCellWidth: 10 },
+                7: { minCellWidth: 10 },
+                10: { textColor: [0, 128, 0], fontStyle: 'bold' }
+            },
+            didParseCell: function (data) {
+                if (data.row.raw[0] === 'TOTAL') {
+                    data.cell.styles.fillColor = [240, 240, 240];
+                    data.cell.styles.fontStyle = 'bold';
                 }
+            }
         });
     }
 
