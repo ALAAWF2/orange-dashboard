@@ -982,7 +982,7 @@
             document.getElementById('prevYearTitle').textContent = `(${toYMD(prevStart)} - ${toYMD(prevEnd)})`;
 
             // --- 2. Aggregation Function ---
-            const calcStats = (start, end) => {
+            const calcStats = (start, end, filters = {}) => {
                 let sales = 0, trans = 0, visitors = 0, target = 0;
                 let monthly = {};
                 let branchSales = {};
@@ -990,30 +990,30 @@
                 let branchVisitors = {};
                 let branchTarget = {};
 
-                // Convert to comparable value
+                // Use provided filters or fallback to UI state
+                const filterBranch = filters.branch || selBranch;
+                const filterCity = filters.city || selCity;
+                const filterManager = filters.manager || selManager;
+                const filterType = filters.type || selType;
+
                 let sTime = start.getTime();
                 let eTime = end.getTime();
 
                 const filterFn = (dStr, sId) => {
-                    // Branch Filter
-                    if (selBranch !== 'all' && sId !== selBranch) return false;
+                    // Branch
+                    if (filterBranch !== 'all' && sId !== filterBranch) return false;
 
-                    // City & Manager & Type Filter
+                    // Meta Filters
                     if (rawData.store_meta && rawData.store_meta[sId]) {
                         let meta = rawData.store_meta[sId];
-                        if (selCity !== 'all' && meta.city !== selCity) return false;
-                        if (selManager !== 'all' && meta.manager !== selManager) return false;
-                        if (selType !== 'all' && meta.type !== selType) return false;
+                        if (filterCity !== 'all' && meta.city !== filterCity) return false;
+                        if (filterManager !== 'all' && meta.manager !== filterManager) return false;
+                        if (filterType !== 'all' && meta.type !== filterType) return false;
                     } else {
-                        // Logic for missing metadata (fallback)
-                        if (selCity !== 'all') return false;
-                        if (selManager !== 'all') return false;
-
-                        // Default assumption if meta missing? exclude from both specifics
-                        if (selType !== 'all') return false;
+                        if (filterCity !== 'all' || filterManager !== 'all' || filterType !== 'all') return false;
                     }
 
-                    // Date Filter
+                    // Date
                     let dTime = new Date(dStr).getTime();
                     return dTime >= sTime && dTime <= eTime;
                 };
@@ -1052,8 +1052,26 @@
                 return { sales, trans, visitors, target, monthly, branchSales, branchTrans, branchVisitors, branchTarget };
             };
 
+            // Calculate Current (Filtered) for Display
             const curr = calcStats(currentStart, currentEnd);
             const prev = calcStats(prevStart, prevEnd);
+
+            // Calculate Global Top 5 Benchmark (Unfiltered)
+            const globalCurr = calcStats(currentStart, currentEnd, {
+                branch: 'all', city: 'all', manager: 'all', type: 'all'
+            });
+
+            // Extract Global Top 5 Achievement
+            let globalBranchRates = [];
+            Object.keys(globalCurr.branchSales).forEach(sid => {
+                let v = globalCurr.branchSales[sid] || 0;
+                let t = globalCurr.branchTarget[sid] || 0;
+                let ach = t > 0 ? (v / t) * 100 : 0;
+                if (t > 0) globalBranchRates.push(ach);
+            });
+            globalBranchRates.sort((a, b) => b - a);
+            let top5 = globalBranchRates.slice(0, 5);
+            let top5Avg = top5.length > 0 ? top5.reduce((include, val) => include + val, 0) / top5.length : 100;
 
             // --- 3. Update KPI Cards (Current) ---
             fmt(document.getElementById('totalSales'), curr.sales);
@@ -1203,7 +1221,7 @@
             renderDailyReport();
 
             // --- 7. Advanced Analysis ---
-            updateAdvancedAnalysis(curr, prev, branchList);
+            updateAdvancedAnalysis(curr, prev, branchList, top5Avg);
         }
 
         // Global Data for Daily Report
@@ -1437,7 +1455,7 @@
         }
 
         // --- NEW: Advanced Analysis Function ---
-        function updateAdvancedAnalysis(curr, prev, branchList) {
+        function updateAdvancedAnalysis(curr, prev, branchList, top5Avg) {
             // 3. Early Warning
             const warningBody = document.getElementById('earlyWarningBody');
             warningBody.innerHTML = '';
@@ -1448,13 +1466,17 @@
             // Show Top 10 at Risk
             withTarget.slice(0, 10).forEach(b => {
                 let riskClass = 'risk-low';
-                let riskLabel = 'طمئن (Safe)';
+                let riskLabel = 'Safe';
 
-                if (b.ach < 50) { riskClass = 'risk-high'; riskLabel = 'حرج (Critical)'; }
-                else if (b.ach < 85) { riskClass = 'risk-med'; riskLabel = 'متوسط (Medium)'; }
+                // Compare against 80% and 50% of the Top 5 Average
+                let safeThreshold = top5Avg * 0.8;
+                let criticalThreshold = top5Avg * 0.5;
+
+                if (b.ach < criticalThreshold) { riskClass = 'risk-high'; riskLabel = 'Critical'; }
+                else if (b.ach < safeThreshold) { riskClass = 'risk-med'; riskLabel = 'Medium'; }
 
                 let tr = document.createElement('tr');
-                let riskTip = `تحقيق: ${b.ach.toFixed(1)}%`;
+                let riskTip = `تحقيق: ${b.ach.toFixed(1)}% | المعيار (أفضل 5): ${top5Avg.toFixed(1)}%`;
 
                 tr.innerHTML = `
                     <td class="fw-bold" data-bs-toggle="tooltip" title="${riskTip}">${b.name}</td>
