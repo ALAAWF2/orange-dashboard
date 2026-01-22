@@ -168,6 +168,23 @@
             <div class="d-flex gap-2 align-items-center">
                 <span class="badge bg-light text-dark border" id="lastUpdate">...</span>
                 <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">🏠 الرئيسية</a>
+
+                <!-- Export Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-success btn-sm fw-bold dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        📊 تصدير Excel
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="exportExcel('current')">البيانات الحالية</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#" onclick="exportExcel('template')">📄 قالب تارجت الشهر
+                                القادم</a></li>
+                    </ul>
+                </div>
+
                 <button onclick="generateEmployeePDF()" class="btn btn-warning btn-sm fw-bold text-white">📄 تصدير
                     PDF</button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
@@ -178,6 +195,11 @@
     <!-- JS Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="assets/amiri_font.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="assets/amiri_font.js"></script>
     <script src="pdf_export_employees.js"></script>
 
@@ -890,6 +912,65 @@
     </tr>
     `;
                 }).join('');
+            }
+
+            // === EXCEL EXPORT ===
+            function exportExcel(type) {
+                if (!currentEmpList || currentEmpList.length === 0) {
+                    alert("لا توجد بيانات للتصدير");
+                    return;
+                }
+
+                if (type === 'current') {
+                    // 1. Export Current View
+                    const data = currentEmpList.map((e, i) => ({
+                        "الترتيب": i + 1,
+                        "الموظف": e.name,
+                        "الفرع": e.storeName,
+                        "المبيعات": e.sales,
+                        "الفواتير": e.transactions,
+                        "معدل الفاتورة": e.avg_ticket,
+                        "متوسط القطع": e.items_per_inv,
+                        "الهدف": e.target || 0,
+                        "التحقيق %": (e.achievement || 0).toFixed(1) + '%',
+                        "حصة الفرع %": (e.branchShare || 0).toFixed(1) + '%'
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    // Adjust column widths
+                    ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Employees Report");
+                    XLSX.writeFile(wb, "Orange_Employees_Report.xlsx");
+                }
+                else if (type === 'template') {
+                    // 2. Export Target Template
+                    // CRITICAL: Includes Employee ID for consistent mapping in the future
+                    const data = currentEmpList.map(e => {
+                        // Clean ID: Remove 'Unknown', 'Unkown' and trim
+                        let cleanId = e.id.toString().replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
+
+                        return {
+                            "Employee ID": cleanId,
+                            "Employee Name": e.name,
+                            "Store": e.storeName,
+                            "Target Amount": "" // Empty column for user input
+                        };
+                    });
+
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Targets Template");
+
+                    const nextMonth = new Date();
+                    nextMonth.setMonth(nextMonth.getMonth() + 1);
+                    const monthName = nextMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+                    XLSX.writeFile(wb, `Target_Template_${monthName}.xlsx`);
+                }
             }
 
             // Initialize
