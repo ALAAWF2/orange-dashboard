@@ -1552,27 +1552,17 @@
             if (missed.length === 0) {
                 gapList.innerHTML = '<li class="list-group-item text-center text-muted">الجميع حقق الهدف! 🎉</li>';
             } else {
-                missed.slice(0, 5).forEach(b => {
+                missed.slice(0, 10).forEach(b => {
                     let gap = b.target - b.val;
                     let pct = (b.val / b.target) * 100;
 
                     let item = document.createElement('li');
-                    if (missed.length === 0) {
-                        gapList.innerHTML = '<li class="list-group-item text-center text-muted">الجميع حقق الهدف! 🎉</li>';
-                    } else {
-                        // Modified: Show Top 10 High Gaps
-                        missed.slice(0, 10).forEach(b => {
-                            let gap = b.target - b.val;
-                            let pct = (b.val / b.target) * 100;
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center px-0 py-2';
+                    item.setAttribute('data-bs-toggle', 'tooltip');
+                    item.setAttribute('data-bs-placement', 'left');
+                    item.setAttribute('title', `الهدف: ${valFmt(b.target)} | المبيعات: ${valFmt(b.val)} | المتبقي: ${valFmt(gap)}`);
 
-                            let item = document.createElement('li');
-                            item.className = 'list-group-item d-flex justify-content-between align-items-center px-0 py-2';
-                            // Added tooltip to the item itself
-                            item.setAttribute('data-bs-toggle', 'tooltip');
-                            item.setAttribute('data-bs-placement', 'left');
-                            item.setAttribute('title', `الهدف: ${valFmt(b.target)} | المبيعات: ${valFmt(b.val)} | المتبقي: ${valFmt(gap)}`);
-
-                            item.innerHTML = `
+                    item.innerHTML = `
                         <div class="ms-2 me-auto">
                             <div class="fw-bold" style="font-size: 0.9rem">${b.name}</div>
                             <div class="text-muted" style="font-size: 0.75rem">حقق ${pct.toFixed(1)}%</div>
@@ -1584,52 +1574,29 @@
                             </div>
                         </div>
                     `;
-                            gapList.appendChild(item);
-                        });
-                    }
+                    gapList.appendChild(item);
+                });
+            }
 
-                    // 3. Early Warning
-                    const warningBody = document.getElementById('earlyWarningBody');
-                    warningBody.innerHTML = '';
+            // 3. Early Warning
+            const warningBody = document.getElementById('earlyWarningBody');
+            warningBody.innerHTML = '';
 
-                    // Calc Time Elapsed %
-                    let now = new Date();
-                    let daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    // If selected filter is not current month, this logic is tricky. 
-                    // We should use the 'currentEnd' date from filter.
-                    // Assuming 'curr' period end date.
+            let withTarget = branchList.filter(b => b.target > 0);
+            withTarget.sort((a, b) => a.ach - b.ach);
 
-                    // To be accurate with filter:
-                    // Check if current filter covers a full closed month?
-                    // If filtered range is 2025, early warning is irrelevant (it's history).
-                    // Logic: Only show warning if "Unachieved" and "Run Rate" is bad.
+            // Show Top 10 at Risk
+            withTarget.slice(0, 10).forEach(b => {
+                let riskClass = 'risk-low';
+                let riskLabel = 'طمئن';
 
-                    // Simple Logic: List lowest achievement % among those with Targets
-                    // sorted ascending.
+                if (b.ach < 50) { riskClass = 'risk-high'; riskLabel = 'حرج'; }
+                else if (b.ach < 85) { riskClass = 'risk-med'; riskLabel = 'متوسط'; }
 
-                    let withTarget = branchList.filter(b => b.target > 0);
-                    withTarget.sort((a, b) => a.ach - b.ach);
+                let tr = document.createElement('tr');
+                let riskTip = `تحقيق: ${b.ach.toFixed(1)}% | المعدل الطبيعي المتوقع: >${(new Date().getDate() / 30 * 100).toFixed(0)}%`;
 
-                    // Modified: Show Top 10 at Risk
-                    withTarget.slice(0, 10).forEach(b => {
-                        // Determine Risk
-                        // If Ach < 50% -> High
-                        // If Ach < 80% -> Med
-                        // Else Low
-
-                        let riskClass = 'risk-low';
-                        let riskLabel = 'طمئن';
-
-                        // Dynamic Risk based on elapsed days? 
-                        // Let's stick to simple bands for now as filter context varies.
-                        if (b.ach < 50) { riskClass = 'risk-high'; riskLabel = 'حرج'; }
-                        else if (b.ach < 85) { riskClass = 'risk-med'; riskLabel = 'متوسط'; }
-
-                        let tr = document.createElement('tr');
-                        // Tooltip logic
-                        let riskTip = `تحقيق: ${b.ach.toFixed(1)}% | المعدل الطبيعي المتوقع: >${(new Date().getDate() / 30 * 100).toFixed(0)}%`;
-
-                        tr.innerHTML = `
+                tr.innerHTML = `
                     <td class="fw-bold" data-bs-toggle="tooltip" title="${riskTip}">${b.name}</td>
                     <td class="text-center">
                         <span style="font-size:0.9rem">${b.ach.toFixed(1)}%</span>
@@ -1641,15 +1608,15 @@
                         <span class="badge ${riskClass === 'risk-high' ? 'bg-danger' : (riskClass === 'risk-med' ? 'bg-warning text-dark' : 'bg-success')}">${riskLabel}</span>
                     </td>
                 `;
-                        warningBody.appendChild(tr);
-                    });
+                warningBody.appendChild(tr);
+            });
 
-                    // Re-init tooltips for dynamic content
-                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                        return new bootstrap.Tooltip(tooltipTriggerEl);
-                    });
-                }
+            // Re-init tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
 
         init();
     </script>

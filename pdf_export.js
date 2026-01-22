@@ -158,6 +158,8 @@ async function generatePDF() {
 
             const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100).toFixed(1) + '%' : '-';
             const avgInv = trans > 0 ? Math.round(sales / trans) : 0;
+            // Added: Customer Value (Sales / Visitors)
+            const custVal = visitors > 0 ? Math.round(sales / visitors) : 0;
             const conv = visitors > 0 ? ((trans / visitors) * 100).toFixed(1) + '%' : '-';
 
             rows.push([
@@ -167,6 +169,7 @@ async function generatePDF() {
                 growth,
                 trans,
                 avgInv,
+                custVal, // New Column
                 visitors,
                 visitorsLY,
                 conv
@@ -185,6 +188,7 @@ async function generatePDF() {
         // Totals Row
         const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100).toFixed(1) + '%' : '-';
         const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
+        const grandCustVal = grandVisitors > 0 ? Math.round(grandTotalSales / grandVisitors) : 0;
         const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100).toFixed(1) + '%' : '-';
 
         rows.push([
@@ -194,13 +198,14 @@ async function generatePDF() {
             grandGrowth,
             grandTrans,
             grandAvgInv,
+            grandCustVal, // New Column
             grandVisitors,
             grandVisitorsLY,
             grandConv
         ]);
 
         doc.autoTable({
-            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'زوار 2026', 'زوار 2025', 'التحويل %']],
+            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'قيمة العميل', 'زوار 2026', 'زوار 2025', 'التحويل %']],
             body: rows,
             startY: 40,
             theme: 'grid',
