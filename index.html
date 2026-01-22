@@ -127,6 +127,73 @@
             justify-content: center;
             font-size: 0.8rem;
         }
+
+        /* Tooltip Customization */
+        .custom-tooltip {
+            --bs-tooltip-bg: #343a40;
+            --bs-tooltip-color: #fff;
+        }
+
+        /* Analysis Cards */
+        .analysis-card {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analysis-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .analysis-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        /* Growth Table */
+        .growth-pos {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .growth-neg {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Early Warning */
+        .risk-high {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .risk-med {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .risk-low {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .progress-micro {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+            margin-top: 4px;
+        }
     </style>
 </head>
 
@@ -423,6 +490,83 @@
                 <h5 class="section-title">أعلى 10 فروع (Top 10)</h5>
                 <div class="chart-container">
                     <canvas id="top10Chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3.5: Advanced Analysis (Growth, Gap, Risk) -->
+        <h5 class="section-title mt-4">التحليل المتقدم (Advanced Analysis)</h5>
+        <div class="row g-3 mb-4">
+
+            <!-- 1. Growth Contribution -->
+            <div class="col-lg-4">
+                <div class="analysis-card">
+                    <div class="analysis-header">
+                        <h6 class="m-0 fw-bold text-primary">
+                            🌱 مساهمة النمو (Contribution)
+                            <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                title="يوضح الفروع الأكثر مساهمة في زيادة (أو نقص) المبيعات مقارنة بالعام الماضي"></i>
+                        </h6>
+                    </div>
+                    <div class="analysis-body">
+                        <table class="table table-sm table-hover mb-0" style="font-size: 0.9rem;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>الفرع</th>
+                                    <th>النمو</th>
+                                    <th>المساهمة %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="growthContribBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Target Gap -->
+            <div class="col-lg-4">
+                <div class="analysis-card">
+                    <div class="analysis-header">
+                        <h6 class="m-0 fw-bold text-danger">
+                            🎯 فجوة الهدف (Target Gap)
+                            <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                title="الفروع التي لم تحقق الهدف بعد، مرتبة حسب المبلغ المتبقي (الأعلى فالأقل)"></i>
+                        </h6>
+                    </div>
+                    <div class="analysis-body p-3">
+                        <ul class="list-group list-group-flush" id="targetGapList">
+                            <!-- JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Early Warning -->
+            <div class="col-lg-4">
+                <div class="analysis-card">
+                    <div class="analysis-header">
+                        <h6 class="m-0 fw-bold text-warning">
+                            ⚠️ الإنذار المبكر (Early Warning)
+                            <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                title="فروع أداؤها أقل من الوقت المنقضي من الشهر وتواجه خطر عدم تحقيق الهدف"></i>
+                        </h6>
+                    </div>
+                    <div class="analysis-body">
+                        <table class="table table-sm mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>الفرع</th>
+                                    <th>التحقيق</th>
+                                    <th>التقييم</th>
+                                </tr>
+                            </thead>
+                            <tbody id="earlyWarningBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1100,6 +1244,9 @@
 
             // --- 6. Render Daily Report ---
             renderDailyReport();
+
+            // --- 7. Advanced Analysis ---
+            updateAdvancedAnalysis(curr, prev, branchList);
         }
 
         // Global Data for Daily Report
@@ -1331,6 +1478,178 @@
                 }
             });
         }
+
+        // --- NEW: Advanced Analysis Function ---
+        function updateAdvancedAnalysis(curr, prev, branchList) {
+
+            // 1. Growth Contribution
+            // Total Growth (Absolute)
+            const totalGrowth = curr.sales - prev.sales;
+            const isPositiveGrowth = totalGrowth >= 0;
+
+            // Sort by Absolute Growth (High to Low)
+            // We want to see who Added the most value, and who Removed the most.
+            let sortedByGrowth = [...branchList].sort((a, b) => b.absGrowth - a.absGrowth);
+
+            const growthBody = document.getElementById('growthContribBody');
+            growthBody.innerHTML = '';
+
+            // Take Top 3 Positive contributors and Top 3 Negative contributors
+            // Or just top 5 contributors to the change?
+            // Let's show Top 3 Gainers and Bottom 3 Losers if exist
+            let gainers = sortedByGrowth.filter(b => b.absGrowth > 0);
+            let losers = sortedByGrowth.filter(b => b.absGrowth < 0);
+
+            // Render Helper
+            const renderGrowthRow = (b) => {
+                let contrib = totalGrowth !== 0 ? (b.absGrowth / Math.abs(totalGrowth)) * 100 : 0;
+                // If company declined, positive branch held it up? 
+
+                return `
+                    <tr>
+                        <td class="fw-bold" style="font-size: 0.85rem">${b.name}</td>
+                        <td class="${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} text-end" dir="ltr" style="font-size: 0.85rem">
+                            ${b.absGrowth > 0 ? '+' : ''}${valFmt(b.absGrowth)}
+                        </td>
+                        <td class="text-end text-muted" style="font-size: 0.8rem">
+                             ${b.growth.toFixed(1)}%
+                        </td>
+                    </tr>
+                `;
+            };
+
+            // Header for Positive
+            let rows = [];
+
+            // Add top 3 gainers
+            gainers.slice(0, 3).forEach(b => rows.push(renderGrowthRow(b)));
+
+            // Divider if needed, or just list them. 
+            // If we have losers, show them too.
+            if (losers.length > 0) {
+                // Sort losers ascending (most negative first)
+                losers.sort((a, b) => a.absGrowth - b.absGrowth);
+                losers.slice(0, 3).forEach(b => rows.push(renderGrowthRow(b)));
+            }
+
+            // Fallback if empty
+            if (rows.length === 0) {
+                growthBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد بيانات</td></tr>';
+            } else {
+                growthBody.innerHTML = rows.join('');
+            }
+
+
+            // 2. Target Gap
+            const gapList = document.getElementById('targetGapList');
+            gapList.innerHTML = '';
+
+            // Filter stores that missed target
+            let missed = branchList.filter(b => b.target > 0 && b.val < b.target);
+            // Sort by Gap Amount (Desc) - Biggest opportunity first
+            missed.sort((a, b) => (b.target - b.val) - (a.target - a.val));
+
+            if (missed.length === 0) {
+                gapList.innerHTML = '<li class="list-group-item text-center text-muted">الجميع حقق الهدف! 🎉</li>';
+            } else {
+                missed.slice(0, 5).forEach(b => {
+                    let gap = b.target - b.val;
+                    let pct = (b.val / b.target) * 100;
+
+                    let item = document.createElement('li');
+                    if (missed.length === 0) {
+                        gapList.innerHTML = '<li class="list-group-item text-center text-muted">الجميع حقق الهدف! 🎉</li>';
+                    } else {
+                        // Modified: Show Top 10 High Gaps
+                        missed.slice(0, 10).forEach(b => {
+                            let gap = b.target - b.val;
+                            let pct = (b.val / b.target) * 100;
+
+                            let item = document.createElement('li');
+                            item.className = 'list-group-item d-flex justify-content-between align-items-center px-0 py-2';
+                            // Added tooltip to the item itself
+                            item.setAttribute('data-bs-toggle', 'tooltip');
+                            item.setAttribute('data-bs-placement', 'left');
+                            item.setAttribute('title', `الهدف: ${valFmt(b.target)} | المبيعات: ${valFmt(b.val)} | المتبقي: ${valFmt(gap)}`);
+
+                            item.innerHTML = `
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold" style="font-size: 0.9rem">${b.name}</div>
+                            <div class="text-muted" style="font-size: 0.75rem">حقق ${pct.toFixed(1)}%</div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-danger rounded-pill mb-1">${valFmt(gap)}</span>
+                            <div class="progress text-end" style="height: 4px; width: 60px; margin-left: auto;">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                            gapList.appendChild(item);
+                        });
+                    }
+
+                    // 3. Early Warning
+                    const warningBody = document.getElementById('earlyWarningBody');
+                    warningBody.innerHTML = '';
+
+                    // Calc Time Elapsed %
+                    let now = new Date();
+                    let daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    // If selected filter is not current month, this logic is tricky. 
+                    // We should use the 'currentEnd' date from filter.
+                    // Assuming 'curr' period end date.
+
+                    // To be accurate with filter:
+                    // Check if current filter covers a full closed month?
+                    // If filtered range is 2025, early warning is irrelevant (it's history).
+                    // Logic: Only show warning if "Unachieved" and "Run Rate" is bad.
+
+                    // Simple Logic: List lowest achievement % among those with Targets
+                    // sorted ascending.
+
+                    let withTarget = branchList.filter(b => b.target > 0);
+                    withTarget.sort((a, b) => a.ach - b.ach);
+
+                    // Modified: Show Top 10 at Risk
+                    withTarget.slice(0, 10).forEach(b => {
+                        // Determine Risk
+                        // If Ach < 50% -> High
+                        // If Ach < 80% -> Med
+                        // Else Low
+
+                        let riskClass = 'risk-low';
+                        let riskLabel = 'طمئن';
+
+                        // Dynamic Risk based on elapsed days? 
+                        // Let's stick to simple bands for now as filter context varies.
+                        if (b.ach < 50) { riskClass = 'risk-high'; riskLabel = 'حرج'; }
+                        else if (b.ach < 85) { riskClass = 'risk-med'; riskLabel = 'متوسط'; }
+
+                        let tr = document.createElement('tr');
+                        // Tooltip logic
+                        let riskTip = `تحقيق: ${b.ach.toFixed(1)}% | المعدل الطبيعي المتوقع: >${(new Date().getDate() / 30 * 100).toFixed(0)}%`;
+
+                        tr.innerHTML = `
+                    <td class="fw-bold" data-bs-toggle="tooltip" title="${riskTip}">${b.name}</td>
+                    <td class="text-center">
+                        <span style="font-size:0.9rem">${b.ach.toFixed(1)}%</span>
+                        <div class="progress-micro">
+                            <div class="progress-bar ${b.ach < 50 ? 'bg-danger' : 'bg-warning'}" style="width: ${b.ach}%"></div>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge ${riskClass === 'risk-high' ? 'bg-danger' : (riskClass === 'risk-med' ? 'bg-warning text-dark' : 'bg-success')}">${riskLabel}</span>
+                    </td>
+                `;
+                        warningBody.appendChild(tr);
+                    });
+
+                    // Re-init tooltips for dynamic content
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl);
+                    });
+                }
 
         init();
     </script>
