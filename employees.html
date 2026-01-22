@@ -480,18 +480,8 @@
                 };
 
                 Object.entries(history).forEach(([storeCode, records]) => {
-                    // Filter by Branch
-                    if (branchFilter !== 'all' && branchFilter !== storeCode) return;
-
-                    // Filter by Manager
-                    // If manager is selected, check if this store belongs to that manager
-                    // Some stores might not use storeMeta, fallback safely
-                    if (managerFilter !== 'all') {
-                        const meta = storeMeta[storeCode];
-                        if (!meta || meta.manager !== managerFilter) {
-                            return;
-                        }
-                    }
+                    // Removed early filtering to allow global aggregation
+                    // We will filter by Primary Store LATER
 
                     // Init Store Stats
                     if (!branchStats[storeCode]) branchStats[storeCode] = { current: 0, prev: 0 };
@@ -535,15 +525,31 @@
                             empAgg[key] = {
                                 id: empId,
                                 name: empName,
-                                storeCode: storeCode,
+                                name: empName,
+                                storeCode: storeCode, // Placeholder, will be updated
                                 storeName: storesData[storeCode] || storeCode,
                                 sales: 0,
-                                prevSales: 0, // NEW
+                                prevSales: 0,
                                 transactions: 0,
                                 items: 0,
                                 max_ticket: 0,
-                                target: monthlyTarget
+                                target: monthlyTarget,
+                                storeStats: {},
+                                latestDates: {}  // NEW: Track latest date per store
                             };
+                        }
+
+                        // Track Stats & Dates per store for Primary Store determination
+                        if (pStatus === 1) {
+                            if (!empAgg[key].storeStats[storeCode]) empAgg[key].storeStats[storeCode] = 0;
+                            empAgg[key].storeStats[storeCode] += (sales || 0);
+
+                            // Update Latest Date for this store (If sales are positive, it's a stronger indication of presence)
+                            if (sales > 0) {
+                                if (!empAgg[key].latestDates[storeCode] || date > empAgg[key].latestDates[storeCode]) {
+                                    empAgg[key].latestDates[storeCode] = date;
+                                }
+                            }
                         }
 
                         // Accumulate Employee Stats
@@ -558,8 +564,41 @@
                     });
                 });
 
-                // Convert to array
-                let empList = Object.values(empAgg).filter(e => e.sales > 0 || e.transactions > 0);
+                // 1. Determine Primary Store & Apply Filters (Filters moved here)
+                let empList = Object.values(empAgg).filter(e => {
+                    // Determine Primary Store
+                    // Logic Change: Use the store with the MOST RECENT (Latest) POSITIVE sales date.
+                    // This correctly handles mid-month transfers.
+                    let bestStore = e.storeCode;
+                    let latestDate = "";
+
+                    if (Object.keys(e.latestDates).length > 0) {
+                        Object.entries(e.latestDates).forEach(([sCode, dStr]) => {
+                            if (dStr > latestDate) {
+                                latestDate = dStr;
+                                bestStore = sCode;
+                            }
+                        });
+                        e.storeCode = bestStore;
+                        e.storeName = storesData[bestStore] || bestStore;
+                    }
+
+                    // Now Apply Filters based on PRIMARY Store
+
+                    // Filter by Branch
+                    if (branchFilter !== 'all' && branchFilter !== e.storeCode) return false;
+
+                    // Filter by Manager
+                    if (managerFilter !== 'all') {
+                        const meta = storeMeta[e.storeCode];
+                        if (!meta || meta.manager !== managerFilter) {
+                            return false;
+                        }
+                    }
+
+                    // Filter Non-Active
+                    return e.sales > 0 || e.transactions > 0;
+                });
 
                 // Search filter
                 if (searchTerm) {

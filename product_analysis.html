@@ -513,12 +513,22 @@
             }
         }
 
+        // Helper to check if user has access to a store
+        function isStoreAccessible(sid) {
+            if (!currentUser) return false;
+            if (currentUser.role === 'Admin') return true;
+
+            const meta = storeMeta[sid];
+            if (meta && meta.manager === currentUser.name) return true;
+
+            if (currentUser.stores && (currentUser.stores.includes(sid) || currentUser.stores.includes('all'))) {
+                return true;
+            }
+            return false;
+        }
+
         function setupFilters(mgmtData) {
             const role = (currentUser.role || 'guest').toLowerCase().replace(' ', '_');
-            // Normalize: 'Sales Manager' -> 'sales_manager', 'Admin' -> 'admin'
-            console.log("Normalized Role:", role);
-
-            // Check aliases
             const allowed = ['admin', 'sales_manager', 'manager', 'salesmanager'];
 
             if (allowed.includes(role) || role.includes('admin') || role.includes('manager')) {
@@ -528,31 +538,23 @@
                 regSel.style.display = 'inline-block';
                 storeSel.style.display = 'inline-block';
 
-                // Populate Regions
                 const regions = new Set();
                 const stores = [];
-
-                // Use Analysis MTD as the source of truth for "Active Stores"
-                // storeMeta might contain IDs with no names, or old stores.
-                // data.analysis_mtd contains { storeId: { store_name: "..." } }
 
                 const sourceData = rawData.analysis_mtd || {};
 
                 Object.keys(sourceData).forEach(sid => {
+                    if (!isStoreAccessible(sid)) return;
+
                     const storeObj = sourceData[sid];
                     const m = storeMeta[sid] || {};
-
-                    // Prefer name from data (it's usually correct), then meta, then ID
                     const sName = storeObj.store_name || m.name_ar || m.name || sid;
-
-                    const region = m.region; // Region usually comes from meta
+                    const region = m.region;
 
                     if (region) regions.add(region);
-
                     stores.push({ id: sid, name: sName, region: region });
                 });
 
-                // Fill Region
                 const sortedRegions = Array.from(regions).sort();
                 sortedRegions.forEach(r => {
                     const opt = document.createElement('option');
@@ -561,7 +563,6 @@
                     regSel.appendChild(opt);
                 });
 
-                // Fill Store
                 populateStoreFilter(stores);
             }
         }
@@ -582,9 +583,6 @@
         function applyFilters() {
             activeRegion = document.getElementById('regionFilter').value;
             activeStore = document.getElementById('storeFilter').value;
-
-            // If Region changed, maybe filter stores? optional UX improvement
-            // For now specific Logic:
             renderDashboard();
         }
 
@@ -702,13 +700,13 @@
             let data = [];
 
             if (activeStore === 'all') {
-                // Aggregate all stores
-                Object.values(missedByStore).forEach(storeList => {
-                    data = data.concat(storeList);
+                // Aggregate allowed stores
+                Object.entries(missedByStore).forEach(([sId, storeList]) => {
+                    if (isStoreAccessible(sId)) {
+                        data = data.concat(storeList);
+                    }
                 });
-                // Sort aggregated by count desc
                 data.sort((a, b) => b.total_count - a.total_count);
-                // Limit to 100
                 data = data.slice(0, 100);
             } else {
                 data = missedByStore[activeStore] || [];
@@ -882,13 +880,11 @@
             } else if (activeRegion !== 'all') {
                 filteredKeys = filteredKeys.filter(id => {
                     const m = storeMeta[id];
-                    return m && m.region === activeRegion;
+                    return m && m.region === activeRegion && isStoreAccessible(id);
                 });
-            }
-
-            // If user has specific store access only (currentUser.stores), filter further
-            if (currentUser.stores && currentUser.stores.length > 0 && !currentUser.stores.includes('all')) {
-                filteredKeys = filteredKeys.filter(id => currentUser.stores.includes(id));
+            } else {
+                // Global view, but respect permissions
+                filteredKeys = filteredKeys.filter(id => isStoreAccessible(id));
             }
 
             // 1. Calculate Category Performance (Aggregation)

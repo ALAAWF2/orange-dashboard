@@ -1,4 +1,4 @@
-/* PDF Export Logic for Employees - Final Array Fix */
+/* PDF Export Logic for Employees - Final Array Fix - Ver 1.2 */
 
 async function generateEmployeePDF() {
     const { jsPDF } = window.jspdf;
@@ -47,24 +47,15 @@ async function generateEmployeePDF() {
 
     targetStores.sort();
 
-    // --- Dates ---
-    consttoYMD = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    };
-
-    let today = new Date();
-    let yestDate = new Date(today);
-    yestDate.setDate(today.getDate() - 1);
-    const yestStr = today.toISOString().slice(0, 10) >= '2026-01-16' ? yestDate.toISOString().slice(0, 10) : yestDate.toLocaleDateString('en-CA');
-    // Simplified: Just use simple formatting
     const formatDate = (d) => {
         const offset = d.getTimezoneOffset();
         const local = new Date(d.getTime() - (offset * 60 * 1000));
         return local.toISOString().split('T')[0];
     }
+
+    let today = new Date();
+    let yestDate = new Date(today);
+    yestDate.setDate(today.getDate() - 1);
 
     const yestStrFinal = formatDate(yestDate);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -80,64 +71,117 @@ async function generateEmployeePDF() {
 
     let pageIndex = 0;
 
-    for (const storeId of targetStores) {
+    // 1. Pre-process GLOBAL data to find Primary Store and Consolidated Stats
+    const processGlobalData = () => {
+        const globalEmps = {};
 
-        const storeRecords = historyData[storeId] || []; // Array of ARRAYS
-
-        // Helper to aggregate
-        const aggData = (startStr, endStr) => {
-            const emps = {};
-            let storeTotalSales = 0;
-
-            storeRecords.forEach(r => {
-                // r is [Date, ID, Sales, Trans, Items, MaxTicket]
-                // Index 0: Date
+        Object.entries(historyData).forEach(([sCode, records]) => {
+            records.forEach(r => {
                 const rDateStr = r[0];
+                const isCurrent = (rDateStr >= monthStartStr && rDateStr <= yestStrFinal);
+                const isPrev = (rDateStr >= prevMonthStartStr && rDateStr <= prevMonthEndStr);
 
-                if (rDateStr >= startStr && rDateStr <= endStr) {
-                    const rawKey = r[1]; // e.g. "3628-Ashjan Alashwan"
-                    let cleanKey = rawKey;
+                if (isCurrent || isPrev) {
+                    const rawKey = r[1];
+                    let empId = rawKey;
+                    let empName = rawKey;
 
-                    if (rawKey && rawKey.includes('-')) {
-                        cleanKey = rawKey.split('-')[0].trim();
-                    } else if (rawKey && rawKey.toLowerCase().startsWith('unknown')) {
-                        cleanKey = rawKey.toLowerCase().replace('unknown', '').trim();
+                    if (rawKey.includes('-')) {
+                        const parts = rawKey.split('-');
+                        empId = parts[0].trim();
+                        empName = parts[1].trim();
+                    } else if (rawKey.toLowerCase().startsWith('unknown')) {
+                        empId = rawKey;
+                        empName = rawKey.toLowerCase().replace('unknown', '').trim();
                     }
 
-                    if (!emps[cleanKey]) {
-                        // Resolve Name
-                        let eName = cleanKey;
-                        // Try Arabic Name map
-                        if (typeof employeeNames !== 'undefined' && employeeNames[cleanKey]) {
-                            eName = employeeNames[cleanKey];
-                        } else if (rawKey.includes('-')) {
-                            // Fallback to name part of raw string if no arabic map
-                            eName = rawKey.split('-')[1].trim();
-                        }
+                    if (empName === 'مرتجع') return;
+                    const key = empId;
 
-                        emps[cleanKey] = {
-                            name: eName,
-                            sales: 0,
-                            trans: 0,
-                            items: 0
+                    if (!globalEmps[key]) {
+                        globalEmps[key] = {
+                            id: key,
+                            name: empName,
+                            storeStats: {},
+                            globalMtd: { sales: 0, trans: 0, items: 0 },
+                            globalYest: { sales: 0, trans: 0, items: 0 },
+                            globalPrev: { sales: 0 },
+                            lastStore: sCode,
+                            latestActiveStore: sCode,
+                            latestActiveDate: ""
                         };
                     }
-                    emps[cleanKey].sales += r[2] || 0;
-                    emps[cleanKey].trans += r[3] || 0;
-                    emps[cleanKey].items += r[4] || 0;
-                    storeTotalSales += r[2] || 0;
+
+                    const sales = r[2] || 0;
+                    if (isCurrent) {
+                        globalEmps[key].globalMtd.sales += sales;
+                        globalEmps[key].globalMtd.trans += r[3] || 0;
+                        globalEmps[key].globalMtd.items += r[4] || 0;
+
+                        if (sales > 0) {
+                            if (rDateStr > globalEmps[key].latestActiveDate) {
+                                globalEmps[key].latestActiveDate = rDateStr;
+                                globalEmps[key].latestActiveStore = sCode;
+                            }
+                        }
+
+                        if (rDateStr === yestStrFinal) {
+                            globalEmps[key].globalYest.sales += r[2] || 0;
+                            globalEmps[key].globalYest.trans += r[3] || 0;
+                            globalEmps[key].globalYest.items += r[4] || 0;
+                        }
+                    }
+
+                    if (isPrev) {
+                        globalEmps[key].globalPrev.sales += sales;
+                    }
+
+                    if (!globalEmps[key].storeStats[sCode]) globalEmps[key].storeStats[sCode] = 0;
+                    globalEmps[key].storeStats[sCode] += sales;
                 }
             });
+        });
 
-            return { emps, storeTotalSales };
-        };
+        Object.values(globalEmps).forEach(e => {
+            if (e.latestActiveDate) {
+                e.primaryStore = e.latestActiveStore;
+            } else {
+                let bestStore = e.lastStore;
+                let maxVal = -Infinity;
+                Object.entries(e.storeStats).forEach(([s, val]) => {
+                    if (val > maxVal) { maxVal = val; bestStore = s; }
+                });
+                e.primaryStore = bestStore;
+            }
+            if (typeof employeeNames !== 'undefined' && employeeNames[e.id]) {
+                e.name = employeeNames[e.id];
+            }
+        });
+        return globalEmps;
+    };
 
-        const yesterdayData = aggData(yestStrFinal, yestStrFinal);
-        const mtdData = aggData(monthStartStr, yestStrFinal);
-        const prevMtdData = aggData(prevMonthStartStr, prevMonthEndStr);
+    const globalEmpMap = processGlobalData();
 
-        // Filter active employees
-        const empKeys = Object.keys(mtdData.emps).filter(k => mtdData.emps[k].sales > 0 || mtdData.emps[k].trans > 0);
+    // Loop through stores
+    for (const storeId of targetStores) {
+
+        // 2. Calculate Store-Specific Totals for contribution mapping
+        const storeTotals = { yest: 0, mtd: 0, prev: 0 };
+        (historyData[storeId] || []).forEach(r => {
+            const d = r[0];
+            const s = r[2] || 0;
+            if (d === yestStrFinal) storeTotals.yest += s;
+            if (d >= monthStartStr && d <= yestStrFinal) storeTotals.mtd += s;
+            if (d >= prevMonthStartStr && d <= prevMonthEndStr) storeTotals.prev += s;
+        });
+
+        // 3. Filter employees assigned to THIS store
+        const empKeys = [];
+        Object.values(globalEmpMap).forEach(e => {
+            if (e.primaryStore === storeId && (e.globalMtd.sales > 0 || e.globalMtd.trans > 0)) {
+                empKeys.push(e.id);
+            }
+        });
 
         if (empKeys.length === 0) continue;
 
@@ -145,78 +189,52 @@ async function generateEmployeePDF() {
         pageIndex++;
 
         doc.setFont(fontName);
-
-        // Header
         doc.setFontSize(14);
         let sName = storeId;
         if (typeof storesData !== 'undefined' && storesData[storeId]) {
             sName = storesData[storeId];
-        } else if (typeof storeMeta !== 'undefined' && storeMeta[storeId] && storeMeta[storeId].city) {
-            // fallback logic?
-            sName = storeId;
         }
-
         doc.text(`${storeId} - ${sName}`, 14, 15);
 
         const tableRows = [];
-
-        // Totals setup
         let yestTotalSales = 0, yestTotalTrans = 0;
         let mtdTotalSales = 0, mtdTotalTrans = 0, mtdTotalTarget = 0;
 
+        empKeys.sort((a, b) => globalEmpMap[b].globalMtd.sales - globalEmpMap[a].globalMtd.sales);
+
         empKeys.forEach(key => {
-            const yest = yesterdayData.emps[key] || { sales: 0, trans: 0, items: 0, name: mtdData.emps[key].name };
-            const mtd = mtdData.emps[key];
+            const emp = globalEmpMap[key];
+            const yest = emp.globalYest;
+            const mtd = emp.globalMtd;
             const target = (typeof targetsData !== 'undefined' && targetsData[key]) ? targetsData[key] : 0;
 
-            // Metrics
-            const yestContrib = yesterdayData.storeTotalSales > 0 ? (yest.sales / yesterdayData.storeTotalSales) * 100 : 0;
+            const yestContrib = storeTotals.yest > 0 ? (yest.sales / storeTotals.yest) * 100 : 0;
             const yestAvgInv = yest.trans > 0 ? Math.round(yest.sales / yest.trans) : 0;
 
-            const mtdContrib = mtdData.storeTotalSales > 0 ? (mtd.sales / mtdData.storeTotalSales) * 100 : 0;
+            const mtdContrib = storeTotals.mtd > 0 ? (mtd.sales / storeTotals.mtd) * 100 : 0;
             const mtdAvgInv = mtd.trans > 0 ? Math.round(mtd.sales / mtd.trans) : 0;
 
-            // Prior Period Share
-            const prevMtd = prevMtdData.emps[key] || { sales: 0 };
-            const prevContrib = prevMtdData.storeTotalSales > 0 ? (prevMtd.sales / prevMtdData.storeTotalSales) * 100 : 0;
-            const shareGrowth = mtdContrib - prevContrib;
-            const shareGrowthStr = (shareGrowth > 0 ? '+' : '') + shareGrowth.toFixed(1) + '%';
+            const prevContrib = storeTotals.prev > 0 ? (emp.globalPrev.sales / storeTotals.prev) * 100 : 0;
             const ach = target > 0 ? (mtd.sales / target) * 100 : 0;
             const remaining = Math.max(0, target - mtd.sales);
 
-            // Date Calc for Daily Required
-            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-            const daysPassed = yestDate.getDate();
-            const daysLeft = daysInMonth - daysPassed;
-            const dailyReq = daysLeft > 0 ? remaining / daysLeft : 0;
+            const daysInMonthLabel = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            const daysPassedLabel = yestDate.getDate();
+            const daysLeftLabel = daysInMonthLabel - daysPassedLabel;
+            const dailyReq = daysLeftLabel > 0 ? remaining / daysLeftLabel : 0;
 
             yestTotalSales += yest.sales;
             yestTotalTrans += yest.trans;
-
             mtdTotalSales += mtd.sales;
             mtdTotalTarget += target;
             mtdTotalTrans += mtd.trans;
 
-            // --- Reversing Arabic Name ---
-            // doc.text with font 'Amiri' handles encoding, but DOES NOT handle Right-to-Left letter shaping/connection.
-            // Paradoxically, blindly using the font might just render disconnected letters.
-            // Just let's use the name as is. If connected letters fail, we might need a shaping library, 
-            // but the user's "Previous Success" with pdf_export.js (Step 204) implies the font itself worked okay enough or user accepted it.
-            // Wait, step 204 was "Font Base64". 
-            // In Step 200 user complained about "No look how" -> showing garbage chars?
-            // Actually the screenshot showed "Square boxes" or weird chars.
-            // Base64 font fixes the boxes. Separation of letters is a jsPDF limitation.
-            // I'll trust the font is loaded.
-
             tableRows.push([
-                mtd.name,
-                // YESTERDAY
+                emp.name,
                 Math.round(yest.sales).toLocaleString(),
                 yestContrib.toFixed(0) + '%',
                 yest.trans,
                 yestAvgInv,
-
-                // MTD
                 Math.round(mtd.sales).toLocaleString(),
                 mtdContrib.toFixed(0) + '%',
                 mtd.trans,
@@ -231,10 +249,10 @@ async function generateEmployeePDF() {
         // Totals Row
         const mtdTotalAch = mtdTotalTarget > 0 ? (mtdTotalSales / mtdTotalTarget * 100).toFixed(1) + '%' : '-';
         const mtdRem = Math.max(0, mtdTotalTarget - mtdTotalSales);
-        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        const daysPassed = yestDate.getDate();
-        const daysLeft = daysInMonth - daysPassed;
-        const mtdDaily = daysLeft > 0 ? mtdRem / daysLeft : 0;
+        const daysInMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const daysPassedEnd = yestDate.getDate();
+        const daysLeftEnd = daysInMonthEnd - daysPassedEnd;
+        const mtdDaily = daysLeftEnd > 0 ? mtdRem / daysLeftEnd : 0;
 
         tableRows.push([
             "الإجمالي (Total)",
@@ -269,20 +287,13 @@ async function generateEmployeePDF() {
             ],
             body: tableRows,
             theme: 'grid',
-            styles: {
-                font: fontName,
-                fontSize: 8,
-                cellPadding: 1,
-                halign: 'center'
-            },
+            styles: { font: fontName, fontSize: 8, cellPadding: 1, halign: 'center' },
             columnStyles: {
                 0: { halign: 'right', fontStyle: 'bold', minCellWidth: 30 },
-                3: { minCellWidth: 10 },
-                7: { minCellWidth: 10 },
                 10: { textColor: [0, 128, 0], fontStyle: 'bold' }
             },
             didParseCell: function (data) {
-                if (data.row.raw[0] === 'TOTAL') {
+                if (data.row.raw[0] && data.row.raw[0].toString().includes('Total')) {
                     data.cell.styles.fillColor = [240, 240, 240];
                     data.cell.styles.fontStyle = 'bold';
                 }
