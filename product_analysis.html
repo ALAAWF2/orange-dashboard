@@ -478,6 +478,7 @@
         let productModalObj = null;
         let catalogModalObj = null;
         let missedDetailsModalObj = null;
+        let categoryItemsModalObj = null;
 
         // Filter Scope
         let activeRegion = 'all';
@@ -1157,13 +1158,15 @@
             }
 
             cats.forEach(cat => {
+                // Escape single quotes in category name for onclick
+                const escapedCategory = cat.category.replace(/'/g, "\\'");
                 let row = `
-                    <tr>
-                        <td class="fw-bold text-center">${cat.category}</td>
+                    <tr onclick="showCategoryItems('${escapedCategory}', '${storeId}')" style="cursor: pointer;" title="اضغط لعرض جميع المنتجات">
+                        <td class="fw-bold text-center text-primary">${cat.category} <small class="text-muted">⟵</small></td>
                         <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'bg-light fw-bold' : ''}">${cat.qty}</td>
                         <td class="text-center ${currentMetric === 'val' ? 'bg-light fw-bold' : ''}">${cat.amount.toLocaleString()}</td>
                         <td class="text-center">
-                            <a href="#" onclick="openProductDetails('${cat.top_item_id}', '${cat.top_item_name}', '${cat.category}', ${cat.top_item_qty}, ${cat.top_item_amount}); return false;" class="text-decoration-none fw-bold text-dark small d-block text-truncate hover-primary" style="max-width: 200px; margin: 0 auto;" title="${cat.top_item_name}">${cat.top_item_name}</a>
+                            <a href="#" onclick="event.stopPropagation(); openProductDetails('${cat.top_item_id}', '${cat.top_item_name}', '${cat.category}', ${cat.top_item_qty}, ${cat.top_item_amount}); return false;" class="text-decoration-none fw-bold text-dark small d-block text-truncate hover-primary" style="max-width: 200px; margin: 0 auto;" title="${cat.top_item_name}">${cat.top_item_name}</a>
                             <small class="text-muted d-block" style="font-size: 0.75em;">${cat.top_item_id}</small>
                         </td>
                         <td dir="ltr" class="text-center small">${cat.top_item_qty}</td>
@@ -1175,6 +1178,75 @@
 
             if (!detailsModalObj) detailsModalObj = new bootstrap.Modal(document.getElementById('detailsModal'));
             detailsModalObj.show();
+        }
+
+        function showCategoryItems(categoryName, storeId) {
+            // Get catalog data for current period
+            const pData = rawData.periods ? rawData.periods[currentMode] : null;
+            const catalog = pData ? (pData.catalog || {}) : {};
+
+            // Get items for this category
+            let items = catalog[categoryName] || [];
+
+            // Get store name for display
+            const meta = storeMeta[storeId] || {};
+            const storeName = meta.name_ar || meta.name || storeId;
+
+            // Period display names
+            const periodNames = {
+                'mtd': 'من بداية الشهر',
+                'yest': 'أمس',
+                '7d': 'آخر 7 أيام',
+                '14d': 'آخر 14 يوم',
+                '30d': 'آخر 30 يوم'
+            };
+
+            // Update modal header
+            document.getElementById('catItemsTitle').textContent = `منتجات: ${categoryName}`;
+            document.getElementById('catItemsSubtitle').textContent = `${storeName} | ${periodNames[currentMode] || currentMode}`;
+
+            // Populate table
+            const tbody = document.getElementById('catItemsBody');
+            tbody.innerHTML = '';
+
+            const noDataDiv = document.getElementById('catItemsNoData');
+
+            if (items.length === 0) {
+                noDataDiv.classList.remove('d-none');
+                tbody.parentElement.classList.add('d-none');
+            } else {
+                noDataDiv.classList.add('d-none');
+                tbody.parentElement.classList.remove('d-none');
+
+                // Sort by amount descending
+                items = [...items].sort((a, b) => b.amount - a.amount);
+
+                items.forEach((item, i) => {
+                    let row = `
+                        <tr onclick="closeCategoryItemsAndOpenProduct('${item.id}', '${item.name.replace(/'/g, "\\'")}', '${categoryName}', ${item.qty}, ${item.amount})" style="cursor: pointer;">
+                            <td class="text-center">${i + 1}</td>
+                            <td>
+                                <span class="fw-bold text-dark">${item.name}</span>
+                                <small class="text-muted d-block">${item.id}</small>
+                            </td>
+                            <td class="text-center">${item.qty}</td>
+                            <td class="text-center fw-bold text-success">${Math.round(item.amount).toLocaleString()}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+
+            // Show modal
+            if (!categoryItemsModalObj) categoryItemsModalObj = new bootstrap.Modal(document.getElementById('categoryItemsModal'));
+            categoryItemsModalObj.show();
+        }
+
+        function closeCategoryItemsAndOpenProduct(id, name, cat, qty, amt) {
+            if (categoryItemsModalObj) categoryItemsModalObj.hide();
+            setTimeout(() => {
+                openProductDetails(id, name, cat, qty, amt);
+            }, 150);
         }
 
         // ==========================================
