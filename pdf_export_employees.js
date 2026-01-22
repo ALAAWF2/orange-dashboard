@@ -70,6 +70,14 @@ async function generateEmployeePDF() {
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthStartStr = formatDate(monthStart);
 
+    // Prev Period Dates (for Share Growth)
+    const prevEnd = new Date(yestDate);
+    prevEnd.setMonth(prevEnd.getMonth() - 1);
+    const prevMonthEndStr = formatDate(prevEnd);
+
+    const prevStart = new Date(prevEnd.getFullYear(), prevEnd.getMonth(), 1);
+    const prevMonthStartStr = formatDate(prevStart);
+
     let pageIndex = 0;
 
     for (const storeId of targetStores) {
@@ -126,6 +134,7 @@ async function generateEmployeePDF() {
 
         const yesterdayData = aggData(yestStrFinal, yestStrFinal);
         const mtdData = aggData(monthStartStr, yestStrFinal);
+        const prevMtdData = aggData(prevMonthStartStr, prevMonthEndStr);
 
         // Filter active employees
         const empKeys = Object.keys(mtdData.emps).filter(k => mtdData.emps[k].sales > 0 || mtdData.emps[k].trans > 0);
@@ -166,6 +175,12 @@ async function generateEmployeePDF() {
 
             const mtdContrib = mtdData.storeTotalSales > 0 ? (mtd.sales / mtdData.storeTotalSales) * 100 : 0;
             const mtdAvgInv = mtd.trans > 0 ? Math.round(mtd.sales / mtd.trans) : 0;
+
+            // Prior Period Share
+            const prevMtd = prevMtdData.emps[key] || { sales: 0 };
+            const prevContrib = prevMtdData.storeTotalSales > 0 ? (prevMtd.sales / prevMtdData.storeTotalSales) * 100 : 0;
+            const shareGrowth = mtdContrib - prevContrib;
+            const shareGrowthStr = (shareGrowth > 0 ? '+' : '') + shareGrowth.toFixed(1) + '%';
             const ach = target > 0 ? (mtd.sales / target) * 100 : 0;
             const remaining = Math.max(0, target - mtd.sales);
 
@@ -204,6 +219,7 @@ async function generateEmployeePDF() {
                 // MTD
                 Math.round(mtd.sales).toLocaleString(),
                 mtdContrib.toFixed(0) + '%',
+                shareGrowthStr,
                 mtd.trans,
                 mtdAvgInv,
                 Math.round(target).toLocaleString(),
@@ -230,6 +246,7 @@ async function generateEmployeePDF() {
 
             Math.round(mtdTotalSales).toLocaleString(),
             "100%",
+            "-",
             mtdTotalTrans,
             mtdTotalTrans > 0 ? Math.round(mtdTotalSales / mtdTotalTrans) : 0,
             Math.round(mtdTotalTarget).toLocaleString(),
@@ -244,12 +261,12 @@ async function generateEmployeePDF() {
                 [
                     { content: 'بيانات الموظف (Employee)', colSpan: 1, styles: { fillColor: [255, 255, 255], textColor: 0, halign: 'center' } },
                     { content: `الأمس (Yesterday) - ${yestStrFinal}`, colSpan: 4, styles: { fillColor: [220, 220, 220], textColor: 0, halign: 'center' } },
-                    { content: `الشهر الحالي (MTD) - ${monthStartStr} إلى ${yestStrFinal}`, colSpan: 8, styles: { fillColor: [200, 200, 200], textColor: 0, halign: 'center' } }
+                    { content: `الشهر الحالي (MTD) - ${monthStartStr} إلى ${yestStrFinal}`, colSpan: 9, styles: { fillColor: [200, 200, 200], textColor: 0, halign: 'center' } }
                 ],
                 [
                     'الموظف',
                     'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة',
-                    'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
+                    'المبيعات', 'المساهمة %', 'تطور الحصة', 'العدد', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
                 ]
             ],
             body: tableRows,

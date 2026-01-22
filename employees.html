@@ -301,6 +301,8 @@
                                         <th>الموظف</th>
                                         <th class="d-none d-md-table-cell">الفرع</th>
                                         <th>المبيعات</th>
+                                        <th class="text-center">حصة الفرع %</th>
+                                        <th class="text-center">تطور الحصة</th>
                                         <th class="text-center">الهدف</th>
                                         <th class="text-center">التحقيق %</th>
                                         <th class="text-center">اليومية المتبقية</th>
@@ -417,6 +419,8 @@
 
                 // Date Filters
                 const today = new Date();
+                const branchStats = {}; // To track branch totals for share calculation
+
                 // Local YYYY-MM-DD
                 const toLocalYMD = (d) => {
                     const y = d.getFullYear();
@@ -429,44 +433,50 @@
                 const todayYear = today.getFullYear();
                 const todayMonth = today.getMonth(); // 0-11
                 const todayDay = today.getDate();
-                const todayVal = todayYear * 10000 + (todayMonth + 1) * 100 + todayDay; // YYYYMMDD numeric for comparison
+                const todayVal = todayYear * 10000 + (todayMonth + 1) * 100 + todayDay;
 
-                const currentMonthPrefix = todayStr.slice(0, 7); // YYYY-MM
+                // Previous Period Logic (for Growth comparison)
+                // Logic: Same Period Last Month (Month - 1)
+                const prevMonthDate = new Date(todayYear, todayMonth - 1, 1);
+                const prevYear = prevMonthDate.getFullYear();
+                const prevMonth = prevMonthDate.getMonth();
 
                 // Calculate Yesterday
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayStr = toLocalYMD(yesterday);
+                const yesterdayDay = yesterday.getDate();
 
-                const filterDate = (dateStr) => {
-                    const d = new Date(dateStr);
-                    const dYear = d.getFullYear();
-                    const dMonth = d.getMonth();
-                    const dDay = d.getDate();
-                    const dVal = dYear * 10000 + (dMonth + 1) * 100 + dDay;
+                const checkPeriod = (dYear, dMonth, dDay, dVal, dDateStr) => {
+                    // Returns: 0 (None), 1 (Current), 2 (Previous)
+                    let status = 0;
 
+                    // 1. Check Current
                     if (periodFilter === 'mtd') {
-                        // MTD Logic
-                        // Must be same month & year
-                        // Must be <= today
-                        if (dYear === todayYear && dMonth === todayMonth) {
-                            return dVal <= todayVal;
-                        }
-                        return false;
+                        if (dYear === todayYear && dMonth === todayMonth && dVal <= todayVal) status = 1;
                     } else if (periodFilter === 'mtd_yest') {
-                        // MTD until yesterday
-                        // Must be same month & year
-                        // Must be < today
-                        if (dYear === todayYear && dMonth === todayMonth) {
-                            return dVal < todayVal;
-                        }
-                        return false;
+                        if (dYear === todayYear && dMonth === todayMonth && dVal < todayVal) status = 1;
                     } else if (periodFilter === 'yesterday') {
-                        return dateStr === yesterdayStr;
+                        if (dDateStr === yesterdayStr) status = 1;
                     } else if (periodFilter === 'today') {
-                        return dateStr === todayStr;
+                        if (dDateStr === todayStr) status = 1;
                     }
-                    return true; // Should not happen with current options
+
+                    if (status === 1) return 1;
+
+                    // 2. Check Previous (Same period last month)
+                    if (dYear === prevYear && dMonth === prevMonth) {
+                        if (periodFilter === 'mtd') {
+                            if (dDay <= todayDay) return 2;
+                        } else if (periodFilter === 'mtd_yest') {
+                            if (dDay <= yesterdayDay) return 2;
+                        } else if (periodFilter === 'yesterday') {
+                            if (dDay === yesterdayDay) return 2;
+                        } else if (periodFilter === 'today') {
+                            if (dDay === todayDay) return 2;
+                        }
+                    }
+                    return 0;
                 };
 
                 Object.entries(history).forEach(([storeCode, records]) => {
@@ -483,12 +493,28 @@
                         }
                     }
 
+                    // Init Store Stats
+                    if (!branchStats[storeCode]) branchStats[storeCode] = { current: 0, prev: 0 };
+
                     records.forEach(rec => {
                         // Data Format: [Date, Name, Sales, Trans, Items, MaxTicket]
                         const [date, rawName, sales, trans, items, maxTicket] = rec;
-                        if (!filterDate(date)) return;
 
-                        // Clean Name & Extract ID
+                        // Parse Date
+                        const d = new Date(date);
+                        const dYear = d.getFullYear();
+                        const dMonth = d.getMonth();
+                        const dDay = d.getDate();
+                        const dVal = dYear * 10000 + (dMonth + 1) * 100 + dDay;
+
+                        const pStatus = checkPeriod(dYear, dMonth, dDay, dVal, date);
+                        if (pStatus === 0) return; // Not in current or prev period
+
+                        // Update Store Totals
+                        if (pStatus === 1) branchStats[storeCode].current += sales || 0;
+                        if (pStatus === 2) branchStats[storeCode].prev += sales || 0;
+
+                        // Identify Employee
                         let empName = rawName;
                         let empId = rawName;
 
@@ -497,33 +523,22 @@
                             empId = parts[0].trim();
                             empName = parts[1].trim();
                         } else {
-                            // Fallback for names without ID prefix
                             empId = rawName;
                         }
 
-                        // Handle Unknown/System employees
-                        // User requested to show Unknown employees as is.
-                        // Only exclude 'merger' (returns aggregation) if desired.
                         if (empName === 'مرتجع') return;
-
-                        // Use Arabic Name if available
-                        if (employeeNames[empId]) {
-                            empName = employeeNames[empId];
-                        }
-
-                        // Unique Key: ID preferred, else Name+Store
+                        if (employeeNames[empId]) empName = employeeNames[empId];
                         const key = empId;
 
                         if (!empAgg[key]) {
-                            // Lookup Target (Only relevant if MTD, but we store it anyway)
                             let monthlyTarget = targets[empId] || 0;
-
                             empAgg[key] = {
                                 id: empId,
                                 name: empName,
                                 storeCode: storeCode,
                                 storeName: storesData[storeCode] || storeCode,
                                 sales: 0,
+                                prevSales: 0, // NEW
                                 transactions: 0,
                                 items: 0,
                                 max_ticket: 0,
@@ -531,11 +546,14 @@
                             };
                         }
 
-                        empAgg[key].sales += sales || 0;
-                        empAgg[key].transactions += trans || 0;
-                        empAgg[key].items += items || 0;
-                        if (maxTicket > empAgg[key].max_ticket) {
-                            empAgg[key].max_ticket = maxTicket;
+                        // Accumulate Employee Stats
+                        if (pStatus === 1) {
+                            empAgg[key].sales += sales || 0;
+                            empAgg[key].transactions += trans || 0;
+                            empAgg[key].items += items || 0;
+                            if (maxTicket > empAgg[key].max_ticket) empAgg[key].max_ticket = maxTicket;
+                        } else if (pStatus === 2) {
+                            empAgg[key].prevSales += sales || 0;
                         }
                     });
                 });
@@ -551,23 +569,30 @@
                 // Calculate metrics
                 empList.forEach(e => {
                     e.avg_ticket = e.transactions > 0 ? e.sales / e.transactions : 0;
-                    // Items per Basket (previously conversion)
-                    // Items are stored negative for sales, positive for returns.
-                    // We want strict "Activity Strength".
-                    // Net items sold is Sum(Items) which will remain negative if sales > returns.
-                    // We display absolute value.
                     e.items_per_inv = e.transactions > 0 ? Math.abs(e.items) / e.transactions : 0;
 
-                    // Achievement (Only valid for MTD typically)
+                    // Achievement
                     e.achievement = 0;
                     if (e.target > 0) {
                         if (periodFilter === 'mtd' || periodFilter === 'mtd_yest') {
                             e.achievement = (e.sales / e.target) * 100;
-                        } else {
-                            // For other periods, showing monthly target achievement might be misleading.
-                            e.achievement = 0;
                         }
                     }
+
+                    // Share & Growth Logic
+                    const bStats = branchStats[e.storeCode];
+                    const branchTotalCurr = bStats ? bStats.current : 0;
+                    const branchTotalPrev = bStats ? bStats.prev : 0;
+
+                    // Current Share
+                    e.branchShare = branchTotalCurr > 0 ? (e.sales / branchTotalCurr) * 100 : 0;
+
+                    // Previous Share
+                    const prevShare = branchTotalPrev > 0 ? (e.prevSales / branchTotalPrev) * 100 : 0;
+
+                    // Share Growth (Delta)
+                    // If prevShare is 0, growth is implied as positive gain of entire current share
+                    e.shareGrowth = e.branchShare - prevShare;
                 });
 
                 // Sort
@@ -656,6 +681,20 @@
         <td class="fw-bold text-success" style="font-size:1.1em">${emp.sales.toLocaleString('en-US', {
                         maximumFractionDigits: 0
                     })}</td>
+        
+        <!-- Branch Share -->
+        <td class="text-center">
+            <div class="progress" style="height: 6px; width: 80px; margin: 0 auto;">
+                 <div class="progress-bar bg-info" role="progressbar" style="width: ${emp.branchShare}%"></div>
+            </div>
+            <small class="text-muted" style="font-size:0.75rem">${emp.branchShare.toFixed(1)}%</small>
+        </td>
+
+        <!-- Share Growth -->
+        <td class="text-center fw-bold ${emp.shareGrowth >= 0 ? 'text-success' : 'text-danger'}">
+             ${emp.shareGrowth > 0 ? '▲' : emp.shareGrowth < 0 ? '▼' : '-'} ${Math.abs(emp.shareGrowth).toFixed(1)}%
+        </td>
+
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
         <td class="text-center fw-bold text-danger">${dailyReqText}</td>
