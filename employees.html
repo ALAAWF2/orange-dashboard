@@ -674,7 +674,14 @@
                     // We will filter by Primary Store LATER
 
                     // Init Store Stats
-                    if (!branchStats[storeCode]) branchStats[storeCode] = { current: 0, prev: 0 };
+                    if (!branchStats[storeCode]) {
+                        branchStats[storeCode] = {
+                            current: 0,
+                            prev: 0,
+                            transactions: 0,
+                            items: 0
+                        };
+                    }
 
                     records.forEach(rec => {
                         // Data Format: [Date, Name, Sales, Trans, Items, MaxTicket]
@@ -690,8 +697,12 @@
                         const pStatus = checkPeriod(dYear, dMonth, dDay, dVal, date);
                         if (pStatus === 0) return; // Not in current or prev period
 
-                        // Update Store Totals
-                        if (pStatus === 1) branchStats[storeCode].current += sales || 0;
+                        // Update Store Totals & Daily Maps (Current Period Only)
+                        if (pStatus === 1) {
+                            branchStats[storeCode].current += sales || 0;
+                            branchStats[storeCode].transactions += trans || 0;
+                            branchStats[storeCode].items += items || 0;
+                        }
                         if (pStatus === 2) branchStats[storeCode].prev += sales || 0;
 
                         // Identify Employee
@@ -710,11 +721,24 @@
                         if (employeeNames[empId]) empName = employeeNames[empId];
                         const key = empId;
 
+                        // Populate Employee Daily Helper (For Chart) - Current Period OR recent
+                        // Only add if pStatus is 1 (Current Period) to show trend in this period
+                        if (pStatus === 1) {
+                            if (!employeeDailyMaps[key]) {
+                                employeeDailyMaps[key] = [];
+                            }
+                            employeeDailyMaps[key].push({
+                                date: date,
+                                sales: sales || 0,
+                                inv: trans || 0,
+                                items: items || 0
+                            });
+                        }
+
                         if (!empAgg[key]) {
                             let monthlyTarget = targets[empId] || 0;
                             empAgg[key] = {
                                 id: empId,
-                                name: empName,
                                 name: empName,
                                 storeCode: storeCode, // Placeholder, will be updated
                                 storeName: storesData[storeCode] || storeCode,
@@ -1097,8 +1121,7 @@
                 }
             }
 
-                }
-            }
+
 
             // === EMPLOYEE INSIGHT PANEL ===
             function openEmployeeInsights(empId) {
