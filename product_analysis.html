@@ -519,8 +519,12 @@
             if (currentUser.role === 'Admin') return true;
 
             const meta = storeMeta[sid];
-            if (meta && meta.manager === currentUser.name) return true;
+            // For Manager role, only show stores where this user is the manager
+            if (currentUser.role === 'Manager') {
+                return meta && meta.manager === currentUser.name;
+            }
 
+            // For other roles, check explicit store list
             if (currentUser.stores && (currentUser.stores.includes(sid) || currentUser.stores.includes('all'))) {
                 return true;
             }
