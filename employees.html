@@ -212,6 +212,70 @@
             background: #e2e3e5;
             color: #41464b;
         }
+
+        /* Employee Selection Modal Styles */
+        .emp-select-modal .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .emp-select-row {
+            transition: background-color 0.2s;
+        }
+
+        .emp-select-row:hover {
+            background-color: #f8f9fa !important;
+        }
+
+        /* Highly suspected (both criteria) */
+        .emp-suspected-high {
+            background-color: #f8d7da !important;
+            border-right: 4px solid #dc3545;
+        }
+
+        .emp-suspected-high:hover {
+            background-color: #f5c2c7 !important;
+        }
+
+        /* Medium suspected (one criteria) */
+        .emp-suspected-medium {
+            background-color: #fff3cd !important;
+            border-right: 4px solid #ffc107;
+        }
+
+        .emp-suspected-medium:hover {
+            background-color: #ffecb5 !important;
+        }
+
+        /* Active employee */
+        .emp-active {
+            background-color: #d1e7dd !important;
+            border-right: 4px solid #198754;
+        }
+
+        .emp-active:hover {
+            background-color: #badbcc !important;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 15px;
+            font-size: 0.85rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+
+        .badge-reason {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            margin-right: 3px;
+        }
     </style>
 </head>
 
@@ -497,6 +561,81 @@
                 <h6 class="fw-bold mb-3">📈 آخر 7 أيام تداول</h6>
                 <div style="height: 200px;">
                     <canvas id="empTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Selection Modal for Target Export -->
+        <div class="modal fade emp-select-modal" id="empSelectModal" tabindex="-1" aria-labelledby="empSelectModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-light">
+                        <div>
+                            <h5 class="modal-title fw-bold" id="empSelectModalLabel">📋 اختيار الموظفين للتصدير</h5>
+                            <small class="text-muted">اختر الموظفين الذين تريد تضمينهم في قالب التارجت</small>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Legend -->
+                        <div class="d-flex flex-wrap justify-content-center mb-3 p-2 bg-light rounded">
+                            <div class="legend-item">
+                                <span class="legend-dot" style="background: #d1e7dd; border: 1px solid #198754;"></span>
+                                <span>موظف نشط</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-dot" style="background: #fff3cd; border: 1px solid #ffc107;"></span>
+                                <span>مشتبه (معيار واحد)</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-dot" style="background: #f8d7da; border: 1px solid #dc3545;"></span>
+                                <span>مشتبه بشدة (معياران)</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary"
+                                    onclick="selectAllEmployees(true)">✓ تحديد الكل</button>
+                                <button type="button" class="btn btn-outline-secondary"
+                                    onclick="selectAllEmployees(false)">✗ إلغاء الكل</button>
+                                <button type="button" class="btn btn-outline-success" onclick="selectActiveOnly()">👤
+                                    النشطين فقط</button>
+                            </div>
+                            <div class="text-muted small align-self-center">
+                                المحددين: <strong id="selectedCount">0</strong> من <strong id="totalEmpCount">0</strong>
+                            </div>
+                        </div>
+
+                        <!-- Employees Table -->
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th style="width: 40px;">
+                                            <input type="checkbox" id="selectAllCheckbox"
+                                                onchange="selectAllEmployees(this.checked)">
+                                        </th>
+                                        <th>الموظف</th>
+                                        <th>الفرع</th>
+                                        <th class="text-center">المبيعات</th>
+                                        <th class="text-center">الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="empSelectBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="button" class="btn btn-success fw-bold" onclick="exportSelectedEmployees()">
+                            📥 تصدير المحددين
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1063,6 +1202,8 @@
             }
 
             // === EXCEL EXPORT ===
+            let employeeSelectionData = []; // Store employee data with suspected status
+
             function exportExcel(type) {
                 if (!currentEmpList || currentEmpList.length === 0) {
                     alert("لا توجد بيانات للتصدير");
@@ -1093,32 +1234,213 @@
                     XLSX.writeFile(wb, "Orange_Employees_Report.xlsx");
                 }
                 else if (type === 'template') {
-                    // 2. Export Target Template
-                    // CRITICAL: Includes Employee ID for consistent mapping in the future
-                    const data = currentEmpList.map(e => {
-                        // Clean ID: Remove 'Unknown', 'Unkown' and trim
-                        let cleanId = e.id.toString().replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
+                    // Open Employee Selection Modal
+                    openEmployeeSelectionModal();
+                }
+            }
 
-                        return {
-                            "Employee ID": cleanId,
-                            "Employee Name": e.name,
-                            "Store": e.storeName,
-                            "Target Amount": "" // Empty column for user input
-                        };
+            // === EMPLOYEE SELECTION MODAL FUNCTIONS ===
+            function openEmployeeSelectionModal() {
+                // Analyze employees and detect suspected resigned
+                employeeSelectionData = analyzeEmployeesForResignation();
+
+                // Populate Modal Table
+                populateEmployeeSelectionTable();
+
+                // Update Counts
+                updateSelectionCount();
+
+                // Show Modal
+                const modal = new bootstrap.Modal(document.getElementById('empSelectModal'));
+                modal.show();
+            }
+
+            function analyzeEmployeesForResignation() {
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const currentMonth = today.getMonth();
+                const currentDay = today.getDate();
+
+                // Calculate last 15 days threshold
+                const last15DaysStart = new Date(currentYear, currentMonth, currentDay - 15);
+
+                // Calculate average sales of active employees
+                const totalActiveSales = currentEmpList.reduce((sum, e) => sum + e.sales, 0);
+                const avgActiveSales = currentEmpList.length > 0 ? totalActiveSales / currentEmpList.length : 0;
+
+                // Analyze each employee
+                return currentEmpList.map(emp => {
+                    const suspectedReasons = [];
+
+                    // Criteria 1: No sales in last 15 days
+                    const dailyRecords = employeeDailyMaps[emp.id] || [];
+                    let hasRecentSales = false;
+
+                    dailyRecords.forEach(record => {
+                        const recordDate = new Date(record.date);
+                        if (recordDate >= last15DaysStart && record.sales > 0) {
+                            hasRecentSales = true;
+                        }
                     });
 
-                    const ws = XLSX.utils.json_to_sheet(data);
-                    ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
+                    // Only flag if employee has SOME history but no recent sales
+                    const noSalesLast15Days = dailyRecords.length > 0 && !hasRecentSales;
+                    if (noSalesLast15Days) {
+                        suspectedReasons.push('لا مبيعات آخر 15 يوم');
+                    }
 
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "Targets Template");
+                    // Criteria 2: Average sales less than 30% of active average
+                    const lowAverage = avgActiveSales > 0 && emp.sales < (avgActiveSales * 0.3);
+                    if (lowAverage) {
+                        suspectedReasons.push('متوسط مبيعات ضعيف');
+                    }
 
-                    const nextMonth = new Date();
-                    nextMonth.setMonth(nextMonth.getMonth() + 1);
-                    const monthName = nextMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                    // Determine status
+                    let status = 'active'; // Default
+                    if (suspectedReasons.length >= 2) {
+                        status = 'high'; // Both criteria
+                    } else if (suspectedReasons.length === 1) {
+                        status = 'medium'; // One criteria
+                    }
 
-                    XLSX.writeFile(wb, `Target_Template_${monthName}.xlsx`);
+                    return {
+                        ...emp,
+                        suspectedStatus: status,
+                        suspectedReasons: suspectedReasons,
+                        selected: status === 'active' // Pre-select only active employees
+                    };
+                });
+            }
+
+            function populateEmployeeSelectionTable() {
+                const tbody = document.getElementById('empSelectBody');
+
+                // Sort: Active first, then medium, then high
+                const sorted = [...employeeSelectionData].sort((a, b) => {
+                    const order = { 'active': 0, 'medium': 1, 'high': 2 };
+                    return order[a.suspectedStatus] - order[b.suspectedStatus];
+                });
+
+                tbody.innerHTML = sorted.map((emp, idx) => {
+                    const rowClass = emp.suspectedStatus === 'high' ? 'emp-suspected-high' :
+                        emp.suspectedStatus === 'medium' ? 'emp-suspected-medium' : 'emp-active';
+
+                    // Status Badge
+                    let statusBadge = '';
+                    if (emp.suspectedStatus === 'high') {
+                        statusBadge = '<span class="badge bg-danger">مشتبه بشدة</span>';
+                    } else if (emp.suspectedStatus === 'medium') {
+                        statusBadge = '<span class="badge bg-warning text-dark">مشتبه</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-success">نشط</span>';
+                    }
+
+                    // Reasons
+                    const reasonsHtml = emp.suspectedReasons.map(r =>
+                        `<span class="badge badge-reason bg-secondary">${r}</span>`
+                    ).join('');
+
+                    return `
+                    <tr class="emp-select-row ${rowClass}" data-emp-id="${emp.id}">
+                        <td>
+                            <input type="checkbox" class="emp-checkbox" 
+                                   data-emp-id="${emp.id}" 
+                                   ${emp.selected ? 'checked' : ''} 
+                                   onchange="onEmployeeCheckChange('${emp.id}', this.checked)">
+                        </td>
+                        <td>
+                            <div class="fw-bold">${emp.name}</div>
+                            <small class="text-muted">${emp.id}</small>
+                        </td>
+                        <td><small>${emp.storeName}</small></td>
+                        <td class="text-center fw-bold">${emp.sales.toLocaleString()}</td>
+                        <td class="text-center">
+                            ${statusBadge}
+                            <div class="mt-1">${reasonsHtml}</div>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('totalEmpCount').textContent = employeeSelectionData.length;
+            }
+
+            function onEmployeeCheckChange(empId, isChecked) {
+                const emp = employeeSelectionData.find(e => e.id === empId);
+                if (emp) {
+                    emp.selected = isChecked;
                 }
+                updateSelectionCount();
+            }
+
+            function selectAllEmployees(selected) {
+                employeeSelectionData.forEach(emp => emp.selected = selected);
+                document.querySelectorAll('.emp-checkbox').forEach(cb => cb.checked = selected);
+                document.getElementById('selectAllCheckbox').checked = selected;
+                updateSelectionCount();
+            }
+
+            function selectActiveOnly() {
+                employeeSelectionData.forEach(emp => {
+                    emp.selected = emp.suspectedStatus === 'active';
+                });
+                document.querySelectorAll('.emp-checkbox').forEach(cb => {
+                    const empId = cb.dataset.empId;
+                    const emp = employeeSelectionData.find(e => e.id === empId);
+                    cb.checked = emp ? emp.selected : false;
+                });
+                document.getElementById('selectAllCheckbox').checked = false;
+                updateSelectionCount();
+            }
+
+            function updateSelectionCount() {
+                const selectedCount = employeeSelectionData.filter(e => e.selected).length;
+                document.getElementById('selectedCount').textContent = selectedCount;
+
+                // Update header checkbox state
+                const allSelected = selectedCount === employeeSelectionData.length;
+                document.getElementById('selectAllCheckbox').checked = allSelected;
+            }
+
+            function exportSelectedEmployees() {
+                const selectedEmps = employeeSelectionData.filter(e => e.selected);
+
+                if (selectedEmps.length === 0) {
+                    alert('الرجاء اختيار موظف واحد على الأقل');
+                    return;
+                }
+
+                // Export Target Template with selected employees
+                const data = selectedEmps.map(e => {
+                    // Clean ID: Remove 'Unknown', 'Unkown' and trim
+                    let cleanId = e.id.toString().replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
+
+                    return {
+                        "Employee ID": cleanId,
+                        "Employee Name": e.name,
+                        "Store": e.storeName,
+                        "Target Amount": "" // Empty column for user input
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 15 }];
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Targets Template");
+
+                const nextMonth = new Date();
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                const monthName = nextMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+                XLSX.writeFile(wb, `Target_Template_${monthName}.xlsx`);
+
+                // Close Modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('empSelectModal'));
+                if (modal) modal.hide();
+
+                // Show success message
+                alert(`تم تصدير ${selectedEmps.length} موظف بنجاح!`);
             }
 
 
