@@ -56,10 +56,20 @@ async function generatePDF() {
     }
 
     // --- Dates ---
-    let today = new Date();
-    let endDate = new Date(today);
-    endDate.setDate(today.getDate() - 1);
-    let startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    let startDate, endDate;
+
+    if (window.dashboardState && window.dashboardState.start && window.dashboardState.end) {
+        startDate = new Date(window.dashboardState.start);
+        endDate = new Date(window.dashboardState.end);
+        console.log("PDF Export: Using Dashboard Dates", startDate, endDate);
+    } else {
+        // Fallback (Original Logic)
+        let today = new Date();
+        endDate = new Date(today);
+        endDate.setDate(today.getDate() - 1);
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        console.warn("PDF Export: Using Fallback Dates (Dashboard State Missing)");
+    }
 
     let pageIndex = 0;
 
@@ -207,14 +217,15 @@ async function generatePDF() {
         doc.autoTable({
             head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'قيمة العميل', 'زوار 2026', 'زوار 2025', 'التحويل %']],
             body: rows,
-            startY: 40,
+            startY: 35,
             theme: 'grid',
             headStyles: {
                 fillColor: [254, 121, 0],
                 textColor: 255,
                 halign: 'center',
                 valign: 'middle',
-                font: fontName
+                font: fontName,
+                fontSize: 8 // Keep header slightly larger
             },
             columnStyles: {
                 0: { halign: 'center', cellWidth: 25 },
@@ -222,12 +233,12 @@ async function generatePDF() {
             },
             styles: {
                 font: fontName,
-                fontSize: 8,
-                cellPadding: 1.5,
+                fontSize: 7, // Reduced from 8
+                cellPadding: 0.8, // Reduced from 1.5
                 halign: 'center',
                 valign: 'middle'
             },
-            margin: { top: 15, bottom: 15, left: 10, right: 10 },
+            margin: { top: 10, bottom: 10, left: 10, right: 10 },
             didParseCell: function (data) {
                 if (data.row.raw[0] === 'الإجمالي') {
                     data.cell.styles.fillColor = [240, 240, 240];
