@@ -219,7 +219,6 @@ async function generateEmployeePDF() {
                 // MTD
                 Math.round(mtd.sales).toLocaleString(),
                 mtdContrib.toFixed(0) + '%',
-                shareGrowthStr,
                 mtd.trans,
                 mtdAvgInv,
                 Math.round(target).toLocaleString(),
@@ -246,7 +245,6 @@ async function generateEmployeePDF() {
 
             Math.round(mtdTotalSales).toLocaleString(),
             "100%",
-            "-",
             mtdTotalTrans,
             mtdTotalTrans > 0 ? Math.round(mtdTotalSales / mtdTotalTrans) : 0,
             Math.round(mtdTotalTarget).toLocaleString(),
@@ -266,7 +264,7 @@ async function generateEmployeePDF() {
                 [
                     'الموظف',
                     'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة',
-                    'المبيعات', 'المساهمة %', 'تطور الحصة', 'العدد', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
+                    'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
                 ]
             ],
             body: tableRows,
