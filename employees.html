@@ -587,11 +587,11 @@
                             </div>
                             <div class="legend-item">
                                 <span class="legend-dot" style="background: #fff3cd; border: 1px solid #ffc107;"></span>
-                                <span>مشتبه (معيار واحد)</span>
+                                <span>مراجعة (معيار واحد)</span>
                             </div>
                             <div class="legend-item">
                                 <span class="legend-dot" style="background: #f8d7da; border: 1px solid #dc3545;"></span>
-                                <span>مشتبه بشدة (معياران)</span>
+                                <span>مستقيل (معياران)</span>
                             </div>
                         </div>
 
@@ -1352,8 +1352,16 @@
             function populateEmployeeSelectionTable() {
                 const tbody = document.getElementById('empSelectBody');
 
-                // Sort: Active first, then medium, then high
+                // Sort: Store Name (ASC) -> Status (Active first -> Medium -> High)
                 const sorted = [...employeeSelectionData].sort((a, b) => {
+                    // 1. Sort by Store Name
+                    const storeA = a.storeName || '';
+                    const storeB = b.storeName || '';
+                    const storeCmp = storeA.localeCompare(storeB, 'ar');
+
+                    if (storeCmp !== 0) return storeCmp;
+
+                    // 2. Sort by Status
                     const order = { 'active': 0, 'medium': 1, 'high': 2 };
                     return order[a.suspectedStatus] - order[b.suspectedStatus];
                 });
@@ -1365,9 +1373,9 @@
                     // Status Badge
                     let statusBadge = '';
                     if (emp.suspectedStatus === 'high') {
-                        statusBadge = '<span class="badge bg-danger">مشتبه بشدة</span>';
+                        statusBadge = '<span class="badge bg-danger">مستقيل</span>';
                     } else if (emp.suspectedStatus === 'medium') {
-                        statusBadge = '<span class="badge bg-warning text-dark">مشتبه</span>';
+                        statusBadge = '<span class="badge bg-warning text-dark">مراجعة</span>';
                     } else {
                         statusBadge = '<span class="badge bg-success">نشط</span>';
                     }
