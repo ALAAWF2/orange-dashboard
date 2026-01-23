@@ -1,6 +1,6 @@
 /* PDF Export Logic for Employees - Final Array Fix - Ver 1.2 */
 
-async function generateEmployeePDF() {
+async function generateEmployeePDF(targetEmps = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -178,6 +178,9 @@ async function generateEmployeePDF() {
         // 3. Filter employees assigned to THIS store
         const empKeys = [];
         Object.values(globalEmpMap).forEach(e => {
+            // Filter by Allowed IDs (if provided)
+            if (targetEmps && !targetEmps.includes(e.id)) return;
+
             if (e.primaryStore === storeId && (e.globalMtd.sales > 0 || e.globalMtd.trans > 0)) {
                 empKeys.push(e.id);
             }

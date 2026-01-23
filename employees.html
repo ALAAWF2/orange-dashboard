@@ -305,7 +305,8 @@
                     </ul>
                 </div>
 
-                <button onclick="generateEmployeePDF()" class="btn btn-warning btn-sm fw-bold text-white">📄 تصدير
+                <button onclick="openEmployeeSelectionModal('pdf')" class="btn btn-warning btn-sm fw-bold text-white">📄
+                    تصدير
                     PDF</button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
@@ -1203,6 +1204,7 @@
 
             // === EXCEL EXPORT ===
             let employeeSelectionData = []; // Store employee data with suspected status
+            let currentExportMode = 'excel'; // 'excel' or 'pdf'
 
             function exportExcel(type) {
                 if (!currentEmpList || currentEmpList.length === 0) {
@@ -1235,14 +1237,49 @@
                 }
                 else if (type === 'template') {
                     // Open Employee Selection Modal
-                    openEmployeeSelectionModal();
+                    openEmployeeSelectionModal('excel');
                 }
             }
 
             // === EMPLOYEE SELECTION MODAL FUNCTIONS ===
-            function openEmployeeSelectionModal() {
+            function openEmployeeSelectionModal(mode = 'excel') {
+                currentExportMode = mode;
+
                 // Analyze employees and detect suspected resigned
                 employeeSelectionData = analyzeEmployeesForResignation();
+
+                // Apply Saved Preferences (for PDF only)
+                if (mode === 'pdf') {
+                    const savedSelection = localStorage.getItem('pdf_selected_employees');
+                    if (savedSelection) {
+                        const savedIds = JSON.parse(savedSelection); // Array of IDs
+                        employeeSelectionData.forEach(emp => {
+                            // If ID exists in saved list, select it. otherwise deselect.
+                            // Note: We match by ID. New employees (not in list) will be UNSELECTED by this logic.
+                            // Better Logic: Default to Active, but Override with Saved.
+                            // BUT user wants to "save their choice". So strictly following saved list is expected.
+                            // However, if a NEW employee appears, they might be missed.
+                            // Hybrid: If ID is in saved list -> true. If ID is NOT in saved list -> false (excluded).
+                            // Wait, if I explicitly unchecked someone, they are not in list.
+                            // If I added someone, they are in list.
+                            // Making it strict (only allow if in list) is safest for "removing people".
+                            emp.selected = savedIds.includes(emp.id);
+                        });
+                    }
+                    // Update Modal UI
+                    document.getElementById('empSelectModalLabel').innerHTML = '📄 اختيار الموظفين (PDF)';
+                    document.querySelector('#empSelectModal .text-muted').textContent = 'اختر الموظفين للتقرير وأزل المستقيلين';
+                    const btn = document.querySelector('#empSelectModal .btn-success');
+                    btn.innerHTML = '📥 إنشاء التقرير';
+                    btn.setAttribute('onclick', 'confirmExportSelection()');
+                } else {
+                    // Excel Mode Defaults
+                    document.getElementById('empSelectModalLabel').innerHTML = '📋 اختيار الموظفين للتصدير';
+                    document.querySelector('#empSelectModal .text-muted').textContent = 'اختر الموظفين الذين تريد تضمينهم في قالب التارجت';
+                    const btn = document.querySelector('#empSelectModal .btn-success');
+                    btn.innerHTML = '📥 تصدير المحددين';
+                    btn.setAttribute('onclick', 'confirmExportSelection()');
+                }
 
                 // Populate Modal Table
                 populateEmployeeSelectionTable();
@@ -1402,11 +1439,25 @@
                 document.getElementById('selectAllCheckbox').checked = allSelected;
             }
 
-            function exportSelectedEmployees() {
+            function confirmExportSelection() {
                 const selectedEmps = employeeSelectionData.filter(e => e.selected);
 
                 if (selectedEmps.length === 0) {
                     alert('الرجاء اختيار موظف واحد على الأقل');
+                    return;
+                }
+
+                if (currentExportMode === 'pdf') {
+                    // Save Selection
+                    const selectedIds = selectedEmps.map(e => e.id);
+                    localStorage.setItem('pdf_selected_employees', JSON.stringify(selectedIds));
+
+                    // Generate PDF
+                    generateEmployeePDF(selectedIds);
+
+                    // Close Modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('empSelectModal'));
+                    if (modal) modal.hide();
                     return;
                 }
 
