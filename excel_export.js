@@ -245,18 +245,25 @@ async function exportEmployeeSales(startDate, endDate) {
             // Date Check
             if (date >= startDate && date <= endDate) {
 
-                // Resolve Name
+                // Resolve Name & ID
                 let name = empId;
+                let employeeNumber = empId;
+
                 if (empNames[empId]) {
                     name = empNames[empId];
-                } else if (empId.includes('-')) {
+                    // empId is the key, so it's the ID
+                    employeeNumber = empId;
+                } else if (empId && empId.includes('-')) {
                     // Fallback parse if format is "ID - Name"
-                    name = empId.split('-')[1].trim();
+                    let parts = empId.split('-');
+                    employeeNumber = parts[0].trim();
+                    name = parts.slice(1).join('-').trim();
                 }
 
                 rows.push({
                     "التاريخ": date,
                     "المعرض": storeName,
+                    "الرقم الوظيفي": employeeNumber,
                     "اسم الموظف": name,
                     "المبيعات": sales,
                     "عدد الفواتير": trans
