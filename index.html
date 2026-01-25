@@ -234,6 +234,9 @@
                 <button onclick="generatePDF()" class="btn btn-warning btn-sm fw-bold text-white">
                     📄 <span class="d-none d-lg-inline">PDF</span>
                 </button>
+                <button onclick="showExcelModal()" class="btn btn-success btn-sm fw-bold text-white">
+                    📊 <span class="d-none d-lg-inline">Excel</span>
+                </button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
@@ -245,6 +248,9 @@
     <!-- Arabic Font Base64 -->
     <script src="assets/amiri_font.js"></script>
     <script src="pdf_export.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="excel_export.js"></script>
 
     <script>
         // Session Check
@@ -648,12 +654,65 @@
             </div>
         </div>
 
+        <!-- Excel Date Selection Modal -->
+        <div class="modal fade" id="excelDateModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title fw-bold">تصدير Excel</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Date Range -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">اختر الفترة:</label>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">من</span>
+                                <input type="date" id="excelStartDate" class="form-control">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">إلى</span>
+                                <input type="date" id="excelEndDate" class="form-control">
+                            </div>
+                        </div>
+
+                        <!-- Report Type (Restricted) -->
+                        <div class="mb-3" id="excelReportTypeGroup" style="display: none;">
+                            <label class="form-label fw-bold text-danger">نوع التقرير (Sales Manager Only):</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="excelReportType" id="typeStore"
+                                        value="store" checked>
+                                    <label class="form-check-label" for="typeStore">
+                                        مبيعات المعارض (Store Sales)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="excelReportType"
+                                        id="typeEmployee" value="employee">
+                                    <label class="form-check-label" for="typeEmployee">
+                                        مبيعات الموظفين (Employee Sales)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="button" class="btn btn-success fw-bold" onclick="generateExcelReport()">تصدير
+                            (Export)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        let rawData = null;
+        window.rawData = null;
         let charts = {};
 
         // Sorting State
