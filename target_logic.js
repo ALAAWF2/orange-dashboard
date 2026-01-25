@@ -163,9 +163,7 @@ function updateTotalTarget() {
 
 // --- Export Logic ---
 
-let exportModal = null;
-
-function showExportOptions() {
+function saveTargetReport() {
     // Validate: At least one target set?
     let hasVal = false;
     document.querySelectorAll('.input-target').forEach(inp => {
@@ -176,10 +174,9 @@ function showExportOptions() {
         if (!confirm("لم تقم بإدخال أي أهداف جديدة. هل تريد المتابعة بملف فارغ؟")) return;
     }
 
-    if (!exportModal) {
-        exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
-    }
-    exportModal.show();
+    const wb = generateExcelWorkbook();
+    const monthVal = document.getElementById('targetMonth').value;
+    XLSX.writeFile(wb, `Targets_${monthVal}.xlsx`);
 }
 
 function generateExcelWorkbook() {
@@ -213,23 +210,4 @@ function generateExcelWorkbook() {
     XLSX.utils.book_append_sheet(wb, ws, "Targets");
 
     return wb;
-}
-
-function saveToExcel() {
-    const wb = generateExcelWorkbook();
-    const monthVal = document.getElementById('targetMonth').value;
-    XLSX.writeFile(wb, `Targets_${monthVal}.xlsx`);
-    exportModal.hide();
-}
-
-function sendToWhatsApp() {
-    // 1. Download File first (Browser limitation)
-    saveToExcel();
-
-    // 2. Open WhatsApp
-    const phone = "966553377408";
-    const text = encodeURIComponent("السلام عليكم، مرفق ملف التارجت الجديد.");
-    const url = `https://wa.me/${phone}?text=${text}`;
-
-    window.open(url, '_blank');
 }
