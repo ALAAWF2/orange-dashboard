@@ -507,7 +507,7 @@
 
         <!-- Employee Insight Offcanvas -->
         <div class="offcanvas offcanvas-start" tabindex="-1" id="empInsightPanel"
-            style="width: 400px; border-right: 5px solid #fe7900;">
+            style="width: 100%; border-right: 5px solid #fe7900;">
             <div class="offcanvas-header bg-light">
                 <div>
                     <h5 class="offcanvas-title fw-bold" id="panelEmpName">Employee Name</h5>
@@ -559,7 +559,7 @@
                 <hr>
 
                 <!-- 3. Trend Chart -->
-                <h6 class="fw-bold mb-3">📈 آخر 7 أيام تداول</h6>
+                <h6 class="fw-bold mb-3">📈 تطور المبيعات (MTD)</h6>
                 <div style="height: 200px;">
                     <canvas id="empTrendChart"></canvas>
                 </div>
@@ -658,7 +658,7 @@
 
             // Global for Insight Panel
             let empTrendChartInstance = null;
-            let employeeDailyMaps = {}; // Map empId -> Array of daily records
+            let employeeDailyMaps = {}; // Map empId -> Object {date: {stats}} for aggregation
             let branchStats = {}; // Map storeId -> {current, transactions, items}
 
             // Fetch Data
@@ -865,14 +865,23 @@
                         // Only add if pStatus is 1 (Current Period) to show trend in this period
                         if (pStatus === 1) {
                             if (!employeeDailyMaps[key]) {
-                                employeeDailyMaps[key] = [];
+                                employeeDailyMaps[key] = {};
                             }
-                            employeeDailyMaps[key].push({
-                                date: date,
-                                sales: sales || 0,
-                                inv: trans || 0,
-                                items: items || 0
-                            });
+                            // Aggregate by Date String (YYYY-MM-DD or unique date key)
+                            // "date" variable is already YYYY-MM-DD from the source usually
+                            // To be safe, we rely on the input 'date' string being consistent for the day
+                            if (!employeeDailyMaps[key][date]) {
+                                employeeDailyMaps[key][date] = {
+                                    date: date,
+                                    sales: 0,
+                                    inv: 0,
+                                    items: 0
+                                };
+                            }
+
+                            employeeDailyMaps[key][date].sales += sales || 0;
+                            employeeDailyMaps[key][date].inv += trans || 0;
+                            employeeDailyMaps[key][date].items += items || 0;
                         }
 
                         if (!empAgg[key]) {
@@ -1587,21 +1596,31 @@
                 const ctx = document.getElementById('empTrendChart').getContext('2d');
 
                 // Get Daily Data (Last 7 days active)
-                // Filter only for current month/period if strictly needed, or just last 7 available days
-                let daily = employeeDailyMaps[empId] || [];
+                // Get Daily Data
+                // Convert Map back to Array
+                let daily = Object.values(employeeDailyMaps[empId] || {});
 
-                // Sort by date
-                daily.sort((a, b) => new Date(a.date) - new Date(b.date));
+                // Filter: Start of Current Month to Today
+                const today = new Date();
+                const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-                // Take last 7 days provided they are recent? 
-                // Or just last 7 records
-                const recent = daily.slice(-7);
+                // Reset time for accurate comparison
+                startOfMonth.setHours(0, 0, 0, 0);
 
-                const labels = recent.map(d => {
+                let filtered = daily.filter(d => {
+                    const recordDate = new Date(d.date);
+                    recordDate.setHours(0, 0, 0, 0);
+                    return recordDate >= startOfMonth;
+                });
+
+                // Sort by date ASCII (YYYY-MM-DD works) or Date object
+                filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                const labels = filtered.map(d => {
                     const date = new Date(d.date);
                     return date.getDate() + '/' + (date.getMonth() + 1);
                 });
-                const data = recent.map(d => d.sales);
+                const data = filtered.map(d => d.sales);
 
                 if (empTrendChartInstance) {
                     empTrendChartInstance.destroy();
