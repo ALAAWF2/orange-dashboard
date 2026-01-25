@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحديد التارجت - Orange Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: #fe7900 !important;
+        }
+
+        .bg-orange {
+            background-color: #fe7900;
+            color: white;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #fff3e0;
+        }
+
+        .input-target {
+            width: 120px;
+            font-weight: bold;
+            text-align: center;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .input-target:focus {
+            border-color: #fe7900;
+            box-shadow: 0 0 0 0.2rem rgba(254, 121, 0, 0.25);
+            outline: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-arrow-right me-2"></i> العودة للرئيسية
+            </a>
+            <span class="navbar-text fw-bold fs-5">
+                🎯 تحديد التارجت الشهري (Monthly Target Setting)
+            </span>
+            <div>
+                <span id="userNameDisplay" class="badge bg-secondary"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 mt-4">
+
+        <!-- Controls -->
+        <div class="card border-0 shadow-sm p-3 mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-md-auto">
+                    <label class="form-label fw-bold">اختر الشهر للتارجت الجديد:</label>
+                    <input type="month" id="targetMonth" class="form-control">
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-primary fw-bold" onclick="loadData()">
+                        <i class="fas fa-sync-alt me-1"></i> تحميل بيانات المقارنة
+                    </button>
+                </div>
+                <div class="col text-start">
+                    <div class="alert alert-info py-2 mb-0 d-inline-block">
+                        <i class="fas fa-info-circle me-1"></i>
+                        يتم عرض بيانات نفس الشهر من السنة الماضية للمساعدة في اتخاذ القرار.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover align-middle mb-0 text-center">
+                        <thead class="bg-dark text-white">
+                            <tr>
+                                <th rowspan="2" class="align-middle">#</th>
+                                <th rowspan="2" class="align-middle">المعرض (Store)</th>
+                                <th colspan="4" class="bg-secondary">أداء السنة الماضية (Last Year)</th>
+                                <th rowspan="2" class="align-middle bg-orange">الهدف الجديد (New Target)</th>
+                                <th rowspan="2" class="align-middle">نسبة النمو %</th>
+                            </tr>
+                            <tr>
+                                <th class="table-light">المبيعات (Sales)</th>
+                                <th class="table-light">التارجت (Target)</th>
+                                <th class="table-light">الزوار (Visitors)</th>
+                                <th class="table-light">قيمة العميل (Avg Cust Val)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="targetTableBody">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr id="tableFooter">
+                                <!-- Totals -->
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white py-3 text-start">
+                <button class="btn btn-success btn-lg fw-bold px-5" onclick="showExportOptions()">
+                    <i class="fas fa-paper-plane me-2"></i> إرسال التارجت
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Export Options Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold">خيارات الحفظ والإرسال</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <p class="fs-5 mb-4">ماذا تريد أن تفعل بملف التارجت الجديد؟</p>
+
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-outline-primary btn-lg" onclick="saveToExcel()">
+                            <i class="fas fa-file-excel me-2"></i> حفظ ملف Excel فقط
+                        </button>
+
+                        <div class="position-relative">
+                            <hr>
+                            <span
+                                class="position-absolute top-50 start-50 translate-middle bg-white px-2 text-muted small">أو</span>
+                        </div>
+
+                        <button class="btn btn-success btn-lg" onclick="sendToWhatsApp()">
+                            <i class="fab fa-whatsapp me-2"></i> إرسال إلى علاء (Via WhatsApp)
+                        </button>
+                        <div class="alert alert-warning small text-start mt-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            سيتم تنزيل الملف، ثم فتح واتساب. يرجى <b>سحب وإفلات</b> الملف في المحادثة.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <script src="target_logic.js"></script>
+    <script>
+        // Auth Check
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser || (currentUser.name !== 'Sales Manager' && currentUser.role !== 'Admin')) {
+            alert("عذراً، هذه الصفحة خاصة بمدير المبيعات فقط.");
+            window.location.href = 'index.html';
+        }
+        document.getElementById('userNameDisplay').textContent = currentUser.name;
+    </script>
+</body>
+
+</html>
