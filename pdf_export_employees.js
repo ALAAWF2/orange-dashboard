@@ -290,9 +290,9 @@ async function generateEmployeePDF(targetEmps = null) {
             ],
             body: tableRows,
             theme: 'grid',
-            styles: { font: fontName, fontSize: 8, cellPadding: 1, halign: 'center' },
+            styles: { font: fontName, fontSize: 10, cellPadding: 2, halign: 'center' },
             columnStyles: {
-                0: { halign: 'right', fontStyle: 'bold', minCellWidth: 30 },
+                0: { halign: 'right', fontStyle: 'bold', minCellWidth: 35 },
                 10: { textColor: [0, 128, 0], fontStyle: 'bold' }
             },
             didParseCell: function (data) {
