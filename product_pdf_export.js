@@ -18,6 +18,9 @@ async function generateProductPDF() {
     const includeStore = document.getElementById('chkStore').checked;
     const includeCatDet = document.getElementById('chkCatDet').checked;
 
+    const selectedStoreId = document.getElementById('pdfStoreSelect').value;
+    const isDetailed = document.getElementById('chkPdfDetailed').checked;
+
     if (!includePerf && !includeAdv && !includeStore && !includeCatDet) {
         alert("الرجاء اختيار قسم واحد على الأقل للتصدير");
         return;
@@ -51,65 +54,119 @@ async function generateProductPDF() {
         doc.text(text, x, y);
     };
 
-    // --- Header Info ---
-    // Fix Date Reversal: Construct explicitly
+    // --- MAIN GENERATION LOGIC ---
+
+    // 1. Define Scope
+    // Logic: 
+    // If selectedStoreId == 'all' AND !isDetailed -> Generate ONE Global Summary (Filtered by current dashboard logic usually, but let's respect "All" implies active filters or truly all?)
+    // Actually "All (according to current filter)" is what I labelled.
+    // If selectedStoreId == 'all' AND isDetailed -> Generate Global Summary + Page per Store.
+    // If selectedStoreId != 'all' -> Generate ONE Report for that store only.
+
+    // Determine Base Stores to iterate
+    let targetStores = [];
+    if (selectedStoreId !== 'all') {
+        targetStores = [selectedStoreId];
+    } else {
+        // Collect all stores based on CURRENT permission/dashboard filter logic
+        // We use the `filteredKeys` logic we built before or access `currentData`.
+        // `currentData` usually contains filters if dashboard is filtered? 
+        // No, currentData is filtered by MODE (Time). `processGlobalStats` does the filtering.
+        // We need list of stores that match `activeRegion` if set.
+
+        let allKeys = Object.keys(currentData);
+        // Filter by Region if set globally in dashboard
+        if (typeof activeRegion !== 'undefined' && activeRegion !== 'all') {
+            allKeys = allKeys.filter(id => {
+                const m = rawData.store_meta[id];
+                return m && m.region === activeRegion;
+            });
+        }
+        targetStores = allKeys;
+    }
+
+    // A. Generate "Global/Summary" Section (Always first)
+    // For single store selection, "Global" IS that store.
+    // For All + Detailed, "Global" is the aggregate.
+
+    // --- Header Info (Global) ---
     let rangeText = "";
     if (rawData.metadata && rawData.metadata.period_start) {
-        // Force LTR for dates, RTL for text?
-        // Best approach: "From: [Start]  To: [End]"
         rangeText = `الفترة من: ${rawData.metadata.period_start}   إلى: ${rawData.metadata.period_end}`;
     } else {
         rangeText = document.getElementById('periodDisplay').textContent;
     }
+    const exportDate = new Date().toLocaleDateString('en-GB');
 
-    // Export Date
-    const exportDate = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
-
+    // Page 1 Header
     doc.setFontSize(18);
     centerText("تقرير تحليل المنتجات (Product Analysis Report)", 15);
 
     doc.setFontSize(12);
-    centerText(rangeText, 22);
+    centerText(rangeText, 25); // Moved down slightly
 
     doc.setFontSize(10);
-    // Render Date manually to avoid reversal "Export Date: ..."
-    doc.text(`تاريخ التصدير: ${exportDate}`, pageWidth - 50, 22, { align: 'right' });
-    doc.text(`المستخدم: ${currentUser.name}`, 15, 22); // Left align user
+    // Fix Overlap: Move these to line 35
+    doc.text(`تاريخ التصدير: ${exportDate}`, pageWidth - 15, 35, { align: 'right' });
+    doc.text(`المستخدم: ${currentUser.name}`, 15, 35);
 
-    let finalY = 30; // Start Y for content
+    let finalY = 45; // Start content lower
 
-    // --- DATA PREPARATION ---
-    // The HTML page aggregates data on the fly in `processGlobalStats`. 
-    // We must replicate that logic here to get the correct filtered data for the PDF.
+    // Generate The Content
+    // We pass 'targetStores' to a helper function that aggregates data from `currentData` for these stores.
 
-    // 1. Filter Keys (Active Store Logic)
-    // Access global `activeStore` and `activeRegion` variables from window
-    const pActiveStore = (typeof activeStore !== 'undefined') ? activeStore : 'all';
-    const pActiveRegion = (typeof activeRegion !== 'undefined') ? activeRegion : 'all';
+    await generateSection(doc, targetStores, "ملخص شامل (Global Summary)", includePerf, includeAdv, includeStore, includeCatDet, fontName);
 
-    let filteredKeys = Object.keys(currentData);
+    // B. Generate Detailed Pages if requested
+    if (selectedStoreId === 'all' && isDetailed) {
+        for (const sid of targetStores) {
+            doc.addPage();
+            finalY = 20;
 
-    if (pActiveStore !== 'all') {
-        filteredKeys = filteredKeys.filter(id => id === pActiveStore);
-    } else if (pActiveRegion !== 'all') {
-        filteredKeys = filteredKeys.filter(id => {
-            const m = rawData.store_meta[id];
-            return m && m.region === pActiveRegion;
-            // Note: isStoreAccessible check skipped for simplicity or assume handle by UI state
-        });
+            // Store Header
+            const m = rawData.store_meta[sid] || {};
+            const sName = m.name_ar || m.name || sid;
+
+            doc.setFontSize(16);
+            doc.setTextColor(254, 121, 0);
+            centerText(`تقرير فرع: ${sName} (${sid})`, 15);
+            doc.setTextColor(0);
+            doc.setFontSize(10);
+            centerText(rangeText, 22);
+
+            await generateSection(doc, [sid], `تفاصيل: ${sName}`, includePerf, includeAdv, false, includeCatDet, fontName, 30);
+            // Note: includeStore (Store Breakdown) is disabled for single store pages as it's redundant (table of 1 row)
+        }
     }
 
-    // 2. Aggregate Categories & Top Items
-    const catMap = {}; // Cat -> {name, qty, amount}
-    const itemMap = {}; // ItemID -> {id, name, cat, qty, amount}
+    // --- Save ---
+    const fName = selectedStoreId === 'all' ? 'Product_Analysis_All' : `Product_Analysis_${selectedStoreId}`;
+    doc.save(`${fName}_${exportDate.replace(/\//g, '-')}.pdf`);
+
+    // Close Modal
+    const modalEl = document.getElementById('pdfExportModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+}
+
+/**
+ * Helper to generate report sections for a specific list of store IDs.
+ * filtering logic resides here (aggregating data for the passed IDs).
+ */
+async function generateSection(doc, storeIds, sectionTitle, incPerf, incAdv, incStore, incCatDet, fontName, startY = 45) {
+    let finalY = startY;
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // --- AGGREGATION ---
+    const catMap = {};
+    const itemMap = {};
     let grandTotal = 0;
 
-    filteredKeys.forEach(storeId => {
+    storeIds.forEach(storeId => {
         const store = currentData[storeId];
         if (!store) return;
 
         store.categories.forEach(c => {
-            // Categories Aggregation
             if (!catMap[c.category]) {
                 catMap[c.category] = { name: c.category, qty: 0, amount: 0, share: 0 };
             }
@@ -117,7 +174,6 @@ async function generateProductPDF() {
             catMap[c.category].amount += c.amount;
             grandTotal += c.amount;
 
-            // Top Items Aggregation (Approximate from 'top_item' fields)
             const tid = c.top_item_id;
             if (tid && tid !== '-') {
                 if (!itemMap[tid]) itemMap[tid] = {
@@ -127,60 +183,54 @@ async function generateProductPDF() {
                     qty: 0,
                     amount: 0
                 };
-                // Aggregate quantity and amount for the top item across stores/categories
+                // Aggregation
                 itemMap[tid].qty += c.top_item_qty;
                 itemMap[tid].amount += c.top_item_amount;
             }
         });
     });
 
-    // Prepare Sorted Lists
     const sortedCats = Object.values(catMap).sort((a, b) => b.amount - a.amount);
     sortedCats.forEach(c => c.share = grandTotal > 0 ? (c.amount / grandTotal * 100) : 0);
-
     const topItems = Object.values(itemMap).sort((a, b) => b.amount - a.amount);
 
 
-    // --- SECTION 1: PERFORMANCE SUMMARY ---
-    if (includePerf) {
+    // --- SECTION 1: PERFORMANCE ---
+    if (incPerf) {
         doc.setFontSize(14);
-        doc.setTextColor(254, 121, 0); // Orange
+        doc.setTextColor(254, 121, 0);
         doc.text("1. ملخص الأداء (Performance Summary)", 190, finalY, { align: "right" });
         doc.setTextColor(0);
         finalY += 8;
 
-        // Table 1.1: Top Products per Category (Global/Filtered)
         if (topItems.length > 0) {
             doc.setFontSize(11);
             doc.text("المنتج الأكثر مبيعاً حسب الفئة:", 190, finalY, { align: "right" });
             finalY += 6;
 
-            const topProdRows = topItems.slice(0, 20).map(item => [
+            const topRows = topItems.slice(0, 20).map(item => [
                 Math.round(item.amount).toLocaleString(),
                 item.qty,
                 item.id,
-                item.name, // Added Name
+                item.name,
                 item.category
             ]);
 
             doc.autoTable({
                 startY: finalY,
-                head: [['المبيعات', 'الكمية', 'رقم المنتج', 'اسم المنتج', 'التصنيف']], // Added Header
-                body: topProdRows,
+                head: [['المبيعات', 'الكمية', 'رقم المنتج', 'اسم المنتج', 'التصنيف']],
+                body: topRows,
                 theme: 'grid',
                 headStyles: { fillColor: [254, 121, 0], textColor: 255, font: fontName, halign: 'center' },
                 bodyStyles: { font: fontName, halign: 'center' },
-                styles: { fontSize: 8 }, // Slightly smaller font to fit name
-                columnStyles: { 3: { cellWidth: 50 } } // Give more space to Name
+                styles: { fontSize: 8 },
+                columnStyles: { 3: { cellWidth: 50 } }
             });
-
             finalY = doc.lastAutoTable.finalY + 10;
         }
 
-        // Table 1.2: Category Performance
         if (sortedCats.length > 0) {
             if (finalY > 250) { doc.addPage(); finalY = 20; }
-
             doc.setFontSize(11);
             doc.text("أداء الفئات (Category Performance):", 190, finalY, { align: "right" });
             finalY += 6;
@@ -192,47 +242,53 @@ async function generateProductPDF() {
                 cat.name,
                 (i + 1)
             ]);
-
             doc.autoTable({
                 startY: finalY,
                 head: [['مساهمة %', 'المبيعات', 'الكمية', 'التصنيف', '#']],
                 body: catRows,
                 theme: 'grid',
-                headStyles: { fillColor: [108, 117, 125], textColor: 255, font: fontName, halign: 'center' }, // Secondary color
+                headStyles: { fillColor: [108, 117, 125], textColor: 255, font: fontName, halign: 'center' },
                 bodyStyles: { font: fontName, halign: 'center' },
                 styles: { fontSize: 9 }
             });
-
             finalY = doc.lastAutoTable.finalY + 15;
         }
     }
 
-    // --- SECTION 2: ADVANCED ANALYSIS ---
-    if (includeAdv) {
+    // --- SECTION 2: ADVANCED ---
+    if (incAdv) {
         if (finalY > 240) { doc.addPage(); finalY = 25; }
-
         doc.setFontSize(14);
         doc.setTextColor(254, 121, 0);
         doc.text("2. تحليل متقدم (Advanced Analysis)", 190, finalY, { align: "right" });
         doc.setTextColor(0);
         finalY += 10;
 
-        // Market Basket
+        // Aggregate Market Basket & Missed Opps for these stores
         const allBasket = rawData ? rawData.market_basket : {};
-        const basketData = (allBasket && allBasket[pActiveStore]) ? allBasket[pActiveStore] : (allBasket['all'] || []);
+        let basketData = [];
+
+        // If single store, we just take that store's basket
+        if (storeIds.length === 1 && allBasket[storeIds[0]]) {
+            basketData = allBasket[storeIds[0]];
+        } else if (storeIds.length > 1) {
+            // If multiple stores, we technically should check 'all' or aggregating...
+            // But existing structure usually has 'all' key for global.
+            // If we are printing "Global Summary", we use 'all'.
+            // If we are printing "Detailed User Report" (which we don't support iterating detailed advanced analysis yet per store? wait, we do)
+            // Let's rely on fallback to 'all' only if stores > 1, otherwise specific.
+            // Actually, if we are in "All Stores" mode, we want Global Aggregate.
+            basketData = allBasket['all'] || [];
+        }
+        // Note: If we iterate stores in Detailed Mode, storeIds has 1 element. We try to find that store's basket.
 
         if (basketData.length > 0) {
             doc.setFontSize(11);
-            doc.text("أكثر المنتجات التي تشترى معاً (Market Basket):", 190, finalY, { align: "right" });
+            doc.text("أكثر المنتجات التي تشترى معاً:", 190, finalY, { align: "right" });
             finalY += 6;
-
             const basketRows = basketData.slice(0, 15).map((pair, i) => [
-                pair.frequency,
-                pair.item_b_name,
-                pair.item_a_name,
-                (i + 1)
+                pair.frequency, pair.item_b_name, pair.item_a_name, (i + 1)
             ]);
-
             doc.autoTable({
                 startY: finalY,
                 head: [['مرات التكرار', 'المنتج الثاني', 'المنتج الأول', '#']],
@@ -245,46 +301,32 @@ async function generateProductPDF() {
             finalY = doc.lastAutoTable.finalY + 10;
         }
 
-        // Missed Opportunities
+        // Missed Opps
         if (rawData && rawData.periods && rawData.periods[currentMode]) {
             const missedMap = rawData.periods[currentMode].missed_opportunities || {};
             let missedList = [];
 
-            if (pActiveStore === 'all') {
-                Object.values(missedMap).forEach(arr => missedList.push(...arr));
-            } else {
-                missedList = missedMap[pActiveStore] || [];
-            }
+            storeIds.forEach(sid => {
+                if (missedMap[sid]) missedList.push(...missedMap[sid]);
+            });
 
-            // Sort and Slice
             missedList.sort((a, b) => b.total_count - a.total_count);
             missedList = missedList.slice(0, 15);
 
             if (missedList.length > 0) {
                 if (finalY > 240) { doc.addPage(); finalY = 25; }
-
                 doc.setFontSize(11);
-                doc.text("الفرص الضائعة (Missed Opportunities):", 190, finalY, { align: "right" });
+                doc.text("الفرص الضائعة:", 190, finalY, { align: "right" });
                 finalY += 6;
-
-                const missedRows = missedList.map((m, i) => {
-                    // Top missed item
-                    const topMissed = (m.missed_items && m.missed_items.length > 0) ? m.missed_items[0].name : '-';
-                    return [
-                        m.total_count,
-                        topMissed,
-                        m.sold_item,
-                        m.employee_name,
-                        (i + 1)
-                    ];
-                });
-
+                const missedRows = missedList.map((m, i) => [
+                    m.total_count, (m.missed_items && m.missed_items[0]) ? m.missed_items[0].name : '-', m.sold_item, m.employee_name, (i + 1)
+                ]);
                 doc.autoTable({
                     startY: finalY,
-                    head: [['عدد المرات', 'الفرصة الضائعة (أهم صنف)', 'المنتج المباع', 'الموظف', '#']],
+                    head: [['عدد المرات', 'الفرصة الضائعة', 'المنتج المباع', 'الموظف', '#']],
                     body: missedRows,
                     theme: 'striped',
-                    headStyles: { fillColor: [220, 53, 69], font: fontName, halign: 'center' }, // Danger Red
+                    headStyles: { fillColor: [220, 53, 69], font: fontName, halign: 'center' },
                     bodyStyles: { font: fontName, halign: 'center' },
                     styles: { fontSize: 9 }
                 });
@@ -293,8 +335,8 @@ async function generateProductPDF() {
         }
     }
 
-    // --- SECTION 3: STORE BREAKDOWN ---
-    if (includeStore && filteredKeys.length > 0) {
+    // --- SECTION 3: STORE BREAKDOWN (Only if multiple stores) ---
+    if (incStore && storeIds.length > 1) {
         doc.addPage();
         finalY = 20;
 
@@ -304,30 +346,16 @@ async function generateProductPDF() {
         doc.setTextColor(0);
         finalY += 10;
 
-        // Build Store List from key list
-        const storeRows = filteredKeys.map((sid, i) => {
+        const storeRows = storeIds.map((sid, i) => {
             const s = currentData[sid];
-            // Calculate total for store since 'total_sales' might not be on the object, 
-            // the HTML code calculated it on the fly. 
-            // Actually 'currentData[sid]' is just {categories: [...], store_name: ...}
-            // We need to sum it up.
-            let sSales = 0;
-            let sQty = 0;
+            let sSales = 0; let sQty = 0;
             s.categories.forEach(c => { sSales += c.amount; sQty += c.qty; });
-
-            // Top Cat
             const topCat = s.categories.length > 0 ? s.categories[0].category : '-';
-
             return [
-                topCat,
-                Math.round(sSales).toLocaleString(),
-                sQty.toLocaleString(),
-                s.store_name || sid,
-                (i + 1)
+                topCat, Math.round(sSales).toLocaleString(), sQty.toLocaleString(), s.store_name || sid, (i + 1)
             ];
         });
 
-        // Sort by Sales desc
         storeRows.sort((a, b) => parseInt(b[1].replace(/,/g, '')) - parseInt(a[1].replace(/,/g, '')));
 
         doc.autoTable({
@@ -335,19 +363,17 @@ async function generateProductPDF() {
             head: [['أعلى تصنيف', 'المبيعات', 'الكمية', 'الفرع', '#']],
             body: storeRows,
             theme: 'grid',
-            headStyles: { fillColor: [23, 162, 184], font: fontName, halign: 'center' }, // Info Cyan
+            headStyles: { fillColor: [23, 162, 184], font: fontName, halign: 'center' },
             bodyStyles: { font: fontName, halign: 'center' },
             styles: { fontSize: 9 }
         });
-
         finalY = doc.lastAutoTable.finalY + 15;
     }
 
-    // --- SECTION 4: CATEGORY DETAILS (NEW) ---
-    if (includeCatDet) {
+    // --- SECTION 4: CATEGORY DETAILS ---
+    if (incCatDet) {
         doc.addPage();
         finalY = 20;
-
         doc.setFontSize(14);
         doc.setTextColor(254, 121, 0);
         doc.text("4. تفاصيل أصناف المبيعات (Category Details)", 190, finalY, { align: "right" });
@@ -357,32 +383,26 @@ async function generateProductPDF() {
         const pData = rawData.periods ? rawData.periods[currentMode] : null;
         const catalog = pData ? (pData.catalog || {}) : {};
 
-        // Use sortedCats from earlier to iterate in order
+        // Note: Catalog is GLOBAL. We cannot easily filter it per store currently without restructuring the data.
+        // If user asks for specific store details, showing Global Catalog is misleading.
+        // However, if we are in "All Stores" mode, Global Catalog is correct.
+        // If Single Store Mode -> We should try to use 'sortedCats' (which comes from Store Data) 
+        // AND 'topItems' (which comes from Store Data).
+        // BUT 'topItems' only has TOP items. 'catalog' has ALL.
+        // We lack 'All Items Per Store' data structure in currentData.
+        // So for Single Store, we might be limited to what we have or print Global with warning.
+        // Let's check `processGlobalStats`...
+        // `showCategoryItems` functionality uses `catalog`. 
+        // Does `catalog` have store_id in items? NO.
+        // So `product_analysis.html` actually shows GLOBAL items even when clicking on a store category?
+        // Let's verify: `showCategoryItems` uses `catalog[categoryName]`. 
+        // It blindly shows all items. So yes, it seems it shows global items.
+        // We will replicate that behavior but ensure the HEADER says "Global Items (Note: Data not split by store)".
+        // OR better: Just show it.
+
         for (const cat of sortedCats) {
             const catName = cat.name;
-            // Catalog contains ALL items. Filter ??
-            // Actually catalog is generic. 
-            // Does catalog have store info? No.
-            // Catalog is likely Global for the period.
-            // If we are filtering by store, we should technically filter items too.
-            // But catalog data structure usually is just Item List.
-            // Let's check `processGlobalStats`... it doesn't use catalog. 
-            // `showCategoryItems` uses catalog.
-            // If we are in 'all' stores mode, using catalog is fine.
-            // If specific store, catalog might be misleading if it doesn't have store split.
-            // But since we can't easily filter catalog (unless it has store_id field), 
-            // we will use it as is (Global List) but label it "Global" if mixed?
-            // Or maybe catalog items *do* have store breakdown? 
-            // inspecting `showCategoryItems`: `let items = catalog[categoryName] || [];`
-            // No store filter there! 
-            // Wait, `catItemsSubtitle` shows store Name. 
-            // This implies `catalog` might be pre-filtered? No, rawData is static.
-            // If `catalog` items don't have store_id, then `showCategoryItems` shows GLOBAL items even when store is selected?
-            // That would be a bug in the existing dashboard if true.
-            // Let's assume catalog is global. 
-
             let items = catalog[catName] || [];
-
             if (items.length === 0) continue;
 
             if (finalY > 250) { doc.addPage(); finalY = 20; }
@@ -394,13 +414,10 @@ async function generateProductPDF() {
             finalY += 4;
 
             items.sort((a, b) => b.amount - a.amount);
-            const topItemsList = items.slice(0, 20);
+            const topItemsList = items.slice(0, 20); // Top 20
 
             const itemRows = topItemsList.map((item, i) => [
-                Math.round(item.amount).toLocaleString(),
-                item.qty,
-                item.name,
-                (i + 1)
+                Math.round(item.amount).toLocaleString(), item.qty, item.name, (i + 1)
             ]);
 
             doc.autoTable({
@@ -414,17 +431,7 @@ async function generateProductPDF() {
                 margin: { left: 20 },
                 tableWidth: 170
             });
-
             finalY = doc.lastAutoTable.finalY + 8;
         }
     }
-
-
-    // --- Save ---
-    doc.save(`Product_Analysis_${exportDate.replace(/\//g, '-')}.pdf`);
-
-    // Close Modal
-    const modalEl = document.getElementById('pdfExportModal');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
 }

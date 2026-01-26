@@ -151,8 +151,8 @@
             </div>
             <div class="col-md-6 text-end">
                 <div class="d-flex justify-content-end align-items-center gap-2">
-                    <button class="btn btn-danger fw-bold text-white shadow-sm"
-                        onclick="new bootstrap.Modal('#pdfExportModal').show()">تصدير PDF</button>
+                    <button class="btn btn-danger fw-bold text-white shadow-sm" onclick="openPdfModal()">تصدير
+                        PDF</button>
                     <button class="btn btn-warning fw-bold text-dark" onclick="openCatalogModal()">📂 تصفح
                         الأقسام</button>
                     <div class="input-group" style="width: 250px;">
@@ -443,7 +443,27 @@
                         aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted mb-3">حدد الأقسام التي تريد تضمينها في التقرير:</p>
+
+                    <!-- Store Selector -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">نطاق التصدير:</label>
+                        <select class="form-select" id="pdfStoreSelect" onchange="togglePdfDetailOption()">
+                            <option value="all">الكل (حسب الفلتر الحالي)</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Detailed Option (Visible only when All is selected) -->
+                    <div class="form-check mb-3 bg-light p-2 rounded" id="divPdfDetailed">
+                        <input class="form-check-input" type="checkbox" id="chkPdfDetailed">
+                        <label class="form-check-label fw-bold" for="chkPdfDetailed">
+                            توليد صفحة تفصيلية لكل معرض
+                        </label>
+                        <div class="form-text small">سيتم إنشاء ملخص عام، يليه تقرير مستقل لكل معرض في نفس الملف.</div>
+                    </div>
+
+                    <hr>
+                    <p class="text-muted mb-2 small">الأقسام المطلوبة:</p>
 
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" value="perf" id="chkPerf" checked>
@@ -1536,6 +1556,68 @@
             setTimeout(() => {
                 openProductDetails(id, name, cat, qty, amt);
             }, 150);
+        }
+
+        // ==========================================
+        // PDF EXPORT UI HELPERS
+        // ==========================================
+
+        function openPdfModal() {
+            populatePdfStoreSelect();
+            new bootstrap.Modal('#pdfExportModal').show();
+        }
+
+        function populatePdfStoreSelect() {
+            const sel = document.getElementById('pdfStoreSelect');
+            sel.innerHTML = '<option value="all">الكل (حسب الفلتر الحالي)</option>';
+
+            // Use currentData to get names as they appear in the table
+            let accessibleStores = [];
+
+            // currentData keys are store IDs
+            if (currentData) {
+                Object.keys(currentData).forEach(sid => {
+                    // Check permission
+                    if (isStoreAccessible(sid)) {
+                        const store = currentData[sid];
+                        const m = storeMeta[sid] || {};
+                        // Prioritize store_name from data (which comes from backend/meta usually)
+                        const name = store.store_name || m.name_ar || m.name || sid;
+
+                        accessibleStores.push({
+                            id: sid,
+                            name: name
+                        });
+                    }
+                });
+            }
+
+            // Sort by Name
+            accessibleStores.sort((a, b) => a.name.localeCompare(b.name));
+
+            accessibleStores.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                sel.appendChild(opt);
+            });
+
+            // Set default if activeStore is selected in dashboard
+            if (activeStore !== 'all') {
+                sel.value = activeStore;
+                togglePdfDetailOption();
+            }
+        }
+
+        function togglePdfDetailOption() {
+            const val = document.getElementById('pdfStoreSelect').value;
+            const div = document.getElementById('divPdfDetailed');
+            if (val === 'all') {
+                div.style.display = 'block';
+            } else {
+                div.style.display = 'none';
+                document.getElementById('chkPdfDetailed').checked = false;
+            }
         }
 
         function renderCatalog(filter = '') {
