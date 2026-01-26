@@ -335,8 +335,8 @@ async function generateSection(doc, storeIds, sectionTitle, incPerf, incAdv, inc
         }
     }
 
-    // --- SECTION 3: STORE BREAKDOWN (Only if multiple stores) ---
-    if (incStore && storeIds.length > 1) {
+    // --- SECTION 3: STORE BREAKDOWN ---
+    if (incStore && storeIds.length > 0) {
         doc.addPage();
         finalY = 20;
 
@@ -346,28 +346,47 @@ async function generateSection(doc, storeIds, sectionTitle, incPerf, incAdv, inc
         doc.setTextColor(0);
         finalY += 10;
 
-        const storeRows = storeIds.map((sid, i) => {
+        const storeRows = [];
+
+        storeIds.forEach((sid, i) => {
             const s = currentData[sid];
-            let sSales = 0; let sQty = 0;
-            s.categories.forEach(c => { sSales += c.amount; sQty += c.qty; });
-            const topCat = s.categories.length > 0 ? s.categories[0].category : '-';
-            return [
-                topCat, Math.round(sSales).toLocaleString(), sQty.toLocaleString(), s.store_name || sid, (i + 1)
-            ];
+            if (!s) return; // Skip if data missing from currentData
+
+            let sSales = 0;
+            let sQty = 0;
+
+            if (s.categories) {
+                s.categories.forEach(c => { sSales += c.amount; sQty += c.qty; });
+            }
+
+            const topCat = (s.categories && s.categories.length > 0) ? s.categories[0].category : '-';
+
+            storeRows.push([
+                topCat,
+                Math.round(sSales).toLocaleString(),
+                sQty.toLocaleString(),
+                s.store_name || sid,
+                (i + 1)
+            ]);
         });
 
+        // Sort by Sales desc
         storeRows.sort((a, b) => parseInt(b[1].replace(/,/g, '')) - parseInt(a[1].replace(/,/g, '')));
 
-        doc.autoTable({
-            startY: finalY,
-            head: [['أعلى تصنيف', 'المبيعات', 'الكمية', 'الفرع', '#']],
-            body: storeRows,
-            theme: 'grid',
-            headStyles: { fillColor: [23, 162, 184], font: fontName, halign: 'center' },
-            bodyStyles: { font: fontName, halign: 'center' },
-            styles: { fontSize: 9 }
-        });
-        finalY = doc.lastAutoTable.finalY + 15;
+        if (storeRows.length === 0) {
+            doc.text("لا توجد بيانات للفروع المحددة", pageWidth - 20, finalY, { align: 'right' });
+        } else {
+            doc.autoTable({
+                startY: finalY,
+                head: [['أعلى تصنيف', 'المبيعات', 'الكمية', 'الفرع', '#']],
+                body: storeRows,
+                theme: 'grid',
+                headStyles: { fillColor: [23, 162, 184], font: fontName, halign: 'center' },
+                bodyStyles: { font: fontName, halign: 'center' },
+                styles: { fontSize: 9 }
+            });
+            finalY = doc.lastAutoTable.finalY + 15;
+        }
     }
 
     // --- SECTION 4: CATEGORY DETAILS ---
