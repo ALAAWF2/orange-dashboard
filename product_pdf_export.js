@@ -90,13 +90,40 @@ async function generateProductPDF() {
     // For All + Detailed, "Global" is the aggregate.
 
     // --- Header Info (Global) ---
+    // --- Header Info (Global) ---
     let rangeText = "";
-    if (rawData.metadata && rawData.metadata.period_start) {
-        rangeText = `الفترة من: ${rawData.metadata.period_start}   إلى: ${rawData.metadata.period_end}`;
-    } else {
-        rangeText = document.getElementById('periodDisplay').textContent;
+
+    // Priority 1: Check if we have active mode period data (Source of Truth)
+    if (typeof currentMode !== 'undefined' && rawData.periods && rawData.periods[currentMode]) {
+        const pData = rawData.periods[currentMode];
+        if (pData.date_range && pData.date_range !== "N/A") {
+            rangeText = `الفترة: ${pData.date_range}`;
+        }
     }
-    const exportDate = new Date().toLocaleDateString('en-GB');
+
+    // Priority 2: Use the label currently displayed on the dashboard (UI Truth)
+    if (!rangeText) {
+        const lbl = document.getElementById('currentPeriodLabel');
+        if (lbl && lbl.textContent && lbl.textContent !== '...') {
+            rangeText = lbl.textContent;
+        }
+    }
+
+    // Priority 3: Fallback to periodDisplay
+    if (!rangeText) {
+        const pd = document.getElementById('periodDisplay');
+        if (pd && pd.textContent && pd.textContent !== '...') {
+            rangeText = pd.textContent;
+        }
+    }
+
+    // Priority 4: Fallback to metadata (Default/Initial)
+    if (!rangeText && rawData.metadata && rawData.metadata.period_start) {
+        rangeText = `الفترة من: ${rawData.metadata.period_start}   إلى: ${rawData.metadata.period_end}`;
+    }
+
+    // Final Fallback
+    if (!rangeText) rangeText = "الفترة: غير محدد";
 
     // Page 1 Header
     doc.setFontSize(18);
