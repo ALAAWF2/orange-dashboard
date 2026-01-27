@@ -125,6 +125,8 @@ async function generateProductPDF() {
     // Final Fallback
     if (!rangeText) rangeText = "الفترة: غير محدد";
 
+    const exportDate = new Date().toLocaleDateString('en-GB');
+
     // Page 1 Header
     doc.setFontSize(18);
     centerText("تقرير تحليل المنتجات (Product Analysis Report)", 15);
