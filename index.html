@@ -231,7 +231,7 @@
                 <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
                     📦 <span class="d-none d-lg-inline">تحليل المنتجات</span>
                 </a>
-                <button onclick="generatePDF()" class="btn btn-warning btn-sm fw-bold text-white">
+                <button onclick="openPdfModal()" class="btn btn-warning btn-sm fw-bold text-white">
                     📄 <span class="d-none d-lg-inline">PDF</span>
                 </button>
                 <button onclick="showExcelModal()" class="btn btn-success btn-sm fw-bold text-white">
@@ -1573,8 +1573,158 @@
             });
         }
 
+        // ==========================================
+        // PDF EXPORT UI HELPERS
+        // ==========================================
+
+        function openPdfModal() {
+            populatePdfStoreSelect();
+            new bootstrap.Modal('#pdfExportModal').show();
+        }
+
+        function populatePdfStoreSelect() {
+            const sel = document.getElementById('pdfStoreSelect');
+            sel.innerHTML = '<option value="all">الكل (ملخص عام)</option>';
+
+            // Use rawData.store_meta directly but respect permissions
+            let accessibleStores = [];
+
+            // Respect Manager Filter
+            let selManager = document.getElementById('managerFilter').value;
+            if (currentUser.role !== 'Admin') {
+                selManager = currentUser.name;
+            }
+
+            Object.keys(rawData.store_meta).forEach(sid => {
+                const meta = rawData.store_meta[sid];
+                if (meta.type !== 'Showroom') return;
+
+                // Manager Check
+                if (selManager !== 'all' && meta.manager !== selManager) return;
+
+                // Name priority: rawData.stores[sid] > meta.name_ar > sid
+                const name = (rawData.stores && rawData.stores[sid]) || meta.name_ar || meta.name || sid;
+
+                accessibleStores.push({ id: sid, name: name });
+            });
+
+            // Sort by Name
+            accessibleStores.sort((a, b) => a.name.localeCompare(b.name));
+
+            accessibleStores.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                sel.appendChild(opt);
+            });
+        }
+
+        function triggerPdfExport() {
+            const storeId = document.getElementById('pdfStoreSelect').value;
+            const isDetailed = document.getElementById('pdfDetailedCheck').checked;
+
+            // Close modal
+            const modalEl = document.getElementById('pdfExportModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Call function in pdf_export.js
+            generatePDF(storeId, isDetailed);
+        }
+
+
+        // ==========================================
+        // PDF EXPORT UI HELPERS
+        // ==========================================
+
+        function openPdfModal() {
+            populatePdfStoreSelect();
+            new bootstrap.Modal('#pdfExportModal').show();
+        }
+
+        function populatePdfStoreSelect() {
+            const sel = document.getElementById('pdfStoreSelect');
+            sel.innerHTML = '<option value="all">الكل (ملخص عام)</option>';
+
+            // Use rawData.store_meta directly but respect permissions
+            let accessibleStores = [];
+
+            // Respect Manager Filter
+            let selManager = document.getElementById('managerFilter').value;
+            if (currentUser.role !== 'Admin') {
+                selManager = currentUser.name;
+            }
+
+            if (rawData && rawData.store_meta) {
+                Object.keys(rawData.store_meta).forEach(sid => {
+                    const meta = rawData.store_meta[sid];
+                    if (meta.type !== 'Showroom') return;
+
+                    // Manager Check
+                    if (selManager !== 'all' && meta.manager !== selManager) return;
+
+                    // Name priority: rawData.stores[sid] > meta.name_ar > sid
+                    const name = (rawData.stores && rawData.stores[sid]) || meta.name_ar || meta.name || sid;
+
+                    accessibleStores.push({ id: sid, name: name });
+                });
+            }
+
+            // Sort by Name
+            accessibleStores.sort((a, b) => a.name.localeCompare(b.name));
+
+            accessibleStores.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                sel.appendChild(opt);
+            });
+        }
+
+        function triggerPdfExport() {
+            const storeId = document.getElementById('pdfStoreSelect').value;
+            const isDetailed = document.getElementById('pdfDetailedCheck').checked;
+
+            // Close modal
+            const modalEl = document.getElementById('pdfExportModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Call function in pdf_export.js
+            generatePDF(storeId, isDetailed);
+        }
+
         init();
     </script>
+    <!-- PDF Export Modal -->
+    <div class="modal fade" id="pdfExportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تصدير التقرير PDF</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="pdfStoreSelect" class="form-label">اختر الفرع:</label>
+                        <select id="pdfStoreSelect" class="form-select">
+                            <option value="all">الكل (ملخص عام)</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="" id="pdfDetailedCheck">
+                        <label class="form-check-label" for="pdfDetailedCheck">
+                            إنشاء صفحة تفصيلية لكل فرع (عند اختيار الكل)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-primary" onclick="triggerPdfExport()">تصدير</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
