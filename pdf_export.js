@@ -210,8 +210,12 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
             grandConv
         ]);
 
+        // Dynamic Years
+        const currYear = startDate.getFullYear();
+        const prevYear = currYear - 1;
+
         doc.autoTable({
-            head: [['التاريخ', 'مبيعات 2026', 'مبيعات 2025', 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'قيمة العميل', 'زوار 2026', 'زوار 2025', 'التحويل %']],
+            head: [['التاريخ', `مبيعات ${currYear}`, `مبيعات ${prevYear}`, 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'قيمة العميل', `زوار ${currYear}`, `زوار ${prevYear}`, 'التحويل %']],
             body: rows,
             startY: 35,
             theme: 'grid',

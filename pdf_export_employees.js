@@ -53,21 +53,26 @@ async function generateEmployeePDF(targetEmps = null) {
         return local.toISOString().split('T')[0];
     }
 
+    // Today
     let today = new Date();
+    // Yesterday
     let yestDate = new Date(today);
     yestDate.setDate(today.getDate() - 1);
 
     const yestStrFinal = formatDate(yestDate);
+
+    // MTD Start (1st of Current Month)
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthStartStr = formatDate(monthStart);
 
-    // Prev Period Dates (for Share Growth)
-    const prevEnd = new Date(yestDate);
-    prevEnd.setMonth(prevEnd.getMonth() - 1);
-    const prevMonthEndStr = formatDate(prevEnd);
-
-    const prevStart = new Date(prevEnd.getFullYear(), prevEnd.getMonth(), 1);
+    // Previous Month Logic (Robust)
+    // 1. Get 1st of Previous Month
+    const prevStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const prevMonthStartStr = formatDate(prevStart);
+
+    // 2. Get Last Day of Previous Month (Day 0 of Current Month)
+    const prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const prevMonthEndStr = formatDate(prevEnd);
 
     let pageIndex = 0;
 
