@@ -127,7 +127,12 @@
                         <span class="badge bg-secondary" id="dupCount">Checking...</span>
                     </div>
                     <div class="card-body">
-                        <p class="small text-muted mb-2">يفحص وجود أكثر من سجل مبيعات لنفس الموظف في نفس اليوم.</p>
+                        <p class="small text-muted mb-2">
+                            <strong>شرح:</strong> هذا ليس تكرار الفواتير (وهو طبيعي)، بل هو
+                            <span class="text-danger fw-bold">خطأ تقني</span>
+                            يعني أن الموظف له تقريرين مبيعات إجمالي لنفس اليوم! (يجب أن يكون له سطر واحد فقط يجمع كل
+                            فواتيره).
+                        </p>
                         <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                             <table class="table table-sm table-striped">
                                 <thead>
@@ -270,6 +275,7 @@
                 // 1. Management Data Audit
                 if (mgmtRes.status === 'fulfilled') {
                     const data = await mgmtRes.value.json();
+                    window.mgmtData = data; // Save for store lookup
                     auditManagementData(data);
                 } else {
                     console.error("Failed to load management_data.json");
@@ -296,35 +302,57 @@
             }
         }
 
+        function getStoreName(id) {
+            if (window.mgmtData && window.mgmtData.stores && window.mgmtData.stores[id]) {
+                return `${window.mgmtData.stores[id]} (${id})`;
+            }
+            return id;
+        }
+
         // --- Logic: Management Data ---
         function auditManagementData(data) {
             const issues = [];
             const sales = data.sales || [];
+            const visitors = data.visitors || [];
 
-            // We need visitors data too if it's separate or integrated. 
-            // In management_data.json, sales is a list of [Date, StoreID, Value]
-            // We need to check if there are 0 visitors/transactions for positive sales.
-            // But wait, the raw JSON structure for visitors isn't in 'sales' array usually.
-            // Let's assume we look for anomalies we CAN see.
-            // Actually, based on previous file reads, 'sales' is [Date, StoreID, Val].
-            // If there's a separate 'visitors' key, we need to map them.
-            // Let's check for basic anomalies first: Negative Sales.
+            // Index Visitors for O(1) lookup
+            const visitorMap = new Map();
+            visitors.forEach(rec => {
+                const [date, storeId, val] = rec;
+                visitorMap.set(`${storeId}|${date}`, val);
+            });
 
             sales.forEach(rec => {
                 const [date, storeId, val] = rec;
+                const storeName = getStoreName(storeId);
+
+                // 1. Check Negative Sales
                 if (val < 0) {
                     issues.push({
-                        type: 'Negative Sales',
-                        detail: `Store ${storeId} has negative sales`,
+                        type: 'Negative Sales 🔻',
+                        detail: `مبيعات بالسالب في ${storeName} (ربما مرتجعات؟)`,
                         date: date,
-                        val: val,
+                        val: val.toLocaleString(),
                         severity: 'danger'
                     });
                 }
+
+                // 2. Check Zero Visitors (Anomaly)
+                // Logic: If Sales > 0 AND Visitors is 0 or missing
+                if (val > 0) {
+                    const vizCount = visitorMap.get(`${storeId}|${date}`) || 0;
+                    if (vizCount === 0) {
+                        issues.push({
+                            type: 'Zero Visitors 👻',
+                            detail: `مبيعات (${val.toLocaleString()}) بدون زوار! في ${storeName}`,
+                            date: date,
+                            val: 0, // Visitor Count
+                            severity: 'warning'
+                        });
+                    }
+                }
             });
 
-            // TODO: Ensure we load visitors/trans if avail in JSON to cross-reference
-            // For now, render what we found
             renderIssues(issues, 'mgmtIssuesBody', 'mgmtCount');
         }
 
@@ -335,12 +363,11 @@
 
             // Loop through all stores
             for (const [storeId, records] of Object.entries(history)) {
-                // Records: [Date, Name, Sales, Trans, ...]
-                // Key for uniqueness: Name + Date
+
                 const seen = new Map();
 
                 records.forEach(rec => {
-                    const date = rec[0]; // "01-16" usually (MM-DD) or Full Date
+                    const date = rec[0];
                     const name = rec[1];
                     const key = `${name}|${date}`;
 
@@ -348,8 +375,8 @@
                         duplicates.push({
                             name: name,
                             date: date,
-                            store: storeId,
-                            count: 2 // simplified
+                            store: getStoreName(storeId), // Use Name
+                            count: 2
                         });
                     } else {
                         seen.set(key, true);
@@ -361,7 +388,7 @@
             document.getElementById('dupCount').textContent = duplicates.length;
 
             if (duplicates.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-success"><i class="fas fa-check-circle me-1"></i> لا يوجد تكرار</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-success fw-bold"><i class="fas fa-check-double me-1"></i> لا يوجد سجلات مكررة (نظيف)</td></tr>';
                 return;
             }
 
@@ -369,8 +396,8 @@
                 <tr>
                     <td class="fw-bold">${d.name}</td>
                     <td>${d.date}</td>
-                    <td>${d.store}</td>
-                    <td class="text-danger fw-bold">مكرر!</td>
+                    <td class="small">${d.store}</td>
+                    <td class="text-danger fw-bold">تكرار السجل! ⚠️</td>
                 </tr>
             `).join('');
         }
