@@ -79,9 +79,15 @@
                 <h4 class="fw-bold mb-1">لوحة تدقيق البيانات</h4>
                 <p class="text-muted mb-0 small">فحص تلقائي للأخطاء، النواقص، والتكرار في ملفات البيانات.</p>
             </div>
-            <button onclick="runAudit()" class="btn btn-primary fw-bold">
-                <i class="fas fa-sync-alt me-1"></i> إعادة الفحص
-            </button>
+            <div class="d-flex gap-2">
+                <select id="dateFilter" class="form-select" onchange="runAudit()">
+                    <option value="all">كل الفترات (All Time)</option>
+                    <option value="current_month" selected>هذا الشهر (Current Month)</option>
+                </select>
+                <button onclick="runAudit()" class="btn btn-primary fw-bold text-nowrap">
+                    <i class="fas fa-sync-alt me-1"></i> تحديث
+                </button>
+            </div>
         </div>
 
         <!-- Alerts Area -->
@@ -264,19 +270,24 @@
 
         async function runAudit() {
             console.log("Starting Audit...");
+            const filter = document.getElementById('dateFilter').value;
+
             try {
+                // Clear previous states
+                document.getElementById('mgmtIssuesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">جاري الفحص...</td></tr>';
+
                 // Load Data concurrently
                 const [mgmtRes, empRes, missingRes] = await Promise.allSettled([
                     fetch('management_data.json?t=' + Date.now()),
                     fetch('employees_data.json?t=' + Date.now()),
-                    fetch('audit_missing_emp.json?t=' + Date.now()) // Expecting this new file
+                    fetch('audit_missing_emp.json?t=' + Date.now())
                 ]);
 
                 // 1. Management Data Audit
                 if (mgmtRes.status === 'fulfilled') {
                     const data = await mgmtRes.value.json();
-                    window.mgmtData = data; // Save for store lookup
-                    auditManagementData(data);
+                    window.mgmtData = data;
+                    auditManagementData(data, filter);
                 } else {
                     console.error("Failed to load management_data.json");
                 }
@@ -284,7 +295,7 @@
                 // 2. Employee Duplicates
                 if (empRes.status === 'fulfilled') {
                     const data = await empRes.value.json();
-                    auditEmployeeDuplicates(data);
+                    auditEmployeeDuplicates(data); // Can also apply filter if needed, but sticking to mgmt for now
                 }
 
                 // 3. Missing Employees
@@ -292,7 +303,6 @@
                     const data = await missingRes.value.json();
                     renderMissingEmployees(data);
                 } else {
-                    // Start of project, file might not exist yet
                     document.getElementById('missingBody').innerHTML = `<tr><td colspan="2" class="text-center text-warning">ملف التقرير غير موجود (audit_missing_emp.json)</td></tr>`;
                 }
 
@@ -310,10 +320,14 @@
         }
 
         // --- Logic: Management Data ---
-        function auditManagementData(data) {
+        function auditManagementData(data, filterType) {
             const issues = [];
             const sales = data.sales || [];
             const visitors = data.visitors || [];
+
+            // Helper: Date Logic
+            const today = new Date().toISOString().split('T')[0];
+            const currentMonthPrefix = onPageLoadMonth();
 
             // Index Visitors for O(1) lookup
             const visitorMap = new Map();
@@ -322,9 +336,23 @@
                 visitorMap.set(`${storeId}|${date}`, val);
             });
 
+            // Stores to ignore for "Zero Visitors" check (No footfall logic)
+            const IGNORE_ZERO_VISITORS = ['0', '1013']; // 0=Warehouse, 1013=Platforms
+
             sales.forEach(rec => {
                 const [date, storeId, val] = rec;
+
+                // --- Filter Logic ---
+                if (filterType === 'current_month') {
+                    // 1. Must match current month (YYYY-MM)
+                    if (!date.startsWith(currentMonthPrefix)) return;
+                    // 2. Exclude Today (Data incomplete)
+                    if (date === today) return;
+                }
+
                 const storeName = getStoreName(storeId);
+
+                // --- Audit Checks ---
 
                 // 1. Check Negative Sales
                 if (val < 0) {
@@ -339,14 +367,15 @@
 
                 // 2. Check Zero Visitors (Anomaly)
                 // Logic: If Sales > 0 AND Visitors is 0 or missing
-                if (val > 0) {
+                // EXCLUSION: Skip if store is in ignore list
+                if (val > 0 && !IGNORE_ZERO_VISITORS.includes(String(storeId))) {
                     const vizCount = visitorMap.get(`${storeId}|${date}`) || 0;
                     if (vizCount === 0) {
                         issues.push({
                             type: 'Zero Visitors 👻',
                             detail: `مبيعات (${val.toLocaleString()}) بدون زوار! في ${storeName}`,
                             date: date,
-                            val: 0, // Visitor Count
+                            val: 0,
                             severity: 'warning'
                         });
                     }
@@ -354,6 +383,12 @@
             });
 
             renderIssues(issues, 'mgmtIssuesBody', 'mgmtCount');
+        }
+
+        function onPageLoadMonth() {
+            const d = new Date();
+            const m = d.getMonth() + 1;
+            return `${d.getFullYear()}-${m < 10 ? '0' + m : m}`;
         }
 
         // --- Logic: Employee Duplicates ---
