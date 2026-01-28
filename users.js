@@ -10,5 +10,7 @@ const USERS = {
     "عبدالله السرداح": { pin: "4618", role: "Manager" },
     "عبيدة السباعي": { pin: "1647", role: "Manager" },
     "محمدكلو": { pin: "4891", role: "Manager" },
-    "منطقة الطائف": { pin: "6342", role: "Manager" }
+    "محمدكلو": { pin: "4891", role: "Manager" },
+    "منطقة الطائف": { pin: "6342", role: "Manager" },
+    "علاء": { pin: "0000", role: "Auditor" }
 };
