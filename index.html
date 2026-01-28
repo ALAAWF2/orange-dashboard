@@ -1039,12 +1039,74 @@
                     if (currentEnd > now) currentEnd = now;
                 }
 
-                // Previous Range (Fair Comparison)
-                prevStart = new Date(currentStart);
-                prevStart.setFullYear(prevStart.getFullYear() - 1);
+                // Previous Range (Fair Comparison) using Month/Year logic to catch Leap Years
+                if (selMonth === 'all') {
+                    prevStart = new Date(currentStart);
+                    prevStart.setFullYear(prevStart.getFullYear() - 1);
 
-                prevEnd = new Date(currentEnd);
-                prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+                    prevEnd = new Date(currentEnd);
+                    prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+                    // Ensure end of day is preserved
+                    prevEnd.setHours(23, 59, 59, 999);
+                } else {
+                    // For specific month, recalculate end of month for the PREVIOUS year
+                    // This creates 29th Feb for leap years if needed
+                    let pYear = selYear - 1;
+                    prevStart = new Date(pYear, selMonth - 1, 1);
+                    prevEnd = new Date(pYear, selMonth, 0); // Last day of that month in prev year
+                    prevEnd.setHours(23, 59, 59, 999);
+
+                    // Cap at today equivalent? 
+                    // Usually for historical comparison we want full month if current month is finished.
+                    // But if current month is in progress, maybe we want 'To Date'?
+                    // The user is asking about full month discrepancy (590 vs 561). 
+                    // So they expect Full Month vs Full Month.
+
+                    // However, if we are in the MIDDLE of the month, we might want YTD comparison.
+                    // But the loop above (Lines 1031) caps currentEnd at NOW if future.
+
+                    // Logic: If currentEnd was capped at NOW (e.g. today is 15th), 
+                    // then we should probably cap prevEnd at 15th too for fairness?
+                    // The user's case is Feb 2025 (past). So currentEnd is 28th.
+                    // They want PrevEnd to be 29th.
+
+                    // So: If currentEnd is the LAST DAY of the month, make prevEnd LAST DAY of prev month.
+                    // If currentEnd is Partial (e.g. 15th), make prevEnd 15th.
+
+                    let daysInCurr = new Date(selYear, selMonth, 0).getDate();
+                    let currentDay = currentEnd.getDate();
+
+                    // If we selected 'Full Month' (currentDay == daysInCurr or passed), use Full Month Prev
+                    // But wait, currentEnd might be capped at 'now'.
+                    // If 'now' is later than the month, currentEnd is full month.
+
+                    // Simple check: If currentEnd is the actual end of the selected month
+                    if (currentDay === daysInCurr) {
+                        // Keep prevEnd as Full Month (e.g. 29th)
+                    } else {
+                        // It was partial. Use specific date.
+                        // But what if Feb 29? 
+                        // If current is Feb 28 (partial?), Prev should be Feb 28.
+                        // If current is Feb 28 (full), Prev should be Feb 29.
+
+                        // Actually, simpler approach:
+                        // If user selected specific month, and that month is completed, show full month vs full month.
+                        // Since we recalculated prevEnd using (pYear, selMonth, 0), it IS full month.
+
+                        // We only need to clamp it IF currentEnd was clamped.
+                        // How do we know if currentEnd was clamped? 
+                        // compare currentEnd to new Date(selYear, selMonth, 0).
+
+                        let fullCurrEnd = new Date(selYear, selMonth, 0);
+                        let isFullMonth = currentEnd.getDate() === fullCurrEnd.getDate();
+
+                        if (!isFullMonth) {
+                            // Partial. Use same day.
+                            prevEnd = new Date(pYear, selMonth - 1, currentEnd.getDate());
+                            prevEnd.setHours(23, 59, 59, 999);
+                        }
+                    }
+                }
 
 
 
