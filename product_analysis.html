@@ -214,6 +214,33 @@
             </div>
         </div>
 
+        <!-- Offers Analysis Section (NEW) -->
+        <h5 class="section-title">تحليل مبيعات العروض (Sales Analysis of Offers)</h5>
+        <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
+            <div class="alert alert-info small py-2 d-flex align-items-center">
+                <i class="fs-5 me-2">🏷️</i>
+                <div>
+                    <strong>ملاحظة:</strong> الأرقام أدناه تمثل إجمالي أداء العرض منذ بدايته وحتى الآن (Lifetime).
+                </div>
+            </div>
+            <table class="table table-sm align-middle table-hover">
+                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                    <tr>
+                        <th>#</th>
+                        <th>اسم العرض (Offer Name)</th>
+                        <th>الفترة (Duration)</th>
+                        <th>الحالة (Status)</th>
+                        <th class="text-center">عدد العمليات</th>
+                        <th class="text-center">إجمالي الخصم (Discount)</th>
+                        <th class="text-center">إجمالي المبيعات (Sales)</th>
+                    </tr>
+                </thead>
+                <tbody id="offersAnlaysisBody">
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
+
         <!-- Market Basket Analysis Section (NEW) -->
         <h5 class="section-title">أكثر المنتجات التي تشترى معاً (Items Bought Together)</h5>
         <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
@@ -607,6 +634,7 @@
 
                 rawData = await resAnalysis.json();
                 const mgmtData = await resMgmt.json();
+                window.mgmtData = mgmtData; // Store globally
                 storeMeta = mgmtData.store_meta || {};
 
                 // Update Badge for period
@@ -619,6 +647,9 @@
 
                 // Check Role & Init Filters
                 setupFilters(mgmtData);
+
+                // Initial Offers Render
+                renderOffersTable();
 
             } catch (e) {
                 console.error(e);
@@ -766,6 +797,47 @@
         }
 
         // ... (Existing Functions) ...
+
+        function renderOffersTable() {
+            const tbody = document.getElementById('offersAnlaysisBody');
+            tbody.innerHTML = '';
+
+            // Data comes from management_data.json -> mgmtData.offers_analysis
+            // We need to access global mgmtData if possible. 
+            // Currently init() loads it into `storeMeta` but maybe we should store the whole thing?
+            // Let's modify init() to store `window.mgmtData` or similar.
+            // Assuming we will fix init() next.
+
+            const offersData = window.mgmtData ? (window.mgmtData.offers_analysis || []) : [];
+
+            if (offersData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد عروض مسجلة</td></tr>';
+                return;
+            }
+
+            // Sort by Start Date Descending
+            // offersData.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+
+            offersData.forEach((offer, i) => {
+                let statusBadge = '<span class="badge bg-secondary">Unknown</span>';
+                if (offer.status === 'Active') statusBadge = '<span class="badge bg-success">Active</span>';
+                else if (offer.status === 'Expired') statusBadge = '<span class="badge bg-danger">Expired</span>';
+                else if (offer.status === 'Upcoming') statusBadge = '<span class="badge bg-warning text-dark">Upcoming</span>';
+
+                let row = `
+                    <tr>
+                        <td class="fw-bold">${i + 1}</td>
+                        <td class="fw-bold" title="${offer.id}">${offer.name}</td>
+                        <td class="small text-muted">${offer.start_date} <span class="mx-1">➡</span> ${offer.end_date}</td>
+                        <td>${statusBadge}</td>
+                        <td class="text-center font-monospace">${offer.count.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-danger">-${offer.total_discount.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-success fw-bold">${offer.total_sales.toLocaleString()}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
 
         function renderMarketBasketTable() {
             const tbody = document.getElementById('marketBasketBody');
