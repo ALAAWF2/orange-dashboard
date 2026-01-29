@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange | المنتجات الراكدة</title>
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            --bs-secondary: #6c757d;
+            --bg-light: #f8f9fa;
+            --card-radius: 12px;
+            --font-main: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-light);
+            color: #212529;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: white !important;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #000 !important;
+        }
+
+        .brand-orange {
+            color: #fe7900;
+        }
+
+        .card-custom {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-right: 4px solid #fe7900;
+            padding-right: 10px;
+        }
+
+        .table-custom thead th {
+            background-color: #fe7900;
+            color: white;
+            font-weight: 500;
+            border: none;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #fff3e0;
+            cursor: pointer;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #fe7900 0%, #ff9933 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            height: 100%;
+        }
+
+        .stat-card.danger {
+            background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+        }
+
+        .stat-card.secondary {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body onload="init()">
+    <!-- Navbar -->
+    <nav class="navbar mb-4 sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand"><span class="brand-orange">ORANGE</span> المنتجات الراكدة</span>
+            <div class="d-flex gap-2 align-items-center">
+                <button class="btn btn-success btn-sm fw-bold" onclick="exportToExcel()">📊 تصدير Excel</button>
+                <a href="offers_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
+                    🏷️ تحليل العروض
+                </a>
+                <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">
+                    🏠 الرئيسية
+                </a>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
+            </div>
+        </div>
+    </nav>
+    <script src="users.js"></script>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+    </script>
+    <div class="container-fluid px-4">
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="row align-items-center g-3">
+                <div class="col-md-6">
+                    <h5 class="mb-0 fw-bold text-muted">تصفية البيانات:</h5>
+                </div>
+                <!-- Filters -->
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                        <select class="form-select form-select-sm fw-bold" id="regionFilter" style="width: 150px;"
+                            onchange="applyFilters()">
+                            <option value="all">📍 كل المناطق</option>
+                        </select>
+                        <select class="form-select form-select-sm fw-bold" id="storeFilter" style="width: 180px;"
+                            onchange="applyFilters()">
+                            <option value="all">🏪 كل المعارض</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Summary Stats -->
+        <div class="row mb-4" id="summaryStats">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h6 class="opacity-75 small">عدد الأصناف الراكدة</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalItems">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card secondary">
+                    <h6 class="opacity-75 small">إجمالي الكمية (Quantity)</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalQty">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card danger">
+                    <h6 class="opacity-75 small">القيمة التقديرية (Risky Stock Value)</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalValue">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
+                    <h6 class="opacity-75 small">نسبة الركود (من إجمالي الأصناف)</h6>
+                    <h3 class="fw-bold mb-0" id="statRatio">--</h3>
+                </div>
+            </div>
+        </div>
+        <!-- Stagnant Table -->
+        <div class="card-custom p-3">
+            <h5 class="section-title">📦 قائمة المنتجات الراكدة</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="stagnantTable">
+                    <thead class="table-custom">
+                        <tr>
+                            <th>#</th>
+                            <th>المعرض (Store)</th>
+                            <th>رقم المنتج (Item ID)</th>
+                            <th>اسم المنتج (Product Name)</th>
+                            <th class="text-center">الكمية الحالية</th>
+                            <th class="text-center">القيمة التقديرية</th>
+                            <th class="text-center">آخر مبيعة</th>
+                            <th class="text-center">أيام الركود</th>
+                            <th class="text-center">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stagnantBody">
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <div class="spinner-border text-primary"></div>
+                                <div class="mt-2">جاري تحميل البيانات...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        let rawStagnantData = null;
+        let storeMeta = {};
+        let activeRegion = 'all';
+        let activeStore = 'all';
+        async function init() {
+            try {
+                const [resStagnant, resMgmt] = await Promise.all([
+                    fetch('stagnant_data.json?t=' + Date.now()),
+                    fetch('management_data.json?t=' + Date.now())
+                ]);
+                if (!resStagnant.ok) throw new Error("Stagnant Data not found (Run Backend first)");
+                if (!resMgmt.ok) throw new Error("Management Data not found");
+                const stagJson = await resStagnant.json();
+                const mgmtJson = await resMgmt.json();
+                rawStagnantData = stagJson.data || {};
+                storeMeta = mgmtJson.store_meta || {};
+                setupFilters(storeMeta);
+                renderAll();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('stagnantBody').innerHTML = `
+                    <tr><td colspan="9" class="text-center text-danger py-5">
+                        ⚠️ تعذر تحميل البيانات<br>
+                        <small>${e.message}</small>
+                    </td></tr>
+                `;
+            }
+        }
+        function isStoreAccessible(sid) {
+            if (!currentUser) return false;
+            if (currentUser.role === 'Admin') return true;
+            const meta = storeMeta[sid];
+            if (currentUser.role === 'Manager') {
+                return meta && meta.manager === currentUser.name;
+            }
+            if (currentUser.stores && (currentUser.stores.includes(sid) || currentUser.stores.includes('all'))) {
+                return true;
+            }
+            return false;
+        }
+        function setupFilters(storeMeta) {
+            const regSel = document.getElementById('regionFilter');
+            const storeSel = document.getElementById('storeFilter');
+            const regions = new Set();
+            const stores = [];
+            Object.keys(storeMeta).forEach(sid => {
+                if (!isStoreAccessible(sid)) return;
+                const m = storeMeta[sid];
+                if (m.region) regions.add(m.region);
+                const r = m.region || m.city || 'Other';
+                regions.add(r);
+                const sName = m.name_ar || m.name || `Store ${sid}`;
+                stores.push({ id: sid, name: sName, region: r });
+            });
+            Array.from(regions).sort().forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r;
+                opt.textContent = `📍 ${r}`;
+                regSel.appendChild(opt);
+            });
+            stores.sort((a, b) => a.name.localeCompare(b.name));
+            stores.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                opt.dataset.region = s.region;
+                storeSel.appendChild(opt);
+            });
+        }
+        function applyFilters() {
+            activeRegion = document.getElementById('regionFilter').value;
+            activeStore = document.getElementById('storeFilter').value;
+            const storeOpts = document.getElementById('storeFilter').options;
+            for (let i = 0; i < storeOpts.length; i++) {
+                const opt = storeOpts[i];
+                if (opt.value === 'all') continue;
+                if (activeRegion === 'all' || opt.dataset.region === activeRegion) {
+                    opt.style.display = 'block';
+                } else {
+                    opt.style.display = 'none';
+                }
+            }
+            renderAll();
+        }
+        function renderAll() {
+            if (!rawStagnantData) return;
+            const tbody = document.getElementById('stagnantBody');
+            tbody.innerHTML = '';
+            let totalItems = 0;
+            let totalQty = 0;
+            let totalValue = 0;
+            const rows = [];
+            Object.keys(rawStagnantData).forEach(sid => {
+                if (!isStoreAccessible(sid)) return;
+                if (activeStore !== 'all' && sid !== activeStore) return;
+                const m = storeMeta[sid] || {};
+                const r = m.region || m.city || 'Other';
+                if (activeRegion !== 'all' && r !== activeRegion) return;
+                const items = rawStagnantData[sid] || [];
+                items.forEach(item => {
+                    totalItems++;
+                    totalQty += item.qty;
+                    const val = item.qty * (item.est_price || 0);
+                    totalValue += val;
+                    rows.push({
+                        sid: sid,
+                        storeName: m.name_ar || m.name || sid,
+                        ...item,
+                        val: val
+                    });
+                });
+            });
+            rows.sort((a, b) => b.days - a.days);
+            const displayRows = rows;
+            if (displayRows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">✅ لا توجد منتجات راكدة في هذا النطاق</td></tr>';
+            } else {
+                displayRows.forEach((r, idx) => {
+                    const badgeClass = r.status === 'Dead' ? 'bg-danger' :
+                        r.status === 'Never Sold' ? 'bg-dark' : 'bg-warning text-dark';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${idx + 1}</td>
+                        <td>${r.storeName}</td>
+                        <td>${r.id}</td>
+                        <td class="fw-bold text-primary">${r.name}</td>
+                        <td class="text-center fw-bold">${r.qty}</td>
+                        <td class="text-center">${Math.round(r.val).toLocaleString()}</td>
+                        <td class="text-center small text-muted">${r.last_sale || '-'}</td>
+                        <td class="text-center fw-bold text-danger">${r.days} يوم</td>
+                        <td class="text-center"><span class="badge ${badgeClass}">${r.status}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('statTotalItems').textContent = totalItems.toLocaleString();
+            document.getElementById('statTotalQty').textContent = totalQty.toLocaleString();
+            document.getElementById('statTotalValue').textContent = totalValue.toLocaleString();
+        }
+        function exportToExcel() {
+            const table = document.getElementById("stagnantTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Stagnant Products" });
+            XLSX.writeFile(wb, "stagnant_products.xlsx");
+        }
+    </script>
+</body>
+
+</html>

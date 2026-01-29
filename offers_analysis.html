@@ -156,6 +156,9 @@
                 <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">
                     🏠 الرئيسية
                 </a>
+                <button class="btn btn-warning btn-sm fw-bold text-dark" onclick="openStagnantModal()">
+                    📉 المنتجات الراكدة (Suggestions)
+                </button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
@@ -432,6 +435,48 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stagnant Suggestions Modal -->
+    <div class="modal fade" id="stagnantModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title w-100 fw-bold">⚡ اقتراحات لعمل عروض (Stagnant Products)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 shadow-sm">
+                        <i class="bi bi-info-circle-fill"></i>
+                        هذه المنتجات متوفرة بكميات كبيرة ولم يتم بيعها لفترة طويلة (> 90 يوم). يُنصح بعمل عروض ترويجية
+                        عليها.
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>الفرع</th>
+                                    <th>المنتج</th>
+                                    <th class="text-center">الكمية</th>
+                                    <th class="text-center">أيام الركود</th>
+                                    <th class="text-center">القيمة التقديرية</th>
+                                    <th>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stagnantModalBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <a href="stagnant_products.html" class="btn btn-primary">🔍 عرض التفاصيل الكاملة</a>
                 </div>
             </div>
         </div>
@@ -804,6 +849,92 @@
                 `;
             });
         }
+
+        // --- Stagnant Logic ---
+        async function openStagnantModal() {
+            const modal = new bootstrap.Modal(document.getElementById('stagnantModal'));
+            modal.show();
+
+            const tbody = document.getElementById('stagnantModalBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>';
+
+            try {
+                // Reuse existing data logic or fetch if not ready
+                // Assuming we haven't loaded stagnant data in the main init() of this page.
+                const res = await fetch('stagnant_data.json?t=' + Date.now());
+                if (!res.ok) throw new Error("بيانات الراكد غير متوفرة حالياً");
+
+                const json = await res.json();
+                const data = json.data || {};
+
+                // Aggregate top stagnant items globally or by active filters?
+                // Logic: Show top 20 items with highest Value (Qty * Price) that are Stagnant
+                let allItems = [];
+
+                Object.keys(data).forEach(sid => {
+                    // Filter by access
+                    if (!isStoreAccessible(sid)) return;
+                    if (activeStore !== 'all' && sid !== activeStore) return;
+
+                    // Region Filter Check
+                    if (activeRegion !== 'all') {
+                        const m = storeMeta[sid];
+                        if (!m || (m.region !== activeRegion && m.city !== activeRegion)) return;
+                    }
+
+                    data[sid].forEach(item => {
+                        allItems.push({
+                            ...item,
+                            sid: sid,
+                            storeName: (storeMeta[sid]?.name_ar || storeMeta[sid]?.name || sid),
+                            val: item.qty * (item.est_price || 0)
+                        });
+                    });
+                });
+
+                // Sort by Value Descending
+                allItems.sort((a, b) => b.val - a.val);
+
+                // Take top 50
+                const topItems = allItems.slice(0, 50);
+
+                tbody.innerHTML = '';
+                if (topItems.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">✅ لا توجد اقتراحات حالياً</td></tr>';
+                    return;
+                }
+
+                topItems.forEach((r, idx) => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td><span class="badge bg-light text-dark border">${r.storeName}</span></td>
+                            <td>
+                                <div class="fw-bold">${r.name}</div>
+                                <div class="small text-muted">${r.id}</div>
+                            </td>
+                            <td class="text-center fw-bold text-success">${r.qty}</td>
+                            <td class="text-center text-danger">${r.days} يوم</td>
+                            <td class="text-center">${Math.round(r.val).toLocaleString()}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('${r.id} - ${r.name}')"> نسخ</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${e.message}</td></tr>`;
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("تم نسخ اسم المنتج: " + text);
+            });
+        }
+
 
         function renderTopProducts() {
             const tbody = document.getElementById('topProductsBody');
