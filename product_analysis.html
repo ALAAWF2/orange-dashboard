@@ -214,99 +214,176 @@
             </div>
         </div>
 
-        <!-- Offers Analysis Section (NEW) -->
-        <h5 class="section-title">تحليل مبيعات العروض (Sales Analysis of Offers)</h5>
-        <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
-            <div class="alert alert-info small py-2 d-flex align-items-center">
-                <i class="fs-5 me-2">🏷️</i>
-                <div>
-                    <strong>ملاحظة:</strong> الأرقام أدناه تمثل إجمالي أداء العرض منذ بدايته وحتى الآن (Lifetime).
+    </div>
+
+    <!-- Offers Analysis Button -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <button class="btn btn-outline-primary btn-lg shadow-sm" onclick="openOffersModal()">
+                <i class="fs-4 me-2">🏷️</i>
+                تحليل مبيعات العروض (Offers Analysis)
+            </button>
+        </div>
+    </div>
+
+    <!-- Offers List Modal -->
+    <div class="modal fade" id="offersListModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">قائمة العروض (Offers List)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small d-flex align-items-center">
+                        <i class="me-2">ℹ️</i>
+                        <div><strong>ملاحظة:</strong> الأرقام تتأثر بفلاتر الداشبورد الحالية (الفترة، الفرع، المنطقة).
+                        </div>
+                    </div>
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light sticky-top" style="top: 0;">
+                            <tr>
+                                <th>اسم العرض (Offer Name)</th>
+                                <th>الفترة (Duration)</th>
+                                <th>الحالة (Status)</th>
+                                <th class="text-center">عدد العمليات</th>
+                                <th class="text-center">إجمالي الخصم (Discount)</th>
+                                <th class="text-center">إجمالي المبيعات (Sales)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="offersListBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <table class="table table-sm align-middle table-hover">
-                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
-                    <tr>
-                        <th>#</th>
-                        <th>اسم العرض (Offer Name)</th>
-                        <th>الفترة (Duration)</th>
-                        <th>الحالة (Status)</th>
-                        <th class="text-center">عدد العمليات</th>
-                        <th class="text-center">إجمالي الخصم (Discount)</th>
-                        <th class="text-center">إجمالي المبيعات (Sales)</th>
-                    </tr>
-                </thead>
-                <tbody id="offersAnlaysisBody">
-                    <!-- JS -->
-                </tbody>
-            </table>
         </div>
+    </div>
 
-        <!-- Market Basket Analysis Section (NEW) -->
-        <h5 class="section-title">أكثر المنتجات التي تشترى معاً (Items Bought Together)</h5>
-        <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
-            <table class="table table-sm align-middle table-hover">
-                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
-                    <tr>
-                        <th>#</th>
-                        <th>المنتج الأول</th>
-                        <th>المنتج الثاني</th>
-                        <th onclick="setSort('basket', 'freq')" style="cursor: pointer;">مرات الشراء معاً ↕</th>
-                    </tr>
-                </thead>
-                <tbody id="marketBasketBody">
-                    <!-- JS -->
-                </tbody>
-            </table>
-        </div>
+    <!-- Offer Details Modal (Drill-down) -->
+    <div class="modal fade" id="offerDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title w-100" id="offerDetailsTitle">تفاصيل العرض</h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="backToOffersList()"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">إجمالي المبيعات (Sales)</h6>
+                                    <h4 class="fw-bold text-primary" id="d_offerSales">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">إجمالي الخصم (Discount)</h6>
+                                    <h4 class="fw-bold text-danger" id="d_offerDiscount">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">كمية المنتجات (Quantity)</h6>
+                                    <h4 class="fw-bold text-success" id="d_offerQty">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-
-        <!-- Missed Opportunities Section (NEW) -->
-        <h5 class="section-title text-danger">فرص البيع الضائعة حسب الموظف (Missed Opportunities)</h5>
-        <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
-            <div class="alert alert-warning small py-2">
-                <i class="me-1">💡</i>
-                يعرض هذا الجدول الحالات التي قام فيها الموظف ببيع منتج مرتبط بمنتج آخر (حسب سلوك العملاء العام) ولكنه
-                <strong>لم يبع</strong> المنتج الآخر.
-            </div>
-            <table class="table table-sm align-middle table-hover">
-                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
-                    <tr>
-                        <th>#</th>
-                        <th>الموظف (Salesman)</th>
-                        <th>المنتج المباع (Trigger)</th>
-                        <th>الفرصة الضائعة (Missed Item)</th>
-                        <th class="text-center">عدد المرات</th>
-                    </tr>
-                </thead>
-                <tbody id="missedOppBody">
-                    <!-- JS -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Outlets Table -->
-        <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
-        <div class="card-custom p-3">
-            <div class="table-responsive">
-                <table class="table table-custom table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>الفرع (Outlet)</th>
-                            <th onclick="setSort('outlets', 'qty')" style="cursor: pointer;">إجمالي الكمية (Total Qty) ↕
-                            </th>
-                            <th onclick="setSort('outlets', 'val')" style="cursor: pointer;">إجمالي المبيعات (Total
-                                Sales) ↕</th>
-                            <th>أعلى تصنيف مبيعاً (Top Category)</th>
-                            <th>إجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody id="outletsTableBody">
-                        <!-- JS -->
-                    </tbody>
-                </table>
+                    <h6 class="border-bottom pb-2 mb-3">أداء المنتجات في هذا العرض (Products Breakdown)</h6>
+                    <table class="table table-sm table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>اسم المنتج (Item Name)</th>
+                                <th class="text-center">الكمية (Qty)</th>
+                                <!-- Sales per item is approximate or unavailable precisely, we show Qty mainly -->
+                            </tr>
+                        </thead>
+                        <tbody id="offerDetailsBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="backToOffersList()">Back to List</button>
+                </div>
             </div>
         </div>
+    </div>
+
+    <!-- Market Basket Analysis Section (NEW) -->
+    <h5 class="section-title">أكثر المنتجات التي تشترى معاً (Items Bought Together)</h5>
+    <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
+        <table class="table table-sm align-middle table-hover">
+            <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                <tr>
+                    <th>#</th>
+                    <th>المنتج الأول</th>
+                    <th>المنتج الثاني</th>
+                    <th onclick="setSort('basket', 'freq')" style="cursor: pointer;">مرات الشراء معاً ↕</th>
+                </tr>
+            </thead>
+            <tbody id="marketBasketBody">
+                <!-- JS -->
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- Missed Opportunities Section (NEW) -->
+    <h5 class="section-title text-danger">فرص البيع الضائعة حسب الموظف (Missed Opportunities)</h5>
+    <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
+        <div class="alert alert-warning small py-2">
+            <i class="me-1">💡</i>
+            يعرض هذا الجدول الحالات التي قام فيها الموظف ببيع منتج مرتبط بمنتج آخر (حسب سلوك العملاء العام) ولكنه
+            <strong>لم يبع</strong> المنتج الآخر.
+        </div>
+        <table class="table table-sm align-middle table-hover">
+            <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                <tr>
+                    <th>#</th>
+                    <th>الموظف (Salesman)</th>
+                    <th>المنتج المباع (Trigger)</th>
+                    <th>الفرصة الضائعة (Missed Item)</th>
+                    <th class="text-center">عدد المرات</th>
+                </tr>
+            </thead>
+            <tbody id="missedOppBody">
+                <!-- JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Outlets Table -->
+    <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
+    <div class="card-custom p-3">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الفرع (Outlet)</th>
+                        <th onclick="setSort('outlets', 'qty')" style="cursor: pointer;">إجمالي الكمية (Total Qty) ↕
+                        </th>
+                        <th onclick="setSort('outlets', 'val')" style="cursor: pointer;">إجمالي المبيعات (Total
+                            Sales) ↕</th>
+                        <th>أعلى تصنيف مبيعاً (Top Category)</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="outletsTableBody">
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     </div>
 
@@ -648,8 +725,8 @@
                 // Check Role & Init Filters
                 setupFilters(mgmtData);
 
-                // Initial Offers Render
-                renderOffersTable();
+                // Initial Offers Render -> Moved to Button Click
+                // renderOffersTable();
 
             } catch (e) {
                 console.error(e);
@@ -798,45 +875,184 @@
 
         // ... (Existing Functions) ...
 
-        function renderOffersTable() {
-            const tbody = document.getElementById('offersAnlaysisBody');
+        // Global Offers Data Cache
+        let cachedOffersData = null;
+
+        async function openOffersModal() {
+            // Lazy Load if not loaded
+            if (!cachedOffersData) {
+                try {
+                    // Show Loading
+                    document.getElementById('offersListBody').innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div><div class="mt-2">Loading Detailed Data...</div></td></tr>';
+                    const listModal = new bootstrap.Modal(document.getElementById('offersListModal'));
+                    listModal.show();
+
+                    const res = await fetch('offers_data.json');
+                    if (!res.ok) throw new Error("Failed to load offers data file");
+                    cachedOffersData = await res.json();
+                } catch (e) {
+                    console.error(e);
+                    alert("Unable to load detailed offers data: " + e.message);
+                    return;
+                }
+            } else {
+                const listModal = new bootstrap.Modal(document.getElementById('offersListModal'));
+                listModal.show();
+            }
+
+            renderOffersList();
+        }
+
+        function renderOffersList() {
+            const tbody = document.getElementById('offersListBody');
             tbody.innerHTML = '';
 
-            // Data comes from management_data.json -> mgmtData.offers_analysis
-            // We need to access global mgmtData if possible. 
-            // Currently init() loads it into `storeMeta` but maybe we should store the whole thing?
-            // Let's modify init() to store `window.mgmtData` or similar.
-            // Assuming we will fix init() next.
+            if (!cachedOffersData) return;
 
-            const offersData = window.mgmtData ? (window.mgmtData.offers_analysis || []) : [];
+            // Get Current Filters from the Dashboard
+            // Filters are stored in global variables: activeStore, selectedPeriod (start/end)
+            // But checking `filterData()` logic, `activeStore` is reliable. 
+            // For Date: rawData.metadata has period_start/end.
+            // But offers data has daily breakdown. We should use `rawData.metadata.period_start` and `end`.
 
-            if (offersData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد عروض مسجلة</td></tr>';
+            const pStart = new Date(rawData.metadata.period_start);
+            const pEnd = new Date(rawData.metadata.period_end);
+
+            // Filter & Aggregate
+            const aggregatedOffers = cachedOffersData.map(offer => {
+                // Filter Stats by Store & Date
+                let totalDisc = 0;
+                let totalSales = 0;
+                let totalCount = 0;
+
+                if (offer.stats) {
+                    offer.stats.forEach(stat => {
+                        // Check Store
+                        if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
+                        // Check Date
+                        const d = new Date(stat.d);
+                        if (d < pStart || d > pEnd) return;
+
+                        totalDisc += stat.disc;
+                        totalSales += stat.sale;
+                        totalCount += stat.cnt;
+                    });
+                }
+
+                return {
+                    ...offer,
+                    filteredDisc: totalDisc,
+                    filteredSales: totalSales,
+                    filteredCount: totalCount
+                };
+            }).filter(o => o.filteredCount > 0 || o.filteredDisc > 0); // Only show relevant offers for this period
+
+            if (aggregatedOffers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد عروض محققة في هذا التحديد</td></tr>';
                 return;
             }
 
-            // Sort by Start Date Descending
-            // offersData.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+            // Sort by Start Date Desc
+            aggregatedOffers.sort((a, b) => new Date(b.start) - new Date(a.start));
 
-            offersData.forEach((offer, i) => {
-                let statusBadge = '<span class="badge bg-secondary">Unknown</span>';
-                if (offer.status === 'Active') statusBadge = '<span class="badge bg-success">Active</span>';
-                else if (offer.status === 'Expired') statusBadge = '<span class="badge bg-danger">Expired</span>';
-                else if (offer.status === 'Upcoming') statusBadge = '<span class="badge bg-warning text-dark">Upcoming</span>';
+            aggregatedOffers.forEach(offer => {
+                let status = "Unknown";
+                const today = new Date();
+                const start = new Date(offer.start);
+                const end = new Date(offer.end);
 
-                let row = `
-                    <tr>
-                        <td class="fw-bold">${i + 1}</td>
-                        <td class="fw-bold" title="${offer.id}">${offer.name}</td>
-                        <td class="small text-muted">${offer.start_date} <span class="mx-1">➡</span> ${offer.end_date}</td>
-                        <td>${statusBadge}</td>
-                        <td class="text-center font-monospace">${offer.count.toLocaleString()}</td>
-                        <td class="text-center font-monospace text-danger">-${offer.total_discount.toLocaleString()}</td>
-                        <td class="text-center font-monospace text-success fw-bold">${offer.total_sales.toLocaleString()}</td>
+                if (start <= today && today <= end) status = '<span class="badge bg-success">Active</span>';
+                else if (today > end) status = '<span class="badge bg-danger">Expired</span>';
+                else status = '<span class="badge bg-warning text-dark">Upcoming</span>';
+
+                const row = `
+                    <tr style="cursor: pointer;" onclick="openOfferDetails('${offer.id}')">
+                        <td class="fw-bold text-primary">${offer.name}</td>
+                        <td class="small">${offer.start} <span class="mx-1">➡</span> ${offer.end}</td>
+                        <td>${status}</td>
+                        <td class="text-center font-monospace">${offer.filteredCount.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-danger">-${offer.filteredDisc.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-success fw-bold">${offer.filteredSales.toLocaleString()}</td>
                     </tr>
-                `;
+                 `;
                 tbody.innerHTML += row;
             });
+        }
+
+        function openOfferDetails(offerId) {
+            const offer = cachedOffersData.find(o => o.id === offerId);
+            if (!offer) return;
+
+            // Hide List, Show Details
+            bootstrap.Modal.getInstance(document.getElementById('offersListModal')).hide();
+            const detailsModal = new bootstrap.Modal(document.getElementById('offerDetailsModal'));
+            detailsModal.show();
+
+            document.getElementById('offerDetailsTitle').innerText = offer.name;
+
+            // Re-Calculate Stats & Items based on Filters (Just in case)
+            const pStart = new Date(rawData.metadata.period_start);
+            const pEnd = new Date(rawData.metadata.period_end);
+
+            let totalDisc = 0, totalSales = 0, totalQty = 0;
+
+            // Stats (Money)
+            if (offer.stats) {
+                offer.stats.forEach(stat => {
+                    if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
+                    const d = new Date(stat.d);
+                    if (d < pStart || d > pEnd) return;
+
+                    totalDisc += stat.disc;
+                    totalSales += stat.sale;
+                });
+            }
+
+            // Items (Qty)
+            const itemMap = {}; // item_id -> {qty, name}
+
+            if (offer.items) {
+                offer.items.forEach(item => {
+                    if (activeStore !== 'all' && String(item.s) !== String(activeStore)) return;
+                    const d = new Date(item.d);
+                    if (d < pStart || d > pEnd) return;
+
+                    if (!itemMap[item.i]) itemMap[item.i] = { qty: 0, name: item.n || item.i };
+                    itemMap[item.i].qty += item.q;
+                    totalQty += item.q;
+                });
+            }
+
+            document.getElementById('d_offerSales').innerText = totalSales.toLocaleString();
+            document.getElementById('d_offerDiscount').innerText = `-${totalDisc.toLocaleString()}`;
+            document.getElementById('d_offerQty').innerText = totalQty.toLocaleString();
+
+            const tbody = document.getElementById('offerDetailsBody');
+            tbody.innerHTML = '';
+
+            // Convert Map to Array & Sort
+            const itemArr = Object.values(itemMap);
+            itemArr.sort((a, b) => b.qty - a.qty);
+
+            if (itemArr.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق</td></tr>';
+            } else {
+                itemArr.forEach((item, i) => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td class="fw-bold">${item.name}</td> 
+                            <td class="text-center font-monospace">${item.qty}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function backToOffersList() {
+            bootstrap.Modal.getInstance(document.getElementById('offerDetailsModal')).hide();
+            const listModal = new bootstrap.Modal(document.getElementById('offersListModal'));
+            listModal.show();
         }
 
         function renderMarketBasketTable() {
