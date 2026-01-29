@@ -73,6 +73,7 @@
             border-radius: 12px;
             padding: 20px;
             text-align: center;
+            height: 100%;
         }
 
         .stat-card.secondary {
@@ -87,12 +88,54 @@
             background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
         }
 
+        .stat-card.info {
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+        }
+
         .filter-bar {
             background: white;
             border-radius: 12px;
             padding: 15px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             margin-bottom: 20px;
+        }
+
+        .top-offer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            border-left: 4px solid #fe7900;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .top-offer-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .top-offer-card.weak {
+            border-left-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .efficiency-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+        }
+
+        .efficiency-good {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .efficiency-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .efficiency-bad {
+            background: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
@@ -105,6 +148,8 @@
             <span class="navbar-brand"><span class="brand-orange">ORANGE</span> تحليل العروض</span>
             <div class="d-flex gap-2 align-items-center">
                 <span class="badge bg-light text-dark border" id="periodDisplay">...</span>
+                <button class="btn btn-success btn-sm fw-bold" onclick="exportToExcel()">📊 تصدير Excel</button>
+                <button class="btn btn-danger btn-sm fw-bold" onclick="exportToPDF()">📄 تصدير PDF</button>
                 <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
                     📊 تحليل المنتجات
                 </a>
@@ -174,7 +219,7 @@
                             <option value="all">🏪 كل المعارض</option>
                         </select>
                         <select class="form-select form-select-sm fw-bold" id="offerStatusFilter" style="width: 150px;"
-                            onchange="renderOffersList()">
+                            onchange="renderAll()">
                             <option value="all">الكل (All)</option>
                             <option value="Enabled" selected>فعال (Enabled)</option>
                             <option value="Disabled">معطل (Disabled)</option>
@@ -204,37 +249,101 @@
 
         <!-- Summary Stats -->
         <div class="row mb-4" id="summaryStats">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card">
-                    <h6 class="opacity-75">إجمالي العروض</h6>
-                    <h2 class="fw-bold mb-0" id="statTotalOffers">0</h2>
+                    <h6 class="opacity-75 small">إجمالي العروض</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalOffers">0</h3>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card success">
-                    <h6 class="opacity-75">إجمالي المبيعات</h6>
-                    <h2 class="fw-bold mb-0" id="statTotalSales">0</h2>
+                    <h6 class="opacity-75 small">إجمالي المبيعات</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalSales">0</h3>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card danger">
-                    <h6 class="opacity-75">إجمالي الخصم</h6>
-                    <h2 class="fw-bold mb-0" id="statTotalDiscount">0</h2>
+                    <h6 class="opacity-75 small">إجمالي الخصم</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalDiscount">0</h3>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card secondary">
-                    <h6 class="opacity-75">عدد العمليات</h6>
-                    <h2 class="fw-bold mb-0" id="statTotalOperations">0</h2>
+                    <h6 class="opacity-75 small">عدد العمليات</h6>
+                    <h3 class="fw-bold mb-0" id="statTotalOperations">0</h3>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card info">
+                    <h6 class="opacity-75 small">متوسط السلة</h6>
+                    <h3 class="fw-bold mb-0" id="statAvgBasket">0</h3>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">
+                    <h6 class="opacity-75 small">نسبة الكفاءة</h6>
+                    <h3 class="fw-bold mb-0" id="statEfficiency">0%</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 5 Offers Section -->
+        <h5 class="section-title">🏆 أفضل 5 عروض (Top 5 Offers)</h5>
+        <div class="row mb-4" id="top5OffersContainer">
+            <!-- JS Populated -->
+        </div>
+
+        <!-- Weak Offers Section -->
+        <h5 class="section-title text-danger">⚠️ عروض ضعيفة الأداء (Low Performance Offers)</h5>
+        <div class="row mb-4" id="weakOffersContainer">
+            <!-- JS Populated -->
+        </div>
+
+        <!-- Top Products in Offers -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card-custom p-3" style="height: 400px; overflow-y: auto;">
+                    <h5 class="section-title">📦 أكثر المنتجات مبيعاً في العروض</h5>
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>رقم المنتج</th>
+                                <th>اسم المنتج</th>
+                                <th class="text-center">الكمية</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topProductsBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card-custom p-3" style="height: 400px; overflow-y: auto;">
+                    <h5 class="section-title">📊 ملخص كفاءة العروض</h5>
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>العرض</th>
+                                <th class="text-center">الكفاءة</th>
+                                <th class="text-center">متوسط السلة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="efficiencyBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
         <!-- Offers Table -->
         <div class="card-custom p-3">
-            <h5 class="section-title">قائمة العروض (Offers List)</h5>
+            <h5 class="section-title">📋 قائمة العروض (Offers List)</h5>
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="offersTable">
                     <thead class="table-custom">
                         <tr>
                             <th>#</th>
@@ -242,13 +351,15 @@
                             <th>الفترة (Duration)</th>
                             <th>الحالة (Status)</th>
                             <th class="text-center">عدد العمليات</th>
-                            <th class="text-center">إجمالي الخصم (Discount)</th>
-                            <th class="text-center">إجمالي المبيعات (Sales)</th>
+                            <th class="text-center">إجمالي الخصم</th>
+                            <th class="text-center">إجمالي المبيعات</th>
+                            <th class="text-center">الكفاءة</th>
+                            <th class="text-center">متوسط السلة</th>
                         </tr>
                     </thead>
                     <tbody id="offersListBody">
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="9" class="text-center py-5">
                                 <div class="spinner-border text-primary"></div>
                                 <div class="mt-2">جاري التحميل...</div>
                             </td>
@@ -270,27 +381,35 @@
                 </div>
                 <div class="modal-body">
                     <div class="row mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card bg-light border-0 h-100">
                                 <div class="card-body text-center">
-                                    <h6 class="text-muted">إجمالي المبيعات (Sales)</h6>
+                                    <h6 class="text-muted small">إجمالي المبيعات</h6>
                                     <h4 class="fw-bold text-primary" id="d_offerSales">0</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card bg-light border-0 h-100">
                                 <div class="card-body text-center">
-                                    <h6 class="text-muted">إجمالي الخصم (Discount)</h6>
+                                    <h6 class="text-muted small">إجمالي الخصم</h6>
                                     <h4 class="fw-bold text-danger" id="d_offerDiscount">0</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card bg-light border-0 h-100">
                                 <div class="card-body text-center">
-                                    <h6 class="text-muted">كمية المنتجات (Quantity)</h6>
+                                    <h6 class="text-muted small">كمية المنتجات</h6>
                                     <h4 class="fw-bold text-success" id="d_offerQty">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted small">نسبة الكفاءة</h6>
+                                    <h4 class="fw-bold" id="d_offerEfficiency">0%</h4>
                                 </div>
                             </div>
                         </div>
@@ -319,6 +438,12 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- PDF & Excel Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="assets/amiri_font.js"></script>
+
     <script>
         let rawData = null;
         let cachedOffersData = null;
@@ -328,10 +453,10 @@
         let activeStore = 'all';
         let customDateStart = null;
         let customDateEnd = null;
+        let processedOffers = []; // Store processed offers for export
 
         async function init() {
             try {
-                // Fetch data files
                 const [resAnalysis, resMgmt, resOffers] = await Promise.all([
                     fetch('product_analysis_data.json?t=' + Date.now()),
                     fetch('management_data.json?t=' + Date.now()),
@@ -347,21 +472,17 @@
                 window.mgmtData = mgmtData;
                 storeMeta = mgmtData.store_meta || {};
 
-                // Update Badge for period
                 const meta = rawData.metadata || {};
                 const periodText = `${meta.period_start} إلى ${meta.period_end}`;
                 document.getElementById('periodDisplay').textContent = periodText;
 
-                // Setup Filters
                 setupFilters(mgmtData);
-
-                // Initial Render
                 switchPeriod('mtd');
 
             } catch (e) {
                 console.error(e);
                 document.getElementById('offersListBody').innerHTML = `
-                    <tr><td colspan="7" class="text-center text-danger py-5">
+                    <tr><td colspan="9" class="text-center text-danger py-5">
                         تعذر تحميل البيانات: ${e.message}
                     </td></tr>
                 `;
@@ -371,12 +492,10 @@
         function isStoreAccessible(sid) {
             if (!currentUser) return false;
             if (currentUser.role === 'Admin') return true;
-
             const meta = storeMeta[sid];
             if (currentUser.role === 'Manager') {
                 return meta && meta.manager === currentUser.name;
             }
-
             if (currentUser.stores && (currentUser.stores.includes(sid) || currentUser.stores.includes('all'))) {
                 return true;
             }
@@ -384,31 +503,23 @@
         }
 
         function setupFilters(mgmtData) {
-            const role = (currentUser.role || 'guest').toLowerCase().replace(' ', '_');
-            const allowed = ['admin', 'sales_manager', 'manager', 'salesmanager'];
-
             const regSel = document.getElementById('regionFilter');
             const storeSel = document.getElementById('storeFilter');
-
             const regions = new Set();
             const stores = [];
-
             const sourceData = rawData.periods?.mtd?.analysis || {};
 
             Object.keys(sourceData).forEach(sid => {
                 if (!isStoreAccessible(sid)) return;
-
                 const storeObj = sourceData[sid];
                 const m = storeMeta[sid] || {};
                 const sName = storeObj.store_name || m.name_ar || m.name || sid;
                 const region = m.region;
-
                 if (region) regions.add(region);
                 stores.push({ id: sid, name: sName, region: region });
             });
 
-            const sortedRegions = Array.from(regions).sort();
-            sortedRegions.forEach(r => {
+            Array.from(regions).sort().forEach(r => {
                 const opt = document.createElement('option');
                 opt.value = r;
                 opt.textContent = `📍 ${r}`;
@@ -427,7 +538,7 @@
         function applyFilters() {
             activeRegion = document.getElementById('regionFilter').value;
             activeStore = document.getElementById('storeFilter').value;
-            renderOffersList();
+            renderAll();
         }
 
         function switchPeriod(mode) {
@@ -436,25 +547,20 @@
             customDateEnd = null;
             document.getElementById('dateFrom').value = '';
             document.getElementById('dateTo').value = '';
-
             updatePeriodLabel();
-            renderOffersList();
+            renderAll();
         }
 
         function applyCustomDate() {
             const from = document.getElementById('dateFrom').value;
             const to = document.getElementById('dateTo').value;
-
             if (from && to) {
                 customDateStart = new Date(from);
                 customDateEnd = new Date(to);
                 customDateEnd.setHours(23, 59, 59, 999);
-
-                // Uncheck period buttons
                 document.querySelectorAll('input[name="periodbtn"]').forEach(btn => btn.checked = false);
-
                 updatePeriodLabel();
-                renderOffersList();
+                renderAll();
             }
         }
 
@@ -466,21 +572,17 @@
             document.getElementById('btnMtd').checked = true;
             currentMode = 'mtd';
             updatePeriodLabel();
-            renderOffersList();
+            renderAll();
         }
 
         function updatePeriodLabel() {
             const lbl = document.getElementById('currentPeriodLabel');
-
             if (customDateStart && customDateEnd) {
                 lbl.textContent = `الفترة: ${customDateStart.toISOString().split('T')[0]} إلى ${customDateEnd.toISOString().split('T')[0]}`;
             } else {
                 const periodNames = {
-                    'mtd': 'الشهر الحالي',
-                    'yest': 'أمس',
-                    '7d': 'آخر 7 أيام',
-                    '14d': 'آخر 14 يوم',
-                    '30d': 'آخر 30 يوم'
+                    'mtd': 'الشهر الحالي', 'yest': 'أمس',
+                    '7d': 'آخر 7 أيام', '14d': 'آخر 14 يوم', '30d': 'آخر 30 يوم'
                 };
                 lbl.textContent = `الفترة: ${periodNames[currentMode] || currentMode}`;
             }
@@ -490,79 +592,93 @@
             if (customDateStart && customDateEnd) {
                 return { pStart: customDateStart, pEnd: customDateEnd };
             }
-
             const meta = rawData.metadata || {};
             const today = new Date();
-
             let start = new Date(meta.period_start);
             let end = new Date(meta.period_end);
 
-            if (currentMode === 'yest') {
-                if (meta.yesterday_date) {
-                    start = new Date(meta.yesterday_date);
-                    end = new Date(meta.yesterday_date);
-                    end.setHours(23, 59, 59, 999);
-                }
+            if (currentMode === 'yest' && meta.yesterday_date) {
+                start = new Date(meta.yesterday_date);
+                end = new Date(meta.yesterday_date);
+                end.setHours(23, 59, 59, 999);
             } else if (currentMode === '7d') {
-                start = new Date();
-                start.setDate(today.getDate() - 7);
-                end = today;
+                start = new Date(); start.setDate(today.getDate() - 7); end = today;
             } else if (currentMode === '14d') {
-                start = new Date();
-                start.setDate(today.getDate() - 14);
-                end = today;
+                start = new Date(); start.setDate(today.getDate() - 14); end = today;
             } else if (currentMode === '30d') {
-                start = new Date();
-                start.setDate(today.getDate() - 30);
-                end = today;
+                start = new Date(); start.setDate(today.getDate() - 30); end = today;
             }
-
             return { pStart: start, pEnd: end };
         }
 
-        function renderOffersList() {
-            const tbody = document.getElementById('offersListBody');
-            tbody.innerHTML = '';
+        function calculateEfficiency(discount, sales) {
+            if (sales === 0) return 0;
+            return (discount / sales) * 100;
+        }
 
-            if (!cachedOffersData) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">لا توجد بيانات</td></tr>';
-                return;
-            }
+        function getEfficiencyClass(eff) {
+            if (eff <= 10) return 'efficiency-good';
+            if (eff <= 20) return 'efficiency-medium';
+            return 'efficiency-bad';
+        }
+
+        function getEfficiencyLabel(eff) {
+            if (eff <= 10) return '🟢 ممتاز';
+            if (eff <= 20) return '🟡 جيد';
+            return '🔴 مكلف';
+        }
+
+        function renderAll() {
+            if (!cachedOffersData) return;
 
             const { pStart, pEnd } = getFilterDates();
             const statusFilter = document.getElementById('offerStatusFilter').value;
 
-            // Filter & Aggregate
-            const aggregatedOffers = cachedOffersData.map(offer => {
-                let totalDisc = 0;
-                let totalSales = 0;
-                let totalCount = 0;
+            // Process all offers
+            processedOffers = cachedOffersData.map(offer => {
+                let totalDisc = 0, totalSales = 0, totalCount = 0;
+                const allProducts = {};
 
                 if (offer.stats) {
                     offer.stats.forEach(stat => {
-                        // Store filter
                         if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
-
-                        // Region filter
                         if (activeRegion !== 'all') {
                             const meta = storeMeta[stat.s];
                             if (!meta || meta.region !== activeRegion) return;
                         }
-
                         const d = new Date(stat.d);
                         if (d < pStart || d > pEnd) return;
-
                         totalDisc += stat.disc;
                         totalSales += stat.sale;
                         totalCount += stat.cnt;
                     });
                 }
 
+                if (offer.items) {
+                    offer.items.forEach(item => {
+                        if (activeStore !== 'all' && String(item.s) !== String(activeStore)) return;
+                        if (activeRegion !== 'all') {
+                            const meta = storeMeta[item.s];
+                            if (!meta || meta.region !== activeRegion) return;
+                        }
+                        const d = new Date(item.d);
+                        if (d < pStart || d > pEnd) return;
+                        if (!allProducts[item.i]) allProducts[item.i] = { id: item.i, name: item.n || item.i, qty: 0 };
+                        allProducts[item.i].qty += Math.abs(item.q);
+                    });
+                }
+
+                const efficiency = calculateEfficiency(totalDisc, totalSales);
+                const avgBasket = totalCount > 0 ? totalSales / totalCount : 0;
+
                 return {
                     ...offer,
                     filteredDisc: totalDisc,
                     filteredSales: totalSales,
-                    filteredCount: totalCount
+                    filteredCount: totalCount,
+                    efficiency: efficiency,
+                    avgBasket: avgBasket,
+                    products: Object.values(allProducts)
                 };
             }).filter(offer => {
                 const s = offer.status || 'Enabled';
@@ -573,26 +689,182 @@
 
             // Calculate summary stats
             let totalSales = 0, totalDisc = 0, totalOps = 0;
-            aggregatedOffers.forEach(o => {
+            processedOffers.forEach(o => {
                 totalSales += o.filteredSales;
                 totalDisc += o.filteredDisc;
                 totalOps += o.filteredCount;
             });
 
-            document.getElementById('statTotalOffers').textContent = aggregatedOffers.length.toLocaleString();
+            const globalEfficiency = calculateEfficiency(totalDisc, totalSales);
+            const globalAvgBasket = totalOps > 0 ? totalSales / totalOps : 0;
+
+            document.getElementById('statTotalOffers').textContent = processedOffers.length.toLocaleString();
             document.getElementById('statTotalSales').textContent = totalSales.toLocaleString();
             document.getElementById('statTotalDiscount').textContent = totalDisc.toLocaleString();
             document.getElementById('statTotalOperations').textContent = totalOps.toLocaleString();
+            document.getElementById('statAvgBasket').textContent = Math.round(globalAvgBasket).toLocaleString();
+            document.getElementById('statEfficiency').textContent = globalEfficiency.toFixed(1) + '%';
 
-            if (aggregatedOffers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">لا توجد عروض مطابقة</td></tr>';
+            renderTop5Offers();
+            renderWeakOffers();
+            renderTopProducts();
+            renderEfficiencyTable();
+            renderOffersList();
+        }
+
+        function renderTop5Offers() {
+            const container = document.getElementById('top5OffersContainer');
+            container.innerHTML = '';
+
+            const top5 = [...processedOffers].sort((a, b) => b.filteredSales - a.filteredSales).slice(0, 5);
+
+            if (top5.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted py-4">لا توجد بيانات</div>';
                 return;
             }
 
-            // Sort by Start Date Desc
-            aggregatedOffers.sort((a, b) => new Date(b.start) - new Date(a.start));
+            top5.forEach((offer, idx) => {
+                const effClass = getEfficiencyClass(offer.efficiency);
+                container.innerHTML += `
+                    <div class="col-md-4 col-lg-2-4 mb-3" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="top-offer-card h-100" onclick="openOfferDetails('${offer.id}')" style="cursor: pointer;">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-warning text-dark">#${idx + 1}</span>
+                                <span class="badge ${effClass} efficiency-badge">${offer.efficiency.toFixed(1)}%</span>
+                            </div>
+                            <h6 class="fw-bold text-primary mb-2 text-truncate" title="${offer.name}">${offer.name}</h6>
+                            <div class="small">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">المبيعات:</span>
+                                    <span class="fw-bold text-success">${offer.filteredSales.toLocaleString()}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">الخصم:</span>
+                                    <span class="text-danger">${offer.filteredDisc.toLocaleString()}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">العمليات:</span>
+                                    <span>${offer.filteredCount}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
 
-            aggregatedOffers.forEach((offer, idx) => {
+        function renderWeakOffers() {
+            const container = document.getElementById('weakOffersContainer');
+            container.innerHTML = '';
+
+            // Weak = efficiency > 25% OR has operations but very low sales
+            const weak = processedOffers.filter(o => {
+                if (o.filteredCount === 0) return false;
+                return o.efficiency > 25 || (o.filteredCount > 5 && o.filteredSales < 500);
+            }).sort((a, b) => b.efficiency - a.efficiency).slice(0, 5);
+
+            if (weak.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted py-4">✅ لا توجد عروض ضعيفة الأداء</div>';
+                return;
+            }
+
+            weak.forEach((offer, idx) => {
+                container.innerHTML += `
+                    <div class="col-md-4 col-lg-2-4 mb-3" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="top-offer-card weak h-100" onclick="openOfferDetails('${offer.id}')" style="cursor: pointer;">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-danger">⚠️</span>
+                                <span class="badge efficiency-bad efficiency-badge">${offer.efficiency.toFixed(1)}%</span>
+                            </div>
+                            <h6 class="fw-bold text-danger mb-2 text-truncate" title="${offer.name}">${offer.name}</h6>
+                            <div class="small">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">المبيعات:</span>
+                                    <span class="fw-bold">${offer.filteredSales.toLocaleString()}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">الخصم:</span>
+                                    <span class="text-danger fw-bold">${offer.filteredDisc.toLocaleString()}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">متوسط السلة:</span>
+                                    <span>${Math.round(offer.avgBasket).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderTopProducts() {
+            const tbody = document.getElementById('topProductsBody');
+            tbody.innerHTML = '';
+
+            // Aggregate all products from all offers
+            const productMap = {};
+            processedOffers.forEach(offer => {
+                offer.products.forEach(p => {
+                    if (!productMap[p.id]) productMap[p.id] = { id: p.id, name: p.name, qty: 0 };
+                    productMap[p.id].qty += p.qty;
+                });
+            });
+
+            const sortedProducts = Object.values(productMap).sort((a, b) => b.qty - a.qty).slice(0, 20);
+
+            if (sortedProducts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>';
+                return;
+            }
+
+            sortedProducts.forEach((p, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td class="font-monospace text-muted small">${p.id}</td>
+                        <td class="fw-bold">${p.name}</td>
+                        <td class="text-center">${p.qty.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderEfficiencyTable() {
+            const tbody = document.getElementById('efficiencyBody');
+            tbody.innerHTML = '';
+
+            const sorted = [...processedOffers].sort((a, b) => a.efficiency - b.efficiency).slice(0, 15);
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>';
+                return;
+            }
+
+            sorted.forEach((o, idx) => {
+                const effClass = getEfficiencyClass(o.efficiency);
+                tbody.innerHTML += `
+                    <tr onclick="openOfferDetails('${o.id}')" style="cursor: pointer;">
+                        <td>${idx + 1}</td>
+                        <td class="text-truncate" style="max-width: 200px;" title="${o.name}">${o.name}</td>
+                        <td class="text-center"><span class="badge ${effClass}">${o.efficiency.toFixed(1)}%</span></td>
+                        <td class="text-center">${Math.round(o.avgBasket).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderOffersList() {
+            const tbody = document.getElementById('offersListBody');
+            tbody.innerHTML = '';
+
+            if (processedOffers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-5">لا توجد عروض مطابقة</td></tr>';
+                return;
+            }
+
+            const sorted = [...processedOffers].sort((a, b) => b.filteredSales - a.filteredSales);
+
+            sorted.forEach((offer, idx) => {
                 const today = new Date();
                 const start = new Date(offer.start);
                 const end = new Date(offer.end);
@@ -607,81 +879,48 @@
                     else status = '<span class="badge bg-warning text-dark">Upcoming</span>';
                 }
 
-                const row = `
+                const effClass = getEfficiencyClass(offer.efficiency);
+
+                tbody.innerHTML += `
                     <tr style="cursor: pointer;" onclick="openOfferDetails('${offer.id}')">
                         <td>${idx + 1}</td>
                         <td class="fw-bold text-primary">${offer.name}</td>
-                        <td class="small">${offer.start} <span class="mx-1">➡</span> ${offer.end}</td>
+                        <td class="small">${offer.start} ➡ ${offer.end}</td>
                         <td>${status}</td>
                         <td class="text-center font-monospace">${offer.filteredCount.toLocaleString()}</td>
                         <td class="text-center font-monospace text-danger">${offer.filteredDisc.toLocaleString()}</td>
                         <td class="text-center font-monospace text-success fw-bold">${offer.filteredSales.toLocaleString()}</td>
+                        <td class="text-center"><span class="badge ${effClass}">${offer.efficiency.toFixed(1)}%</span></td>
+                        <td class="text-center font-monospace">${Math.round(offer.avgBasket).toLocaleString()}</td>
                     </tr>
-                 `;
-                tbody.innerHTML += row;
+                `;
             });
         }
 
         function openOfferDetails(offerId) {
-            const offer = cachedOffersData.find(o => o.id === offerId);
+            const offer = processedOffers.find(o => o.id === offerId);
             if (!offer) return;
 
             document.getElementById('offerDetailsTitle').innerText = offer.name;
+            document.getElementById('d_offerSales').innerText = offer.filteredSales.toLocaleString();
+            document.getElementById('d_offerDiscount').innerText = offer.filteredDisc.toLocaleString();
 
-            const { pStart, pEnd } = getFilterDates();
-
-            let totalDisc = 0, totalSales = 0, totalQty = 0;
-
-            // Stats
-            if (offer.stats) {
-                offer.stats.forEach(stat => {
-                    if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
-                    if (activeRegion !== 'all') {
-                        const meta = storeMeta[stat.s];
-                        if (!meta || meta.region !== activeRegion) return;
-                    }
-                    const d = new Date(stat.d);
-                    if (d < pStart || d > pEnd) return;
-
-                    totalDisc += stat.disc;
-                    totalSales += stat.sale;
-                });
-            }
-
-            // Items
-            const itemMap = {};
-
-            if (offer.items) {
-                offer.items.forEach(item => {
-                    if (activeStore !== 'all' && String(item.s) !== String(activeStore)) return;
-                    if (activeRegion !== 'all') {
-                        const meta = storeMeta[item.s];
-                        if (!meta || meta.region !== activeRegion) return;
-                    }
-                    const d = new Date(item.d);
-                    if (d < pStart || d > pEnd) return;
-
-                    if (!itemMap[item.i]) itemMap[item.i] = { id: item.i, qty: 0, name: item.n || item.i };
-                    // Use Math.abs to ensure positive quantity
-                    itemMap[item.i].qty += Math.abs(item.q);
-                    totalQty += Math.abs(item.q);
-                });
-            }
-
-            document.getElementById('d_offerSales').innerText = totalSales.toLocaleString();
-            document.getElementById('d_offerDiscount').innerText = totalDisc.toLocaleString();
+            const totalQty = offer.products.reduce((sum, p) => sum + p.qty, 0);
             document.getElementById('d_offerQty').innerText = totalQty.toLocaleString();
+
+            const effEl = document.getElementById('d_offerEfficiency');
+            effEl.innerText = offer.efficiency.toFixed(1) + '%';
+            effEl.className = 'fw-bold ' + (offer.efficiency <= 10 ? 'text-success' : offer.efficiency <= 20 ? 'text-warning' : 'text-danger');
 
             const tbody = document.getElementById('offerDetailsBody');
             tbody.innerHTML = '';
 
-            const itemArr = Object.values(itemMap);
-            itemArr.sort((a, b) => b.qty - a.qty);
+            const sorted = offer.products.sort((a, b) => b.qty - a.qty);
 
-            if (itemArr.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق الزمني</td></tr>';
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد منتجات</td></tr>';
             } else {
-                itemArr.forEach((item, i) => {
+                sorted.forEach((item, i) => {
                     tbody.innerHTML += `
                         <tr>
                             <td>${i + 1}</td>
@@ -694,6 +933,123 @@
             }
 
             new bootstrap.Modal(document.getElementById('offerDetailsModal')).show();
+        }
+
+        // ==================== EXPORT FUNCTIONS ====================
+
+        function exportToExcel() {
+            if (processedOffers.length === 0) {
+                alert('لا توجد بيانات للتصدير');
+                return;
+            }
+
+            // Prepare data
+            const data = processedOffers.map((o, idx) => ({
+                '#': idx + 1,
+                'اسم العرض': o.name,
+                'تاريخ البداية': o.start,
+                'تاريخ النهاية': o.end,
+                'الحالة': o.status || 'Enabled',
+                'عدد العمليات': o.filteredCount,
+                'إجمالي الخصم': o.filteredDisc,
+                'إجمالي المبيعات': o.filteredSales,
+                'نسبة الكفاءة %': parseFloat(o.efficiency.toFixed(1)),
+                'متوسط السلة': Math.round(o.avgBasket)
+            }));
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 40 }, { wch: 12 }, { wch: 12 },
+                { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 15 },
+                { wch: 12 }, { wch: 12 }
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'العروض');
+
+            // Add top products sheet
+            const productMap = {};
+            processedOffers.forEach(offer => {
+                offer.products.forEach(p => {
+                    if (!productMap[p.id]) productMap[p.id] = { id: p.id, name: p.name, qty: 0 };
+                    productMap[p.id].qty += p.qty;
+                });
+            });
+            const topProducts = Object.values(productMap).sort((a, b) => b.qty - a.qty).slice(0, 50);
+            const productsData = topProducts.map((p, idx) => ({
+                '#': idx + 1,
+                'رقم المنتج': p.id,
+                'اسم المنتج': p.name,
+                'الكمية الإجمالية': p.qty
+            }));
+            const ws2 = XLSX.utils.json_to_sheet(productsData);
+            XLSX.utils.book_append_sheet(wb, ws2, 'أكثر المنتجات مبيعاً');
+
+            // Download
+            const fileName = `تحليل_العروض_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        function exportToPDF() {
+            if (processedOffers.length === 0) {
+                alert('لا توجد بيانات للتصدير');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+
+            // Add Arabic font
+            if (typeof amiriFont !== 'undefined') {
+                doc.addFileToVFS('Amiri-Regular.ttf', amiriFont);
+                doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+                doc.setFont('Amiri');
+            }
+
+            // Title
+            doc.setFontSize(18);
+            doc.text('تقرير تحليل العروض', doc.internal.pageSize.width / 2, 15, { align: 'center' });
+
+            doc.setFontSize(10);
+            doc.text(`التاريخ: ${new Date().toLocaleDateString('ar-SA')}`, doc.internal.pageSize.width - 15, 15, { align: 'right' });
+
+            // Summary
+            const totalSales = processedOffers.reduce((s, o) => s + o.filteredSales, 0);
+            const totalDisc = processedOffers.reduce((s, o) => s + o.filteredDisc, 0);
+            const totalOps = processedOffers.reduce((s, o) => s + o.filteredCount, 0);
+            const globalEff = totalSales > 0 ? ((totalDisc / totalSales) * 100).toFixed(1) : '0';
+
+            doc.setFontSize(11);
+            doc.text(`إجمالي العروض: ${processedOffers.length} | المبيعات: ${totalSales.toLocaleString()} | الخصم: ${totalDisc.toLocaleString()} | الكفاءة: ${globalEff}%`, 15, 25);
+
+            // Table data
+            const tableData = processedOffers.slice(0, 30).map((o, idx) => [
+                (idx + 1).toString(),
+                o.name.substring(0, 35),
+                o.start,
+                o.end,
+                o.filteredCount.toLocaleString(),
+                o.filteredDisc.toLocaleString(),
+                o.filteredSales.toLocaleString(),
+                o.efficiency.toFixed(1) + '%',
+                Math.round(o.avgBasket).toLocaleString()
+            ]);
+
+            doc.autoTable({
+                head: [['#', 'العرض', 'البداية', 'النهاية', 'العمليات', 'الخصم', 'المبيعات', 'الكفاءة', 'متوسط السلة']],
+                body: tableData,
+                startY: 30,
+                styles: { font: 'Amiri', halign: 'center', fontSize: 8 },
+                headStyles: { fillColor: [254, 121, 0], textColor: 255 },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            // Download
+            const fileName = `تحليل_العروض_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
         }
 
         // Run
