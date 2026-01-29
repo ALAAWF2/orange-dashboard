@@ -132,7 +132,7 @@
                     <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                         <select class="form-select form-select-sm fw-bold" id="regionFilter" style="width: 150px;"
                             onchange="applyFilters()">
-                            <option value="all">📍 كل المناطق</option>
+                            <option value="all">👤 كل المدراء</option>
                         </select>
                         <select class="form-select form-select-sm fw-bold" id="storeFilter" style="width: 180px;"
                             onchange="applyFilters()">
@@ -251,8 +251,8 @@
             Object.keys(storeMeta).forEach(sid => {
                 if (!isStoreAccessible(sid)) return;
                 const m = storeMeta[sid];
-                if (m.region) regions.add(m.region);
-                const r = m.region || m.city || 'Other';
+                // Use Manager as the key for grouping
+                const r = m.manager || 'Unknown';
                 regions.add(r);
                 const sName = m.name_ar || m.name || `Store ${sid}`;
                 stores.push({ id: sid, name: sName, region: r });
@@ -260,7 +260,7 @@
             Array.from(regions).sort().forEach(r => {
                 const opt = document.createElement('option');
                 opt.value = r;
-                opt.textContent = `📍 ${r}`;
+                opt.textContent = `👤 ${r}`;
                 regSel.appendChild(opt);
             });
             stores.sort((a, b) => a.name.localeCompare(b.name));
@@ -299,7 +299,7 @@
                 if (!isStoreAccessible(sid)) return;
                 if (activeStore !== 'all' && sid !== activeStore) return;
                 const m = storeMeta[sid] || {};
-                const r = m.region || m.city || 'Other';
+                const r = m.manager || 'Unknown';
                 if (activeRegion !== 'all' && r !== activeRegion) return;
                 const items = rawStagnantData[sid] || [];
                 items.forEach(item => {
