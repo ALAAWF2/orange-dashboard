@@ -888,6 +888,37 @@
         // Global Offers Data Cache
         let cachedOffersData = null;
 
+        function getFilterDates() {
+            const meta = rawData.metadata || {};
+            const today = new Date();
+
+            // Default to Meta Dates (MTD usually)
+            let start = new Date(meta.period_start);
+            let end = new Date(meta.period_end);
+
+            if (currentMode === 'yest') {
+                if (meta.yesterday_date) {
+                    start = new Date(meta.yesterday_date);
+                    end = new Date(meta.yesterday_date);
+                    end.setHours(23, 59, 59, 999);
+                }
+            } else if (currentMode === '7d') {
+                start = new Date();
+                start.setDate(today.getDate() - 7);
+                end = today;
+            } else if (currentMode === '14d') {
+                start = new Date();
+                start.setDate(today.getDate() - 14);
+                end = today;
+            } else if (currentMode === '30d') {
+                start = new Date();
+                start.setDate(today.getDate() - 30);
+                end = today;
+            }
+
+            return { pStart: start, pEnd: end };
+        }
+
         async function openOffersModal() {
             // Lazy Load if not loaded
             if (!cachedOffersData) {
@@ -919,27 +950,21 @@
 
             if (!cachedOffersData) return;
 
-            // Get Current Filters from the Dashboard
-            // Filters are stored in global variables: activeStore, selectedPeriod (start/end)
-            // But checking `filterData()` logic, `activeStore` is reliable. 
-            // For Date: rawData.metadata has period_start/end.
-            // But offers data has daily breakdown. We should use `rawData.metadata.period_start` and `end`.
+            // Get Correct Dates based on Current Mode
+            const { pStart, pEnd } = getFilterDates();
 
-            const pStart = new Date(rawData.metadata.period_start);
-            const pEnd = new Date(rawData.metadata.period_end);
+            // Get Status Filter
+            const statusFilter = document.getElementById('offerStatusFilter').value;
 
             // Filter & Aggregate
             const aggregatedOffers = cachedOffersData.map(offer => {
-                // Filter Stats by Store & Date
                 let totalDisc = 0;
                 let totalSales = 0;
                 let totalCount = 0;
 
                 if (offer.stats) {
                     offer.stats.forEach(stat => {
-                        // Check Store
                         if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
-                        // Check Date
                         const d = new Date(stat.d);
                         if (d < pStart || d > pEnd) return;
 
@@ -955,46 +980,38 @@
                     filteredSales: totalSales,
                     filteredCount: totalCount
                 };
-            }).filter(o => o.filteredCount > 0 || o.filteredDisc > 0); // Only show relevant offers for this period
+            }).filter(offer => {
+                // 1. Status Filter
+                const s = offer.status || 'Enabled';
+                if (statusFilter !== 'all' && s !== statusFilter) return false;
+
+                // 2. Quantity Filter
+                // If User selects "Disabled", show them even if 0 sales (Audit Mode).
+                if (statusFilter === 'Disabled') return true;
+
+                // Otherwise, clean up noise
+                return offer.filteredCount > 0 || offer.filteredDisc > 0;
+            });
 
             if (aggregatedOffers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد عروض محققة في هذا التحديد</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">لا توجد عروض مطابقة (تأكد من اختيار معطل/فعال بشكل صحيح)</td></tr>';
                 return;
             }
 
-            // Sort by Start Date Desc
             // Sort by Start Date Desc
             aggregatedOffers.sort((a, b) => new Date(b.start) - new Date(a.start));
 
-            // Apply Status Filter
-            const statusFilter = document.getElementById('offerStatusFilter').value;
-
-            const finalOffers = aggregatedOffers.filter(offer => {
-                if (statusFilter === 'all') return true;
-                // If status is missing (old data), assume Enabled? Or show all? 
-                // Let's assume 'Enabled' if missing to avoid hiding everything before update. 
-                const s = offer.status || 'Enabled';
-                return s === statusFilter;
-            });
-
-            if (finalOffers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">لا توجد عروض مطابقة للفلتر المختار</td></tr>';
-                return;
-            }
-
-            finalOffers.forEach(offer => {
+            aggregatedOffers.forEach(offer => {
                 let status = "Unknown";
                 const today = new Date();
                 const start = new Date(offer.start);
                 const end = new Date(offer.end);
 
-                // Dynamics Status (Enabled/Disabled)
                 const dynStatus = offer.status || 'Enabled';
 
                 if (dynStatus === 'Disabled') {
                     status = '<span class="badge bg-secondary">Disabled</span>';
                 } else {
-                    // It is Enabled, check Date logic
                     if (start <= today && today <= end) status = '<span class="badge bg-success">Active</span>';
                     else if (today > end) status = '<span class="badge bg-danger">Expired</span>';
                     else status = '<span class="badge bg-warning text-dark">Upcoming</span>';
@@ -1025,9 +1042,8 @@
 
             document.getElementById('offerDetailsTitle').innerText = offer.name;
 
-            // Re-Calculate Stats & Items based on Filters (Just in case)
-            const pStart = new Date(rawData.metadata.period_start);
-            const pEnd = new Date(rawData.metadata.period_end);
+            // Use Correct Dates
+            const { pStart, pEnd } = getFilterDates();
 
             let totalDisc = 0, totalSales = 0, totalQty = 0;
 
@@ -1044,7 +1060,7 @@
             }
 
             // Items (Qty)
-            const itemMap = {}; // item_id -> {qty, name}
+            const itemMap = {};
 
             if (offer.items) {
                 offer.items.forEach(item => {
@@ -1070,7 +1086,7 @@
             itemArr.sort((a, b) => b.qty - a.qty);
 
             if (itemArr.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق الزمني</td></tr>';
             } else {
                 itemArr.forEach((item, i) => {
                     tbody.innerHTML += `
