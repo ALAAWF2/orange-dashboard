@@ -636,7 +636,7 @@
 
             // Process all offers
             processedOffers = cachedOffersData.map(offer => {
-                let totalDisc = 0, totalSales = 0, totalCount = 0;
+                let totalDisc = 0, totalSales = 0, totalCount = 0, totalBill = 0;
                 const allProducts = {};
 
                 if (offer.stats) {
@@ -651,6 +651,7 @@
                         totalDisc += stat.disc;
                         totalSales += stat.sale;
                         totalCount += stat.cnt;
+                        totalBill += stat.bill || 0; // Real invoice totals
                     });
                 }
 
@@ -669,13 +670,15 @@
                 }
 
                 const efficiency = calculateEfficiency(totalDisc, totalSales);
-                const avgBasket = totalCount > 0 ? totalSales / totalCount : 0;
+                // Use real bill totals for basket average (if available), fallback to sales
+                const avgBasket = totalCount > 0 ? (totalBill > 0 ? totalBill / totalCount : totalSales / totalCount) : 0;
 
                 return {
                     ...offer,
                     filteredDisc: totalDisc,
                     filteredSales: totalSales,
                     filteredCount: totalCount,
+                    filteredBill: totalBill,
                     efficiency: efficiency,
                     avgBasket: avgBasket,
                     products: Object.values(allProducts)
@@ -688,15 +691,18 @@
             });
 
             // Calculate summary stats
-            let totalSales = 0, totalDisc = 0, totalOps = 0;
+            let totalSales = 0, totalDisc = 0, totalOps = 0, totalBillSum = 0;
             processedOffers.forEach(o => {
                 totalSales += o.filteredSales;
                 totalDisc += o.filteredDisc;
                 totalOps += o.filteredCount;
+                totalBillSum += o.filteredBill || 0;
             });
 
             const globalEfficiency = calculateEfficiency(totalDisc, totalSales);
-            const globalAvgBasket = totalOps > 0 ? totalSales / totalOps : 0;
+            // Use real bill totals for global basket average
+            const globalAvgBasket = totalOps > 0 ? (totalBillSum > 0 ? totalBillSum / totalOps : totalSales / totalOps) : 0;
+
 
             document.getElementById('statTotalOffers').textContent = processedOffers.length.toLocaleString();
             document.getElementById('statTotalSales').textContent = totalSales.toLocaleString();
