@@ -151,6 +151,8 @@
             </div>
             <div class="col-md-6 text-end">
                 <div class="d-flex justify-content-end align-items-center gap-2">
+                    <a href="offers_analysis.html" class="btn btn-outline-primary fw-bold shadow-sm">🏷️ تحليل
+                        العروض</a>
                     <button class="btn btn-danger fw-bold text-white shadow-sm" onclick="openPdfModal()">تصدير
                         PDF</button>
                     <button class="btn btn-warning fw-bold text-dark" onclick="openCatalogModal()">📂 تصفح
@@ -216,15 +218,7 @@
 
     </div>
 
-    <!-- Offers Analysis Button -->
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            <button class="btn btn-outline-primary btn-lg shadow-sm" onclick="openOffersModal()">
-                <i class="fs-4 me-2">🏷️</i>
-                تحليل مبيعات العروض (Offers Analysis)
-            </button>
-        </div>
-    </div>
+
 
     <!-- Offers List Modal -->
     <div class="modal fade" id="offersListModal" tabindex="-1" aria-hidden="true">
@@ -311,9 +305,9 @@
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
+                                <th>رقم المنتج (Item ID)</th>
                                 <th>اسم المنتج (Item Name)</th>
                                 <th class="text-center">الكمية (Qty)</th>
-                                <!-- Sales per item is approximate or unavailable precisely, we show Qty mainly -->
                             </tr>
                         </thead>
                         <tbody id="offerDetailsBody">
@@ -1068,9 +1062,9 @@
                     const d = new Date(item.d);
                     if (d < pStart || d > pEnd) return;
 
-                    if (!itemMap[item.i]) itemMap[item.i] = { qty: 0, name: item.n || item.i };
-                    itemMap[item.i].qty += item.q;
-                    totalQty += item.q;
+                    if (!itemMap[item.i]) itemMap[item.i] = { id: item.i, qty: 0, name: item.n || item.i };
+                    itemMap[item.i].qty += Math.abs(item.q);
+                    totalQty += Math.abs(item.q);
                 });
             }
 
@@ -1086,14 +1080,17 @@
             itemArr.sort((a, b) => b.qty - a.qty);
 
             if (itemArr.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق الزمني</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق الزمني</td></tr>';
             } else {
                 itemArr.forEach((item, i) => {
+                    // Ensure quantity is positive using Math.abs
+                    const displayQty = Math.abs(item.qty);
                     tbody.innerHTML += `
                         <tr>
                             <td>${i + 1}</td>
+                            <td class="font-monospace text-muted">${item.id || '-'}</td>
                             <td class="fw-bold">${item.name}</td> 
-                            <td class="text-center font-monospace">${item.qty}</td>
+                            <td class="text-center font-monospace">${displayQty}</td>
                         </tr>
                     `;
                 });

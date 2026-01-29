@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange | تحليل العروض</title>
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            --bs-secondary: #6c757d;
+            --bg-light: #f8f9fa;
+            --card-radius: 12px;
+            --font-main: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-light);
+            color: #212529;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: white !important;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #000 !important;
+        }
+
+        .brand-orange {
+            color: #fe7900;
+        }
+
+        .card-custom {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-right: 4px solid #fe7900;
+            padding-right: 10px;
+        }
+
+        .table-custom thead th {
+            background-color: #fe7900;
+            color: white;
+            font-weight: 500;
+            border: none;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #fff3e0;
+            cursor: pointer;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #fe7900 0%, #ff9933 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card.secondary {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        .stat-card.danger {
+            background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+        }
+
+        .stat-card.success {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar mb-4 sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand"><span class="brand-orange">ORANGE</span> تحليل العروض</span>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-light text-dark border" id="periodDisplay">...</span>
+                <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
+                    📊 تحليل المنتجات
+                </a>
+                <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">
+                    🏠 الرئيسية
+                </a>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
+            </div>
+        </div>
+    </nav>
+
+    <script src="users.js"></script>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="container-fluid px-4">
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="row align-items-center g-3">
+                <!-- Period Toggle -->
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="fw-bold text-muted me-2">الفترة:</span>
+                        <div class="btn-group" role="group" aria-label="Period Toggle">
+                            <input type="radio" class="btn-check" name="periodbtn" id="btnMtd" autocomplete="off"
+                                checked onchange="switchPeriod('mtd')">
+                            <label class="btn btn-outline-primary fw-bold" for="btnMtd">📅 الشهر الحالي</label>
+
+                            <input type="radio" class="btn-check" name="periodbtn" id="btn7" autocomplete="off"
+                                onchange="switchPeriod('7d')">
+                            <label class="btn btn-outline-primary fw-bold" for="btn7">7 أيام</label>
+
+                            <input type="radio" class="btn-check" name="periodbtn" id="btn14" autocomplete="off"
+                                onchange="switchPeriod('14d')">
+                            <label class="btn btn-outline-primary fw-bold" for="btn14">14 يوم</label>
+
+                            <input type="radio" class="btn-check" name="periodbtn" id="btn30" autocomplete="off"
+                                onchange="switchPeriod('30d')">
+                            <label class="btn btn-outline-primary fw-bold" for="btn30">30 يوم</label>
+
+                            <input type="radio" class="btn-check" name="periodbtn" id="btnYest" autocomplete="off"
+                                onchange="switchPeriod('yest')">
+                            <label class="btn btn-outline-primary fw-bold" for="btnYest">⏳ أمس</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                        <select class="form-select form-select-sm fw-bold" id="regionFilter" style="width: 150px;"
+                            onchange="applyFilters()">
+                            <option value="all">📍 كل المناطق</option>
+                        </select>
+                        <select class="form-select form-select-sm fw-bold" id="storeFilter" style="width: 180px;"
+                            onchange="applyFilters()">
+                            <option value="all">🏪 كل المعارض</option>
+                        </select>
+                        <select class="form-select form-select-sm fw-bold" id="offerStatusFilter" style="width: 150px;"
+                            onchange="renderOffersList()">
+                            <option value="all">الكل (All)</option>
+                            <option value="Enabled" selected>فعال (Enabled)</option>
+                            <option value="Disabled">معطل (Disabled)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Range & Custom Filter -->
+            <div class="row mt-3 g-3">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-muted">من:</span>
+                        <input type="date" class="form-control form-control-sm" id="dateFrom"
+                            onchange="applyCustomDate()">
+                        <span class="fw-bold text-muted">إلى:</span>
+                        <input type="date" class="form-control form-control-sm" id="dateTo"
+                            onchange="applyCustomDate()">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearCustomDate()">مسح</button>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="badge bg-primary fs-6" id="currentPeriodLabel">الفترة: ...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="row mb-4" id="summaryStats">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h6 class="opacity-75">إجمالي العروض</h6>
+                    <h2 class="fw-bold mb-0" id="statTotalOffers">0</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card success">
+                    <h6 class="opacity-75">إجمالي المبيعات</h6>
+                    <h2 class="fw-bold mb-0" id="statTotalSales">0</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card danger">
+                    <h6 class="opacity-75">إجمالي الخصم</h6>
+                    <h2 class="fw-bold mb-0" id="statTotalDiscount">0</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card secondary">
+                    <h6 class="opacity-75">عدد العمليات</h6>
+                    <h2 class="fw-bold mb-0" id="statTotalOperations">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offers Table -->
+        <div class="card-custom p-3">
+            <h5 class="section-title">قائمة العروض (Offers List)</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-custom">
+                        <tr>
+                            <th>#</th>
+                            <th>اسم العرض (Offer Name)</th>
+                            <th>الفترة (Duration)</th>
+                            <th>الحالة (Status)</th>
+                            <th class="text-center">عدد العمليات</th>
+                            <th class="text-center">إجمالي الخصم (Discount)</th>
+                            <th class="text-center">إجمالي المبيعات (Sales)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="offersListBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="spinner-border text-primary"></div>
+                                <div class="mt-2">جاري التحميل...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Offer Details Modal -->
+    <div class="modal fade" id="offerDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title w-100" id="offerDetailsTitle">تفاصيل العرض</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">إجمالي المبيعات (Sales)</h6>
+                                    <h4 class="fw-bold text-primary" id="d_offerSales">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">إجمالي الخصم (Discount)</h6>
+                                    <h4 class="fw-bold text-danger" id="d_offerDiscount">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">كمية المنتجات (Quantity)</h6>
+                                    <h4 class="fw-bold text-success" id="d_offerQty">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3">أداء المنتجات في هذا العرض (Products Breakdown)</h6>
+                    <table class="table table-sm table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>رقم المنتج (Item ID)</th>
+                                <th>اسم المنتج (Item Name)</th>
+                                <th class="text-center">الكمية (Qty)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="offerDetailsBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let rawData = null;
+        let cachedOffersData = null;
+        let storeMeta = {};
+        let currentMode = 'mtd';
+        let activeRegion = 'all';
+        let activeStore = 'all';
+        let customDateStart = null;
+        let customDateEnd = null;
+
+        async function init() {
+            try {
+                // Fetch data files
+                const [resAnalysis, resMgmt, resOffers] = await Promise.all([
+                    fetch('product_analysis_data.json?t=' + Date.now()),
+                    fetch('management_data.json?t=' + Date.now()),
+                    fetch('offers_data.json?t=' + Date.now())
+                ]);
+
+                if (!resAnalysis.ok || !resMgmt.ok || !resOffers.ok) throw new Error("Failed to load data");
+
+                rawData = await resAnalysis.json();
+                const mgmtData = await resMgmt.json();
+                cachedOffersData = await resOffers.json();
+
+                window.mgmtData = mgmtData;
+                storeMeta = mgmtData.store_meta || {};
+
+                // Update Badge for period
+                const meta = rawData.metadata || {};
+                const periodText = `${meta.period_start} إلى ${meta.period_end}`;
+                document.getElementById('periodDisplay').textContent = periodText;
+
+                // Setup Filters
+                setupFilters(mgmtData);
+
+                // Initial Render
+                switchPeriod('mtd');
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('offersListBody').innerHTML = `
+                    <tr><td colspan="7" class="text-center text-danger py-5">
+                        تعذر تحميل البيانات: ${e.message}
+                    </td></tr>
+                `;
+            }
+        }
+
+        function isStoreAccessible(sid) {
+            if (!currentUser) return false;
+            if (currentUser.role === 'Admin') return true;
+
+            const meta = storeMeta[sid];
+            if (currentUser.role === 'Manager') {
+                return meta && meta.manager === currentUser.name;
+            }
+
+            if (currentUser.stores && (currentUser.stores.includes(sid) || currentUser.stores.includes('all'))) {
+                return true;
+            }
+            return false;
+        }
+
+        function setupFilters(mgmtData) {
+            const role = (currentUser.role || 'guest').toLowerCase().replace(' ', '_');
+            const allowed = ['admin', 'sales_manager', 'manager', 'salesmanager'];
+
+            const regSel = document.getElementById('regionFilter');
+            const storeSel = document.getElementById('storeFilter');
+
+            const regions = new Set();
+            const stores = [];
+
+            const sourceData = rawData.periods?.mtd?.analysis || {};
+
+            Object.keys(sourceData).forEach(sid => {
+                if (!isStoreAccessible(sid)) return;
+
+                const storeObj = sourceData[sid];
+                const m = storeMeta[sid] || {};
+                const sName = storeObj.store_name || m.name_ar || m.name || sid;
+                const region = m.region;
+
+                if (region) regions.add(region);
+                stores.push({ id: sid, name: sName, region: region });
+            });
+
+            const sortedRegions = Array.from(regions).sort();
+            sortedRegions.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r;
+                opt.textContent = `📍 ${r}`;
+                regSel.appendChild(opt);
+            });
+
+            stores.sort((a, b) => a.name.localeCompare(b.name));
+            stores.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                storeSel.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            activeRegion = document.getElementById('regionFilter').value;
+            activeStore = document.getElementById('storeFilter').value;
+            renderOffersList();
+        }
+
+        function switchPeriod(mode) {
+            currentMode = mode;
+            customDateStart = null;
+            customDateEnd = null;
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+
+            updatePeriodLabel();
+            renderOffersList();
+        }
+
+        function applyCustomDate() {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+
+            if (from && to) {
+                customDateStart = new Date(from);
+                customDateEnd = new Date(to);
+                customDateEnd.setHours(23, 59, 59, 999);
+
+                // Uncheck period buttons
+                document.querySelectorAll('input[name="periodbtn"]').forEach(btn => btn.checked = false);
+
+                updatePeriodLabel();
+                renderOffersList();
+            }
+        }
+
+        function clearCustomDate() {
+            customDateStart = null;
+            customDateEnd = null;
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('btnMtd').checked = true;
+            currentMode = 'mtd';
+            updatePeriodLabel();
+            renderOffersList();
+        }
+
+        function updatePeriodLabel() {
+            const lbl = document.getElementById('currentPeriodLabel');
+
+            if (customDateStart && customDateEnd) {
+                lbl.textContent = `الفترة: ${customDateStart.toISOString().split('T')[0]} إلى ${customDateEnd.toISOString().split('T')[0]}`;
+            } else {
+                const periodNames = {
+                    'mtd': 'الشهر الحالي',
+                    'yest': 'أمس',
+                    '7d': 'آخر 7 أيام',
+                    '14d': 'آخر 14 يوم',
+                    '30d': 'آخر 30 يوم'
+                };
+                lbl.textContent = `الفترة: ${periodNames[currentMode] || currentMode}`;
+            }
+        }
+
+        function getFilterDates() {
+            if (customDateStart && customDateEnd) {
+                return { pStart: customDateStart, pEnd: customDateEnd };
+            }
+
+            const meta = rawData.metadata || {};
+            const today = new Date();
+
+            let start = new Date(meta.period_start);
+            let end = new Date(meta.period_end);
+
+            if (currentMode === 'yest') {
+                if (meta.yesterday_date) {
+                    start = new Date(meta.yesterday_date);
+                    end = new Date(meta.yesterday_date);
+                    end.setHours(23, 59, 59, 999);
+                }
+            } else if (currentMode === '7d') {
+                start = new Date();
+                start.setDate(today.getDate() - 7);
+                end = today;
+            } else if (currentMode === '14d') {
+                start = new Date();
+                start.setDate(today.getDate() - 14);
+                end = today;
+            } else if (currentMode === '30d') {
+                start = new Date();
+                start.setDate(today.getDate() - 30);
+                end = today;
+            }
+
+            return { pStart: start, pEnd: end };
+        }
+
+        function renderOffersList() {
+            const tbody = document.getElementById('offersListBody');
+            tbody.innerHTML = '';
+
+            if (!cachedOffersData) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">لا توجد بيانات</td></tr>';
+                return;
+            }
+
+            const { pStart, pEnd } = getFilterDates();
+            const statusFilter = document.getElementById('offerStatusFilter').value;
+
+            // Filter & Aggregate
+            const aggregatedOffers = cachedOffersData.map(offer => {
+                let totalDisc = 0;
+                let totalSales = 0;
+                let totalCount = 0;
+
+                if (offer.stats) {
+                    offer.stats.forEach(stat => {
+                        // Store filter
+                        if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
+
+                        // Region filter
+                        if (activeRegion !== 'all') {
+                            const meta = storeMeta[stat.s];
+                            if (!meta || meta.region !== activeRegion) return;
+                        }
+
+                        const d = new Date(stat.d);
+                        if (d < pStart || d > pEnd) return;
+
+                        totalDisc += stat.disc;
+                        totalSales += stat.sale;
+                        totalCount += stat.cnt;
+                    });
+                }
+
+                return {
+                    ...offer,
+                    filteredDisc: totalDisc,
+                    filteredSales: totalSales,
+                    filteredCount: totalCount
+                };
+            }).filter(offer => {
+                const s = offer.status || 'Enabled';
+                if (statusFilter !== 'all' && s !== statusFilter) return false;
+                if (statusFilter === 'Disabled') return true;
+                return offer.filteredCount > 0 || offer.filteredDisc > 0;
+            });
+
+            // Calculate summary stats
+            let totalSales = 0, totalDisc = 0, totalOps = 0;
+            aggregatedOffers.forEach(o => {
+                totalSales += o.filteredSales;
+                totalDisc += o.filteredDisc;
+                totalOps += o.filteredCount;
+            });
+
+            document.getElementById('statTotalOffers').textContent = aggregatedOffers.length.toLocaleString();
+            document.getElementById('statTotalSales').textContent = totalSales.toLocaleString();
+            document.getElementById('statTotalDiscount').textContent = totalDisc.toLocaleString();
+            document.getElementById('statTotalOperations').textContent = totalOps.toLocaleString();
+
+            if (aggregatedOffers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">لا توجد عروض مطابقة</td></tr>';
+                return;
+            }
+
+            // Sort by Start Date Desc
+            aggregatedOffers.sort((a, b) => new Date(b.start) - new Date(a.start));
+
+            aggregatedOffers.forEach((offer, idx) => {
+                const today = new Date();
+                const start = new Date(offer.start);
+                const end = new Date(offer.end);
+                const dynStatus = offer.status || 'Enabled';
+
+                let status = "";
+                if (dynStatus === 'Disabled') {
+                    status = '<span class="badge bg-secondary">Disabled</span>';
+                } else {
+                    if (start <= today && today <= end) status = '<span class="badge bg-success">Active</span>';
+                    else if (today > end) status = '<span class="badge bg-danger">Expired</span>';
+                    else status = '<span class="badge bg-warning text-dark">Upcoming</span>';
+                }
+
+                const row = `
+                    <tr style="cursor: pointer;" onclick="openOfferDetails('${offer.id}')">
+                        <td>${idx + 1}</td>
+                        <td class="fw-bold text-primary">${offer.name}</td>
+                        <td class="small">${offer.start} <span class="mx-1">➡</span> ${offer.end}</td>
+                        <td>${status}</td>
+                        <td class="text-center font-monospace">${offer.filteredCount.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-danger">${offer.filteredDisc.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-success fw-bold">${offer.filteredSales.toLocaleString()}</td>
+                    </tr>
+                 `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function openOfferDetails(offerId) {
+            const offer = cachedOffersData.find(o => o.id === offerId);
+            if (!offer) return;
+
+            document.getElementById('offerDetailsTitle').innerText = offer.name;
+
+            const { pStart, pEnd } = getFilterDates();
+
+            let totalDisc = 0, totalSales = 0, totalQty = 0;
+
+            // Stats
+            if (offer.stats) {
+                offer.stats.forEach(stat => {
+                    if (activeStore !== 'all' && String(stat.s) !== String(activeStore)) return;
+                    if (activeRegion !== 'all') {
+                        const meta = storeMeta[stat.s];
+                        if (!meta || meta.region !== activeRegion) return;
+                    }
+                    const d = new Date(stat.d);
+                    if (d < pStart || d > pEnd) return;
+
+                    totalDisc += stat.disc;
+                    totalSales += stat.sale;
+                });
+            }
+
+            // Items
+            const itemMap = {};
+
+            if (offer.items) {
+                offer.items.forEach(item => {
+                    if (activeStore !== 'all' && String(item.s) !== String(activeStore)) return;
+                    if (activeRegion !== 'all') {
+                        const meta = storeMeta[item.s];
+                        if (!meta || meta.region !== activeRegion) return;
+                    }
+                    const d = new Date(item.d);
+                    if (d < pStart || d > pEnd) return;
+
+                    if (!itemMap[item.i]) itemMap[item.i] = { id: item.i, qty: 0, name: item.n || item.i };
+                    // Use Math.abs to ensure positive quantity
+                    itemMap[item.i].qty += Math.abs(item.q);
+                    totalQty += Math.abs(item.q);
+                });
+            }
+
+            document.getElementById('d_offerSales').innerText = totalSales.toLocaleString();
+            document.getElementById('d_offerDiscount').innerText = totalDisc.toLocaleString();
+            document.getElementById('d_offerQty').innerText = totalQty.toLocaleString();
+
+            const tbody = document.getElementById('offerDetailsBody');
+            tbody.innerHTML = '';
+
+            const itemArr = Object.values(itemMap);
+            itemArr.sort((a, b) => b.qty - a.qty);
+
+            if (itemArr.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد منتجات مباعة في هذا النطاق الزمني</td></tr>';
+            } else {
+                itemArr.forEach((item, i) => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td class="font-monospace text-muted">${item.id}</td>
+                            <td class="fw-bold">${item.name}</td>
+                            <td class="text-center font-monospace">${item.qty}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            new bootstrap.Modal(document.getElementById('offerDetailsModal')).show();
+        }
+
+        // Run
+        init();
+    </script>
+</body>
+
+</html>
