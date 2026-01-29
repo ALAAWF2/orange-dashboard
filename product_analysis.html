@@ -235,10 +235,20 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-info small d-flex align-items-center">
+                    <div class="alert alert-info small d-flex align-items-center mb-2">
                         <i class="me-2">ℹ️</i>
                         <div><strong>ملاحظة:</strong> الأرقام تتأثر بفلاتر الداشبورد الحالية (الفترة، الفرع، المنطقة).
                         </div>
+                    </div>
+
+                    <div class="d-flex align-items-center mb-3 p-2 bg-light border rounded">
+                        <label for="offerStatusFilter" class="fw-bold me-2">فلتر حالة العرض (Status):</label>
+                        <select id="offerStatusFilter" class="form-select form-select-sm w-auto shadow-sm"
+                            onchange="renderOffersList()">
+                            <option value="all">الكل (All)</option>
+                            <option value="Enabled" selected>فعال (Enabled)</option>
+                            <option value="Disabled">معطل (Disabled)</option>
+                        </select>
                     </div>
                     <table class="table table-hover align-middle">
                         <thead class="table-light sticky-top" style="top: 0;">
@@ -953,17 +963,42 @@
             }
 
             // Sort by Start Date Desc
+            // Sort by Start Date Desc
             aggregatedOffers.sort((a, b) => new Date(b.start) - new Date(a.start));
 
-            aggregatedOffers.forEach(offer => {
+            // Apply Status Filter
+            const statusFilter = document.getElementById('offerStatusFilter').value;
+
+            const finalOffers = aggregatedOffers.filter(offer => {
+                if (statusFilter === 'all') return true;
+                // If status is missing (old data), assume Enabled? Or show all? 
+                // Let's assume 'Enabled' if missing to avoid hiding everything before update. 
+                const s = offer.status || 'Enabled';
+                return s === statusFilter;
+            });
+
+            if (finalOffers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">لا توجد عروض مطابقة للفلتر المختار</td></tr>';
+                return;
+            }
+
+            finalOffers.forEach(offer => {
                 let status = "Unknown";
                 const today = new Date();
                 const start = new Date(offer.start);
                 const end = new Date(offer.end);
 
-                if (start <= today && today <= end) status = '<span class="badge bg-success">Active</span>';
-                else if (today > end) status = '<span class="badge bg-danger">Expired</span>';
-                else status = '<span class="badge bg-warning text-dark">Upcoming</span>';
+                // Dynamics Status (Enabled/Disabled)
+                const dynStatus = offer.status || 'Enabled';
+
+                if (dynStatus === 'Disabled') {
+                    status = '<span class="badge bg-secondary">Disabled</span>';
+                } else {
+                    // It is Enabled, check Date logic
+                    if (start <= today && today <= end) status = '<span class="badge bg-success">Active</span>';
+                    else if (today > end) status = '<span class="badge bg-danger">Expired</span>';
+                    else status = '<span class="badge bg-warning text-dark">Upcoming</span>';
+                }
 
                 const row = `
                     <tr style="cursor: pointer;" onclick="openOfferDetails('${offer.id}')">
