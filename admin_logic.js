@@ -37,6 +37,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function logout() {
+    sessionStorage.removeItem('auth');
+    location.reload();
+}
+
 async function login() {
     const u = document.getElementById('username').value;
     const p = document.getElementById('password').value;
@@ -68,7 +73,8 @@ async function login() {
             }
         });
 
-        if (res.status === 401) {
+        if (!res.ok) {
+            document.getElementById('loginError').innerText = "خطأ في الاتصال: " + res.status;
             document.getElementById('loginError').style.display = 'block';
             return;
         }
@@ -100,6 +106,11 @@ async function fetchData() {
                 'ngrok-skip-browser-warning': 'true'
             }
         });
+
+        if (res.status === 401) {
+            logout();
+            return;
+        }
 
         if (!res.ok) throw new Error("Failed to load");
 
