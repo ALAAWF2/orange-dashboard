@@ -62,7 +62,10 @@ async function login() {
     // Test Auth
     try {
         const res = await fetch(`${API_BASE}/api/targets`, {
-            headers: { 'Authorization': header }
+            headers: {
+                'Authorization': header,
+                'ngrok-skip-browser-warning': 'true'
+            }
         });
 
         if (res.status === 401) {
@@ -92,7 +95,10 @@ async function fetchData() {
 
     try {
         const res = await fetch(`${API_BASE}/api/targets?month=${month}`, {
-            headers: { 'Authorization': authHeader }
+            headers: {
+                'Authorization': authHeader,
+                'ngrok-skip-browser-warning': 'true'
+            }
         });
 
         if (!res.ok) throw new Error("Failed to load");
@@ -233,7 +239,10 @@ fetchData = async function () {
 
     try {
         const res = await fetch(`${API_BASE}/api/targets?month=${month}`, {
-            headers: { 'Authorization': authHeader }
+            headers: {
+                'Authorization': authHeader,
+                'ngrok-skip-browser-warning': 'true'
+            }
         });
         const data = await res.json();
 
@@ -275,7 +284,8 @@ async function saveEmpTarget(empId, empName, amount, inputEl) {
             method: 'POST',
             headers: {
                 'Authorization': authHeader,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
             },
             body: JSON.stringify({
                 month,
