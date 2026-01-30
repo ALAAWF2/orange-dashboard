@@ -728,10 +728,7 @@
         });
 
         document.getElementById('installBtn')?.addEventListener('click', async () => {
-            if (!deferredPrompt) {
-                alert('لإضافة التطبيق على iOS:\n1. اضغط على زر المشاركة ↑\n2. اختر "إضافة إلى الشاشة الرئيسية"');
-                return;
-            }
+            if (!deferredPrompt) return;
 
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
@@ -744,10 +741,7 @@
             localStorage.setItem('installBannerDismissed', 'true');
         }
 
-        // Detect if iOS
-        function isIOS() {
-            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        }
+
 
         // Detect if running as standalone PWA
         function isStandalone() {
@@ -755,14 +749,7 @@
                 window.navigator.standalone === true;
         }
 
-        // Handle Home Button Click
         async function handleHomeBtn() {
-            // If iOS, show instructions to add to home screen
-            if (isIOS()) {
-                alert('📱 لإضافة التطبيق للشاشة الرئيسية:\n\n1️⃣ اضغط على زر المشاركة ⬆️ في الأسفل\n2️⃣ اختر "إضافة إلى الشاشة الرئيسية"\n3️⃣ اضغط "إضافة"');
-                return;
-            }
-
             // If already installed as PWA (standalone mode), refresh the widget
             if (isStandalone()) {
                 window.location.reload();
