@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المستهدفات - لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --accent: #ff7900;
+            /* Orange */
+            --accent-hover: #ff9100;
+            --border-color: #404040;
+            --success: #28a745;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        input[type="month"] {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #404040;
+            color: white;
+            font-family: 'Cairo';
+        }
+
+        .refresh-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .grid-container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .store-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+
+        .store-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #333;
+            cursor: pointer;
+        }
+
+        .store-header:hover {
+            background: #3d3d3d;
+        }
+
+        .store-title {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .store-target-input {
+            background: #222;
+            border: 1px solid #555;
+            color: var(--accent);
+            padding: 5px 10px;
+            border-radius: 6px;
+            width: 120px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .emp-list {
+            display: none;
+            /* Hidden by default */
+            padding: 15px;
+            background: #252525;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .emp-list.active {
+            display: block;
+        }
+
+        .emp-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .emp-row:last-child {
+            border-bottom: none;
+        }
+
+        .emp-name {
+            font-size: 0.95em;
+            color: var(--text-secondary);
+        }
+
+        .emp-input {
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            width: 100px;
+            text-align: center;
+        }
+
+        .save-indicator {
+            font-size: 0.8em;
+            margin-right: 10px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .save-indicator.saved {
+            color: var(--success);
+            opacity: 1;
+        }
+
+        .btn-save {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .btn-save:hover {
+            background: var(--success);
+        }
+
+        /* Login Modal */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            width: 300px;
+        }
+
+        .login-input {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2 style="color:var(--accent)">تسجيل الدخول</h2>
+            <input type="text" id="username" class="login-input" placeholder="اسم المستخدم">
+            <input type="password" id="password" class="login-input" placeholder="كلمة المرور">
+            <button class="refresh-btn" onclick="login()">دخول</button>
+            <p id="loginError" style="color:red; display:none; margin-top:10px;">بيانات خاطئة</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="appContent" style="filter: blur(5px); pointer-events: none;">
+        <div class="header">
+            <div>
+                <h1>إدارة المستهدفات</h1>
+                <p style="color:var(--text-secondary); margin: 5px 0;">تحكم كامل بمستهدفات الفروع والموظفين</p>
+            </div>
+            <div class="controls">
+                <label>الشهر:</label>
+                <input type="month" id="targetMonth">
+                <button class="refresh-btn" onclick="fetchData()">تحديث البيانات</button>
+            </div>
+        </div>
+
+        <div id="storesContainer" class="grid-container">
+            <!-- Stores will be loaded here -->
+            <div style="text-align:center; padding: 50px;">جاري التحميل...</div>
+        </div>
+    </div>
+
+    <!-- Logic Script -->
+    <script src="admin_logic.js"></script>
+</body>
+
+</html>
