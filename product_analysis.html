@@ -1604,7 +1604,34 @@
             const catalog = pData ? (pData.catalog || {}) : {};
 
             // Get items for this category
-            let items = catalog[categoryName] || [];
+            const rawItems = catalog[categoryName] || [];
+            let items = [];
+
+            if (activeStore === 'all') {
+                items = [...rawItems];
+            } else {
+                // Filter items specific to this store using the 'stores' breakdown map
+                rawItems.forEach(item => {
+                    // Check if item has breakdown and sales in this store
+                    // Note: Backend provides item.stores = { store_id: {q: qty, a: amt} }
+                    if (item.stores && item.stores[activeStore]) {
+                        const sData = item.stores[activeStore];
+                        if (sData.q > 0 || sData.a > 0) {
+                            // Create copy with store specific stats
+                            items.push({
+                                ...item,
+                                qty: sData.q,
+                                amount: sData.a
+                            });
+                        }
+                    } else {
+                        // Fallback logic if breakdown missing (e.g. old data)? 
+                        // Or if item genuinely didn't sell in this store.
+                        // If we are drill-downing a specific store, we should NOT show global items if they didn't sell here.
+                        // So we exclude them.
+                    }
+                });
+            }
 
             // Get store name for display
             const meta = storeMeta[storeId] || {};
@@ -1637,7 +1664,7 @@
                 tbody.parentElement.classList.remove('d-none');
 
                 // Sort by amount descending
-                items = [...items].sort((a, b) => b.amount - a.amount);
+                items.sort((a, b) => b.amount - a.amount);
 
                 items.forEach((item, i) => {
                     let row = `
