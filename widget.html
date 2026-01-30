@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="مبيعات اليوم">
+    <meta name="theme-color" content="#fe7900">
+    <title>متابعة مبيعات اليوم - Orange</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            --bs-secondary: #6c757d;
+            --bg-light: #f8f9fa;
+            --card-radius: 12px;
+            --font-main: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-light);
+            color: #212529;
+            padding-bottom: 80px;
+        }
+
+        /* Navbar */
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: white !important;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #000 !important;
+        }
+
+        .brand-orange {
+            color: #fe7900;
+        }
+
+        /* KPI Cards */
+        .kpi-card {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s;
+            padding: 16px;
+            height: 100%;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .kpi-title {
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .kpi-sub {
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+
+        .growth-pos {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .growth-neg {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+            border-right: 4px solid #fe7900;
+            padding-right: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Branch Card */
+        .branch-card {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        .branch-header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .branch-header:hover {
+            background-color: #fff3e0;
+        }
+
+        .branch-header.active {
+            background-color: #fff3e0;
+            border-bottom: 1px solid #ffe0b2;
+        }
+
+        .branch-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rank-badge {
+            background: #fe7900;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #CD7F32, #8B4513);
+        }
+
+        .branch-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .branch-stats {
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .branch-sales {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fe7900;
+        }
+
+        .branch-trans {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .toggle-icon {
+            font-size: 1.2rem;
+            color: #6c757d;
+            transition: transform 0.2s;
+        }
+
+        .branch-header.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Employee List (Collapsible) */
+        .employee-list {
+            background: #fafafa;
+            padding: 0;
+            display: none;
+        }
+
+        .employee-list.show {
+            display: block;
+        }
+
+        .emp-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .emp-row:last-child {
+            border-bottom: none;
+        }
+
+        .emp-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .emp-rank {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e9ecef;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .emp-rank.top-1 {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+        }
+
+        .emp-rank.top-2 {
+            background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+            color: white;
+        }
+
+        .emp-rank.top-3 {
+            background: linear-gradient(135deg, #CD7F32, #8B4513);
+            color: white;
+        }
+
+        .emp-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .emp-stats {
+            text-align: left;
+        }
+
+        .emp-sales {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .emp-trans {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        .no-employees {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+        }
+
+        /* Install Banner */
+        .install-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fe7900;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 150;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            color: white;
+        }
+
+        .install-banner.hidden {
+            display: none;
+        }
+
+        .install-btn {
+            background: #fff;
+            color: #fe7900;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .close-banner {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.8;
+            padding: 0 8px;
+        }
+
+        /* Card */
+        .card-bordered {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar mb-3 sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand"><span class="brand-orange">📊</span> مبيعات اليوم</span>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-light text-dark border" id="lastUpdate">...</span>
+                <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">🏠</a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="app">
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="spinner-border text-warning" role="status">
+                <span class="visually-hidden">جار التحميل...</span>
+            </div>
+        </div>
+
+        <!-- Login Required -->
+        <div id="loginRequired" class="text-center py-5" style="display: none;">
+            <h5 class="mb-3">يرجى تسجيل الدخول</h5>
+            <a href="login.html" class="btn btn-primary">تسجيل الدخول</a>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="container-fluid px-3" style="display: none;">
+
+            <!-- Date Header -->
+            <div class="text-center mb-3">
+                <span class="badge bg-light text-dark border px-3 py-2" id="todayDate"
+                    style="font-size: 0.95rem;"></span>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="kpi-card border-bottom border-4 border-warning">
+                        <div class="kpi-title">إجمالي المبيعات</div>
+                        <div class="kpi-value" id="totalSales">0</div>
+                        <div class="kpi-sub" id="changeYesterday"></div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="kpi-card border-bottom border-4 border-primary">
+                        <div class="kpi-title">عدد الفواتير</div>
+                        <div class="kpi-value" id="totalTrans">0</div>
+                        <div class="kpi-sub text-muted" id="avgTicket">متوسط: 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-4">
+                <div class="col-6">
+                    <div class="kpi-card border-bottom border-4 border-success">
+                        <div class="kpi-title">عدد الفروع</div>
+                        <div class="kpi-value" id="branchCount">0</div>
+                        <div class="kpi-sub text-muted">فرع نشط اليوم</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="kpi-card border-bottom border-4 border-info">
+                        <div class="kpi-title">متوسط / فرع</div>
+                        <div class="kpi-value" id="avgPerBranch">0</div>
+                        <div class="kpi-sub" id="changeLY"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch List -->
+            <h6 class="section-title">📍 مبيعات الفروع اليوم</h6>
+            <div id="branchList">
+                <!-- JS Populated -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Install Banner -->
+    <div class="install-banner hidden" id="installBanner">
+        <button class="close-banner" onclick="closeBanner()">×</button>
+        <span class="fw-bold">أضف للشاشة الرئيسية</span>
+        <button class="install-btn" id="installBtn">تثبيت</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global Variables
+        let rawData = null;
+        let employeesData = null;
+        let employeeNames = {};
+        let currentUser = null;
+        let deferredPrompt = null;
+
+        // Date Helpers
+        function getTodayStr() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        }
+
+        function getYesterdayStr() {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            return d.toISOString().split('T')[0];
+        }
+
+        function getLastYearTodayStr() {
+            const d = new Date();
+            d.setFullYear(d.getFullYear() - 1);
+            return d.toISOString().split('T')[0];
+        }
+
+        function formatNumber(num) {
+            return Math.round(num).toLocaleString('ar-SA');
+        }
+
+        function formatArabicDate(dateStr) {
+            const d = new Date(dateStr);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return d.toLocaleDateString('ar-SA', options);
+        }
+
+        // Get Employee Name (Arabic if available)
+        function getEmployeeName(empId) {
+            if (!empId || empId === '' || empId === 'None') return null;
+            return employeeNames[empId] || empId;
+        }
+
+        // Check User Login
+        function checkLogin() {
+            const userStr = localStorage.getItem('currentUser');
+            if (!userStr) {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('loginRequired').style.display = 'block';
+                return false;
+            }
+            currentUser = JSON.parse(userStr);
+            return true;
+        }
+
+        // Get User Allowed Branches
+        function getUserAllowedBranches() {
+            if (!rawData || !rawData.store_meta) return [];
+
+            const storeIds = Object.keys(rawData.stores || {});
+
+            // Admin sees all
+            if (currentUser.role === 'Admin') {
+                return storeIds;
+            }
+
+            // Filter by manager name
+            return storeIds.filter(sid => {
+                const meta = rawData.store_meta[sid];
+                return meta && meta.manager === currentUser.name;
+            });
+        }
+
+        // Load Data
+        async function loadData() {
+            try {
+                const timestamp = Date.now();
+                const [mgmtRes, empRes] = await Promise.all([
+                    fetch('management_data.json?t=' + timestamp),
+                    fetch('employees_data.json?t=' + timestamp)
+                ]);
+
+                rawData = await mgmtRes.json();
+                const empJson = await empRes.json();
+                employeesData = empJson;
+                employeeNames = empJson.employee_names || {};
+
+                // Update last update time
+                if (rawData.metadata && rawData.metadata.generated_at) {
+                    const genTime = rawData.metadata.generated_at.split(' ')[1];
+                    const shortTime = genTime.split(':').slice(0, 2).join(':');
+                    document.getElementById('lastUpdate').textContent = shortTime;
+                }
+
+                renderWidget();
+            } catch (e) {
+                console.error('Error loading data:', e);
+                document.getElementById('loadingState').innerHTML =
+                    '<div class="text-center text-danger">خطأ في تحميل البيانات</div>';
+            }
+        }
+
+        // Render Widget
+        function renderWidget() {
+            const todayStr = getTodayStr();
+            const yesterdayStr = getYesterdayStr();
+            const lyStr = getLastYearTodayStr();
+
+            document.getElementById('todayDate').textContent = formatArabicDate(todayStr);
+
+            const allowedBranches = getUserAllowedBranches();
+
+            // Filter today's sales
+            let todaySales = {};
+            let todayTrans = {};
+            let yesterdaySales = {};
+            let lySales = {};
+
+            if (rawData.sales) {
+                rawData.sales.forEach(row => {
+                    const date = row[0];
+                    const storeId = row[1];
+                    const value = row[2] || 0;
+                    const trans = row[3] || 0;
+
+                    if (!allowedBranches.includes(storeId)) return;
+
+                    if (date === todayStr && value > 0) {
+                        todaySales[storeId] = (todaySales[storeId] || 0) + value;
+                        todayTrans[storeId] = (todayTrans[storeId] || 0) + trans;
+                    }
+                    if (date === yesterdayStr && value > 0) {
+                        yesterdaySales[storeId] = (yesterdaySales[storeId] || 0) + value;
+                    }
+                    if (date === lyStr && value > 0) {
+                        lySales[storeId] = (lySales[storeId] || 0) + value;
+                    }
+                });
+            }
+
+            // Calculate totals
+            let totalSalesVal = Object.values(todaySales).reduce((a, b) => a + b, 0);
+            let totalTransVal = Object.values(todayTrans).reduce((a, b) => a + b, 0);
+            let totalYestVal = Object.values(yesterdaySales).reduce((a, b) => a + b, 0);
+            let totalLYVal = Object.values(lySales).reduce((a, b) => a + b, 0);
+
+            const branchesWithSales = Object.keys(todaySales).length;
+
+            // Update UI
+            document.getElementById('totalSales').textContent = formatNumber(totalSalesVal);
+            document.getElementById('totalTrans').textContent = totalTransVal.toLocaleString('ar-SA');
+            document.getElementById('branchCount').textContent = branchesWithSales;
+            document.getElementById('avgPerBranch').textContent =
+                branchesWithSales > 0 ? formatNumber(totalSalesVal / branchesWithSales) : '0';
+
+            // Avg Ticket
+            if (totalTransVal > 0) {
+                document.getElementById('avgTicket').textContent = 'متوسط: ' + formatNumber(totalSalesVal / totalTransVal);
+            }
+
+            // Change vs Yesterday
+            if (totalYestVal > 0) {
+                const changeYest = ((totalSalesVal - totalYestVal) / totalYestVal * 100).toFixed(0);
+                const changeEl = document.getElementById('changeYesterday');
+                changeEl.textContent = `${changeYest > 0 ? '+' : ''}${changeYest}% عن أمس`;
+                changeEl.className = 'kpi-sub ' + (changeYest >= 0 ? 'growth-pos' : 'growth-neg');
+            }
+
+            // Change vs LY
+            if (totalLYVal > 0) {
+                const changeLY = ((totalSalesVal - totalLYVal) / totalLYVal * 100).toFixed(0);
+                const changeEl = document.getElementById('changeLY');
+                changeEl.textContent = `${changeLY > 0 ? '+' : ''}${changeLY}% vs LY`;
+                changeEl.className = 'kpi-sub ' + (changeLY >= 0 ? 'growth-pos' : 'growth-neg');
+            }
+
+            // Render branch cards
+            const branchListEl = document.getElementById('branchList');
+
+            // Sort by sales descending
+            const sortedBranches = Object.entries(todaySales)
+                .sort((a, b) => b[1] - a[1]);
+
+            if (sortedBranches.length === 0) {
+                branchListEl.innerHTML = '<div class="text-center text-muted py-4">لا توجد مبيعات حتى الآن اليوم</div>';
+            } else {
+                branchListEl.innerHTML = sortedBranches.map(([storeId, sales], index) => {
+                    const storeName = rawData.stores[storeId] || storeId;
+                    const trans = todayTrans[storeId] || 0;
+                    const rankClass = index < 3 ? `rank-${index + 1}` : '';
+
+                    return `
+                        <div class="branch-card" id="branch-${storeId}">
+                            <div class="branch-header" onclick="toggleEmployees('${storeId}')">
+                                <div class="branch-info">
+                                    <span class="rank-badge ${rankClass}">${index + 1}</span>
+                                    <span class="branch-name">${storeName}</span>
+                                </div>
+                                <div class="branch-stats">
+                                    <div>
+                                        <div class="branch-sales">${formatNumber(sales)}</div>
+                                        <div class="branch-trans">${trans} فاتورة</div>
+                                    </div>
+                                    <span class="toggle-icon">▼</span>
+                                </div>
+                            </div>
+                            <div class="employee-list" id="emp-list-${storeId}">
+                                <div class="text-center py-3 text-muted">جار التحميل...</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Hide loading, show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+
+        // Toggle Employees List
+        function toggleEmployees(storeId) {
+            const header = document.querySelector(`#branch-${storeId} .branch-header`);
+            const empList = document.getElementById(`emp-list-${storeId}`);
+
+            if (empList.classList.contains('show')) {
+                empList.classList.remove('show');
+                header.classList.remove('active');
+            } else {
+                empList.classList.add('show');
+                header.classList.add('active');
+                loadEmployeesForBranch(storeId);
+            }
+        }
+
+        // Load Employees for a Branch
+        function loadEmployeesForBranch(storeId) {
+            const todayStr = getTodayStr();
+            const empListEl = document.getElementById(`emp-list-${storeId}`);
+
+            if (!employeesData || !employeesData.history || !employeesData.history[storeId]) {
+                empListEl.innerHTML = '<div class="no-employees">لا توجد بيانات موظفين</div>';
+                return;
+            }
+
+            // Get today's employee data
+            const storeHistory = employeesData.history[storeId];
+            const todayEmployees = {};
+
+            storeHistory.forEach(entry => {
+                // entry: [date, employee_id, sales, trans, qty, visitors]
+                const [date, empId, sales, trans] = entry;
+                if (date === todayStr && empId && empId !== '' && empId !== 'None' && sales > 0) {
+                    if (!todayEmployees[empId]) {
+                        todayEmployees[empId] = { sales: 0, trans: 0 };
+                    }
+                    todayEmployees[empId].sales += sales;
+                    todayEmployees[empId].trans += (trans || 0);
+                }
+            });
+
+            const sortedEmps = Object.entries(todayEmployees)
+                .sort((a, b) => b[1].sales - a[1].sales);
+
+            if (sortedEmps.length === 0) {
+                empListEl.innerHTML = '<div class="no-employees">لا توجد مبيعات موظفين اليوم</div>';
+            } else {
+                empListEl.innerHTML = sortedEmps.map(([empId, data], idx) => {
+                    const empName = getEmployeeName(empId);
+                    const topClass = idx < 3 ? `top-${idx + 1}` : '';
+                    return `
+                        <div class="emp-row">
+                            <div class="emp-info">
+                                <span class="emp-rank ${topClass}">${idx + 1}</span>
+                                <span class="emp-name">${empName}</span>
+                            </div>
+                            <div class="emp-stats">
+                                <div class="emp-sales">${formatNumber(data.sales)}</div>
+                                <div class="emp-trans">${data.trans} فاتورة</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // PWA Install
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBanner').classList.remove('hidden');
+        });
+
+        document.getElementById('installBtn')?.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                alert('لإضافة التطبيق على iOS:\n1. اضغط على زر المشاركة ↑\n2. اختر "إضافة إلى الشاشة الرئيسية"');
+                return;
+            }
+
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            document.getElementById('installBanner').classList.add('hidden');
+        });
+
+        function closeBanner() {
+            document.getElementById('installBanner').classList.add('hidden');
+            localStorage.setItem('installBannerDismissed', 'true');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            if (checkLogin()) {
+                loadData();
+            }
+
+            if (localStorage.getItem('installBannerDismissed') === 'true') {
+                document.getElementById('installBanner').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>
