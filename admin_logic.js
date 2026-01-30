@@ -10,7 +10,7 @@
 // IF user opens HTML file via 'http://<server-ip>/admin_targets.html' (served by nginx/apache), then relative '/api' works if proxied.
 // Configuration
 // If running from file:// or GitHub Pages, point to Localhost Server
-const API_BASE = "http://localhost:5000";
+let API_BASE = "http://localhost:5000";
 
 let authHeader = null;
 
@@ -25,7 +25,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Check if logged in (simple session storage)
     const storedAuth = sessionStorage.getItem('auth');
+    const storedIp = sessionStorage.getItem('serverIp');
+
     if (storedAuth) {
+        if (storedIp) API_BASE = storedIp;
         authHeader = storedAuth;
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('appContent').style.filter = 'none';
@@ -37,6 +40,13 @@ window.addEventListener('DOMContentLoaded', () => {
 async function login() {
     const u = document.getElementById('username').value;
     const p = document.getElementById('password').value;
+    const ipInput = document.getElementById('serverIp').value.trim();
+
+    if (ipInput) {
+        // Assume user provided IP, append port if not present
+        if (ipInput.includes(':')) API_BASE = `http://${ipInput}`;
+        else API_BASE = `http://${ipInput}:5000`;
+    }
 
     // Create Basic Auth Header
     const creds = btoa(u + ":" + p);
@@ -56,6 +66,8 @@ async function login() {
         // Success
         authHeader = header;
         sessionStorage.setItem('auth', header);
+        sessionStorage.setItem('serverIp', API_BASE); // Save IP for future loads within session
+
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('appContent').style.filter = 'none';
         document.getElementById('appContent').style.pointerEvents = 'all';
