@@ -43,9 +43,16 @@ async function login() {
     const ipInput = document.getElementById('serverIp').value.trim();
 
     if (ipInput) {
-        // Assume user provided IP, append port if not present
-        if (ipInput.includes(':')) API_BASE = `http://${ipInput}`;
-        else API_BASE = `http://${ipInput}:5000`;
+        if (ipInput.startsWith('http')) {
+            // Full URL provided (e.g. ngrok)
+            API_BASE = ipInput;
+            // Remove trailing slash if present
+            if (API_BASE.endsWith('/')) API_BASE = API_BASE.slice(0, -1);
+        } else {
+            // IP provided
+            if (ipInput.includes(':')) API_BASE = `http://${ipInput}`;
+            else API_BASE = `http://${ipInput}:5000`;
+        }
     }
 
     // Create Basic Auth Header
