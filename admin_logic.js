@@ -221,8 +221,33 @@ async function renderEmployees(container, emps, outletName) {
     html += '<div style="margin-bottom:10px; font-size:0.8em; color:#888;">أدخل 0 لإزالة الهدف</div>';
 
     emps.forEach(emp => {
-        // Check global map
-        const targetVal = (window.globalEmpTargets && window.globalEmpTargets[emp.id]) ? window.globalEmpTargets[emp.id].amount : 0;
+        // Check global map with multiple ID formats
+        // The targets table uses numeric ID (e.g., "4408")
+        // But the employee list might have "Name-ID" format (e.g., "Rawabi Hawsawi-4408")
+        let targetVal = 0;
+
+        if (window.globalEmpTargets) {
+            // Try exact match first
+            if (window.globalEmpTargets[emp.id]) {
+                targetVal = window.globalEmpTargets[emp.id].amount;
+            } else {
+                // Try extracting numeric ID from different formats
+                const idParts = String(emp.id).split('-');
+                // Format could be "Name-ID" or "ID-Name"
+                for (const part of idParts) {
+                    const numericPart = part.replace(/\D/g, ''); // Extract only digits
+                    if (numericPart && window.globalEmpTargets[numericPart]) {
+                        targetVal = window.globalEmpTargets[numericPart].amount;
+                        break;
+                    }
+                    // Also try the part as-is
+                    if (window.globalEmpTargets[part.trim()]) {
+                        targetVal = window.globalEmpTargets[part.trim()].amount;
+                        break;
+                    }
+                }
+            }
+        }
 
         html += `
             <div class="emp-row">
