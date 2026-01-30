@@ -538,24 +538,38 @@
             let yesterdaySales = {};
             let lySales = {};
 
+            // Process sales data
             if (rawData.sales) {
                 rawData.sales.forEach(row => {
                     const date = row[0];
                     const storeId = row[1];
                     const value = row[2] || 0;
-                    const trans = row[3] || 0;
 
                     if (!allowedBranches.includes(storeId)) return;
 
                     if (date === todayStr && value > 0) {
                         todaySales[storeId] = (todaySales[storeId] || 0) + value;
-                        todayTrans[storeId] = (todayTrans[storeId] || 0) + trans;
                     }
                     if (date === yesterdayStr && value > 0) {
                         yesterdaySales[storeId] = (yesterdaySales[storeId] || 0) + value;
                     }
                     if (date === lyStr && value > 0) {
                         lySales[storeId] = (lySales[storeId] || 0) + value;
+                    }
+                });
+            }
+
+            // Process transactions data (separate array)
+            if (rawData.transactions) {
+                rawData.transactions.forEach(row => {
+                    const date = row[0];
+                    const storeId = row[1];
+                    const trans = row[2] || 0;
+
+                    if (!allowedBranches.includes(storeId)) return;
+
+                    if (date === todayStr) {
+                        todayTrans[storeId] = (todayTrans[storeId] || 0) + trans;
                     }
                 });
             }
@@ -570,7 +584,7 @@
 
             // Update UI
             document.getElementById('totalSales').textContent = formatNumber(totalSalesVal);
-            document.getElementById('totalTrans').textContent = totalTransVal.toLocaleString('ar-SA');
+            document.getElementById('totalTrans').textContent = formatNumber(totalTransVal);
             document.getElementById('branchCount').textContent = branchesWithSales;
             document.getElementById('avgPerBranch').textContent =
                 branchesWithSales > 0 ? formatNumber(totalSalesVal / branchesWithSales) : '0';
