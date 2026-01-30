@@ -341,7 +341,8 @@
             <span class="navbar-brand"><span class="brand-orange">📊</span> مبيعات اليوم</span>
             <div class="d-flex gap-2 align-items-center">
                 <span class="badge bg-light text-dark border" id="lastUpdate">...</span>
-                <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">🏠</a>
+                <button class="btn btn-outline-secondary btn-sm fw-bold" id="homeBtn"
+                    onclick="handleHomeBtn()">🏠</button>
             </div>
         </div>
     </nav>
@@ -741,6 +742,48 @@
         function closeBanner() {
             document.getElementById('installBanner').classList.add('hidden');
             localStorage.setItem('installBannerDismissed', 'true');
+        }
+
+        // Detect if iOS
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
+        // Detect if running as standalone PWA
+        function isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true;
+        }
+
+        // Handle Home Button Click
+        async function handleHomeBtn() {
+            // If iOS, show instructions to add to home screen
+            if (isIOS()) {
+                alert('📱 لإضافة التطبيق للشاشة الرئيسية:\n\n1️⃣ اضغط على زر المشاركة ⬆️ في الأسفل\n2️⃣ اختر "إضافة إلى الشاشة الرئيسية"\n3️⃣ اضغط "إضافة"');
+                return;
+            }
+
+            // If already installed as PWA (standalone mode), refresh the widget
+            if (isStandalone()) {
+                window.location.reload();
+                return;
+            }
+
+            // Android: Try to install PWA first
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('installBanner').classList.add('hidden');
+
+                // After install, refresh the page
+                if (outcome === 'accepted') {
+                    window.location.reload();
+                }
+            } else {
+                // If PWA not available, refresh the widget page
+                window.location.reload();
+            }
         }
 
         // Init
