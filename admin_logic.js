@@ -170,7 +170,7 @@ async function toggleEmpList(safeName, outletName) {
     // Fetch Employees if not loaded
     if (!listDiv.dataset.loaded) {
         try {
-            const res = await fetch(`${API_BASE}/api/employees?outlet=${encodeURIComponent(outletName)}`, {
+            const res = await fetch(`${API_BASE}/api/employees?store=${encodeURIComponent(outletName)}`, {
                 headers: {
                     'Authorization': authHeader,
                     'ngrok-skip-browser-warning': 'true'
