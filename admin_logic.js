@@ -8,9 +8,9 @@
 // Since we are running on the server, relative path /api works ONLY if served by Flask?
 // But user opens the HTML file directly? No, HTML file opened directly cannot use relative URLs to API easily unless API is on same origin.
 // IF user opens HTML file via 'http://<server-ip>/admin_targets.html' (served by nginx/apache), then relative '/api' works if proxied.
-// IF user opens HTML file via 'http://<server-ip>:5000/static/...' relative works.
-// FOR NOW: We assume the API is at port 5000 on the same host.
-const API_BASE = window.location.protocol + "//" + window.location.hostname + ":5000";
+// Configuration
+// If running from file:// or GitHub Pages, point to Localhost Server
+const API_BASE = "http://localhost:5000";
 
 let authHeader = null;
 
