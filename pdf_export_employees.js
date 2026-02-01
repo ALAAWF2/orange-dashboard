@@ -256,6 +256,16 @@ async function generateEmployeePDF(targetEmps = null) {
                 target = relevantTargets[parseInt(empKey)] || relevantTargets[empKey.toString()] || 0;
             }
 
+            // --- Monthly Target Override ---
+            const monthlyTargets = (typeof window.monthlyTargetsData !== 'undefined') ? window.monthlyTargetsData : {};
+            const tDateStr = isPrevMode ? prevMonthStartStr : monthStartStr;
+
+            if (monthlyTargets[empKey] && monthlyTargets[empKey][tDateStr]) {
+                target = monthlyTargets[empKey][tDateStr];
+            } else if (monthlyTargets[parseInt(empKey)] && monthlyTargets[parseInt(empKey)][tDateStr]) {
+                target = monthlyTargets[parseInt(empKey)][tDateStr];
+            }
+
             // Define Data Sources based on Mode
             let dataCol1, dataCol2; // Col1 = Small Period (Yest), Col2 = Main Period (MTD/Prev)
             let storeTotalCol1, storeTotalCol2;
