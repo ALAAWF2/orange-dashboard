@@ -228,9 +228,22 @@ async function generateEmployeePDF(targetEmps = null) {
             return globalEmpMap[b].globalMtd.sales - globalEmpMap[a].globalMtd.sales;
         });
 
-        empKeys.forEach(key => {
-            const emp = globalEmpMap[key];
-            const target = (typeof targetsData !== 'undefined' && targetsData[key]) ? targetsData[key] : 0;
+        empKeys.forEach(empKey => {
+            const emp = globalEmpMap[empKey];
+
+            // Robust Target Lookup:
+            // 1. Try window.targetsData if targetsData is not in scope.
+            // 2. Try the exact key (string).
+            // 3. Try the key as number (if mismatch).
+            // 4. Fallback to 0.
+            let relevantTargets = (typeof targetsData !== 'undefined') ? targetsData : (window.targetsData || {});
+            let target = relevantTargets[empKey];
+
+            if (target === undefined) {
+                // Try converting key to int or string
+                // keys in JSON might be integers
+                target = relevantTargets[parseInt(empKey)] || relevantTargets[empKey.toString()] || 0;
+            }
 
             // Define Data Sources based on Mode
             let dataCol1, dataCol2; // Col1 = Small Period (Yest), Col2 = Main Period (MTD/Prev)
