@@ -314,7 +314,7 @@ async function generateEmployeePDF(targetEmps = null) {
         }
 
         tableRows.push([
-            "الإجمالي (Total)",
+            "الإجمالي",
             isPrevMode ? '-' : Math.round(col1TotalSales).toLocaleString(),
             isPrevMode ? '-' : "100%",
             isPrevMode ? '-' : col1TotalTrans,
@@ -349,13 +349,13 @@ async function generateEmployeePDF(targetEmps = null) {
                 ],
                 [
                     'الموظف',
-                    'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة',
-                    'المبيعات', 'المساهمة %', 'العدد', 'متوسط الفاتورة', 'الهدف', 'التحقيق %', 'المتبقي', 'اليومية المتبقية'
+                    'المبيعات', 'مساهمة %', 'العدد', 'م. فاتورة',
+                    'المبيعات', 'مساهمة %', 'العدد', 'م. فاتورة', 'الهدف', 'تحقيق %', 'المتبقي', 'يومية متبقية'
                 ]
             ],
             body: tableRows,
             theme: 'grid',
-            styles: { font: fontName, fontSize: 10, cellPadding: 2, halign: 'center' },
+            styles: { font: fontName, fontSize: 9, cellPadding: 1, halign: 'center', overflow: 'ellipsize' },
             columnStyles: {
                 0: { halign: 'right', fontStyle: 'bold', minCellWidth: 35 },
                 10: { textColor: [0, 128, 0], fontStyle: 'bold' }
