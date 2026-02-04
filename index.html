@@ -1063,6 +1063,15 @@
                 prevEnd = new Date(currentEnd);
                 prevEnd.setFullYear(prevEnd.getFullYear() - 1);
 
+                // Custom Logic for Feb 2026 (Apply 11-day shift)
+                // If the selected Start Date is in Feb 2026
+                if (currentStart.getFullYear() === 2026 && currentStart.getMonth() === 1) {
+                    // Shift Previous Year Dates by +11 days
+                    // Feb 1 2026 -> Feb 12 2025
+                    prevStart.setDate(prevStart.getDate() + 11);
+                    prevEnd.setDate(prevEnd.getDate() + 11);
+                }
+
             } else if (mode === 'ramadan') {
                 // Ramadan Logic
                 const selYear = parseInt(document.getElementById('yearFilter').value);
@@ -1122,7 +1131,20 @@
                 }
 
                 // Previous Range (Fair Comparison) using Month/Year logic to catch Leap Years
-                if (selMonth === 'all') {
+                // Custom Logic for Feb 2026 (Compare 1st Feb to 12th Feb Previous Year)
+                if (selYear === 2026 && selMonth == 2) {
+                    // Current is Feb 2026
+                    // Previous Start: Feb 12, 2025
+                    prevStart = new Date(2025, 1, 12); // Month 1 is Feb
+
+                    // Calculate Duration of Current Range
+                    let durationTime = currentEnd.getTime() - currentStart.getTime();
+
+                    // Previous End = Prev Start + Duration
+                    prevEnd = new Date(prevStart.getTime() + durationTime);
+                    prevEnd.setHours(23, 59, 59, 999);
+
+                } else if (selMonth === 'all') {
                     prevStart = new Date(currentStart);
                     prevStart.setFullYear(prevStart.getFullYear() - 1);
 
