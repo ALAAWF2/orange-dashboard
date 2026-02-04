@@ -155,6 +155,12 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
 
             let lyDate = new Date(loopDate);
             lyDate.setFullYear(loopDate.getFullYear() - 1);
+
+            // Custom Shift for Feb 2026
+            if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 1) {
+                lyDate.setDate(lyDate.getDate() + 11);
+            }
+
             const lyDateStr = lyDate.toLocaleDateString('en-CA');
 
             const lyData = isGlobal
