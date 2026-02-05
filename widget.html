@@ -171,6 +171,12 @@
             gap: 15px;
         }
 
+        .branch-visitors {
+            font-size: 0.8rem;
+            color: #dc3545;
+            font-weight: 600;
+        }
+
         .branch-sales {
             font-weight: 700;
             font-size: 1.1rem;
@@ -389,14 +395,21 @@
             </div>
 
             <div class="row g-2 mb-4">
-                <div class="col-6">
+                <div class="col-4">
+                    <div class="kpi-card border-bottom border-4 border-danger">
+                        <div class="kpi-title">عدد الزوار</div>
+                        <div class="kpi-value" id="totalVisitors">0</div>
+                        <div class="kpi-sub text-muted">زائر اليوم</div>
+                    </div>
+                </div>
+                <div class="col-4">
                     <div class="kpi-card border-bottom border-4 border-success">
                         <div class="kpi-title">عدد الفروع</div>
                         <div class="kpi-value" id="branchCount">0</div>
-                        <div class="kpi-sub text-muted">فرع نشط اليوم</div>
+                        <div class="kpi-sub text-muted">فرع نشط</div>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-4">
                     <div class="kpi-card border-bottom border-4 border-info">
                         <div class="kpi-title">متوسط / فرع</div>
                         <div class="kpi-value" id="avgPerBranch">0</div>
@@ -581,11 +594,27 @@
             let totalYestVal = Object.values(yesterdaySales).reduce((a, b) => a + b, 0);
             let totalLYVal = Object.values(lySales).reduce((a, b) => a + b, 0);
 
+            // Process Visitors
+            let totalVisitorsVal = 0;
+            let branchVisitors = {};
+            if (rawData.visitors) {
+                rawData.visitors.forEach(row => {
+                    const date = row[0];
+                    const storeId = row[1];
+                    const count = row[2];
+                    if (date === todayStr && allowedBranches.includes(storeId)) {
+                        branchVisitors[storeId] = (branchVisitors[storeId] || 0) + count;
+                        totalVisitorsVal += count;
+                    }
+                });
+            }
+
             const branchesWithSales = Object.keys(todaySales).length;
 
             // Update UI
             document.getElementById('totalSales').textContent = formatNumber(totalSalesVal);
             document.getElementById('totalTrans').textContent = formatNumber(totalTransVal);
+            document.getElementById('totalVisitors').textContent = formatNumber(totalVisitorsVal);
             document.getElementById('branchCount').textContent = branchesWithSales;
             document.getElementById('avgPerBranch').textContent =
                 branchesWithSales > 0 ? formatNumber(totalSalesVal / branchesWithSales) : '0';
@@ -636,7 +665,10 @@
                                 <div class="branch-stats">
                                     <div>
                                         <div class="branch-sales">${formatNumber(sales)}</div>
-                                        <div class="branch-trans">${trans} فاتورة</div>
+                                        <div class="d-flex gap-2">
+                                            <span class="branch-trans">${trans} فاتورة</span>
+                                            ${branchVisitors[storeId] ? `<span class="branch-visitors">| ${branchVisitors[storeId]} زائر</span>` : ''}
+                                        </div>
                                     </div>
                                     <span class="toggle-icon">▼</span>
                                 </div>
