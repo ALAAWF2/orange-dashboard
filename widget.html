@@ -370,10 +370,19 @@
         <!-- Main Content -->
         <div id="mainContent" class="container-fluid px-3" style="display: none;">
 
-            <!-- Date Header -->
+            <!-- Date Header & Filter -->
             <div class="text-center mb-3">
                 <span class="badge bg-light text-dark border px-3 py-2" id="todayDate"
                     style="font-size: 0.95rem;"></span>
+
+                <!-- Manager Filter (Hidden by default) -->
+                <div id="managerFilterContainer" class="mt-2" style="display: none;">
+                    <select id="managerSelect" class="form-select form-select-sm w-auto d-inline-block"
+                        onchange="renderWidget()">
+                        <option value="">جميع المناطق (All Areas)</option>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
             </div>
 
             <!-- KPI Cards -->
@@ -399,7 +408,7 @@
                     <div class="kpi-card border-bottom border-4 border-danger">
                         <div class="kpi-title">عدد الزوار</div>
                         <div class="kpi-value" id="totalVisitors">0</div>
-                        <div class="kpi-sub text-muted">زائر اليوم</div>
+                        <div class="kpi-sub text-muted" id="visitorUpdateTime">زائر اليوم</div>
                     </div>
                 </div>
                 <div class="col-4">
@@ -493,18 +502,52 @@
         function getUserAllowedBranches() {
             if (!rawData || !rawData.store_meta) return [];
 
-            const storeIds = Object.keys(rawData.stores || {});
+            let storeIds = Object.keys(rawData.stores || {});
 
-            // Admin sees all
-            if (currentUser.role === 'Admin') {
-                return storeIds;
+            // 1. Role-based Filtering
+            if (currentUser.role !== 'Admin' && currentUser.role !== 'Sales Manager') {
+                storeIds = storeIds.filter(sid => {
+                    const meta = rawData.store_meta[sid];
+                    return meta && meta.manager === currentUser.name;
+                });
             }
 
-            // Filter by manager name
-            return storeIds.filter(sid => {
-                const meta = rawData.store_meta[sid];
-                return meta && meta.manager === currentUser.name;
+            // 2. Dropdown Filtering (Area Manager)
+            const selectedManager = document.getElementById('managerSelect').value;
+            if (selectedManager) {
+                storeIds = storeIds.filter(sid => {
+                    const meta = rawData.store_meta[sid];
+                    return meta && meta.manager === selectedManager; // Match exact manager name
+                });
+            }
+
+            return storeIds;
+        }
+
+        // Populate Manager Filter
+        function populateManagerFilter() {
+            if (currentUser.role !== 'Admin' && currentUser.role !== 'Sales Manager') return;
+
+            const container = document.getElementById('managerFilterContainer');
+            const select = document.getElementById('managerSelect');
+
+            // Get unique managers
+            const managers = new Set();
+            Object.values(rawData.store_meta || {}).forEach(m => {
+                if (m.manager && m.manager !== 'Unknown') {
+                    managers.add(m.manager);
+                }
             });
+
+            // Add options
+            Array.from(managers).sort().forEach(mgr => {
+                const opt = document.createElement('option');
+                opt.value = mgr;
+                opt.textContent = mgr;
+                select.appendChild(opt);
+            });
+
+            container.style.display = 'block';
         }
 
         // Load Data
@@ -521,13 +564,19 @@
                 employeesData = empJson;
                 employeeNames = empJson.employee_names || {};
 
-                // Update last update time
                 if (rawData.metadata && rawData.metadata.generated_at) {
                     const genTime = rawData.metadata.generated_at.split(' ')[1];
                     const shortTime = genTime.split(':').slice(0, 2).join(':');
                     document.getElementById('lastUpdate').textContent = shortTime;
+
+                    // Specific Visitor Time
+                    if (rawData.metadata.last_updated) {
+                        const vTime = rawData.metadata.last_updated.split(' ')[1].split(':').slice(0, 2).join(':');
+                        document.getElementById('visitorUpdateTime').textContent = `تحديث: ${vTime}`;
+                    }
                 }
 
+                populateManagerFilter();
                 renderWidget();
             } catch (e) {
                 console.error('Error loading data:', e);
@@ -667,7 +716,11 @@
                                         <div class="branch-sales">${formatNumber(sales)}</div>
                                         <div class="d-flex gap-2">
                                             <span class="branch-trans">${trans} فاتورة</span>
-                                            ${branchVisitors[storeId] ? `<span class="branch-visitors">| ${branchVisitors[storeId]} زائر</span>` : ''}
+                                            ${branchVisitors[storeId] ? (() => {
+                            const v = branchVisitors[storeId];
+                            const rate = v > 0 ? ((trans / v) * 100).toFixed(1) : 0;
+                            return `<span class="branch-visitors">| ${v} زائر (${rate}%)</span>`;
+                        })() : ''}
                                         </div>
                                     </div>
                                     <span class="toggle-icon">▼</span>
