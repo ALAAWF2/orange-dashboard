@@ -223,7 +223,9 @@ async function exportEmployeeSales(startDate, endDate) {
     if (!res.ok) throw new Error("Could not fetch employee data (employees_data.json missing)");
     const empData = await res.json();
 
-    // empData struct: { history: { storeId: [ [date, empId, sales, trans, items, ?], ... ] } }
+    // empData struct: { history: { storeId: ... }, targets: {...}, monthly_targets: {...} }
+    const targets = empData.targets || {};
+    const monthlyTargets = empData.monthly_targets || {};
 
     const managerFilter = document.getElementById('managerFilter').value;
     const cityFilter = document.getElementById('cityFilter').value;
@@ -277,12 +279,28 @@ async function exportEmployeeSales(startDate, endDate) {
                     name = parts.slice(1).join('-').trim();
                 }
 
+                // Resolve Target
+                // 1. Try Monthly Target for specific month (YYYY-MM-01)
+                const dObj = new Date(date);
+                const yyyy = dObj.getFullYear();
+                const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+                const targetKey = `${yyyy}-${mm}-01`;
+
+                let targetVal = 0;
+                if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
+                    targetVal = monthlyTargets[empId][targetKey];
+                } else if (targets[empId]) {
+                    // 2. Fallback to Legacy Target
+                    targetVal = targets[empId];
+                }
+
                 rows.push({
                     "التاريخ": date,
                     "المعرض": storeName,
                     "الرقم الوظيفي": employeeNumber,
                     "اسم الموظف": name,
                     "المبيعات": sales,
+                    "الهدف (الشهري)": targetVal,
                     "عدد الفواتير": trans
                 });
             }
@@ -303,6 +321,19 @@ async function exportEmployeeSales(startDate, endDate) {
 
     // Create Worksheet
     const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-width columns roughly
+    const wscols = [
+        { wch: 12 }, // Date
+        { wch: 25 }, // Store
+        { wch: 10 }, // Emp ID
+        { wch: 20 }, // Emp Name
+        { wch: 10 }, // Sales
+        { wch: 12 }, // Target
+        { wch: 10 }  // Trans
+    ];
+    ws['!cols'] = wscols;
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Employee Sales");
 
