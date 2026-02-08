@@ -15,15 +15,19 @@ if not os.path.exists(env_path):
 load_dotenv(env_path)
 
 app = Flask(__name__)
-# Allow CORS for development (or specify domain in production)
-# Explicitly allow Authorization and ngrok headers
-CORS(app, resources={r"/api/*": {"origins": "*"}}) # Simplified CORS
 
+# Manual CORS Handling to avoid conflicts and support credentials
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    origin = request.headers.get('Origin')
+    if origin:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
+    else:
+        # Fallback for non-browser or tools
+        response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
 # Database Config
@@ -323,6 +327,156 @@ def save_employee_target():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+# --- Daily Stats for Visitor Editing ---
+@app.route('/api/daily_stats', methods=['GET', 'OPTIONS'])
+@requires_auth
+def get_daily_stats():
+    """
+    Get daily statistics for a store in a given month.
+    Returns: date, transactions (bill count), visitors
+    """
+    try:
+        store_id = request.args.get('store_id')
+        month = request.args.get('month')  # Format: YYYY-MM
+        
+        if not store_id or not month:
+            return jsonify({"error": "store_id and month required"}), 400
+        
+        # Get outlet name from store ID
+        with engine.connect() as conn:
+            name_q = text("SELECT outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number = :sid")
+            res = conn.execute(name_q, {"sid": store_id}).fetchone()
+            
+            if not res:
+                return jsonify({"error": "Store not found"}), 404
+            
+            outlet_name = res[0]
+            
+            # Parse month to get date range
+            year, mon = month.split('-')
+            start_date = f"{month}-01"
+            # Get last day of month
+            if int(mon) == 12:
+                end_date = f"{int(year)+1}-01-01"
+            else:
+                end_date = f"{year}-{int(mon)+1:02d}-01"
+            
+            # Get transactions per day from branch sales
+            trans_q = text("""
+                SELECT bill_date::date as date, COUNT(DISTINCT bill_no) as trans_count
+                FROM gofrugal_branch_sales
+                WHERE outlet_name = :outlet
+                  AND bill_date >= :start_date
+                  AND bill_date < :end_date
+                GROUP BY bill_date::date
+                ORDER BY date
+            """)
+            trans_data = conn.execute(trans_q, {
+                "outlet": outlet_name,
+                "start_date": start_date,
+                "end_date": end_date
+            }).fetchall()
+            
+            trans_map = {str(row[0]): row[1] for row in trans_data}
+            
+            # Get visitors per day
+            vis_q = text("""
+                SELECT visit_date::date as date, visitor_count
+                FROM gofrugal_visitors
+                WHERE outlet_name = :outlet
+                  AND visit_date >= :start_date
+                  AND visit_date < :end_date
+                ORDER BY date
+            """)
+            vis_data = conn.execute(vis_q, {
+                "outlet": outlet_name,
+                "start_date": start_date,
+                "end_date": end_date
+            }).fetchall()
+            
+            vis_map = {str(row[0]): row[1] for row in vis_data}
+            
+            # Combine all dates
+            all_dates = set(trans_map.keys()) | set(vis_map.keys())
+            
+            result = []
+            for d in sorted(all_dates):
+                result.append({
+                    "date": d,
+                    "transactions": trans_map.get(d, 0),
+                    "visitors": vis_map.get(d, 0)
+                })
+            
+            return jsonify(result)
+            
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/daily_visitors', methods=['POST', 'OPTIONS'])
+@requires_auth
+def save_daily_visitors():
+    """
+    Update visitor counts for multiple days.
+    Body: [{"date": "2026-02-01", "store_id": "1001", "visitors": 150}, ...]
+    """
+    try:
+        updates = request.json
+        
+        if not updates or not isinstance(updates, list):
+            return jsonify({"error": "Expected list of updates"}), 400
+        
+        with engine.connect() as conn:
+            for update in updates:
+                date = update.get('date')
+                store_id = update.get('store_id')
+                visitors = update.get('visitors', 0)
+                
+                if not date or not store_id:
+                    continue
+                
+                # Get outlet name
+                name_q = text("SELECT outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number = :sid")
+                res = conn.execute(name_q, {"sid": store_id}).fetchone()
+                
+                if not res:
+                    continue
+                    
+                outlet_name = res[0]
+                
+                # Check if record exists
+                check_q = text("""
+                    SELECT 1 FROM gofrugal_visitors 
+                    WHERE outlet_name = :outlet AND visit_date = :d
+                """)
+                exists = conn.execute(check_q, {"outlet": outlet_name, "d": date}).fetchone()
+                
+                if exists:
+                    # Update
+                    upd_q = text("""
+                        UPDATE gofrugal_visitors 
+                        SET visitor_count = :v
+                        WHERE outlet_name = :outlet AND visit_date = :d
+                    """)
+                    conn.execute(upd_q, {"v": visitors, "outlet": outlet_name, "d": date})
+                else:
+                    # Insert
+                    ins_q = text("""
+                        INSERT INTO gofrugal_visitors (outlet_name, visit_date, visitor_count)
+                        VALUES (:outlet, :d, :v)
+                    """)
+                    conn.execute(ins_q, {"outlet": outlet_name, "d": date, "v": visitors})
+            
+            conn.commit()
+        
+        return jsonify({"status": "success", "updated": len(updates)})
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     # Listen on all interfaces
