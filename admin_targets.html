@@ -254,8 +254,171 @@
         </div>
     </div>
 
+
+    <!-- Visitor Edit Modal -->
+    <div id="visitorModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
+        <div
+            style="background:var(--card-bg); padding:20px; border-radius:12px; width:80%; max-width:800px; max-height:90vh; overflow-y:auto; border:1px solid var(--border-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 id="visitorModalTitle" style="color:var(--accent); margin:0;">تعديل الزوار</h2>
+                <button onclick="closeVisitorModal()"
+                    style="background:none; border:none; color:#888; font-size:1.5em; cursor:pointer;">&times;</button>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; color:white; font-size:0.9em;">
+                <thead style="background:#333; position:sticky; top:0;">
+                    <tr>
+                        <th style="padding:10px;">التاريخ</th>
+                        <th style="padding:10px;">الفواتير</th>
+                        <th style="padding:10px;">الزوار الحالي</th>
+                        <th style="padding:10px;">تحويل %</th>
+                        <th style="padding:10px;">الزوار الجديد</th>
+                        <th style="padding:10px;">تحويل جديد %</th>
+                    </tr>
+                </thead>
+                <tbody id="visitorTableBody">
+                    <!-- Rows -->
+                </tbody>
+            </table>
+
+            <div style="margin-top:20px; text-align:right;">
+                <button class="refresh-btn" style="background:#444;" onclick="closeVisitorModal()">إلغاء</button>
+                <button class="refresh-btn" onclick="saveVisitorChanges()">حفظ التعديلات</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Logic Script -->
     <script src="admin_logic.js"></script>
+    <script>
+        // --- Visitor Editing Logic (Embedded for simplicity) ---
+        let currentStoreId = null;
+        let visitorDataCache = []; // To store original fetched data
+
+        async function openVisitorModal(sid, sname) {
+            currentStoreId = sid;
+            const m = document.getElementById('targetMonth').value; // YYYY-MM
+            document.getElementById('visitorModalTitle').textContent = `تعديل زوار: ${sname} (${m})`;
+
+            const tbody = document.getElementById('visitorTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري التحميل...</td></tr>';
+
+            document.getElementById('visitorModal').style.display = 'flex';
+
+            try {
+                const creds = btoa(currentUser + ":" + currentPass);
+                const res = await fetch(`${SERVER_URL}/api/daily_stats?store_id=${sid}&month=${m}`, {
+                    headers: { 'Authorization': 'Basic ' + creds }
+                });
+
+                if (!res.ok) throw new Error("Failed to fetch data");
+                const data = await res.json();
+
+                // Sort by Date
+                data.sort((a, b) => a.date.localeCompare(b.date));
+                visitorDataCache = data;
+
+                renderVisitorTable(data);
+
+            } catch (e) {
+                alert("Error: " + e.message);
+                closeVisitorModal();
+            }
+        }
+
+        function renderVisitorTable(data) {
+            const tbody = document.getElementById('visitorTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #444';
+
+                const conv = row.visitors > 0 ? (row.transactions / row.visitors * 100).toFixed(1) : "0.0";
+
+                // Determine day name
+                const d = new Date(row.date);
+                const dayName = d.toLocaleDateString('ar-EG', { weekday: 'short' });
+
+                tr.innerHTML = `
+                    <td style="padding:8px; text-align:center;">${row.date} <span style="color:#888; font-size:0.8em">(${dayName})</span></td>
+                    <td style="padding:8px; text-align:center;">${row.transactions}</td>
+                    <td style="padding:8px; text-align:center; color:#aaa;">${row.visitors}</td>
+                    <td style="padding:8px; text-align:center; color:${getColor(conv)}">${conv}%</td>
+                    <td style="padding:8px; text-align:center;">
+                        <input type="number" class="emp-input" style="width:80px;" 
+                               value="${row.visitors}" 
+                               oninput="calcNewConv(this, ${row.transactions}, 'newConv-${idx}')" 
+                               data-date="${row.date}" 
+                               id="vis-input-${idx}">
+                    </td>
+                    <td style="padding:8px; text-align:center; font-weight:bold;" id="newConv-${idx}">${conv}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getColor(val) {
+            if (val >= 20) return '#28a745';
+            if (val >= 10) return '#ffc107';
+            return '#dc3545';
+        }
+
+        function calcNewConv(input, trans, outId) {
+            const newVis = parseInt(input.value) || 0;
+            const out = document.getElementById(outId);
+            if (newVis > 0) {
+                const nw = (trans / newVis * 100).toFixed(1);
+                out.textContent = nw + '%';
+                out.style.color = getColor(nw);
+            } else {
+                out.textContent = '0.0%';
+                out.style.color = '#dc3545';
+            }
+        }
+
+        function closeVisitorModal() {
+            document.getElementById('visitorModal').style.display = 'none';
+        }
+
+        async function saveVisitorChanges() {
+            const inputs = document.querySelectorAll('input[id^="vis-input-"]');
+            const updates = [];
+
+            inputs.forEach(inp => {
+                const date = inp.getAttribute('data-date');
+                const val = parseInt(inp.value);
+                // Check if changed? Actually, might be safer to send all or just check against cache.
+                // Let's send all non-zero/valid ones to be safe, or check cache.
+                // Simple: Send all rows.
+                updates.push({
+                    date: date,
+                    store_id: currentStoreId,
+                    visitors: val
+                });
+            });
+
+            try {
+                const creds = btoa(currentUser + ":" + currentPass);
+                const res = await fetch(`${SERVER_URL}/api/daily_visitors`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Basic ' + creds,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updates)
+                });
+
+                if (!res.ok) throw new Error("Failed to save");
+                alert("تم حفظ تعديلات الزوار بنجاح!");
+                closeVisitorModal();
+                // Optionally refresh main data if needed, but main data is targets.
+            } catch (e) {
+                alert("Error saving: " + e.message);
+            }
+        }
+    </script>
 </body>
 
 </html>

@@ -139,12 +139,18 @@ function renderStores(data) {
         card.innerHTML = `
             <div class="store-header" onclick="toggleEmpList('${safeName}', '${store.outlet}')">
                 <div class="store-title">${store.outlet}</div>
-                <div onclick="event.stopPropagation()">
-                    <input type="number" 
-                           class="store-target-input" 
-                           value="${store.target}" 
-                           onchange="saveStoreTarget('${store.outlet}', this.value, this)">
-                    <span class="save-indicator">✔</span>
+                
+                <div onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:10px;">
+                    <button class="refresh-btn" style="padding:5px 10px; font-size:0.8em; background:#007bff;" 
+                            onclick="openVisitorModal('${store.id}', '${store.outlet}')">تعديل الزوار</button>
+                    
+                    <div>
+                        <input type="number" 
+                               class="store-target-input" 
+                               value="${store.target}" 
+                               onchange="saveStoreTarget('${store.outlet}', this.value, this)">
+                        <span class="save-indicator">✔</span>
+                    </div>
                 </div>
             </div>
             <div id="emp-list-${safeName}" class="emp-list">
