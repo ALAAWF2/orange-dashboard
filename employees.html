@@ -552,7 +552,9 @@
                         📊 تصدير Excel
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="exportExcel('current')">البيانات الحالية</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportExcel('current')">البيانات الحالية
+                                (مجمع)</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportExcel('daily')">تقرير يومي مفصل</a></li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
@@ -1376,13 +1378,13 @@
                 // Sort using current sort column and direction
                 sortCurrentList();
 
-                // Update KPIs
-                const totalSales = empList.reduce((s, e) => s + e.sales, 0);
-                const totalTarget = empList.reduce((s, e) => s + (periodFilter === 'mtd' ? e.target : 0), 0);
+                // Update KPIs (Exclude 'R')
+                const activeEmps = empList.filter(e => e.name !== 'R');
+                const totalSales = activeEmps.reduce((s, e) => s + e.sales, 0);
+                const totalTarget = activeEmps.reduce((s, e) => s + (periodFilter === 'mtd' ? e.target : 0), 0);
 
-                document.getElementById('totalEmployees').textContent = empList.length.toLocaleString();
-                document.getElementById('totalSales').textContent = totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })
-                    ;
+                document.getElementById('totalEmployees').textContent = activeEmps.length.toLocaleString();
+                document.getElementById('totalSales').textContent = totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
                 // KPI 3: Avg Achievement or Avg Sales
                 if (periodFilter === 'mtd' && totalTarget > 0) {
@@ -1524,7 +1526,10 @@
                 const periodFilter = document.getElementById('periodFilter').value;
                 const tbody = document.getElementById('leaderboardBody');
 
-                tbody.innerHTML = currentEmpList.map((emp, idx) => {
+                // Filter out 'R' from display
+                const displayList = currentEmpList.filter(e => e.name !== 'R');
+
+                tbody.innerHTML = displayList.map((emp, idx) => {
                     const rank = idx + 1;
                     const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
 
@@ -1589,7 +1594,7 @@
                 }
 
                 if (type === 'current') {
-                    // 1. Export Current View
+                    // 1. Export Current View (Aggregated)
                     const data = currentEmpList.map((e, i) => ({
                         "الترتيب": i + 1,
                         "الموظف": e.name,
@@ -1608,8 +1613,46 @@
                     ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
 
                     const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "Employees Report");
-                    XLSX.writeFile(wb, "Orange_Employees_Report.xlsx");
+                    XLSX.utils.book_append_sheet(wb, ws, "Employees Summary");
+                    XLSX.writeFile(wb, "Orange_Employees_Summary.xlsx");
+                }
+                else if (type === 'daily') {
+                    // 2. Export Detailed Daily View
+                    let dailyRows = [];
+
+                    currentEmpList.forEach(emp => {
+                        const days = employeeDailyMaps[emp.id] || {};
+                        Object.values(days).forEach(dayRecord => {
+                            // dayRecord: { date, sales, inv, items }
+                            dailyRows.push({
+                                "التاريخ": dayRecord.date,
+                                "الموظف": emp.name,
+                                "الرقم الوظيفي": emp.id,
+                                "الفرع": emp.storeName,
+                                "المبيعات": dayRecord.sales,
+                                "الفواتير": dayRecord.inv, // Note: mapped as inv in daily map
+                                "القطع": dayRecord.items
+                            });
+                        });
+                    });
+
+                    // Sort by Date then Employee
+                    dailyRows.sort((a, b) => {
+                        if (a["التاريخ"] !== b["التاريخ"]) return a["التاريخ"].localeCompare(b["التاريخ"]);
+                        return a["الموظف"].localeCompare(b["الموظف"], 'ar');
+                    });
+
+                    if (dailyRows.length === 0) {
+                        alert("لا توجد بيانات تفصيلية للفترة المحددة");
+                        return;
+                    }
+
+                    const ws = XLSX.utils.json_to_sheet(dailyRows);
+                    ws['!cols'] = [{ wch: 12 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 10 }];
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Daily Details");
+                    XLSX.writeFile(wb, "Orange_Employees_Daily.xlsx");
                 }
                 else if (type === 'template') {
                     // Open Employee Selection Modal
@@ -2109,7 +2152,8 @@
 
                 // Body
                 let tbody = '<tbody>';
-                sortedEmps.forEach(emp => { // Removed slice(0, 100) limit
+                // Filter out 'R' from Matrix View logic
+                sortedEmps.filter(e => e.name !== 'R').forEach(emp => {
                     const empId = emp.id;
                     const dailyData = employeeDailyMaps[empId] || {};
 
