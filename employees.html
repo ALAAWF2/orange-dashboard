@@ -570,14 +570,12 @@
     </nav>
 
     <!-- JS Libraries -->
+    <!-- JS Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="assets/amiri_font.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- SheetJS for Excel Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="assets/amiri_font.js"></script>
     <script src="pdf_export_employees.js"></script>
 
     <script>
@@ -656,112 +654,116 @@
                 </div>
             </div>
 
-            <!-- Summary KPIs -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <div class="kpi-card border-bottom border-4 border-warning">
-                        <div class="text-muted small">إجمالي الموظفين</div>
-                        <div class="fs-3 fw-bold" id="totalEmployees">0</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="kpi-card border-bottom border-4 border-success">
-                        <div class="text-muted small">إجمالي المبيعات</div>
-                        <div class="fs-3 fw-bold" id="totalSales">0</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="kpi-card border-bottom border-4 border-primary">
-                        <div class="text-muted small" id="avgSalesPerEmpLabel">متوسط المبيعات/موظف</div>
-                        <div class="fs-3 fw-bold" id="avgSalesPerEmp">0</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="kpi-card border-bottom border-4 border-info">
-                        <div class="text-muted small">أعلى موظف</div>
-                        <div class="fs-5 fw-bold text-truncate" id="topEmployee">-</div>
-                        <div class="small text-muted" id="topEmployeeSales">-</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top 10 Chart Section (Moved Up) -->
-            <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="section-title mb-0">📊 تحليل الموظفين (Charts)</h5>
-                        <!-- Chart Controls -->
-                        <div class="d-flex gap-2">
-                            <select id="chartMetric" class="form-select form-select-sm" onchange="updatePage()"
-                                style="width: auto;">
-                                <option value="sales">المبيعات</option>
-                                <option value="achievement">نسبة التحقيق %</option>
-                                <option value="max_ticket">أعلى قيمة فاتورة</option>
-                                <option value="avg_ticket">معدل الفاتورة</option>
-                                <option value="items_per_inv">متوسط القطع</option>
-                            </select>
-                            <select id="chartSort" class="form-select form-select-sm" onchange="updatePage()"
-                                style="width: auto;">
-                                <option value="desc">الأعلى (Top 10)</option>
-                                <option value="asc">الأقل (Bottom 10)</option>
-                            </select>
+            <!-- List View Container (Default) -->
+            <div id="listViewContainer">
+                <!-- Summary KPIs -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="kpi-card border-bottom border-4 border-warning">
+                            <div class="text-muted small">إجمالي الموظفين</div>
+                            <div class="fs-3 fw-bold" id="totalEmployees">0</div>
                         </div>
                     </div>
-                    <div class="card border-0 shadow-sm" style="height: 300px;">
-                        <div class="table-responsive h-100">
-                            <table class="table table-sm table-striped table-hover mb-0 sticky-header">
-                                <thead class="table-light sticky-top" style="z-index: 1;">
-                                    <tr>
-                                        <th style="width: 50px;">#</th>
-                                        <th>الموظف</th>
-                                        <th class="text-end">القيمة</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="top10Body">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
+                    <div class="col-md-3">
+                        <div class="kpi-card border-bottom border-4 border-success">
+                            <div class="text-muted small">إجمالي المبيعات</div>
+                            <div class="fs-3 fw-bold" id="totalSales">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card border-bottom border-4 border-primary">
+                            <div class="text-muted small" id="avgSalesPerEmpLabel">متوسط المبيعات/موظف</div>
+                            <div class="fs-3 fw-bold" id="avgSalesPerEmp">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card border-bottom border-4 border-info">
+                            <div class="text-muted small">أعلى موظف</div>
+                            <div class="fs-5 fw-bold text-truncate" id="topEmployee">-</div>
+                            <div class="small text-muted" id="topEmployeeSales">-</div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="row">
-                <!-- Leaderboard Table (Full Width) -->
-                <div class="col-12">
-                    <h5 class="section-title">🏆 ترتيب الموظفين (Leaderboard)</h5>
-                    <div class="card border-0 shadow-sm p-3">
-                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                            <table class="table table-custom table-hover align-middle mb-0">
-                                <thead class="sticky-top">
-                                    <tr>
-                                        <th>#</th>
-                                        <th class="sortable" data-sort="name" onclick="sortTable('name')">الموظف</th>
-                                        <th class="d-none d-md-table-cell sortable" data-sort="storeName"
-                                            onclick="sortTable('storeName')">الفرع</th>
-                                        <th class="sortable desc" data-sort="sales" onclick="sortTable('sales')">
-                                            المبيعات</th>
-                                        <th class="text-center sortable" data-sort="branchShare"
-                                            onclick="sortTable('branchShare')">حصة الفرع %</th>
-                                        <th class="text-center sortable" data-sort="shareGrowth"
-                                            onclick="sortTable('shareGrowth')">تطور الحصة</th>
-                                        <th class="text-center sortable" data-sort="target"
-                                            onclick="sortTable('target')">الهدف</th>
-                                        <th class="text-center sortable" data-sort="achievement"
-                                            onclick="sortTable('achievement')">التحقيق %</th>
-                                        <th class="text-center sortable" data-sort="dailyReq"
-                                            onclick="sortTable('dailyReq')">اليومية المتبقية</th>
-                                        <th class="d-none d-md-table-cell sortable" data-sort="transactions"
-                                            onclick="sortTable('transactions')">الفواتير</th>
-                                        <th class="d-none d-md-table-cell sortable" data-sort="avg_ticket"
-                                            onclick="sortTable('avg_ticket')">معدل الفاتورة</th>
-                                        <th class="d-none d-md-table-cell sortable" data-sort="items_per_inv"
-                                            onclick="sortTable('items_per_inv')">متوسط القطع</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="leaderboardBody">
-                                </tbody>
-                            </table>
+                <!-- Top 10 Chart Section (Moved Up) -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="section-title mb-0">📊 تحليل الموظفين (Charts)</h5>
+                            <!-- Chart Controls -->
+                            <div class="d-flex gap-2">
+                                <select id="chartMetric" class="form-select form-select-sm" onchange="updatePage()"
+                                    style="width: auto;">
+                                    <option value="sales">المبيعات</option>
+                                    <option value="achievement">نسبة التحقيق %</option>
+                                    <option value="max_ticket">أعلى قيمة فاتورة</option>
+                                    <option value="avg_ticket">معدل الفاتورة</option>
+                                    <option value="items_per_inv">متوسط القطع</option>
+                                </select>
+                                <select id="chartSort" class="form-select form-select-sm" onchange="updatePage()"
+                                    style="width: auto;">
+                                    <option value="desc">الأعلى (Top 10)</option>
+                                    <option value="asc">الأقل (Bottom 10)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card border-0 shadow-sm" style="height: 300px;">
+                            <div class="table-responsive h-100">
+                                <table class="table table-sm table-striped table-hover mb-0 sticky-header">
+                                    <thead class="table-light sticky-top" style="z-index: 1;">
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>الموظف</th>
+                                            <th class="text-end">القيمة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="top10Body">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Leaderboard Table (Full Width) -->
+                    <div class="col-12">
+                        <h5 class="section-title">🏆 ترتيب الموظفين (Leaderboard)</h5>
+                        <div class="card border-0 shadow-sm p-3">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-custom table-hover align-middle mb-0">
+                                    <thead class="sticky-top">
+                                        <tr>
+                                            <th>#</th>
+                                            <th class="sortable" data-sort="name" onclick="sortTable('name')">الموظف
+                                            </th>
+                                            <th class="d-none d-md-table-cell sortable" data-sort="storeName"
+                                                onclick="sortTable('storeName')">الفرع</th>
+                                            <th class="sortable desc" data-sort="sales" onclick="sortTable('sales')">
+                                                المبيعات</th>
+                                            <th class="text-center sortable" data-sort="branchShare"
+                                                onclick="sortTable('branchShare')">حصة الفرع %</th>
+                                            <th class="text-center sortable" data-sort="shareGrowth"
+                                                onclick="sortTable('shareGrowth')">تطور الحصة</th>
+                                            <th class="text-center sortable" data-sort="target"
+                                                onclick="sortTable('target')">الهدف</th>
+                                            <th class="text-center sortable" data-sort="achievement"
+                                                onclick="sortTable('achievement')">التحقيق %</th>
+                                            <th class="text-center sortable" data-sort="dailyReq"
+                                                onclick="sortTable('dailyReq')">اليومية المتبقية</th>
+                                            <th class="d-none d-md-table-cell sortable" data-sort="transactions"
+                                                onclick="sortTable('transactions')">الفواتير</th>
+                                            <th class="d-none d-md-table-cell sortable" data-sort="avg_ticket"
+                                                onclick="sortTable('avg_ticket')">معدل الفاتورة</th>
+                                            <th class="d-none d-md-table-cell sortable" data-sort="items_per_inv"
+                                                onclick="sortTable('items_per_inv')">متوسط القطع</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leaderboardBody">
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1048,7 +1050,7 @@
                 let managerFilter = document.getElementById('managerFilter').value;
 
                 // Enforce Permissions
-                if (currentUser.role !== 'Admin') {
+                if (currentUser.role !== 'Admin' && currentUser.role !== 'HR') {
                     managerFilter = currentUser.name;
                     // Also lock UI
                     const mf = document.getElementById('managerFilter');
@@ -1056,12 +1058,21 @@
                         mf.value = currentUser.name;
                         mf.parentElement.style.display = 'none';
                     }
+                } else if (currentUser.role === 'HR' || currentUser.role === 'Admin') {
+                    // Show View Mode for HR/Admin
+                    document.getElementById('viewModeContainer').style.display = 'block';
                 }
 
                 const branchFilter = document.getElementById('branchFilter').value;
                 const periodFilter = document.getElementById('periodFilter').value;
+                const viewMode = document.getElementById('viewMode').value;
                 const sortBy = document.getElementById('sortBy').value;
                 const searchTerm = document.getElementById('searchEmp').value.toLowerCase();
+
+                // Visibility Toggle based on View Mode
+                document.getElementById('listViewContainer').style.display = viewMode === 'list' ? 'block' : 'none';
+                document.getElementById('matrixViewContainer').style.display = viewMode === 'matrix' ? 'block' : 'none';
+                document.getElementById('auditViewContainer').style.display = viewMode === 'audit' ? 'block' : 'none';
 
                 // Aggregate employee data
                 const empAgg = {};
@@ -1301,7 +1312,17 @@
                     }
 
                     // Filter Non-Active
-                    return e.sales > 0 || e.transactions > 0;
+                    if (e.sales === 0 && e.transactions === 0) return false;
+
+                    // FILTER: Showrooms Only (Exclude Online/Corporate)
+                    // We check Store Meta. Assuming 'manager' == 'online' or specific flags imply non-showroom.
+                    const meta = storeMeta[e.storeCode];
+                    if (meta) {
+                        if (meta.manager && (meta.manager.toLowerCase() === 'online' || meta.manager.includes('Corporate'))) return false;
+                        // Add other exclusions if necessary
+                    }
+
+                    return true;
                 });
 
                 // Search filter
@@ -1393,7 +1414,13 @@
                 renderTable();
 
                 // Update charts
-                updateCharts(currentEmpList);
+                if (viewMode === 'list') {
+                    updateCharts(currentEmpList);
+                } else if (viewMode === 'matrix') {
+                    renderMatrixView(currentEmpList, periodFilter);
+                } else if (viewMode === 'audit') {
+                    renderAuditView(currentEmpList, history); // Need full history for Audit
+                }
             }
 
             function updateCharts(empList) {
@@ -2046,14 +2073,8 @@
                         plugins: {
                             legend: { display: false }
                         },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: { display: false }
-                            },
-                            x: {
-                                grid: { display: false }
-                            }
+                        x: {
+                            grid: { display: false }
                         }
                     }
                 });
@@ -2061,6 +2082,180 @@
 
             // Initialize
             loadData();
+
+            function renderMatrixView(empList, periodFilter) {
+                const table = document.getElementById('matrixTable');
+                table.innerHTML = ''; // Clear
+
+                // 1. Determine Days Column
+                // Using 'today' from updatePage scope would be better, but let's recalc
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = today.getMonth(); // 0-indexed
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                // Sort Employees by Sales Desc
+                const sortedEmps = [...empList].sort((a, b) => b.sales - a.sales);
+
+                // Header Row
+                let thead = '<thead class="table-light sticky-top"><tr><th style="width:150px; min-width:150px;">الموظف</th><th style="width:100px;">الفرع</th>';
+                for (let d = 1; d <= daysInMonth; d++) {
+                    // Highlight Fridays?
+                    const dateObj = new Date(year, month, d);
+                    const isFri = dateObj.getDay() === 5;
+                    const bg = isFri ? 'background-color:#ffe0b2;' : '';
+                    thead += `<th style="width:35px; ${bg}">${d}</th>`;
+                }
+                thead += '<th style="width:60px;">Total</th><th style="width:50px;">Zero Days</th></tr></thead>';
+                table.innerHTML = thead;
+
+                // Body
+                let tbody = '<tbody>';
+                sortedEmps.slice(0, 100).forEach(emp => { // Limit to 100 for performance
+                    const empId = emp.id;
+                    const dailyData = employeeDailyMaps[empId] || {};
+
+                    let rowHtml = `<tr>
+                        <td class="fw-bold text-start text-truncate" style="max-width:150px;" title="${emp.name}">${emp.name}</td>
+                        <td class="small text-muted text-truncate" style="max-width:100px;">${emp.storeName}</td>`;
+
+                    let zeroDays = 0;
+                    let totalSales = 0;
+
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        // Construct Date Key YYYY-MM-DD
+                        // Note: Ensure padding matches source data format (usually YYYY-MM-DD)
+                        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                        // Check if future date
+                        const isFuture = new Date(dateKey) > today;
+
+                        const dayStats = dailyData[dateKey];
+                        const sales = dayStats ? dayStats.sales : 0;
+
+                        let cellClass = '';
+                        let cellText = '';
+
+                        if (!isFuture) {
+                            if (sales === 0) {
+                                // Only count zero day if it wasn't a future date. 
+                                // ALSO: Need to know if store was open? Assuming 0 sales = Zero Day.
+                                // Improvement: check if it's a Friday/Off day? For now, strict 0.
+                                cellClass = 'matrix-cell-0';
+                                cellText = '-';
+                                zeroDays++;
+                            } else {
+                                cellText = Math.round(sales / 1000) + 'k'; // Abbreviate
+                                if (sales < 1000 && sales > 0) cellText = sales;
+
+                                if (sales < 500) cellClass = 'matrix-cell-Low';
+                                else if (sales < 2000) cellClass = 'matrix-cell-Med';
+                                else cellClass = 'matrix-cell-High';
+                            }
+                        } else {
+                            cellText = '';
+                            cellClass = 'bg-light';
+                        }
+
+                        rowHtml += `<td class="${cellClass}" title="${sales}">${cellText}</td>`;
+                        if (!isFuture) totalSales += sales;
+                    }
+
+                    rowHtml += `<td class="fw-bold">${Math.round(emp.sales).toLocaleString()}</td>`;
+                    rowHtml += `<td class="text-danger fw-bold">${zeroDays}</td>`;
+                    rowHtml += '</tr>';
+                    tbody += rowHtml;
+                });
+                tbody += '</tbody>';
+                table.innerHTML += tbody;
+            }
+
+            function renderAuditView(empList, fullHistory) {
+                const tbody = document.getElementById('auditTableBody');
+                tbody.innerHTML = '';
+
+                // We need to scan full history for each filtered employee to find store changes
+                // Optimization: build a map of { empId: [ {date, storeCode}... ] } sorted by date
+
+                const movements = [];
+
+                empList.forEach(emp => {
+                    const empId = emp.id;
+                    // We need access to raw history records for this employee.
+                    // Since 'historyData' is grouped by STORE, we must iterate all stores again or use a pre-built map.
+                    // Pre-building map is better but expensive.
+                    // given the constraints, let's look at `employeeDailyMaps` but that only has aggregate stats, not store code per day if undefined.
+                    // Actually `employeeDailyMaps` I defined earlier only stored stats.
+                    // Let's iterate `fullHistory` (which is `historyData` grouped by Store) 
+                    // and extract records for this emp.
+                });
+
+                // REAMINDER: `historyData` is { storeCode: [ [date, name, ...], ... ] }
+                // This is hard to query by Employee.
+                // Better approach: When loading data (loadData), build an `employeeMovements` map.
+
+                // Since I cannot change loadData structure easily without reloading page logic, 
+                // I will do a quick scan here. It might be slow if data is huge.
+                // But `empList` is already filtered (e.g. by branch), showing transfers relevant to them.
+
+                // Actually, for Audit, we want ALL movements of ALL employees, or just filtered ones?
+                // Usually Audit implies seeing everything. Let's use `empList` (filtered employees)
+
+                const targetEmpIds = new Set(empList.map(e => e.id));
+                const empTimeline = {}; // { empId: [ {date: '2023-10-01', store: '101'} ] }
+
+                Object.entries(fullHistory).forEach(([storeCode, records]) => {
+                    records.forEach(r => {
+                        // r: [date, rawName, ...]
+                        let rawName = r[1];
+                        let empId = rawName.includes('-') ? rawName.split('-')[0].trim() : rawName;
+
+                        if (targetEmpIds.has(empId)) {
+                            if (!empTimeline[empId]) empTimeline[empId] = [];
+                            empTimeline[empId].push({ date: r[0], store: storeCode, name: empId /*should be name*/ });
+                        }
+                    });
+                });
+
+                // Analyze Timeline
+                Object.entries(empTimeline).forEach(([empId, events]) => {
+                    // Sort by Date
+                    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    let currentStore = null;
+                    events.forEach(ev => {
+                        if (currentStore && currentStore !== ev.store) {
+                            // Found a movement!
+                            movements.push({
+                                id: empId,
+                                name: employeeNames[empId] || empId,
+                                date: ev.date,
+                                from: storesData[currentStore] || currentStore,
+                                to: storesData[ev.store] || ev.store
+                            });
+                        }
+                        currentStore = ev.store;
+                    });
+                });
+
+                // Sort movements by date desc
+                movements.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (movements.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3">لا توجد تنقلات مسجلة للموظفين المحددين في الفترة الحالية</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = movements.map(m => `
+                    <tr>
+                        <td class="fw-bold">${m.name}</td>
+                        <td>${m.date}</td>
+                        <td class="text-muted">${m.from}</td>
+                        <td class="text-success fw-bold">${m.to}</td>
+                        <td><span class="badge bg-info text-dark">نقل</span></td>
+                    </tr>
+                `).join('');
+            }
         </script>
 
 </body>
