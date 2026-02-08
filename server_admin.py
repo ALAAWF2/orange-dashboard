@@ -123,15 +123,16 @@ def get_targets():
                 # No, just one canonical key.
 
             # 3. Fetch Master List of Stores
-            stores_q = text("SELECT outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number IS NOT NULL")
-            all_stores = [r[0] for r in conn.execute(stores_q).fetchall()]
+            stores_q = text("SELECT dynamic_number, outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number IS NOT NULL")
+            all_stores = conn.execute(stores_q).fetchall()
             
         # Construct Response
         response_data = []
-        for store in all_stores:
+        for row in all_stores:
             response_data.append({
-                "outlet": store,
-                "target": store_targets.get(store, 0),
+                "id": row[0],
+                "outlet": row[1],
+                "target": store_targets.get(row[1], 0),
             })
             
         return jsonify({
