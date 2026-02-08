@@ -83,7 +83,7 @@ async function exportStoreSales(startDate, endDate) {
     const passFilter = (storeId) => {
         if (branchFilter !== 'all' && storeId !== branchFilter) return false;
 
-        const meta = window.rawData.store_meta ? window.rawData.store_meta[storeId] : {};
+        const meta = (window.rawData.store_meta && window.rawData.store_meta[storeId]) || {};
         if (managerFilter !== 'all' && meta.manager !== managerFilter) return false;
         if (cityFilter !== 'all' && meta.city !== cityFilter) return false;
         if (typeFilter !== 'all' && meta.type !== typeFilter) return false;
@@ -161,7 +161,7 @@ async function exportStoreSales(startDate, endDate) {
 
     // Format for Excel
     let excelRows = rows.map(r => {
-        const meta = window.rawData.store_meta ? window.rawData.store_meta[r.storeId] : {};
+        const meta = (window.rawData.store_meta && window.rawData.store_meta[r.storeId]) || {};
         return {
             "التاريخ": r.date,
             "المعرض": window.rawData.stores[r.storeId] || r.storeId,
@@ -216,7 +216,7 @@ async function exportEmployeeSales(startDate, endDate) {
     let rows = [];
     const empNames = empData.employee_names || {};
 
-    // Get List of Store IDs we care about (from Emp Data)
+    // List of Store IDs we care about (from Emp Data)
     let targetStoreIds = Object.keys(empData.history || {});
 
     // Filter Stores based on Metadata in rawData
@@ -224,7 +224,7 @@ async function exportEmployeeSales(startDate, endDate) {
         targetStoreIds = targetStoreIds.filter(sid => {
             if (branchFilter !== 'all' && sid !== branchFilter) return false;
 
-            const meta = rawData.store_meta[sid] || {};
+            const meta = window.rawData.store_meta[sid] || {};
             if (managerFilter !== 'all' && meta.manager !== managerFilter) return false;
             if (cityFilter !== 'all' && meta.city !== cityFilter) return false;
             if (typeFilter !== 'all' && meta.type !== typeFilter) return false;
