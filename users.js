@@ -12,6 +12,6 @@ const USERS = {
     "محمدكلو": { pin: "4891", role: "Manager" },
     "محمدكلو": { pin: "4891", role: "Manager" },
     "منطقة الطائف": { pin: "6342", role: "Manager" },
-    "HR": { pin: "2030", role: "HR" },
+
     "علاء": { pin: "0000", role: "Auditor" }
 };

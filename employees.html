@@ -1050,7 +1050,7 @@
                 let managerFilter = document.getElementById('managerFilter').value;
 
                 // Enforce Permissions
-                if (currentUser.role !== 'Admin' && currentUser.role !== 'HR') {
+                if (currentUser.role !== 'Admin') {
                     managerFilter = currentUser.name;
                     // Also lock UI
                     const mf = document.getElementById('managerFilter');
@@ -1058,8 +1058,8 @@
                         mf.value = currentUser.name;
                         mf.parentElement.style.display = 'none';
                     }
-                } else if (currentUser.role === 'HR' || currentUser.role === 'Admin') {
-                    // Show View Mode for HR/Admin
+                } else {
+                    // Show View Mode for Admin (Sales Manager)
                     document.getElementById('viewModeContainer').style.display = 'block';
                 }
 
@@ -1314,13 +1314,11 @@
                     // Filter Non-Active
                     if (e.sales === 0 && e.transactions === 0) return false;
 
-                    // FILTER: Showrooms Only (Exclude Online/Corporate)
-                    // We check Store Meta. Assuming 'manager' == 'online' or specific flags imply non-showroom.
-                    const meta = storeMeta[e.storeCode];
-                    if (meta) {
-                        if (meta.manager && (meta.manager.toLowerCase() === 'online' || meta.manager.includes('Corporate'))) return false;
-                        // Add other exclusions if necessary
-                    }
+                    // FILTER: Showrooms Only (Exclude Online/Corporate) - DISABLED to show all active employees
+                    // const meta = storeMeta[e.storeCode];
+                    // if (meta) {
+                    //     if (meta.manager && (meta.manager.toLowerCase() === 'online' || meta.manager.includes('Corporate'))) return false;
+                    // }
 
                     return true;
                 });
@@ -1526,7 +1524,7 @@
                 const periodFilter = document.getElementById('periodFilter').value;
                 const tbody = document.getElementById('leaderboardBody');
 
-                tbody.innerHTML = currentEmpList.slice(0, 100).map((emp, idx) => {
+                tbody.innerHTML = currentEmpList.map((emp, idx) => {
                     const rank = idx + 1;
                     const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
 
@@ -2111,7 +2109,7 @@
 
                 // Body
                 let tbody = '<tbody>';
-                sortedEmps.slice(0, 100).forEach(emp => { // Limit to 100 for performance
+                sortedEmps.forEach(emp => { // Removed slice(0, 100) limit
                     const empId = emp.id;
                     const dailyData = employeeDailyMaps[empId] || {};
 
@@ -2139,16 +2137,19 @@
                         if (!isFuture) {
                             if (sales === 0) {
                                 // Only count zero day if it wasn't a future date. 
-                                // ALSO: Need to know if store was open? Assuming 0 sales = Zero Day.
-                                // Improvement: check if it's a Friday/Off day? For now, strict 0.
                                 cellClass = 'matrix-cell-0';
                                 cellText = '-';
                                 zeroDays++;
                             } else {
-                                cellText = Math.round(sales / 1000) + 'k'; // Abbreviate
-                                if (sales < 1000 && sales > 0) cellText = sales;
+                                // Fix '0k' (OK) issue for negative/small numbers
+                                if (Math.abs(sales) < 1000) {
+                                    cellText = Math.round(sales).toLocaleString();
+                                } else {
+                                    cellText = Math.round(sales / 1000) + 'k';
+                                }
 
-                                if (sales < 500) cellClass = 'matrix-cell-Low';
+                                if (sales < 0) cellClass = 'text-danger fw-bold bg-light-danger'; // Highlight returns
+                                else if (sales < 500) cellClass = 'matrix-cell-Low';
                                 else if (sales < 2000) cellClass = 'matrix-cell-Med';
                                 else cellClass = 'matrix-cell-High';
                             }
