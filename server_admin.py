@@ -16,7 +16,15 @@ load_dotenv(env_path)
 
 app = Flask(__name__)
 # Allow CORS for development (or specify domain in production)
-CORS(app) 
+# Explicitly allow Authorization and ngrok headers
+CORS(app, resources={r"/api/*": {"origins": "*"}}) # Simplified CORS
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # Database Config
 DB_USER = "postgres"
