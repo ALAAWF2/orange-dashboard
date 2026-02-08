@@ -106,6 +106,7 @@ async function exportStoreSales(startDate, endDate) {
                 date: d,
                 storeId: s,
                 sales: 0,
+                target: 0,
                 trans: 0,
                 visitors: 0
             };
@@ -119,6 +120,16 @@ async function exportStoreSales(startDate, endDate) {
             if (inRange(d) && passFilter(s)) {
                 let entry = ensureEntry(d, s);
                 entry.sales += v;
+            }
+        });
+    }
+
+    // 1.1 Process Targets
+    if (window.rawData.targets) {
+        window.rawData.targets.forEach(([d, s, v]) => {
+            if (inRange(d) && passFilter(s)) {
+                let entry = ensureEntry(d, s);
+                entry.target += v;
             }
         });
     }
@@ -162,12 +173,16 @@ async function exportStoreSales(startDate, endDate) {
     // Format for Excel
     let excelRows = rows.map(r => {
         const meta = (window.rawData.store_meta && window.rawData.store_meta[r.storeId]) || {};
+        const ach = r.target > 0 ? ((r.sales / r.target) * 100).toFixed(1) + '%' : '0%';
+
         return {
             "التاريخ": r.date,
             "المعرض": window.rawData.stores[r.storeId] || r.storeId,
             "المدينة": meta.city || '-',
             "مدير المنطقة": meta.manager || '-',
             "المبيعات": r.sales,
+            "الهدف": r.target,
+            "نسبة التحقيق": ach,
             "عدد الفواتير": r.trans,
             "الزوار": r.visitors,
             "متوسط الفاتورة": r.trans > 0 ? (r.sales / r.trans).toFixed(0) : 0,
@@ -185,6 +200,8 @@ async function exportStoreSales(startDate, endDate) {
         { wch: 10 }, // City
         { wch: 15 }, // Manager
         { wch: 10 }, // Sales
+        { wch: 10 }, // Target
+        { wch: 10 }, // Achievement
         { wch: 10 }, // Trans
         { wch: 10 }, // Visitors
         { wch: 10 }, // Avg
