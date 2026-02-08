@@ -59,6 +59,9 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Skip authentication for OPTIONS preflight requests
+        if request.method == 'OPTIONS':
+            return '', 200
         auth = request.authorization
         if not auth or not check_auth(auth.username, auth.password):
             return authenticate()
@@ -362,18 +365,18 @@ def get_daily_stats():
             else:
                 end_date = f"{year}-{int(mon)+1:02d}-01"
             
-            # Get transactions per day from branch sales
+            # Get transactions per day from dynamic_sales_bills
             trans_q = text("""
-                SELECT bill_date::date as date, COUNT(DISTINCT bill_no) as trans_count
-                FROM gofrugal_branch_sales
-                WHERE outlet_name = :outlet
+                SELECT bill_date as date, COUNT(DISTINCT transaction_id) as trans_count
+                FROM dynamic_sales_bills
+                WHERE store_number = :sid
                   AND bill_date >= :start_date
                   AND bill_date < :end_date
-                GROUP BY bill_date::date
+                GROUP BY bill_date
                 ORDER BY date
             """)
             trans_data = conn.execute(trans_q, {
-                "outlet": outlet_name,
+                "sid": store_id,
                 "start_date": start_date,
                 "end_date": end_date
             }).fetchall()
