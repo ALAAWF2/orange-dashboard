@@ -307,9 +307,12 @@
             document.getElementById('visitorModal').style.display = 'flex';
 
             try {
-                const creds = btoa(currentUser + ":" + currentPass);
-                const res = await fetch(`${SERVER_URL}/api/daily_stats?store_id=${sid}&month=${m}`, {
-                    headers: { 'Authorization': 'Basic ' + creds }
+                const token = authHeader || sessionStorage.getItem('auth');
+                const res = await fetch(`${API_BASE}/api/daily_stats?store_id=${sid}&month=${m}`, {
+                    headers: {
+                        'Authorization': token,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
                 });
 
                 if (!res.ok) throw new Error("Failed to fetch data");
@@ -400,12 +403,13 @@
             });
 
             try {
-                const creds = btoa(currentUser + ":" + currentPass);
-                const res = await fetch(`${SERVER_URL}/api/daily_visitors`, {
+                const token = authHeader || sessionStorage.getItem('auth');
+                const res = await fetch(`${API_BASE}/api/daily_visitors`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'Basic ' + creds,
-                        'Content-Type': 'application/json'
+                        'Authorization': token,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify(updates)
                 });
