@@ -985,12 +985,18 @@
 
                     // Calculate targets
                     const monthlyTarget = branchTargets[storeId] || 0;
-                    const dailyTarget = monthlyTarget > 0 ? monthlyTarget / daysInMonth : 0;
                     const mtdSales = getMonthToDateSales(storeId, allowedBranches);
-                    const expectedMtdTarget = dailyTarget * currentDay;
+
+                    // Dynamic daily target: (Remaining Target) / (Remaining Days)
+                    const remainingTarget = Math.max(0, monthlyTarget - mtdSales);
+                    const remainingDays = Math.max(1, daysInMonth - currentDay + 1); // +1 includes today
+                    const dynamicDailyTarget = remainingTarget / remainingDays;
+
+                    // For comparison purposes
+                    const expectedMtdTarget = (monthlyTarget / daysInMonth) * currentDay;
 
                     // Calculate percentages
-                    const dailyPercent = dailyTarget > 0 ? Math.min((sales / dailyTarget) * 100, 100) : 0;
+                    const dailyPercent = dynamicDailyTarget > 0 ? Math.min((sales / dynamicDailyTarget) * 100, 100) : 0;
                     const monthlyPercent = monthlyTarget > 0 ? Math.min((mtdSales / monthlyTarget) * 100, 100) : 0;
 
                     // Determine color classes based on performance
@@ -1004,8 +1010,8 @@
                             <div class="target-progress-container">
                                 <div class="progress-row">
                                     <div class="progress-label">
-                                        <span>📈 الهدف اليومي</span>
-                                        <span class="progress-value">${formatNumber(sales)} / ${formatNumber(dailyTarget)}</span>
+                                        <span>📈 المطلوب اليوم (${remainingDays} يوم متبقي)</span>
+                                        <span class="progress-value">${formatNumber(sales)} / ${formatNumber(dynamicDailyTarget)}</span>
                                     </div>
                                     <div class="progress">
                                         <div class="progress-bar ${dailyColorClass}" style="width: ${dailyPercent}%"></div>
