@@ -627,7 +627,12 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title fw-bold">🔍 استعلام سريع عن منتج</h5>
+                    <div>
+                        <h5 class="modal-title fw-bold" id="inquiryModalLabel">🔎 استعلام سريع عن منتج</h5>
+                        <small class="opacity-75" style="font-size: 0.75rem;">
+                            وقت سحب التقرير: <span dir="ltr" id="inqGenTime">-</span>
+                        </small>
+                    </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
                 </div>
@@ -821,6 +826,10 @@
             resDiv.classList.add('d-none');
             errDiv.classList.add('d-none');
 
+            // Update Generation Time
+            const genTime = rawData.metadata ? rawData.metadata.generated_at : '-';
+            document.getElementById('inqGenTime').textContent = genTime;
+
             if (inqCatalog.length === 0) {
                 loadDiv.classList.remove('d-none');
                 // Wait for load
@@ -968,7 +977,8 @@
                     sales_period: periodNames[currentMode] || currentMode,
                     sales_qty: totalSales,
                     stock: finalEntries.map(e => [e.name, e.stock, e.sales]),
-                    total_stock: 0
+                    total_stock: 0,
+                    gen_time: rawData.metadata ? rawData.metadata.generated_at : '-'
                 };
 
                 finalEntries.forEach(item => {
@@ -1013,18 +1023,19 @@
 
             // csv content with BOM
             let csv = '\uFEFF';
+            csv += `Report Generated At,${data.gen_time}\n`;
             csv += `Product Name,${data.name.replace(/,/g, ' ')}\n`;
             csv += `Product Code,${data.code}\n`;
             csv += `Alias,${data.alias}\n`;
             csv += `Price,${data.price}\n`;
-            csv += `Sales Qty (${data.sales_period}),${data.sales_qty}\n\n`;
+            csv += `Total Sales Qty (${data.sales_period}),${data.sales_qty}\n\n`;
 
-            csv += `Branch,Stock Qty\n`;
+            csv += `Branch,Sales Qty,Stock Qty\n`;
 
-            data.stock.forEach(([store, qty]) => {
-                csv += `${store.replace(/,/g, ' ')},${qty}\n`;
+            data.stock.forEach(([store, stock, sales]) => {
+                csv += `${store.replace(/,/g, ' ')},${sales},${stock}\n`;
             });
-            csv += `TOTAL,${data.total_stock}\n`;
+            csv += `TOTAL,${data.sales_qty},${data.total_stock}\n`;
 
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
