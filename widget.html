@@ -1083,6 +1083,10 @@
         // Load Employees for a Branch
         function loadEmployeesForBranch(storeId) {
             const todayStr = getTodayStr();
+            // Use selected date range or default to today
+            const fromDate = selectedFromDate || todayStr;
+            const toDate = selectedToDate || todayStr;
+
             const empListEl = document.getElementById(`emp-list-${storeId}`);
 
             if (!employeesData || !employeesData.history || !employeesData.history[storeId]) {
@@ -1090,27 +1094,28 @@
                 return;
             }
 
-            // Get today's employee data
+            // Get employee data for selected date range
             const storeHistory = employeesData.history[storeId];
-            const todayEmployees = {};
+            const periodEmployees = {};
 
             storeHistory.forEach(entry => {
                 // entry: [date, employee_id, sales, trans, qty, visitors]
                 const [date, empId, sales, trans] = entry;
-                if (date === todayStr && empId && empId !== '' && empId !== 'None' && sales > 0) {
-                    if (!todayEmployees[empId]) {
-                        todayEmployees[empId] = { sales: 0, trans: 0 };
+                // Check if date is in selected range
+                if (date >= fromDate && date <= toDate && empId && empId !== '' && empId !== 'None' && sales > 0) {
+                    if (!periodEmployees[empId]) {
+                        periodEmployees[empId] = { sales: 0, trans: 0 };
                     }
-                    todayEmployees[empId].sales += sales;
-                    todayEmployees[empId].trans += (trans || 0);
+                    periodEmployees[empId].sales += sales;
+                    periodEmployees[empId].trans += (trans || 0);
                 }
             });
 
-            const sortedEmps = Object.entries(todayEmployees)
+            const sortedEmps = Object.entries(periodEmployees)
                 .sort((a, b) => b[1].sales - a[1].sales);
 
             if (sortedEmps.length === 0) {
-                empListEl.innerHTML = '<div class="no-employees">لا توجد مبيعات موظفين اليوم</div>';
+                empListEl.innerHTML = '<div class="no-employees">لا توجد مبيعات موظفين في الفترة المحددة</div>';
             } else {
                 empListEl.innerHTML = sortedEmps.map(([empId, data], idx) => {
                     const empName = getEmployeeName(empId);
