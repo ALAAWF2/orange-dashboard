@@ -336,6 +336,139 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
             border: none;
         }
+
+        /* Target Progress Bars */
+        .target-progress-container {
+            padding: 8px 16px 12px;
+            background: #f9f9f9;
+            border-top: 1px dashed #eee;
+        }
+
+        .progress-row {
+            margin-bottom: 8px;
+        }
+
+        .progress-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .progress-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-value {
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar {
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-bar-daily {
+            background: linear-gradient(90deg, #17a2b8, #20c997);
+        }
+
+        .progress-bar-monthly {
+            background: linear-gradient(90deg, #fe7900, #ffc107);
+        }
+
+        .progress-bar-danger {
+            background: linear-gradient(90deg, #dc3545, #fd7e14) !important;
+        }
+
+        .progress-bar-success {
+            background: linear-gradient(90deg, #198754, #20c997) !important;
+        }
+
+        .target-summary {
+            font-size: 0.7rem;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        /* Date Range Filter */
+        .date-range-container {
+            background: white;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .date-range-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .date-input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .date-input-group label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .date-input-group input[type="date"] {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: var(--font-main);
+        }
+
+        .date-range-btn {
+            background: #fe7900;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .date-range-btn:hover {
+            background: #e56d00;
+        }
+
+        .date-range-btn.reset-btn {
+            background: #6c757d;
+        }
+
+        .date-range-btn.reset-btn:hover {
+            background: #5a6268;
+        }
+
+        .period-label {
+            font-size: 0.8rem;
+            color: #fe7900;
+            font-weight: 600;
+            margin-top: 8px;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -383,6 +516,23 @@
                         <!-- Populated by JS -->
                     </select>
                 </div>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div class="date-range-container">
+                <div class="date-range-row">
+                    <div class="date-input-group">
+                        <label for="dateFrom">من:</label>
+                        <input type="date" id="dateFrom">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="dateTo">إلى:</label>
+                        <input type="date" id="dateTo">
+                    </div>
+                    <button class="date-range-btn" onclick="applyDateRange()">🔍 عرض</button>
+                    <button class="date-range-btn reset-btn" onclick="resetToToday()">↻ اليوم</button>
+                </div>
+                <div id="periodLabel" class="period-label" style="display: none;"></div>
             </div>
 
             <!-- KPI Cards -->
@@ -478,6 +628,104 @@
             const d = new Date(dateStr);
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             return d.toLocaleDateString('ar-SA', options);
+        }
+
+        // Get current month target date (first day of month)
+        function getCurrentMonthTargetDate() {
+            const today = new Date();
+            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        }
+
+        // Get days in current month
+        function getDaysInCurrentMonth() {
+            const today = new Date();
+            return new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        }
+
+        // Get current day of month
+        function getCurrentDayOfMonth() {
+            return new Date().getDate();
+        }
+
+        // Get month-to-date sales for a store
+        function getMonthToDateSales(storeId, allowedBranches) {
+            if (!rawData.sales) return 0;
+
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            let total = 0;
+            rawData.sales.forEach(row => {
+                const date = new Date(row[0]);
+                const sId = row[1];
+                const value = row[2] || 0;
+
+                if (sId === storeId && date >= firstDayOfMonth && date <= today && value > 0) {
+                    total += value;
+                }
+            });
+            return total;
+        }
+
+        // Date Range State
+        let selectedFromDate = null;
+        let selectedToDate = null;
+
+        // Initialize date inputs to today
+        function initializeDates() {
+            const todayStr = getTodayStr();
+            document.getElementById('dateFrom').value = todayStr;
+            document.getElementById('dateTo').value = todayStr;
+            selectedFromDate = todayStr;
+            selectedToDate = todayStr;
+        }
+
+        // Apply date range filter
+        function applyDateRange() {
+            const fromDate = document.getElementById('dateFrom').value;
+            const toDate = document.getElementById('dateTo').value;
+
+            if (!fromDate || !toDate) {
+                alert('يرجى تحديد التواريخ');
+                return;
+            }
+
+            if (fromDate > toDate) {
+                alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                return;
+            }
+
+            selectedFromDate = fromDate;
+            selectedToDate = toDate;
+            renderWidget();
+
+            // Update period label
+            const periodLabel = document.getElementById('periodLabel');
+            if (fromDate === toDate) {
+                periodLabel.textContent = `📅 عرض يوم: ${formatArabicDate(fromDate)}`;
+            } else {
+                const daysDiff = Math.ceil((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1;
+                periodLabel.textContent = `📅 فترة ${daysDiff} أيام`;
+            }
+            periodLabel.style.display = 'block';
+        }
+
+        // Reset to today
+        function resetToToday() {
+            const todayStr = getTodayStr();
+            document.getElementById('dateFrom').value = todayStr;
+            document.getElementById('dateTo').value = todayStr;
+            selectedFromDate = todayStr;
+            selectedToDate = todayStr;
+
+            document.getElementById('periodLabel').style.display = 'none';
+            renderWidget();
+        }
+
+        // Check if date is within selected range
+        function isDateInRange(dateStr) {
+            if (!selectedFromDate || !selectedToDate) return dateStr === getTodayStr();
+            return dateStr >= selectedFromDate && dateStr <= selectedToDate;
         }
 
         // Get Employee Name (Arabic if available)
@@ -577,6 +825,7 @@
                 }
 
                 populateManagerFilter();
+                initializeDates();
                 renderWidget();
             } catch (e) {
                 console.error('Error loading data:', e);
@@ -591,13 +840,24 @@
             const yesterdayStr = getYesterdayStr();
             const lyStr = getLastYearTodayStr();
 
-            document.getElementById('todayDate').textContent = formatArabicDate(todayStr);
+            // Use selected date range or default to today
+            const fromDate = selectedFromDate || todayStr;
+            const toDate = selectedToDate || todayStr;
+            const isRangeMode = fromDate !== toDate;
+
+            // Update header date display
+            if (isRangeMode) {
+                const daysDiff = Math.ceil((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1;
+                document.getElementById('todayDate').textContent = `${daysDiff} أيام`;
+            } else {
+                document.getElementById('todayDate').textContent = formatArabicDate(fromDate);
+            }
 
             const allowedBranches = getUserAllowedBranches();
 
-            // Filter today's sales
-            let todaySales = {};
-            let todayTrans = {};
+            // Filter sales by selected date range
+            let periodSales = {};
+            let periodTrans = {};
             let yesterdaySales = {};
             let lySales = {};
 
@@ -610,8 +870,9 @@
 
                     if (!allowedBranches.includes(storeId)) return;
 
-                    if (date === todayStr && value > 0) {
-                        todaySales[storeId] = (todaySales[storeId] || 0) + value;
+                    // Check if date is in selected range
+                    if (date >= fromDate && date <= toDate && value > 0) {
+                        periodSales[storeId] = (periodSales[storeId] || 0) + value;
                     }
                     if (date === yesterdayStr && value > 0) {
                         yesterdaySales[storeId] = (yesterdaySales[storeId] || 0) + value;
@@ -631,19 +892,20 @@
 
                     if (!allowedBranches.includes(storeId)) return;
 
-                    if (date === todayStr) {
-                        todayTrans[storeId] = (todayTrans[storeId] || 0) + trans;
+                    // Check if date is in selected range
+                    if (date >= fromDate && date <= toDate) {
+                        periodTrans[storeId] = (periodTrans[storeId] || 0) + trans;
                     }
                 });
             }
 
             // Calculate totals
-            let totalSalesVal = Object.values(todaySales).reduce((a, b) => a + b, 0);
-            let totalTransVal = Object.values(todayTrans).reduce((a, b) => a + b, 0);
+            let totalSalesVal = Object.values(periodSales).reduce((a, b) => a + b, 0);
+            let totalTransVal = Object.values(periodTrans).reduce((a, b) => a + b, 0);
             let totalYestVal = Object.values(yesterdaySales).reduce((a, b) => a + b, 0);
             let totalLYVal = Object.values(lySales).reduce((a, b) => a + b, 0);
 
-            // Process Visitors
+            // Process Visitors (for selected date range)
             let totalVisitorsVal = 0;
             let branchVisitors = {};
             if (rawData.visitors) {
@@ -651,14 +913,14 @@
                     const date = row[0];
                     const storeId = row[1];
                     const count = row[2];
-                    if (date === todayStr && allowedBranches.includes(storeId)) {
+                    if (date >= fromDate && date <= toDate && allowedBranches.includes(storeId)) {
                         branchVisitors[storeId] = (branchVisitors[storeId] || 0) + count;
                         totalVisitorsVal += count;
                     }
                 });
             }
 
-            const branchesWithSales = Object.keys(todaySales).length;
+            const branchesWithSales = Object.keys(periodSales).length;
 
             // Update UI
             document.getElementById('totalSales').textContent = formatNumber(totalSalesVal);
@@ -693,16 +955,74 @@
             const branchListEl = document.getElementById('branchList');
 
             // Sort by sales descending
-            const sortedBranches = Object.entries(todaySales)
+            const sortedBranches = Object.entries(periodSales)
                 .sort((a, b) => b[1] - a[1]);
 
             if (sortedBranches.length === 0) {
-                branchListEl.innerHTML = '<div class="text-center text-muted py-4">لا توجد مبيعات حتى الآن اليوم</div>';
+                branchListEl.innerHTML = '<div class="text-center text-muted py-4">لا توجد مبيعات في الفترة المحددة</div>';
             } else {
+                // Build branch targets map
+                const branchTargets = {};
+                const targetDate = getCurrentMonthTargetDate();
+                if (rawData.targets) {
+                    rawData.targets.forEach(row => {
+                        const date = row[0];
+                        const sId = row[1];
+                        const amount = row[2] || 0;
+                        if (date === targetDate) {
+                            branchTargets[sId] = amount;
+                        }
+                    });
+                }
+
+                const daysInMonth = getDaysInCurrentMonth();
+                const currentDay = getCurrentDayOfMonth();
+
                 branchListEl.innerHTML = sortedBranches.map(([storeId, sales], index) => {
                     const storeName = rawData.stores[storeId] || storeId;
-                    const trans = todayTrans[storeId] || 0;
+                    const trans = periodTrans[storeId] || 0;
                     const rankClass = index < 3 ? `rank-${index + 1}` : '';
+
+                    // Calculate targets
+                    const monthlyTarget = branchTargets[storeId] || 0;
+                    const dailyTarget = monthlyTarget > 0 ? monthlyTarget / daysInMonth : 0;
+                    const mtdSales = getMonthToDateSales(storeId, allowedBranches);
+                    const expectedMtdTarget = dailyTarget * currentDay;
+
+                    // Calculate percentages
+                    const dailyPercent = dailyTarget > 0 ? Math.min((sales / dailyTarget) * 100, 100) : 0;
+                    const monthlyPercent = monthlyTarget > 0 ? Math.min((mtdSales / monthlyTarget) * 100, 100) : 0;
+
+                    // Determine color classes based on performance
+                    const dailyColorClass = dailyPercent >= 100 ? 'progress-bar-success' :
+                        dailyPercent < 50 ? 'progress-bar-danger' : 'progress-bar-daily';
+                    const monthlyColorClass = monthlyPercent >= 100 ? 'progress-bar-success' :
+                        mtdSales < expectedMtdTarget * 0.8 ? 'progress-bar-danger' : 'progress-bar-monthly';
+
+                    // Progress bars HTML
+                    const progressBarsHtml = monthlyTarget > 0 ? `
+                            <div class="target-progress-container">
+                                <div class="progress-row">
+                                    <div class="progress-label">
+                                        <span>📈 الهدف اليومي</span>
+                                        <span class="progress-value">${formatNumber(sales)} / ${formatNumber(dailyTarget)}</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar ${dailyColorClass}" style="width: ${dailyPercent}%"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-row">
+                                    <div class="progress-label">
+                                        <span>🎯 الهدف الشهري</span>
+                                        <span class="progress-value">${formatNumber(mtdSales)} / ${formatNumber(monthlyTarget)}</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar ${monthlyColorClass}" style="width: ${monthlyPercent}%"></div>
+                                    </div>
+                                    <div class="target-summary">تحقيق ${monthlyPercent.toFixed(1)}% من الهدف الشهري</div>
+                                </div>
+                            </div>
+                    ` : '';
 
                     return `
                         <div class="branch-card" id="branch-${storeId}">
@@ -725,7 +1045,7 @@
                                     </div>
                                     <span class="toggle-icon">▼</span>
                                 </div>
-                            </div>
+                            </div>${progressBarsHtml}
                             <div class="employee-list" id="emp-list-${storeId}">
                                 <div class="text-center py-3 text-muted">جار التحميل...</div>
                             </div>
