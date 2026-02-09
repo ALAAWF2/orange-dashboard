@@ -1614,10 +1614,15 @@
                         if (!itemMap[tid]) itemMap[tid] = {
                             id: tid,
                             name: c.top_item_name,
+                            alias: c.top_item_alias || '', // NEW
                             category: c.category,
                             qty: 0,
                             amount: 0
                         };
+
+                        // If alias was missing (from previous iteration), update it if found now
+                        if (!itemMap[tid].alias && c.top_item_alias) itemMap[tid].alias = c.top_item_alias;
+
                         itemMap[tid].qty += c.top_item_qty;
                         itemMap[tid].amount += c.top_item_amount;
                     }
@@ -1660,6 +1665,8 @@
                             <td class="text-center">
                                 <a href="#" onclick="openProductDetails('${item.id}', '${item.name}', '${item.category}', ${item.qty}, ${item.amount}); return false;" class="text-decoration-none fw-bold text-dark hover-primary">${item.name}</a>
                                 <small class="text-muted d-block">${item.id} ${alertBadge}</small>
+                                <!-- Hidden Alias for Search -->
+                                <span class="d-none">${item.alias}</span>
                             </td>
                             <td dir="ltr" class="text-center ${currentMetric === 'qty' ? 'fw-bold text-primary' : ''}">${item.qty}</td>
                             <td class="text-center ${currentMetric === 'val' ? 'fw-bold text-primary' : ''}">
