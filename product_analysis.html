@@ -813,7 +813,7 @@
             }
         }
 
-        function executeInquiry() {
+        async function executeInquiry() {
             const input = document.getElementById('inquiryInput').value.trim().toUpperCase();
             if (!input) return;
 
@@ -838,6 +838,19 @@
                     executeInquiry(); // Retry
                 });
                 return;
+            }
+
+            // Fetch Live Stock Data (Parallel)
+            // Ideally we load this with main data, but for now we do it here or assume loaded.
+            // Let's load it if not loaded.
+            if (!window.liveStockDataLoaded) {
+                try {
+                    const res = await fetch('stock_data.json?t=' + Date.now());
+                    if (res.ok) {
+                        window.liveStockData = await res.json();
+                    }
+                    window.liveStockDataLoaded = true;
+                } catch (e) { console.log("No live stock data"); window.liveStockDataLoaded = true; }
             }
 
             // Search Logic
@@ -917,8 +930,21 @@
                 // Sort branches logic - Merge Stock and Sales
                 const storeMap = {};
 
-                // Fill from Stock (Keys are Names)
-                if (found.branches) {
+                // PREPARE STOCK DATA
+                // If liveStockData exists, use it. Otherwise fallback to found.branches
+                let usedLiveStock = false;
+                if (window.liveStockData && window.liveStockData.stock && window.liveStockData.stock[found.code]) {
+                    const live = window.liveStockData.stock[found.code];
+                    // live is { store_id: qty }
+                    for (const [sid, qty] of Object.entries(live)) {
+                        let sName = sid;
+                        if (storeMeta && storeMeta[sid]) sName = storeMeta[sid].name_ar || storeMeta[sid].name || sid;
+                        storeMap[sName] = { stock: qty, sales: 0 };
+                    }
+                    usedLiveStock = true;
+                }
+
+                if (!usedLiveStock && found.branches) {
                     for (const [name, qty] of Object.entries(found.branches)) {
                         storeMap[name] = { stock: qty, sales: 0 };
                     }
