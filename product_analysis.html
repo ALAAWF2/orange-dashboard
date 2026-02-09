@@ -151,6 +151,11 @@
             </div>
             <div class="col-md-6 text-end">
                 <div class="d-flex justify-content-end align-items-center gap-2">
+                    <!-- New Inquiry Button -->
+                    <button class="btn btn-info fw-bold text-white shadow-sm" onclick="openInquiryModal()">
+                        🔍 استعلام منتج
+                    </button>
+
                     <a href="offers_analysis.html" class="btn btn-outline-primary fw-bold shadow-sm">🏷️ تحليل
                         العروض</a>
                     <button class="btn btn-danger fw-bold text-white shadow-sm" onclick="openPdfModal()">تصدير
@@ -616,6 +621,69 @@
         </div>
     </div>
 
+    <!-- Product Inquiry Modal (NEW) -->
+    <div class="modal fade" id="inquiryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold">🔍 استعلام سريع عن منتج</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <!-- Search Input -->
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white">رقم المنتج (جديد/قديم)</span>
+                        <input type="text" class="form-control" id="inquiryInput" placeholder="أدخل رقم المنتج..."
+                            onkeydown="if(event.key==='Enter') executeInquiry()">
+                        <button class="btn btn-primary fw-bold" onclick="executeInquiry()">بحث</button>
+                    </div>
+
+                    <!-- Result Area -->
+                    <div id="inquiryResult" class="d-none">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold text-primary mb-1" id="inqName">-</h5>
+                                <div class="d-flex gap-3 text-muted small mb-3">
+                                    <span>🆔 <span id="inqCode">-</span></span>
+                                    <span>🔖 <span id="inqAlias">-</span></span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h4 class="fw-bold text-success m-0" id="inqPrice">0</h4>
+                                    <small class="text-muted">ريال</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold mb-2">📦 توفر الكميات (Stock Availability):</h6>
+                        <div class="table-responsive bg-white rounded shadow-sm"
+                            style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>الفرع (Branch)</th>
+                                        <th class="text-center">الكمية (Qty)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inqStockBody">
+                                    <!-- JS Populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="inquiryError" class="alert alert-warning d-none mt-3">
+                        ❌ لم يتم العثور على منتج بهذا الرقم.
+                    </div>
+                    <div id="inquiryLoading" class="text-center py-4 d-none">
+                        <div class="spinner-border text-info" role="status"></div>
+                        <div class="mt-2 text-muted">جاري البحث في قاعدة البيانات...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Category Items Modal (NEW) -->
     <div class="modal fade" id="categoryItemsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -669,6 +737,119 @@
         let catalogModalObj = null;
         let missedDetailsModalObj = null;
         let categoryItemsModalObj = null;
+        let inquiryModalObj = null; // New
+
+        // Cache for inquiry
+        let inqCatalog = []; // Will hold the products.json data
+
+        function openInquiryModal() {
+            if (!inquiryModalObj) inquiryModalObj = new bootstrap.Modal(document.getElementById('inquiryModal'));
+            inquiryModalObj.show();
+
+            // Focus input
+            setTimeout(() => document.getElementById('inquiryInput').focus(), 500);
+
+            // Load data if not loaded
+            if (inqCatalog.length === 0) {
+                loadInquiryData();
+            }
+        }
+
+        async function loadInquiryData() {
+            const loading = document.getElementById('inquiryLoading');
+            // Show loading inside modal isn't great if it's not open, but usually called when open.
+            // Better: just fetch silently unless active search.
+            try {
+                const res = await fetch('products.json?t=' + Date.now());
+                if (res.ok) {
+                    inqCatalog = await res.json();
+                    console.log("Inquiry Catalog Loaded:", inqCatalog.length, "items");
+                } else {
+                    console.error("Failed to load products.json");
+                }
+            } catch (e) {
+                console.error("Error loading products.json", e);
+            }
+        }
+
+        function executeInquiry() {
+            const input = document.getElementById('inquiryInput').value.trim().toUpperCase();
+            if (!input) return;
+
+            const resDiv = document.getElementById('inquiryResult');
+            const errDiv = document.getElementById('inquiryError');
+            const loadDiv = document.getElementById('inquiryLoading');
+            const stockBody = document.getElementById('inqStockBody');
+
+            // Reset UI
+            resDiv.classList.add('d-none');
+            errDiv.classList.add('d-none');
+
+            if (inqCatalog.length === 0) {
+                loadDiv.classList.remove('d-none');
+                // Wait for load
+                loadInquiryData().then(() => {
+                    loadDiv.classList.add('d-none');
+                    executeInquiry(); // Retry
+                });
+                return;
+            }
+
+            // Search Logic
+            // 1. By Code (Item Number)
+            // 2. By Alias (Old Item)
+
+            const found = inqCatalog.find(p =>
+                String(p.code).toUpperCase() === input ||
+                String(p.alias).toUpperCase() === input
+            );
+
+            if (found) {
+                // Populate Logic
+                document.getElementById('inqName').textContent = found.name;
+                document.getElementById('inqCode').textContent = found.code;
+                document.getElementById('inqAlias').textContent = found.alias || '-';
+                // Add commas to price
+                document.getElementById('inqPrice').textContent = (found.price || 0).toLocaleString();
+
+                // Sort branches by Qty Desc
+                // branches object: { "StoreName": qty, ... }
+                const entries = Object.entries(found.branches || {});
+                entries.sort((a, b) => b[1] - a[1]);
+
+                stockBody.innerHTML = '';
+                let totalStock = 0;
+
+                entries.forEach(([store, qty]) => {
+                    if (qty !== 0) { // Show negatives? Yes, might be useful.
+                        totalStock += qty;
+                        const tr = document.createElement('tr');
+                        // Colorize stock
+                        const colorClass = qty > 0 ? 'text-success fw-bold' : 'text-danger';
+
+                        tr.innerHTML = `
+                            <td>${store}</td>
+                            <td class="text-center ${colorClass}">${qty}</td>
+                        `;
+                        stockBody.appendChild(tr);
+                    }
+                });
+
+                // Add Total Row
+                const totalRow = document.createElement('tr');
+                totalRow.classList.add('table-secondary', 'fw-bold');
+                totalRow.innerHTML = `
+                    <td>المجموع (Total)</td>
+                    <td class="text-center">${totalStock}</td>
+                `;
+                stockBody.appendChild(totalRow);
+
+                resDiv.classList.remove('d-none');
+
+            } else {
+                errDiv.classList.remove('d-none');
+            }
+        }
 
         // Filter Scope
         let activeRegion = 'all';
