@@ -685,6 +685,7 @@
                                 <thead class="table-light sticky-top">
                                     <tr>
                                         <th>الفرع (Branch)</th>
+                                        <th class="text-center">المبيعات (Sales)</th>
                                         <th class="text-center">الكمية (Qty)</th>
                                     </tr>
                                 </thead>
@@ -848,6 +849,8 @@
 
                 // Calculate Sales Qty based on currentMode
                 let totalSales = 0;
+                let salesByStore = {}; // store_id -> qty
+
                 let periodNames = {
                     'mtd': 'من بداية الشهر',
                     'yest': 'أمس',
@@ -880,10 +883,20 @@
                         const dDate = new Date(d.date);
                         dDate.setHours(0, 0, 0, 0);
 
+                        let isMatch = false;
                         if (currentMode === 'yest') {
-                            if (dDate.getTime() === startDate.getTime()) totalSales += d.qty;
+                            if (dDate.getTime() === startDate.getTime()) isMatch = true;
                         } else {
-                            if (dDate >= startDate) totalSales += d.qty;
+                            if (dDate >= startDate) isMatch = true;
+                        }
+
+                        if (isMatch) {
+                            totalSales += d.qty;
+                            // Aggregate per store
+                            if (d.store) {
+                                if (!salesByStore[d.store]) salesByStore[d.store] = 0;
+                                salesByStore[d.store] += d.qty;
+                            }
                         }
                     });
                 }
@@ -892,12 +905,59 @@
                 const badge = document.getElementById('inqPeriodBadge');
                 if (badge) badge.textContent = periodNames[currentMode] || currentMode;
 
-                // Sort branches by Qty Desc
-                const entries = Object.entries(found.branches || {});
-                entries.sort((a, b) => b[1] - a[1]);
+                // Sort branches logic - Merge Stock and Sales
+                const storeMap = {};
+
+                // Fill from Stock (Keys are Names)
+                if (found.branches) {
+                    for (const [name, qty] of Object.entries(found.branches)) {
+                        storeMap[name] = { stock: qty, sales: 0 };
+                    }
+                }
+
+                // Fill from Sales (Keys are IDs) - Try to map ID to Name
+                for (const [sid, qty] of Object.entries(salesByStore)) {
+                    let sName = sid;
+                    // Try to find name from storeMeta
+                    if (storeMeta && storeMeta[sid]) {
+                        sName = storeMeta[sid].name_ar || storeMeta[sid].name || sid;
+                    }
+
+                    // Add to map (normalize name if possible, but matching exact string key is safer)
+                    // If sName exists in storeMap, use it. If not, add new.
+                    // Note: products.json uses consistent names hopefully.
+                    // If mismatch, we might have duplicate rows (one with stock, one with sales).
+                    // We try to match known names.
+
+                    let matchedKey = null;
+                    if (storeMap[sName]) matchedKey = sName;
+                    else {
+                        // fuzzy check? No, risky. 
+                        // If products.json has "Jeddah Store" and meta has "Jeddah Store", it matches.
+                    }
+
+                    if (matchedKey) {
+                        storeMap[matchedKey].sales += qty;
+                    } else {
+                        storeMap[sName] = { stock: 0, sales: qty };
+                    }
+                }
+
+                const finalEntries = Object.entries(storeMap).map(([name, data]) => ({
+                    name,
+                    stock: data.stock,
+                    sales: data.sales
+                }));
+
+                // Sort by Sales desc, then Stock desc
+                finalEntries.sort((a, b) => {
+                    if (b.sales !== a.sales) return b.sales - a.sales;
+                    return b.stock - a.stock;
+                });
 
                 stockBody.innerHTML = '';
                 let totalStock = 0;
+                let displayedSalesTotal = 0;
 
                 // Store for Export
                 window.currentInquiryData = {
@@ -907,16 +967,24 @@
                     price: found.price,
                     sales_period: periodNames[currentMode] || currentMode,
                     sales_qty: totalSales,
-                    stock: entries,
+                    stock: finalEntries.map(e => [e.name, e.stock, e.sales]),
                     total_stock: 0
                 };
 
-                entries.forEach(([store, qty]) => {
-                    if (qty !== 0) {
-                        totalStock += qty;
+                finalEntries.forEach(item => {
+                    if (item.stock !== 0 || item.sales !== 0) {
+                        totalStock += item.stock;
+                        displayedSalesTotal += item.sales;
+
                         const tr = document.createElement('tr');
-                        const colorClass = qty > 0 ? 'text-success fw-bold' : 'text-danger';
-                        tr.innerHTML = `<td>${store}</td><td class="text-center ${colorClass}">${qty}</td>`;
+                        const stockClass = item.stock > 0 ? 'text-success fw-bold' : 'text-danger';
+                        const salesClass = item.sales > 0 ? 'text-primary fw-bold' : 'text-muted';
+
+                        tr.innerHTML = `
+                            <td>${item.name}</td>
+                            <td class="text-center ${salesClass}">${item.sales}</td>
+                            <td class="text-center ${stockClass}">${item.stock}</td>
+                        `;
                         stockBody.appendChild(tr);
                     }
                 });
@@ -925,7 +993,11 @@
                 window.currentInquiryData.total_stock = totalStock;
                 const totalRow = document.createElement('tr');
                 totalRow.classList.add('table-secondary', 'fw-bold');
-                totalRow.innerHTML = `<td>المجموع (Total)</td><td class="text-center">${totalStock}</td>`;
+                totalRow.innerHTML = `
+                    <td>المجموع (Total)</td>
+                    <td class="text-center">${displayedSalesTotal}</td>
+                    <td class="text-center">${totalStock}</td>
+                `;
                 stockBody.appendChild(totalRow);
 
                 resDiv.classList.remove('d-none');
@@ -2015,6 +2087,7 @@
             // 3. Render KPIs
             if (history.length === 0) {
                 document.getElementById('pmBestDay').textContent = '-';
+                // ... (reset others)
                 document.getElementById('pmBestDayVal').textContent = '-';
                 document.getElementById('pmWorstDay').textContent = '-';
                 document.getElementById('pmWorstDayVal').textContent = '-';
@@ -2023,14 +2096,25 @@
                 renderTrendUI('STABLE', [], 'لا توجد بيانات');
                 renderProductChart([]);
             } else {
+                // AGGREGATE HISTORY BY DATE (Because backend now returns detailed store history)
+                const aggMap = {};
+                history.forEach(h => {
+                    const d = h.date;
+                    if (!aggMap[d]) aggMap[d] = { date: d, qty: 0, amount: 0 };
+                    aggMap[d].qty += h.qty;
+                    aggMap[d].amount += h.amount;
+                });
+                // Convert back to array
+                const aggHistory = Object.values(aggMap);
+
                 // Sort by Date for Chart/Trend
-                history.sort((a, b) => new Date(a.date) - new Date(b.date));
+                aggHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 // Sort by Value for Best/Worst
-                const sortedByVal = [...history].sort((a, b) => b.amount - a.amount);
+                const sortedByVal = [...aggHistory].sort((a, b) => b.amount - a.amount);
                 const best = sortedByVal[0];
                 const worst = sortedByVal[sortedByVal.length - 1];
-                const zeroDays = history.filter(d => d.amount === 0).length;
+                const zeroDays = aggHistory.filter(d => d.amount === 0).length;
 
                 document.getElementById('pmBestDay').textContent = best.date;
                 document.getElementById('pmBestDayVal').textContent = Math.round(best.amount).toLocaleString() + ' SR';
@@ -2041,12 +2125,12 @@
                 document.getElementById('pmZeroDays').textContent = zeroDays + ' يوم';
 
                 // Trend Analysis
-                const trendInfo = calculateRealTrend(history);
-                const alerts = detectAlerts(history);
+                const trendInfo = calculateRealTrend(aggHistory);
+                const alerts = detectAlerts(aggHistory);
                 renderTrendUI(trendInfo.direction, alerts, trendInfo.reason);
 
                 // Render Chart
-                renderProductChart(history);
+                renderProductChart(aggHistory);
             }
 
             // 4. Related Products (Market Basket)
