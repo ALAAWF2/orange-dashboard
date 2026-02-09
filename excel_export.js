@@ -267,16 +267,26 @@ async function exportEmployeeSales(startDate, endDate) {
                 // Resolve Name & ID
                 let name = empId;
                 let employeeNumber = empId;
+                const salesGroupMap = empData.sales_group_map || {};
 
                 if (empNames[empId]) {
                     name = empNames[empId];
-                    // empId is the key, so it's the ID
-                    employeeNumber = empId;
+                    // Check if we have a sales group mapping (e.g. 0051 instead of 227)
+                    if (salesGroupMap[empId]) {
+                        employeeNumber = salesGroupMap[empId];
+                    } else {
+                        employeeNumber = empId;
+                    }
                 } else if (empId && empId.includes('-')) {
                     // Fallback parse if format is "ID - Name"
                     let parts = empId.split('-');
                     employeeNumber = parts[0].trim();
                     name = parts.slice(1).join('-').trim();
+
+                    // Try to map extracted ID
+                    if (salesGroupMap[employeeNumber]) {
+                        employeeNumber = salesGroupMap[employeeNumber];
+                    }
                 }
 
                 // Resolve Target
