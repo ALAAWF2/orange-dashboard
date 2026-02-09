@@ -165,7 +165,8 @@
                     <div class="input-group" style="width: 250px;">
                         <span class="input-group-text bg-white border-end-0">🔍</span>
                         <input type="text" class="form-control border-start-0" id="productSearchInput"
-                            placeholder="بحث عن منتج..." onkeyup="handleSearch()">
+                            placeholder="بحث عن منتج... (اضغط Enter للبحث الشامل)" onkeyup="handleSearch()"
+                            onkeydown="if(event.key==='Enter') openInquiryModalWithQuery(this.value)">
                     </div>
                     <!-- Date Label (Restored) -->
                     <h5 class="section-title mb-0 border-0 ms-2" id="currentPeriodLabel">...</h5>
@@ -639,18 +640,40 @@
                         <button class="btn btn-primary fw-bold" onclick="executeInquiry()">بحث</button>
                     </div>
 
+
                     <!-- Result Area -->
                     <div id="inquiryResult" class="d-none">
                         <div class="card border-0 shadow-sm mb-3">
                             <div class="card-body">
-                                <h5 class="card-title fw-bold text-primary mb-1" id="inqName">-</h5>
-                                <div class="d-flex gap-3 text-muted small mb-3">
-                                    <span>🆔 <span id="inqCode">-</span></span>
-                                    <span>🔖 <span id="inqAlias">-</span></span>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="card-title fw-bold text-primary mb-1" id="inqName">-</h5>
+                                        <div class="d-flex gap-3 text-muted small mb-3">
+                                            <span>🆔 <span id="inqCode">-</span></span>
+                                            <span>🔖 <span id="inqAlias">-</span></span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm btn-success" onclick="exportInquiryToExcel()">
+                                        📊 تصدير (Excel)
+                                    </button>
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <h4 class="fw-bold text-success m-0" id="inqPrice">0</h4>
-                                    <small class="text-muted">ريال</small>
+
+                                <div class="row g-3 border-top pt-2">
+                                    <div class="col-6">
+                                        <label class="small text-muted mb-1">السعر (Price)</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h4 class="fw-bold text-success m-0" id="inqPrice">0</h4>
+                                            <small class="text-muted">ريال</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small text-muted mb-1">المبيعات (Sales) <span id="inqPeriodBadge"
+                                                class="badge bg-secondary ms-1">MTD</span></label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h4 class="fw-bold text-primary m-0" id="inqSalesQty">0</h4>
+                                            <small class="text-muted">طقم/قطعة</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -708,7 +731,8 @@
                         </thead>
                         <tbody id="catItemsBody"></tbody>
                     </table>
-                    <div id="catItemsNoData" class="text-center text-muted p-4 d-none">لا توجد بيانات لهذا التصنيف</div>
+                    <div id="catItemsNoData" class="text-center text-muted p-4 d-none">لا توجد بيانات لهذا التصنيف
+                    </div>
                 </div>
             </div>
         </div>
@@ -752,6 +776,17 @@
             // Load data if not loaded
             if (inqCatalog.length === 0) {
                 loadInquiryData();
+            }
+        }
+
+        function openInquiryModalWithQuery(query) {
+            openInquiryModal();
+            if (query) {
+                setTimeout(() => {
+                    const input = document.getElementById('inquiryInput');
+                    input.value = query;
+                    executeInquiry();
+                }, 600);
             }
         }
 
@@ -809,39 +844,88 @@
                 document.getElementById('inqName').textContent = found.name;
                 document.getElementById('inqCode').textContent = found.code;
                 document.getElementById('inqAlias').textContent = found.alias || '-';
-                // Add commas to price
                 document.getElementById('inqPrice').textContent = (found.price || 0).toLocaleString();
 
+                // Calculate Sales Qty based on currentMode
+                let totalSales = 0;
+                let periodNames = {
+                    'mtd': 'من بداية الشهر',
+                    'yest': 'أمس',
+                    '7d': '7 أيام',
+                    '14d': '14 يوم',
+                    '30d': '30 يوم'
+                };
+
+                const history = (rawData.product_daily_history && rawData.product_daily_history[found.code]) || [];
+
+                if (history.length > 0) {
+                    let startDate = new Date();
+                    startDate.setHours(0, 0, 0, 0);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    if (currentMode === 'mtd') {
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    } else if (currentMode === '7d') {
+                        startDate.setDate(today.getDate() - 7);
+                    } else if (currentMode === '14d') {
+                        startDate.setDate(today.getDate() - 14);
+                    } else if (currentMode === '30d') {
+                        startDate.setDate(today.getDate() - 30);
+                    } else if (currentMode === 'yest') {
+                        startDate.setDate(today.getDate() - 1);
+                    }
+
+                    history.forEach(d => {
+                        const dDate = new Date(d.date);
+                        dDate.setHours(0, 0, 0, 0);
+
+                        if (currentMode === 'yest') {
+                            if (dDate.getTime() === startDate.getTime()) totalSales += d.qty;
+                        } else {
+                            if (dDate >= startDate) totalSales += d.qty;
+                        }
+                    });
+                }
+
+                document.getElementById('inqSalesQty').textContent = totalSales;
+                const badge = document.getElementById('inqPeriodBadge');
+                if (badge) badge.textContent = periodNames[currentMode] || currentMode;
+
                 // Sort branches by Qty Desc
-                // branches object: { "StoreName": qty, ... }
                 const entries = Object.entries(found.branches || {});
                 entries.sort((a, b) => b[1] - a[1]);
 
                 stockBody.innerHTML = '';
                 let totalStock = 0;
 
+                // Store for Export
+                window.currentInquiryData = {
+                    name: found.name,
+                    code: found.code,
+                    alias: found.alias || '',
+                    price: found.price,
+                    sales_period: periodNames[currentMode] || currentMode,
+                    sales_qty: totalSales,
+                    stock: entries,
+                    total_stock: 0
+                };
+
                 entries.forEach(([store, qty]) => {
-                    if (qty !== 0) { // Show negatives? Yes, might be useful.
+                    if (qty !== 0) {
                         totalStock += qty;
                         const tr = document.createElement('tr');
-                        // Colorize stock
                         const colorClass = qty > 0 ? 'text-success fw-bold' : 'text-danger';
-
-                        tr.innerHTML = `
-                            <td>${store}</td>
-                            <td class="text-center ${colorClass}">${qty}</td>
-                        `;
+                        tr.innerHTML = `<td>${store}</td><td class="text-center ${colorClass}">${qty}</td>`;
                         stockBody.appendChild(tr);
                     }
                 });
 
                 // Add Total Row
+                window.currentInquiryData.total_stock = totalStock;
                 const totalRow = document.createElement('tr');
                 totalRow.classList.add('table-secondary', 'fw-bold');
-                totalRow.innerHTML = `
-                    <td>المجموع (Total)</td>
-                    <td class="text-center">${totalStock}</td>
-                `;
+                totalRow.innerHTML = `<td>المجموع (Total)</td><td class="text-center">${totalStock}</td>`;
                 stockBody.appendChild(totalRow);
 
                 resDiv.classList.remove('d-none');
@@ -849,6 +933,35 @@
             } else {
                 errDiv.classList.remove('d-none');
             }
+        }
+
+        function exportInquiryToExcel() {
+            if (!window.currentInquiryData) return;
+            const data = window.currentInquiryData;
+
+            // csv content with BOM
+            let csv = '\uFEFF';
+            csv += `Product Name,${data.name.replace(/,/g, ' ')}\n`;
+            csv += `Product Code,${data.code}\n`;
+            csv += `Alias,${data.alias}\n`;
+            csv += `Price,${data.price}\n`;
+            csv += `Sales Qty (${data.sales_period}),${data.sales_qty}\n\n`;
+
+            csv += `Branch,Stock Qty\n`;
+
+            data.stock.forEach(([store, qty]) => {
+                csv += `${store.replace(/,/g, ' ')},${qty}\n`;
+            });
+            csv += `TOTAL,${data.total_stock}\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Product_${data.code}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Filter Scope
