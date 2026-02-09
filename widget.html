@@ -532,6 +532,17 @@
                     <button class="date-range-btn" onclick="applyDateRange()">🔍 عرض</button>
                     <button class="date-range-btn reset-btn" onclick="resetToToday()">↻ اليوم</button>
                 </div>
+                <div class="date-range-row mt-2">
+                    <div class="date-input-group">
+                        <label for="sortSelect">ترتيب:</label>
+                        <select id="sortSelect" class="form-select form-select-sm" onchange="renderWidget()"
+                            style="width: auto;">
+                            <option value="sales">📊 أعلى مبيعات</option>
+                            <option value="daily">📈 أعلى تحقيق يومي</option>
+                            <option value="monthly">🎯 أعلى تحقيق شهري</option>
+                        </select>
+                    </div>
+                </div>
                 <div id="periodLabel" class="period-label" style="display: none;"></div>
             </div>
 
@@ -978,28 +989,57 @@
                 const daysInMonth = getDaysInCurrentMonth();
                 const currentDay = getCurrentDayOfMonth();
 
-                branchListEl.innerHTML = sortedBranches.map(([storeId, sales], index) => {
-                    const storeName = rawData.stores[storeId] || storeId;
-                    const trans = periodTrans[storeId] || 0;
-                    const rankClass = index < 3 ? `rank-${index + 1}` : '';
-
-                    // Calculate targets
+                // Calculate targets for all branches first (for sorting)
+                const branchData = sortedBranches.map(([storeId, sales]) => {
                     const monthlyTarget = branchTargets[storeId] || 0;
                     const mtdSales = getMonthToDateSales(storeId, allowedBranches);
 
-                    // Dynamic daily target: (Remaining Target) / (Remaining Days)
+                    // Dynamic daily target
                     const remainingTarget = Math.max(0, monthlyTarget - mtdSales);
-                    const remainingDays = Math.max(1, daysInMonth - currentDay + 1); // +1 includes today
+                    const remainingDays = Math.max(1, daysInMonth - currentDay + 1);
                     const dynamicDailyTarget = remainingTarget / remainingDays;
+
+                    // Percentages
+                    const dailyPercent = dynamicDailyTarget > 0 ? (sales / dynamicDailyTarget) * 100 : 0;
+                    const monthlyPercent = monthlyTarget > 0 ? (mtdSales / monthlyTarget) * 100 : 0;
+
+                    return {
+                        storeId,
+                        sales,
+                        trans: periodTrans[storeId] || 0,
+                        monthlyTarget,
+                        mtdSales,
+                        dynamicDailyTarget,
+                        remainingDays,
+                        dailyPercent,
+                        monthlyPercent
+                    };
+                });
+
+                // Sort based on selected option
+                const sortOption = document.getElementById('sortSelect').value;
+                branchData.sort((a, b) => {
+                    if (sortOption === 'daily') {
+                        return b.dailyPercent - a.dailyPercent;
+                    } else if (sortOption === 'monthly') {
+                        return b.monthlyPercent - a.monthlyPercent;
+                    } else { // sales (default)
+                        return b.sales - a.sales;
+                    }
+                });
+
+                branchListEl.innerHTML = branchData.map((data, index) => {
+                    const { storeId, sales, trans, monthlyTarget, mtdSales, dynamicDailyTarget, remainingDays, dailyPercent, monthlyPercent } = data;
+                    const storeName = rawData.stores[storeId] || storeId;
+                    const rankClass = index < 3 ? `rank-${index + 1}` : '';
 
                     // For comparison purposes
                     const expectedMtdTarget = (monthlyTarget / daysInMonth) * currentDay;
 
-                    // Calculate percentages
-                    const dailyPercent = dynamicDailyTarget > 0 ? Math.min((sales / dynamicDailyTarget) * 100, 100) : 0;
-                    const monthlyPercent = monthlyTarget > 0 ? Math.min((mtdSales / monthlyTarget) * 100, 100) : 0;
+                    // Determine color classes based on performance (cap at 100 for display)
+                    const dailyPercentCapped = Math.min(dailyPercent, 100);
+                    const monthlyPercentCapped = Math.min(monthlyPercent, 100);
 
-                    // Determine color classes based on performance
                     const dailyColorClass = dailyPercent >= 100 ? 'progress-bar-success' :
                         dailyPercent < 50 ? 'progress-bar-danger' : 'progress-bar-daily';
                     const monthlyColorClass = monthlyPercent >= 100 ? 'progress-bar-success' :
@@ -1014,7 +1054,7 @@
                                         <span class="progress-value">${formatNumber(sales)} / ${formatNumber(dynamicDailyTarget)}</span>
                                     </div>
                                     <div class="progress">
-                                        <div class="progress-bar ${dailyColorClass}" style="width: ${dailyPercent}%"></div>
+                                        <div class="progress-bar ${dailyColorClass}" style="width: ${dailyPercentCapped}%"></div>
                                     </div>
                                 </div>
                                 <div class="progress-row">
@@ -1023,7 +1063,7 @@
                                         <span class="progress-value">${formatNumber(mtdSales)} / ${formatNumber(monthlyTarget)}</span>
                                     </div>
                                     <div class="progress">
-                                        <div class="progress-bar ${monthlyColorClass}" style="width: ${monthlyPercent}%"></div>
+                                        <div class="progress-bar ${monthlyColorClass}" style="width: ${monthlyPercentCapped}%"></div>
                                     </div>
                                     <div class="target-summary">تحقيق ${monthlyPercent.toFixed(1)}% من الهدف الشهري</div>
                                 </div>
