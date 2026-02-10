@@ -2536,15 +2536,61 @@
 
             if (categories.length === 0) {
                 if (filter === '') container.innerHTML = '<div class="text-center text-muted p-4">لا توجد بيانات فهرس متاحة في هذه الفترة.</div>';
-                // If filter is active but no cats, logic below handles it
             }
 
             let hasMatches = false;
             filter = filter.toLowerCase();
 
             categories.forEach((cat, index) => {
-                const items = catalog[cat];
-                const filteredItems = items.filter(item => {
+                const rawItems = catalog[cat];
+                const processedItems = [];
+
+                // 1. Process Items based on Active Filters (Store/Region)
+                rawItems.forEach(item => {
+                    let displayQty = 0;
+                    let displayAmt = 0;
+                    let includeItem = false;
+
+                    if (activeStore === 'all' && activeRegion === 'all') {
+                        // Global View (Default)
+                        displayQty = item.qty;
+                        displayAmt = item.amount;
+                        includeItem = true;
+                    } else if (activeStore !== 'all') {
+                        // Specific Store View
+                        if (item.stores && item.stores[activeStore]) {
+                            const sData = item.stores[activeStore];
+                            displayQty = sData.q;
+                            displayAmt = sData.a;
+                            if (displayQty > 0 || displayAmt > 0) includeItem = true;
+                        }
+                    } else if (activeRegion !== 'all') {
+                        // Region View (Aggregate stores in region)
+                        if (item.stores) {
+                            Object.keys(item.stores).forEach(sid => {
+                                const m = storeMeta[sid];
+                                if (m && m.region === activeRegion) {
+                                    const sData = item.stores[sid];
+                                    displayQty += sData.q;
+                                    displayAmt += sData.a;
+                                }
+                            });
+                            if (displayQty > 0 || displayAmt > 0) includeItem = true;
+                        }
+                    }
+
+                    if (includeItem) {
+                        // Clone item with updated display values
+                        processedItems.push({
+                            ...item,
+                            qty: displayQty,
+                            amount: displayAmt
+                        });
+                    }
+                });
+
+                // 2. Apply Search Filter
+                const filteredItems = processedItems.filter(item => {
                     return filter === '' ||
                         item.name.toLowerCase().includes(filter) ||
                         item.id.includes(filter) ||
@@ -2552,10 +2598,15 @@
                 });
 
                 const isCatMatch = cat.toLowerCase().includes(filter);
-                const showItems = isCatMatch ? items : filteredItems;
+                const showItems = isCatMatch ? processedItems : filteredItems;
+
                 if (showItems.length === 0) return;
 
                 hasMatches = true;
+
+                // Sort by Amount Descending
+                showItems.sort((a, b) => b.amount - a.amount);
+
                 const headerId = `heading${index}`;
                 const collapseId = `collapse${index}`;
                 const isExpanded = filter !== '';
