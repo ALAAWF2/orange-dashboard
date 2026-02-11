@@ -523,6 +523,8 @@
             <div class="modal-content">
                 <div class="modal-header bg-light">
                     <h5 class="modal-title fw-bold" id="modalTitle">تفاصيل المبيعات</h5>
+                    <button class="btn btn-success btn-sm fw-bold ms-3" onclick="exportStoreDetailsToExcel()">📊 تصدير
+                        Excel</button>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -842,6 +844,8 @@
                         <h5 class="modal-title fw-bold" id="catItemsTitle">منتجات التصنيف</h5>
                         <small id="catItemsSubtitle" class="opacity-75">الفرع - الفترة</small>
                     </div>
+                    <button class="btn btn-success btn-sm fw-bold ms-3" onclick="exportCategoryItemsToExcel()">📊 تصدير
+                        Excel</button>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
                 </div>
@@ -851,6 +855,7 @@
                             <tr>
                                 <th class="text-center">#</th>
                                 <th>المنتج (Product)</th>
+                                <th class="text-center">السعر (Price)</th>
                                 <th class="text-center">الكمية (Qty)</th>
                                 <th class="text-center">المبيعات (Amount)</th>
                             </tr>
@@ -2128,13 +2133,20 @@
             detailsModalObj.show();
         }
 
-        function showCategoryItems(categoryName, storeId) {
+        async function showCategoryItems(categoryName, storeId) {
+            // Ensure catalog is loaded for prices
+            if (inqCatalog.length === 0) {
+                // Show loading indicator in modal body while fetching?
+                // Or just await.
+                await loadInquiryData();
+            }
+
             // Get catalog data for current period
             const pData = rawData.periods ? rawData.periods[currentMode] : null;
-            const catalog = pData ? (pData.catalog || {}) : {};
+            const periodCatalog = pData ? (pData.catalog || {}) : {};
 
             // Get items for this category
-            const rawItems = catalog[categoryName] || [];
+            const rawItems = periodCatalog[categoryName] || [];
             let items = [];
 
             if (activeStore === 'all') {
@@ -2196,7 +2208,19 @@
                 // Sort by amount descending
                 items.sort((a, b) => b.amount - a.amount);
 
+                // Store for Export
+                window.currentCategoryItems = {
+                    category: categoryName,
+                    store: storeName,
+                    period: periodNames[currentMode] || currentMode,
+                    items: items
+                };
+
                 items.forEach((item, i) => {
+                    // Find Price
+                    const prodInfo = inqCatalog.find(p => String(p.code) === String(item.id));
+                    const price = prodInfo ? (prodInfo.price || 0) : 0;
+
                     let row = `
                         <tr onclick="closeCategoryItemsAndOpenProduct('${item.id}', '${item.name.replace(/'/g, "\\'")}', '${categoryName}', ${item.qty}, ${item.amount})" style="cursor: pointer;">
                             <td class="text-center">${i + 1}</td>
@@ -2204,6 +2228,7 @@
                                 <span class="fw-bold text-dark">${item.name}</span>
                                 <small class="text-muted d-block">${item.id}</small>
                             </td>
+                            <td class="text-center fw-bold text-primary">${price.toLocaleString()}</td>
                             <td class="text-center">${item.qty}</td>
                             <td class="text-center fw-bold text-success">${Math.round(item.amount).toLocaleString()}</td>
                         </tr>
@@ -2222,6 +2247,62 @@
             setTimeout(() => {
                 openProductDetails(id, name, cat, qty, amt);
             }, 150);
+        }
+
+        // Export Functions
+        function exportStoreDetailsToExcel() {
+            if (!currentOpenStoreId || !currentData[currentOpenStoreId]) return;
+            const storeId = currentOpenStoreId;
+            const storeData = currentData[storeId];
+            const meta = storeMeta[storeId] || {};
+            const storeName = meta.name_ar || meta.name || storeId;
+
+            let csv = '\uFEFF';
+            csv += `Store Sales Details\n`;
+            csv += `Store: ${storeName}\n`;
+            csv += `Report Date: ${new Date().toLocaleDateString()}\n\n`;
+
+            csv += `Category,Top Product,Top Product ID,Qty,Amount\n`;
+
+            storeData.categories.forEach(cat => {
+                csv += `${cat.category},${cat.top_item_name.replace(/,/g, ' ')},${cat.top_item_id},${cat.qty},${cat.amount}\n`;
+            });
+
+            downloadCSV(csv, `Store_Details_${storeName}.csv`);
+        }
+
+        function exportCategoryItemsToExcel() {
+            if (!window.currentCategoryItems) return;
+            const data = window.currentCategoryItems;
+
+            let csv = '\uFEFF';
+            csv += `Category Items Report\n`;
+            csv += `Category: ${data.category}\n`;
+            csv += `Store: ${data.store}\n`;
+            csv += `Period: ${data.period}\n\n`;
+
+            csv += `Rank,Product Name,Product ID,Price,Qty,Amount\n`;
+
+            data.items.forEach((item, i) => {
+                // Find Price (Redundant look up but safer than storing in DOM)
+                const prodInfo = inqCatalog.find(p => String(p.code) === String(item.id));
+                const price = prodInfo ? (prodInfo.price || 0) : 0;
+
+                csv += `${i + 1},${item.name.replace(/,/g, ' ')},${item.id},${price},${item.qty},${item.amount}\n`;
+            });
+
+            downloadCSV(csv, `Category_Items_${data.category}_${data.store}.csv`);
+        }
+
+        function downloadCSV(content, fileName) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // ==========================================
