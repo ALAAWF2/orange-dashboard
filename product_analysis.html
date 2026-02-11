@@ -294,56 +294,163 @@
             </div>
         </div>
 
-        <!-- Summary Section -->
-        <h5 class="section-title">ملخص أداء الفئات والمنتجات (Category & Product Performance)</h5>
-        <div class="row mb-4">
-            <!-- Top Products per Category -->
-            <div class="col-md-6">
-                <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
-                    <h6 class="text-muted fw-bold mb-3">
-                        المنتج الأكثر مبيعاً حسب الفئة (<span id="topCatLabel">الشهر الحالي</span>)
-                    </h6>
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs mb-4" id="analysisTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="overview-tab" data-bs-toggle="tab"
+                    data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">📊
+                    نظرة عامة (Overview)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="stores-tab" data-bs-toggle="tab" data-bs-target="#stores"
+                    type="button" role="tab" aria-controls="stores" aria-selected="false">🏪 تحليل الفروع (Store
+                    Performance)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights"
+                    type="button" role="tab" aria-controls="insights" aria-selected="false">💡 تحليل متقدم (Advanced
+                    Analysis)</button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="analysisTabsContent">
+
+            <!-- Tab 1: Overview -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+
+
+                <!-- Summary Section -->
+                <h5 class="section-title">ملخص أداء الفئات والمنتجات (Category & Product Performance)</h5>
+                <div class="row mb-4">
+                    <!-- Top Products per Category -->
+                    <div class="col-md-6">
+                        <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
+                            <h6 class="text-muted fw-bold mb-3">
+                                المنتج الأكثر مبيعاً حسب الفئة (<span id="topCatLabel">الشهر الحالي</span>)
+                            </h6>
+                            <table class="table table-sm align-middle table-hover">
+                                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                                    <tr>
+                                        <th>التصنيف</th>
+                                        <th>رقم المنتج (Item ID)</th>
+                                        <th onclick="setSort('topProd', 'qty')" style="cursor: pointer;">الكمية ↕</th>
+                                        <th onclick="setSort('topProd', 'val')" style="cursor: pointer;">القيمة ↕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topProductsBody">
+                                    <!-- JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Top Categories List (Existing) -->
+                    <div class="col-md-6">
+                        <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
+                            <h6 class="text-muted fw-bold mb-3">أداء الفئات (Category Performance) - <span
+                                    id="topCatLabel"></span></h6>
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>التصنيف</th>
+                                        <th onclick="setSort('catPerf', 'qty')" style="cursor: pointer;">الكمية ↕</th>
+                                        <th onclick="setSort('catPerf', 'val')" style="cursor: pointer;">المبيعات ↕</th>
+                                        <th>مساهمة %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topCategoriesBody">
+                                    <!-- JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End Overview Tab -->
+
+            <!-- Tab 2: Store Performance -->
+            <div class="tab-pane fade" id="stores" role="tabpanel" aria-labelledby="stores-tab">
+
+                <!-- Outlets Table -> Moved to Stores Tab -->
+                <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
+                <div class="card-custom p-3">
+                    <div class="table-responsive">
+                        <table class="table table-custom table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الفرع (Outlet)</th>
+                                    <th onclick="setSort('outlets', 'qty')" style="cursor: pointer;">إجمالي الكمية
+                                        (Total Qty) ↕
+                                    </th>
+                                    <th onclick="setSort('outlets', 'val')" style="cursor: pointer;">إجمالي المبيعات
+                                        (Total
+                                        Sales) ↕</th>
+                                    <th>أعلى تصنيف مبيعاً (Top Category)</th>
+                                    <th>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outletsTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div> <!-- End Stores Tab -->
+
+            <!-- Tab 3: Insights -->
+            <div class="tab-pane fade" id="insights" role="tabpanel" aria-labelledby="insights-tab">
+
+                <!-- Market Basket Analysis Section (NEW) -->
+                <h5 class="section-title">أكثر المنتجات التي تشترى معاً (Items Bought Together)</h5>
+                <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
                     <table class="table table-sm align-middle table-hover">
                         <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
                             <tr>
-                                <th>التصنيف</th>
-                                <th>رقم المنتج (Item ID)</th>
-                                <th onclick="setSort('topProd', 'qty')" style="cursor: pointer;">الكمية ↕</th>
-                                <th onclick="setSort('topProd', 'val')" style="cursor: pointer;">القيمة ↕</th>
+                                <th>#</th>
+                                <th>المنتج الأول</th>
+                                <th>المنتج الثاني</th>
+                                <th onclick="setSort('basket', 'freq')" style="cursor: pointer;">مرات الشراء معاً ↕</th>
                             </tr>
                         </thead>
-                        <tbody id="topProductsBody">
+                        <tbody id="marketBasketBody">
                             <!-- JS -->
                         </tbody>
                     </table>
                 </div>
-            </div>
 
-            <!-- Top Categories List (Existing) -->
-            <div class="col-md-6">
-                <div class="card-custom p-3" style="height: 450px; overflow-y: auto;">
-                    <h6 class="text-muted fw-bold mb-3">أداء الفئات (Category Performance) - <span
-                            id="topCatLabel"></span></h6>
-                    <table class="table table-sm align-middle">
+
+                <!-- Missed Opportunities Section (NEW) -->
+                <h5 class="section-title text-danger">فرص البيع الضائعة حسب الموظف (Missed Opportunities)</h5>
+                <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
+                    <div class="alert alert-warning small py-2">
+                        <i class="me-1">💡</i>
+                        يعرض هذا الجدول الحالات التي قام فيها الموظف ببيع منتج مرتبط بمنتج آخر (حسب سلوك العملاء العام)
+                        ولكنه
+                        <strong>لم يبع</strong> المنتج الآخر.
+                    </div>
+                    <table class="table table-sm align-middle table-hover">
                         <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
                             <tr>
                                 <th>#</th>
-                                <th>التصنيف</th>
-                                <th onclick="setSort('catPerf', 'qty')" style="cursor: pointer;">الكمية ↕</th>
-                                <th onclick="setSort('catPerf', 'val')" style="cursor: pointer;">المبيعات ↕</th>
-                                <th>مساهمة %</th>
+                                <th>الموظف (Salesman)</th>
+                                <th>المنتج المباع (Trigger)</th>
+                                <th>الفرصة الضائعة (Missed Item)</th>
+                                <th class="text-center">عدد المرات</th>
                             </tr>
                         </thead>
-                        <tbody id="topCategoriesBody">
+                        <tbody id="missedOppBody">
                             <!-- JS -->
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
+
+            </div> <!-- End Insights Tab -->
+        </div> <!-- End Tab Content -->
 
     </div>
-
 
 
     <!-- Offers List Modal -->
@@ -448,82 +555,14 @@
         </div>
     </div>
 
-    <!-- Market Basket Analysis Section (NEW) -->
-    <h5 class="section-title">أكثر المنتجات التي تشترى معاً (Items Bought Together)</h5>
-    <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
-        <table class="table table-sm align-middle table-hover">
-            <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
-                <tr>
-                    <th>#</th>
-                    <th>المنتج الأول</th>
-                    <th>المنتج الثاني</th>
-                    <th onclick="setSort('basket', 'freq')" style="cursor: pointer;">مرات الشراء معاً ↕</th>
-                </tr>
-            </thead>
-            <tbody id="marketBasketBody">
-                <!-- JS -->
-            </tbody>
-        </table>
-    </div>
-
-
-    <!-- Missed Opportunities Section (NEW) -->
-    <h5 class="section-title text-danger">فرص البيع الضائعة حسب الموظف (Missed Opportunities)</h5>
-    <div class="card-custom p-3 mb-4" style="height: 400px; overflow-y: auto;">
-        <div class="alert alert-warning small py-2">
-            <i class="me-1">💡</i>
-            يعرض هذا الجدول الحالات التي قام فيها الموظف ببيع منتج مرتبط بمنتج آخر (حسب سلوك العملاء العام) ولكنه
-            <strong>لم يبع</strong> المنتج الآخر.
-        </div>
-        <table class="table table-sm align-middle table-hover">
-            <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
-                <tr>
-                    <th>#</th>
-                    <th>الموظف (Salesman)</th>
-                    <th>المنتج المباع (Trigger)</th>
-                    <th>الفرصة الضائعة (Missed Item)</th>
-                    <th class="text-center">عدد المرات</th>
-                </tr>
-            </thead>
-            <tbody id="missedOppBody">
-                <!-- JS -->
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Outlets Table -->
-    <h5 class="section-title">تفاصيل الفروع (Outlets Breakdown)</h5>
-    <div class="card-custom p-3">
-        <div class="table-responsive">
-            <table class="table table-custom table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>الفرع (Outlet)</th>
-                        <th onclick="setSort('outlets', 'qty')" style="cursor: pointer;">إجمالي الكمية (Total Qty) ↕
-                        </th>
-                        <th onclick="setSort('outlets', 'val')" style="cursor: pointer;">إجمالي المبيعات (Total
-                            Sales) ↕</th>
-                        <th>أعلى تصنيف مبيعاً (Top Category)</th>
-                        <th>إجراء</th>
-                    </tr>
-                </thead>
-                <tbody id="outletsTableBody">
-                    <!-- JS -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    </div>
-
     <!-- Store Details Modal -->
     <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-light">
                     <h5 class="modal-title fw-bold" id="modalTitle">تفاصيل المبيعات</h5>
-                    <button class="btn btn-success btn-sm fw-bold ms-3" onclick="exportStoreDetailsToExcel()">📊 تصدير
+                    <button class="btn btn-success btn-sm fw-bold ms-3" onclick="exportStoreDetailsToExcel()">📊
+                        تصدير
                         Excel</button>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -695,7 +734,8 @@
                         <label class="form-check-label fw-bold" for="chkPdfDetailed">
                             توليد صفحة تفصيلية لكل معرض
                         </label>
-                        <div class="form-text small">سيتم إنشاء ملخص عام، يليه تقرير مستقل لكل معرض في نفس الملف.</div>
+                        <div class="form-text small">سيتم إنشاء ملخص عام، يليه تقرير مستقل لكل معرض في نفس الملف.
+                        </div>
                     </div>
 
                     <hr>
@@ -844,7 +884,8 @@
                         <h5 class="modal-title fw-bold" id="catItemsTitle">منتجات التصنيف</h5>
                         <small id="catItemsSubtitle" class="opacity-75">الفرع - الفترة</small>
                     </div>
-                    <button class="btn btn-success btn-sm fw-bold ms-3" onclick="exportCategoryItemsToExcel()">📊 تصدير
+                    <button class="btn btn-success btn-sm fw-bold ms-3" onclick="exportCategoryItemsToExcel()">📊
+                        تصدير
                         Excel</button>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
