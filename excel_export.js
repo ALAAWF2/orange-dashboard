@@ -266,26 +266,31 @@ async function exportEmployeeSales(startDate, endDate) {
 
                 // Resolve Name & ID
                 let name = empId;
-                let employeeNumber = empId;
+                let oldNumber = empId;
+                let newNumber = '';
+
                 const salesGroupMap = empData.sales_group_map || {};
 
                 if (empNames[empId]) {
                     name = empNames[empId];
                     // Check if we have a sales group mapping (e.g. 0051 instead of 227)
                     if (salesGroupMap[empId]) {
-                        employeeNumber = salesGroupMap[empId];
-                    } else {
-                        employeeNumber = empId;
+                        newNumber = salesGroupMap[empId];
                     }
                 } else if (empId && empId.includes('-')) {
                     // Fallback parse if format is "ID - Name"
                     let parts = empId.split('-');
-                    employeeNumber = parts[0].trim();
+                    oldNumber = parts[0].trim();
                     name = parts.slice(1).join('-').trim();
 
                     // Try to map extracted ID
-                    if (salesGroupMap[employeeNumber]) {
-                        employeeNumber = salesGroupMap[employeeNumber];
+                    if (salesGroupMap[oldNumber]) {
+                        newNumber = salesGroupMap[oldNumber];
+                    }
+                } else {
+                    // Helper: Check mapping for direct ID
+                    if (salesGroupMap[empId]) {
+                        newNumber = salesGroupMap[empId];
                     }
                 }
 
@@ -307,7 +312,8 @@ async function exportEmployeeSales(startDate, endDate) {
                 rows.push({
                     "التاريخ": date,
                     "المعرض": storeName,
-                    "الرقم الوظيفي": employeeNumber,
+                    "الرقم الوظيفي (قديم)": oldNumber,
+                    "الرقم الوظيفي (جديد)": newNumber,
                     "اسم الموظف": name,
                     "المبيعات": sales,
                     "الهدف (الشهري)": targetVal,
@@ -336,7 +342,8 @@ async function exportEmployeeSales(startDate, endDate) {
     const wscols = [
         { wch: 12 }, // Date
         { wch: 25 }, // Store
-        { wch: 10 }, // Emp ID
+        { wch: 15 }, // Old Number
+        { wch: 15 }, // New Number
         { wch: 20 }, // Emp Name
         { wch: 10 }, // Sales
         { wch: 12 }, // Target
