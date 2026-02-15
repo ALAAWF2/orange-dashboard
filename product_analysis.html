@@ -2797,12 +2797,16 @@
             renderCatalog(query);
         }
 
-        // --- Excel Export Function ---
+        // --- Excel Export Function (uses existing product_daily_history + lookup maps) ---
         function exportItemSalesExcel() {
-            if (!rawData || !rawData.item_sales_detail) {
+            if (!rawData || !rawData.product_daily_history) {
                 alert('لا توجد بيانات لتصديرها. الرجاء إعادة توليد البيانات.');
                 return;
             }
+
+            const storeNames = rawData.store_names || {};
+            const itemNames = rawData.item_names || {};
+            const itemCategories = rawData.item_categories || {};
 
             // Get current period date range
             const pData = rawData.periods ? rawData.periods[currentMode] : null;
@@ -2815,57 +2819,58 @@
             }
 
             // Get active filters
-            const regionVal = document.getElementById('regionFilter') ? document.getElementById('regionFilter').value : 'all';
             const storeVal = document.getElementById('storeFilter') ? document.getElementById('storeFilter').value : 'all';
 
-            // Filter data
-            // Each row: [date, storeId, storeName, itemId, itemName, category, qty, amount]
-            let filtered = rawData.item_sales_detail.filter(row => {
-                // Date filter
-                if (dateRange) {
-                    if (row[0] < dateRange.start || row[0] > dateRange.end) return false;
-                }
-                // Store filter
-                if (storeVal !== 'all' && row[1] !== storeVal) return false;
-                // Region filter (uses management_data store_meta if available)
-                if (regionVal !== 'all' && window.mgmtData) {
-                    const meta = window.mgmtData.store_meta ? window.mgmtData.store_meta[row[1]] : null;
-                    if (meta && meta.city !== regionVal) return false;
-                }
-                return true;
-            });
+            // Build rows from product_daily_history
+            // Structure: { item_id: [{date, qty, amount, store}] }
+            let rows = [];
+            const history = rawData.product_daily_history;
 
-            if (filtered.length === 0) {
+            for (const itemId in history) {
+                const entries = history[itemId];
+                const itemName = itemNames[itemId] || itemId;
+                const category = itemCategories[itemId] || '';
+
+                for (const entry of entries) {
+                    // Date filter
+                    if (dateRange) {
+                        if (entry.date < dateRange.start || entry.date > dateRange.end) continue;
+                    }
+                    // Store filter
+                    if (storeVal !== 'all' && entry.store !== storeVal) continue;
+
+                    const storeName = storeNames[entry.store] || entry.store;
+                    const qty = entry.qty;
+                    const amount = entry.amount;
+                    const price = qty !== 0 ? Math.abs(amount / qty) : 0;
+
+                    rows.push({
+                        'التاريخ': entry.date,
+                        'المعرض': storeName,
+                        'رقم المنتج': itemId,
+                        'اسم المنتج': itemName,
+                        'الفئة': category,
+                        'السعر': Math.round(price * 100) / 100,
+                        'الكمية': qty,
+                        'القيمة': amount
+                    });
+                }
+            }
+
+            if (rows.length === 0) {
                 alert('لا توجد بيانات للفترة والفلاتر المحددة.');
                 return;
             }
 
             // Sort by date, store, product
-            filtered.sort((a, b) => {
-                if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
-                if (a[2] !== b[2]) return a[2].localeCompare(b[2]);
-                return a[4].localeCompare(b[4]);
-            });
-
-            // Build Excel rows
-            const excelRows = filtered.map(row => {
-                const qty = row[6];
-                const amount = row[7];
-                const price = qty !== 0 ? Math.abs(amount / qty) : 0;
-                return {
-                    'التاريخ': row[0],
-                    'المعرض': row[2],
-                    'رقم المنتج': row[3],
-                    'اسم المنتج': row[4],
-                    'الفئة': row[5],
-                    'السعر': Math.round(price * 100) / 100,
-                    'الكمية': qty,
-                    'القيمة': amount
-                };
+            rows.sort((a, b) => {
+                if (a['التاريخ'] !== b['التاريخ']) return a['التاريخ'].localeCompare(b['التاريخ']);
+                if (a['المعرض'] !== b['المعرض']) return a['المعرض'].localeCompare(b['المعرض']);
+                return a['اسم المنتج'].localeCompare(b['اسم المنتج']);
             });
 
             // Create workbook
-            const ws = XLSX.utils.json_to_sheet(excelRows);
+            const ws = XLSX.utils.json_to_sheet(rows);
             ws['!cols'] = [
                 { wch: 12 }, // Date
                 { wch: 25 }, // Store
