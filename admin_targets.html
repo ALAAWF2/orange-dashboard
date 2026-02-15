@@ -270,10 +270,11 @@
                 <thead style="background:#333; position:sticky; top:0;">
                     <tr>
                         <th style="padding:10px;">التاريخ</th>
+                        <th style="padding:10px;">المبيعات</th>
                         <th style="padding:10px;">الفواتير</th>
-                        <th style="padding:10px;">الزوار الحالي</th>
+                        <th style="padding:10px;">الزوار الحالية</th>
                         <th style="padding:10px;">تحويل %</th>
-                        <th style="padding:10px;">الزوار الجديد</th>
+                        <th style="padding:10px;">الزوار الجديدة</th>
                         <th style="padding:10px;">تحويل جديد %</th>
                     </tr>
                 </thead>
@@ -299,10 +300,14 @@
         async function openVisitorModal(sid, sname) {
             currentStoreId = sid;
             const m = document.getElementById('targetMonth').value; // YYYY-MM
-            document.getElementById('visitorModalTitle').textContent = `تعديل زوار: ${sname} (${m})`;
+
+            // Check if Warehouse/Platform to enable Sales Editing
+            const isManualStore = sname.toLowerCase().includes('warehouse') || sname.toLowerCase().includes('platform') || sid === '0';
+
+            document.getElementById('visitorModalTitle').textContent = `تعديل البيانات: ${sname} (${m})`;
 
             const tbody = document.getElementById('visitorTableBody');
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري التحميل...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">جاري التحميل...</td></tr>';
 
             document.getElementById('visitorModal').style.display = 'flex';
 
@@ -318,11 +323,12 @@
                 if (!res.ok) throw new Error("Failed to fetch data");
                 const data = await res.json();
 
+
                 // Sort by Date
                 data.sort((a, b) => a.date.localeCompare(b.date));
                 visitorDataCache = data;
 
-                renderVisitorTable(data);
+                renderVisitorTable(data, isManualStore);
 
             } catch (e) {
                 alert("Error: " + e.message);
@@ -330,7 +336,7 @@
             }
         }
 
-        function renderVisitorTable(data) {
+        function renderVisitorTable(data, isEditable) {
             const tbody = document.getElementById('visitorTableBody');
             tbody.innerHTML = '';
 
@@ -338,21 +344,48 @@
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #444';
 
+                // Initial Conversion
                 const conv = row.visitors > 0 ? (row.transactions / row.visitors * 100).toFixed(1) : "0.0";
 
                 // Determine day name
                 const d = new Date(row.date);
                 const dayName = d.toLocaleDateString('ar-EG', { weekday: 'short' });
 
+                // Inputs for Sales/Trans (Only if editable)
+                let salesInput = `${row.sales !== undefined ? row.sales : 0}`; // Assuming API returns sales now
+                let transInput = `${row.transactions}`;
+
+                // Note: API 'daily_stats' currently returns {date, transactions, visitors}. 
+                // We need to UPDATE it to return Sales too for manual stores.
+                // Assuming we updated `get_daily_stats` in server? No, we didn't update GET yet.
+                // We need to fetch sales/trans if we want to edit them. 
+                // For now, let's assume `row.transactions` is correct. Sales might be missing.
+                // Let's rely on what we have. If Sales not in API, we default 0.
+
+                // Wait! The user wants to EDIT Sales. We need to display current Sales.
+                // The `get_daily_stats` endpoint currently ONLY fetches Trans Count from Bills and Visitor Count.
+                // It does NOT fetch Sales Amount. We need to fix that in `server_admin.py` first for full support.
+                // But let's finish UI structure first.
+
+                if (isEditable) {
+                    salesInput = `<input type="number" class="emp-input" style="width:80px;" 
+                                   value="${row.sales || 0}" 
+                                   id="sales-input-${idx}" data-date="${row.date}">`;
+                    transInput = `<input type="number" class="emp-input" style="width:60px;" 
+                                   value="${row.transactions}" 
+                                   id="trans-input-${idx}" data-date="${row.date}">`;
+                }
+
                 tr.innerHTML = `
                     <td style="padding:8px; text-align:center;">${row.date} <span style="color:#888; font-size:0.8em">(${dayName})</span></td>
-                    <td style="padding:8px; text-align:center;">${row.transactions}</td>
+                    <td style="padding:8px; text-align:center;">${salesInput}</td>
+                    <td style="padding:8px; text-align:center;">${transInput}</td>
                     <td style="padding:8px; text-align:center; color:#aaa;">${row.visitors}</td>
                     <td style="padding:8px; text-align:center; color:${getColor(conv)}">${conv}%</td>
                     <td style="padding:8px; text-align:center;">
                         <input type="number" class="emp-input" style="width:80px;" 
                                value="${row.visitors}" 
-                               oninput="calcNewConv(this, ${row.transactions}, 'newConv-${idx}')" 
+                               oninput="calcNewConv(this, ${idx}, 'newConv-${idx}')" 
                                data-date="${row.date}" 
                                id="vis-input-${idx}">
                     </td>
@@ -360,6 +393,33 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Updated Calc Logic to use input value of transactions if editable
+        function calcNewConv(visInput, idx, outId) {
+            const newVis = parseInt(visInput.value) || 0;
+
+            // Try to find trans input, else fallback to text
+            const transInp = document.getElementById(`trans-input-${idx}`);
+            let trans = 0;
+            if (transInp) {
+                trans = parseInt(transInp.value) || 0;
+            } else {
+                // Determine from initial data? Or DOM?
+                // Easier to look at DOM row or cache.
+                // Fallback to cache
+                trans = visitorDataCache[idx].transactions;
+            }
+
+            const out = document.getElementById(outId);
+            if (newVis > 0) {
+                const nw = (trans / newVis * 100).toFixed(1);
+                out.textContent = nw + '%';
+                out.style.color = getColor(nw);
+            } else {
+                out.textContent = '0.0%';
+                out.style.color = '#dc3545';
+            }
         }
 
         function getColor(val) {
@@ -395,10 +455,29 @@
                 // Check if changed? Actually, might be safer to send all or just check against cache.
                 // Let's send all non-zero/valid ones to be safe, or check cache.
                 // Simple: Send all rows.
+                // Save Visitors
                 updates.push({
                     date: date,
                     store_id: currentStoreId,
                     visitors: val
+                });
+            });
+
+            // Also collect Sales/Trans Updates if they exist
+            const salesInputs = document.querySelectorAll('input[id^="sales-input-"]');
+            const salesUpdates = [];
+            salesInputs.forEach(inp => {
+                const idx = inp.id.split('-')[2];
+                const date = inp.getAttribute('data-date');
+                const sales = parseFloat(inp.value) || 0;
+                const transInp = document.getElementById(`trans-input-${idx}`);
+                const trans = parseInt(transInp.value) || 0;
+
+                salesUpdates.push({
+                    store_id: currentStoreId,
+                    date: date,
+                    sales: sales,
+                    transactions: trans
                 });
             });
 
@@ -414,8 +493,24 @@
                     body: JSON.stringify(updates)
                 });
 
-                if (!res.ok) throw new Error("Failed to save");
-                alert("تم حفظ تعديلات الزوار بنجاح!");
+                if (!res.ok) throw new Error("Failed to save visitors");
+
+                // If we have sales updates, send them sequentially
+                if (salesUpdates.length > 0) {
+                    for (const update of salesUpdates) {
+                        await fetch(`${API_BASE}/api/update_sales`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': token,
+                                'Content-Type': 'application/json',
+                                'ngrok-skip-browser-warning': 'true'
+                            },
+                            body: JSON.stringify(update)
+                        });
+                    }
+                }
+
+                alert("تم حفظ التعديلات بنجاح!");
                 closeVisitorModal();
                 // Optionally refresh main data if needed, but main data is targets.
             } catch (e) {

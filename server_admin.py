@@ -472,9 +472,151 @@ def save_daily_visitors():
                     """)
                     conn.execute(ins_q, {"outlet": outlet_name, "d": date, "v": visitors})
             
+            
             conn.commit()
         
         return jsonify({"status": "success", "updated": len(updates)})
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/update_sales', methods=['POST'])
+@requires_auth
+def update_sales():
+    """
+    Update Sales & Transactions for specific stores (Warehouse/Platform).
+    Body: {
+        "store_id": "0", 
+        "date": "2026-02-01", 
+        "sales": 5000, 
+        "transactions": 10
+    }
+    """
+    try:
+        data = request.json
+        store_id = data.get('store_id') # Dynamic Number (e.g. '0')
+        date = data.get('date') # YYYY-MM-DD
+        sales = float(data.get('sales', 0))
+        transactions = int(data.get('transactions', 0))
+        
+        if not store_id or not date:
+            return jsonify({"error": "Store ID and Date required"}), 400
+            
+        with engine.connect() as conn:
+            # 1. Verify Store Name & Type
+            name_q = text("SELECT outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number = :sid")
+            res = conn.execute(name_q, {"sid": store_id}).fetchone()
+            
+            if not res:
+                return jsonify({"error": "Store not found"}), 404
+                
+            outlet_name = res[0]
+            
+            # Authorization Check: Only Warehouse or Platform
+            is_allowed = 'warehouse' in outlet_name.lower() or 'platform' in outlet_name.lower()
+            
+            # Also allow store '0' explicitly if mapped to something else but user confirmed it's manual
+            if store_id == '0': is_allowed = True
+            
+            if not is_allowed:
+                return jsonify({"error": f"Editing Restricted: '{outlet_name}' is managed automatically. Only Warehouses/Platforms can be edited manually."}), 403
+                
+            # 2. Update/Insert into gofrugal_sales
+            # We use 'transaction_type' = 'MANUAL_ENTRY' to distinguish? Or just standard?
+            # Standard is fine.
+            
+            # Check if record exists
+            check_q = text("""
+                SELECT 1 FROM gofrugal_sales 
+                WHERE outlet_name = :o AND bill_date = :d
+            """)
+            exists = conn.execute(check_q, {"o": outlet_name, "d": date}).fetchone()
+            
+            if exists:
+                # Update
+                upd_q = text("""
+                    UPDATE gofrugal_sales 
+                    SET net_amount = :s, bill_no = :t
+                    WHERE outlet_name = :o AND bill_date = :d
+                """)
+                # Note: 'bill_no' is a string in schema usually, but we use it for count sometimes?
+                # No, 'bill_no' is usually the ID.
+                # 'gofrugal_sales' schema: bill_date, outlet_name, net_amount, bill_no, transaction_type...
+                # Wait. 'gofrugal_sales' stores LINE items or AGGREGATED? 
+                # It stores LINE items (or bills).
+                # If we want to store Daily Total, we should verify schema.
+                # dashboard logic sums `net_amount` and counts `distinct bill_no`.
+                
+                # Manual Entry Strategy:
+                # We can't easily "Update" a sum if the table has multiple rows.
+                # Best approach: DELETE all rows for that day/store and INSERT one aggregated row.
+                # To represent "Transaction Count", we need N rows? Or can we cheat?
+                # Option A: Insert 1 row with Total Sales. Transaction Count will be 1. (Bad if count matters)
+                # Option B: Insert N rows? (Messy)
+                # Option C: Use a dummy 'bill_no' that indicates count? Dashboard counts DISTINCT bill_no.
+                # If we want Count=X, we need X distinct bill numbers.
+                
+                # Let's see how `update_warehouse_sales.py` did it.
+                # It inserted N rows. 1 row with Sales, N-1 rows with 0 sales.
+                
+                # Let's do the same here.
+                
+                # 1. DELETE existing for this day/outlet
+                del_q = text("DELETE FROM gofrugal_sales WHERE outlet_name = :o AND bill_date = :d")
+                conn.execute(del_q, {"o": outlet_name, "d": date})
+                
+                # 2. INSERT New
+                # Row 1: The Sales Value
+                ins_q = text("""
+                    INSERT INTO gofrugal_sales (bill_date, outlet_name, net_amount, bill_no, transaction_type, salesman)
+                    VALUES (:d, :o, :s, :b, 'MANUAL', 'Admin')
+                """)
+                
+                # Generate Bill IDs
+                # Manual-YYYYMMDD-001
+                date_compact = date.replace('-', '')
+                
+                # Row 1
+                conn.execute(ins_q, {
+                    "d": date, "o": outlet_name, "s": sales, 
+                    "b": f"MANUAL-{date_compact}-001"
+                })
+                
+                # Remaining Rows (Count - 1)
+                if transactions > 1:
+                    for i in range(2, transactions + 1):
+                        dummy_id = f"MANUAL-{date_compact}-{str(i).zfill(3)}"
+                        conn.execute(ins_q, {
+                            "d": date, "o": outlet_name, "s": 0, 
+                            "b": dummy_id
+                        })
+                        
+            else:
+                # Just Insert (Same Logic)
+                ins_q = text("""
+                    INSERT INTO gofrugal_sales (bill_date, outlet_name, net_amount, bill_no, transaction_type, salesman)
+                    VALUES (:d, :o, :s, :b, 'MANUAL', 'Admin')
+                """)
+                
+                date_compact = date.replace('-', '')
+                
+                conn.execute(ins_q, {
+                    "d": date, "o": outlet_name, "s": sales, 
+                    "b": f"MANUAL-{date_compact}-001"
+                })
+                
+                if transactions > 1:
+                    for i in range(2, transactions + 1):
+                        dummy_id = f"MANUAL-{date_compact}-{str(i).zfill(3)}"
+                        conn.execute(ins_q, {
+                            "d": date, "o": outlet_name, "s": 0, 
+                            "b": dummy_id
+                        })
+            
+            conn.commit()
+            
+        return jsonify({"status": "success", "message": f"Updated {outlet_name}: {sales} SAR, {transactions} Tx"})
         
     except Exception as e:
         traceback.print_exc()
