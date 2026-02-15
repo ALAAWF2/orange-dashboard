@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
     <style>
         :root {
@@ -280,6 +282,8 @@
                         العروض</a>
                     <button class="btn btn-danger fw-bold text-white shadow-sm" onclick="openPdfModal()">تصدير
                         PDF</button>
+                    <button class="btn btn-success fw-bold text-white shadow-sm" onclick="exportItemSalesExcel()">📊
+                        تصدير Excel</button>
                     <button class="btn btn-warning fw-bold text-dark" onclick="openCatalogModal()">📂 تصفح
                         الأقسام</button>
                     <div class="input-group" style="width: 250px;">
@@ -2787,6 +2791,96 @@
         function filterCatalog() {
             const query = document.getElementById('catalogSearch').value;
             renderCatalog(query);
+        }
+
+        // --- Excel Export Function ---
+        function exportItemSalesExcel() {
+            if (!rawData || !rawData.item_sales_detail) {
+                alert('لا توجد بيانات لتصديرها. الرجاء إعادة توليد البيانات.');
+                return;
+            }
+
+            // Get current period date range
+            const pData = rawData.periods ? rawData.periods[currentMode] : null;
+            let dateRange = null;
+            if (pData && pData.date_range && pData.date_range !== 'N/A') {
+                const parts = pData.date_range.split(' إلى ');
+                if (parts.length === 2) {
+                    dateRange = { start: parts[0].trim(), end: parts[1].trim() };
+                }
+            }
+
+            // Get active filters
+            const regionVal = document.getElementById('regionFilter') ? document.getElementById('regionFilter').value : 'all';
+            const storeVal = document.getElementById('storeFilter') ? document.getElementById('storeFilter').value : 'all';
+
+            // Filter data
+            // Each row: [date, storeId, storeName, itemId, itemName, category, sellerName, qty, amount]
+            let filtered = rawData.item_sales_detail.filter(row => {
+                // Date filter
+                if (dateRange) {
+                    if (row[0] < dateRange.start || row[0] > dateRange.end) return false;
+                }
+                // Store filter
+                if (storeVal !== 'all' && row[1] !== storeVal) return false;
+                // Region filter (uses management_data store_meta if available)
+                if (regionVal !== 'all' && window.mgmtData) {
+                    const meta = window.mgmtData.store_meta ? window.mgmtData.store_meta[row[1]] : null;
+                    if (meta && meta.city !== regionVal) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                alert('لا توجد بيانات للفترة والفلاتر المحددة.');
+                return;
+            }
+
+            // Sort by date, store, product
+            filtered.sort((a, b) => {
+                if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+                if (a[2] !== b[2]) return a[2].localeCompare(b[2]);
+                return a[4].localeCompare(b[4]);
+            });
+
+            // Build Excel rows
+            const excelRows = filtered.map(row => {
+                const qty = row[7];
+                const amount = row[8];
+                const price = qty !== 0 ? Math.abs(amount / qty) : 0;
+                return {
+                    'التاريخ': row[0],
+                    'المعرض': row[2],
+                    'رقم المنتج': row[3],
+                    'اسم المنتج': row[4],
+                    'الفئة': row[5],
+                    'اسم البائع': row[6],
+                    'السعر': Math.round(price * 100) / 100,
+                    'الكمية': qty,
+                    'القيمة': amount
+                };
+            });
+
+            // Create workbook
+            const ws = XLSX.utils.json_to_sheet(excelRows);
+            ws['!cols'] = [
+                { wch: 12 }, // Date
+                { wch: 25 }, // Store
+                { wch: 18 }, // Item ID
+                { wch: 30 }, // Item Name
+                { wch: 15 }, // Category
+                { wch: 20 }, // Seller
+                { wch: 10 }, // Price
+                { wch: 10 }, // Qty
+                { wch: 12 }  // Value
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'مبيعات الأصناف');
+
+            // Download
+            const periodLabel = currentMode || 'all';
+            XLSX.writeFile(wb, `Item_Sales_${periodLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
         }
 
         // Run
