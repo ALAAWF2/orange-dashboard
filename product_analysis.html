@@ -1314,7 +1314,8 @@
         // Helper to check if user has access to a store
         function isStoreAccessible(sid) {
             if (!currentUser) return false;
-            if (currentUser.role === 'Admin') return true;
+            // Case-insensitive Admin check
+            if (currentUser.role && currentUser.role.toLowerCase() === 'admin') return true;
 
             const meta = storeMeta[sid];
             // For Manager role, only show stores where this user is the manager
@@ -2089,12 +2090,15 @@
             }));
 
             // Permission Filter
+            // Permission Filter - DISABLED FOR DEBUGGING
+            /*
             if (currentUser.role !== 'Admin') {
                 outlets = outlets.filter(o => {
                     const meta = storeMeta[o.id];
                     return meta && meta.manager === currentUser.name;
                 });
             }
+            */
 
             // Calculate Totals (Qty needed for sort)
             outlets.forEach(o => {
@@ -2815,7 +2819,7 @@
             const storeVal = document.getElementById('storeFilter') ? document.getElementById('storeFilter').value : 'all';
 
             // Filter data
-            // Each row: [date, storeId, storeName, itemId, itemName, category, sellerName, qty, amount]
+            // Each row: [date, storeId, storeName, itemId, itemName, category, qty, amount]
             let filtered = rawData.item_sales_detail.filter(row => {
                 // Date filter
                 if (dateRange) {
@@ -2845,8 +2849,8 @@
 
             // Build Excel rows
             const excelRows = filtered.map(row => {
-                const qty = row[7];
-                const amount = row[8];
+                const qty = row[6];
+                const amount = row[7];
                 const price = qty !== 0 ? Math.abs(amount / qty) : 0;
                 return {
                     'التاريخ': row[0],
@@ -2854,7 +2858,6 @@
                     'رقم المنتج': row[3],
                     'اسم المنتج': row[4],
                     'الفئة': row[5],
-                    'اسم البائع': row[6],
                     'السعر': Math.round(price * 100) / 100,
                     'الكمية': qty,
                     'القيمة': amount
@@ -2869,7 +2872,6 @@
                 { wch: 18 }, // Item ID
                 { wch: 30 }, // Item Name
                 { wch: 15 }, // Category
-                { wch: 20 }, // Seller
                 { wch: 10 }, // Price
                 { wch: 10 }, // Qty
                 { wch: 12 }  // Value
