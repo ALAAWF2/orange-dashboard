@@ -382,6 +382,24 @@ def get_daily_stats():
             }).fetchall()
             
             trans_map = {str(row[0]): row[1] for row in trans_data}
+
+            # Get sales & transactions per day from gofrugal_sales (for manual stores & sales data)
+            sales_q = text("""
+                SELECT bill_date as date, SUM(net_amount) as sales, COUNT(DISTINCT bill_no) as trans_count
+                FROM gofrugal_sales
+                WHERE outlet_name = :outlet
+                  AND bill_date >= :start_date
+                  AND bill_date < :end_date
+                GROUP BY bill_date
+            """)
+            sales_data = conn.execute(sales_q, {
+                "outlet": outlet_name,
+                "start_date": start_date,
+                "end_date": end_date
+            }).fetchall()
+            
+            sales_map = {str(row[0]): row[1] for row in sales_data}
+            sales_trans_map = {str(row[0]): row[2] for row in sales_data}
             
             # Get visitors per day
             vis_q = text("""
@@ -401,14 +419,20 @@ def get_daily_stats():
             vis_map = {str(row[0]): row[1] for row in vis_data}
             
             # Combine all dates
-            all_dates = set(trans_map.keys()) | set(vis_map.keys())
+            all_dates = set(trans_map.keys()) | set(vis_map.keys()) | set(sales_map.keys())
             
             result = []
             for d in sorted(all_dates):
+                # Use dynamic transactions first, fallback to gofrugal_sales transactions (manual)
+                tr_count = trans_map.get(d, 0)
+                if tr_count == 0:
+                    tr_count = sales_trans_map.get(d, 0)
+
                 result.append({
                     "date": d,
-                    "transactions": trans_map.get(d, 0),
-                    "visitors": vis_map.get(d, 0)
+                    "transactions": tr_count,
+                    "visitors": vis_map.get(d, 0),
+                    "sales": float(sales_map.get(d, 0) or 0)
                 })
             
             return jsonify(result)
