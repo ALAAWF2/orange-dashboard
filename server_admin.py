@@ -367,7 +367,7 @@ def get_daily_stats():
             
             # Get transactions per day from dynamic_sales_bills
             trans_q = text("""
-                SELECT bill_date as date, COUNT(DISTINCT transaction_id) as trans_count
+                SELECT bill_date::date as date, COUNT(DISTINCT transaction_id) as trans_count
                 FROM dynamic_sales_bills
                 WHERE store_number = :sid
                   AND bill_date >= :start_date
@@ -385,7 +385,7 @@ def get_daily_stats():
 
             # Get sales & transactions per day from gofrugal_sales (for manual stores & sales data)
             sales_q = text("""
-                SELECT bill_date as date, SUM(net_amount) as sales, COUNT(DISTINCT bill_no) as trans_count
+                SELECT bill_date::date as date, SUM(net_amount) as sales, COUNT(DISTINCT bill_no) as trans_count
                 FROM gofrugal_sales
                 WHERE outlet_name = :outlet
                   AND bill_date >= :start_date
