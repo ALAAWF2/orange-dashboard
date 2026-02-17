@@ -772,6 +772,7 @@
                                         <th class="text-center">متوسط الفاتورة</th>
                                         <th class="text-center">الزوار</th>
                                         <th class="text-center opacity-50">السنة السابقة</th>
+                                        <th class="text-center">قيمة العميل</th>
                                         <th class="text-center">التحويل %</th>
                                     </tr>
                                 </thead>
@@ -1661,6 +1662,7 @@
                 // Calculations
                 const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100) : (sales > 0 ? 100 : 0);
                 const avgInv = trans > 0 ? Math.round(sales / trans) : 0;
+                const custVal = visitors > 0 ? Math.round(sales / visitors) : 0;
                 const conv = visitors > 0 ? ((trans / visitors) * 100) : 0;
 
                 // Day name
@@ -1669,7 +1671,7 @@
                 rows.push({
                     date: dateStr,
                     dayName,
-                    sales, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv
+                    sales, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv, custVal
                 });
 
                 grandTotalSales += sales;
@@ -1708,6 +1710,7 @@
                     <td class="text-center">${r.avgInv.toLocaleString()}</td>
                     <td class="text-center">${r.visitors.toLocaleString()}</td>
                     <td class="text-center text-muted">${r.visitorsLY.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
                     <td class="text-center">${r.conv.toFixed(1)}%</td>
                 </tr>
             `).join('');
@@ -1715,6 +1718,7 @@
             // Render Footer (Totals)
             const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100) : 0;
             const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
+            const grandCustVal = grandVisitors > 0 ? Math.round(grandTotalSales / grandVisitors) : 0;
             const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100) : 0;
 
             document.getElementById('branchDailyFoot').innerHTML = `
@@ -1727,6 +1731,7 @@
                     <td class="text-center">${grandAvgInv.toLocaleString()}</td>
                     <td class="text-center">${grandVisitors.toLocaleString()}</td>
                     <td class="text-center">${grandVisitorsLY.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${grandCustVal.toLocaleString()}</td>
                     <td class="text-center">${grandConv.toFixed(1)}%</td>
                 </tr>
             `;
