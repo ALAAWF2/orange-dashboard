@@ -476,6 +476,8 @@
                                         <th onclick="setDailySort('trans')" style="cursor: pointer;">عدد الفواتير ↕</th>
                                         <th onclick="setDailySort('avgInv')" style="cursor: pointer;">متوسط الفاتورة
                                             (Inv Rate) ↕</th>
+                                        <th onclick="setDailySort('custVal')" style="cursor: pointer;">قيمة العميل ↕
+                                        </th>
                                         <th onclick="setDailySort('visitY')" style="cursor: pointer;">زوار ↕</th>
                                         <th class="text-muted" onclick="setDailySort('visitLY')"
                                             style="font-size: 0.9em; cursor: pointer;">زوار (LY)</th>
@@ -510,39 +512,7 @@
             </div>
         </div>
 
-        <!-- Row 3.5: Advanced Analysis (Growth, Gap, Risk) -->
-        <h5 class="section-title mt-4">التحليل المتقدم (Advanced Analysis)</h5>
-        <div class="row g-3 mb-4">
 
-            <!-- 3. Early Warning (Now Full Width) -->
-            <div class="col-12">
-                <div class="analysis-card">
-                    <div class="analysis-header">
-                        <h6 class="m-0 fw-bold text-warning">
-                            ⚠️ الإنذار المبكر (Early Warning)
-                            <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip"
-                                title="فروع أداؤها أقل من الوقت المنقضي من الشهر وتواجه خطر عدم تحقيق الهدف"></i>
-                        </h6>
-                    </div>
-                    <div class="analysis-body">
-                        <table class="table table-sm table-hover mb-0" style="font-size: 0.9rem;">
-                            <thead class="table-light sticky-top">
-                                <tr>
-                                    <th>الفرع</th>
-                                    <th>التحقيق (Achieved)</th>
-                                    <th>التقييم (Status)</th>
-                                    <th>المبيعات (Sales)</th>
-                                    <th>الهدف (Target)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="earlyWarningBody">
-                                <!-- JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4">
@@ -585,6 +555,9 @@
                                         (Vis Rate) ↕</th>
                                 </tr>
                             </thead>
+                            <tfoot id="detailsTableFoot" class="table-dark fw-bold">
+                                <!-- JS -->
+                            </tfoot>
                             <tbody id="detailsTableBody">
                                 <!-- JS -->
                             </tbody>
@@ -1470,11 +1443,58 @@
                 tbody.appendChild(tr);
             });
 
+            // --- 5.5 Render Totals Footer ---
+            const tfoot = document.getElementById('detailsTableFoot');
+            tfoot.innerHTML = '';
+
+            if (branchList.length > 0) {
+                // Calculate Totals
+                let tVal = 0, tPrevVal = 0, tTarget = 0, tTrans = 0, tVisitors = 0, tPrevVisitors = 0, tDailyReq = 0;
+
+                branchList.forEach(b => {
+                    tVal += b.val;
+                    tPrevVal += b.prevVal;
+                    tTarget += b.target;
+                    tTrans += b.trans;
+                    tVisitors += b.visitors;
+                    tPrevVisitors += b.prevVisitors;
+                    tDailyReq += (b.dailyReq || 0);
+                });
+
+                // Calculate Averages/Rates
+                let tAch = tTarget > 0 ? (tVal / tTarget) * 100 : 0;
+                let tGrowth = tPrevVal > 0 ? ((tVal - tPrevVal) / tPrevVal) * 100 : 0;
+                if (tPrevVal === 0 && tVal > 0) tGrowth = 100;
+
+                let tAbsGrowth = tVal - tPrevVal;
+                let tAvgInv = tTrans > 0 ? tVal / tTrans : 0;
+                let tCustVal = tVisitors > 0 ? tVal / tVisitors : 0;
+                let tConv = tVisitors > 0 ? (tTrans / tVisitors) * 100 : 0;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center" colspan="2">الإجمالي (Total)</td>
+                    <td class="text-center">${tVal.toLocaleString()}</td>
+                    <td class="text-center text-light opacity-75">${tPrevVal.toLocaleString()}</td>
+                    <td class="text-center">${tTarget.toLocaleString()}</td>
+                    <td class="text-center ${tAch >= 100 ? 'text-success' : 'text-warning'}">${tAch.toFixed(1)}%</td>
+                    <td class="text-center ${tGrowth >= 0 ? 'text-success' : 'text-danger'}" dir="ltr">${tGrowth.toFixed(1)}%</td>
+                    <td class="text-center ${tAbsGrowth >= 0 ? 'text-success' : 'text-danger'}" dir="ltr">${tAbsGrowth.toLocaleString()}</td>
+                    <td class="text-center text-danger">${tDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="text-center">${tTrans.toLocaleString()}</td>
+                    <td class="text-center">${tAvgInv.toFixed(0)}</td>
+                    <td class="text-center">${tVisitors.toLocaleString()}</td>
+                    <td class="text-center text-light opacity-75">${tPrevVisitors.toLocaleString()}</td>
+                    <td class="text-center">${tCustVal.toFixed(0)}</td>
+                    <td class="text-center">${tConv.toFixed(1)}%</td>
+                `;
+                tfoot.appendChild(tr);
+            }
+
             // --- 6. Render Daily Report ---
             renderDailyReport();
 
-            // --- 7. Advanced Analysis ---
-            updateAdvancedAnalysis(curr, prev, branchList, top5Avg);
+
         }
 
         // Global Data for Daily Report
@@ -1560,10 +1580,11 @@
                 if (d.salesLY === 0 && d.salesY > 0) growth = 100;
 
                 let avgInv = d.transY > 0 ? d.salesY / d.transY : 0;
+                let custVal = d.visitY > 0 ? d.salesY / d.visitY : 0;
                 let conv = d.visitY > 0 ? (d.transY / d.visitY) * 100 : 0;
                 let dailyReq = globalDailyReq[sid] || 0;
 
-                dailyList.push({ sid, name, ...d, growth, avgInv, conv, dailyReq });
+                dailyList.push({ sid, name, ...d, growth, avgInv, custVal, conv, dailyReq });
             });
 
             // Sort Daily List
@@ -1598,6 +1619,7 @@
                     <td class="fw-bold text-danger">${dReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td>${r.transY.toLocaleString()}</td>
                     <td>${r.avgInv.toFixed(0)}</td>
+                    <td class="fw-bold">${r.custVal.toFixed(0)}</td>
                     <td>${r.visitY.toLocaleString()}</td>
                     <td class="text-secondary">${r.visitLY.toLocaleString()}</td>
                     <td>${r.conv.toFixed(1)}%</td>
@@ -1858,47 +1880,7 @@
             });
         }
 
-        // --- NEW: Advanced Analysis Function ---
-        function updateAdvancedAnalysis(curr, prev, branchList, top5Avg) {
-            // 3. Early Warning
-            const warningBody = document.getElementById('earlyWarningBody');
-            warningBody.innerHTML = '';
 
-            let withTarget = branchList.filter(b => b.target > 0);
-            withTarget.sort((a, b) => a.ach - b.ach);
-
-            // Show Top 10 at Risk
-            withTarget.slice(0, 10).forEach(b => {
-                let riskClass = 'risk-low';
-                let riskLabel = 'Safe';
-
-                // Compare against 80% and 50% of the Top 5 Average
-                let safeThreshold = top5Avg * 0.8;
-                let criticalThreshold = top5Avg * 0.5;
-
-                if (b.ach < criticalThreshold) { riskClass = 'risk-high'; riskLabel = 'Critical'; }
-                else if (b.ach < safeThreshold) { riskClass = 'risk-med'; riskLabel = 'Medium'; }
-
-                let tr = document.createElement('tr');
-                let riskTip = `تحقيق: ${b.ach.toFixed(1)}% | المعيار (أفضل 5): ${top5Avg.toFixed(1)}%`;
-
-                tr.innerHTML = `
-                    <td class="fw-bold" data-bs-toggle="tooltip" title="${riskTip}">${b.name}</td>
-                    <td class="fw-bold fs-6 ${riskClass}" dir="ltr">${b.ach.toFixed(1)}%</td>
-                    <td><span class="badge ${riskClass === 'risk-high' ? 'bg-danger' : (riskClass === 'risk-med' ? 'bg-warning text-dark' : 'bg-success')}">${riskLabel}</span></td>
-                    <td>${b.val.toLocaleString()}</td>
-                    <td>${b.target.toLocaleString()}</td>
-                `;
-                warningBody.appendChild(tr);
-            });
-
-
-            // Re-init tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        }
 
         // ==========================================
         // PDF EXPORT UI HELPERS
