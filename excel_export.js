@@ -304,9 +304,20 @@ async function exportEmployeeSales(startDate, endDate) {
                 let targetVal = 0;
                 if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
                     targetVal = monthlyTargets[empId][targetKey];
-                } else if (targets[empId]) {
-                    // 2. Fallback to Legacy Target
-                    targetVal = targets[empId];
+                } else {
+                    // 2. Fallback Logic
+                    // Only use 'targets' (Current Target) if we are reporting on the CURRENT month or a future month.
+                    // If reporting on a past month and no specific target exists, it should be 0.
+
+                    const now = new Date();
+                    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    const reportMonthKey = `${yyyy}-${mm}`;
+
+                    if (reportMonthKey >= currentMonthKey && targets[empId]) {
+                        targetVal = targets[empId];
+                    } else {
+                        targetVal = 0; // Past month with no target -> 0
+                    }
                 }
 
                 rows.push({
