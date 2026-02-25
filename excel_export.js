@@ -114,9 +114,11 @@ async function exportStoreSales(startDate, endDate) {
         return dataMap[k];
     };
 
+    const salesDict = {};
     // 1. Process Sales
     if (window.rawData.sales) {
         window.rawData.sales.forEach(([d, s, v]) => {
+            salesDict[`${d}_${s}`] = v;
             if (inRange(d) && passFilter(s)) {
                 let entry = ensureEntry(d, s);
                 entry.sales += v;
@@ -175,12 +177,23 @@ async function exportStoreSales(startDate, endDate) {
         const meta = (window.rawData.store_meta && window.rawData.store_meta[r.storeId]) || {};
         const ach = r.target > 0 ? ((r.sales / r.target) * 100).toFixed(1) + '%' : '0%';
 
+        // Calculate Previous Year Date
+        let pDate = new Date(r.date);
+        pDate.setFullYear(pDate.getFullYear() - 1);
+        if (r.date.startsWith('2026-02')) {
+            pDate.setDate(pDate.getDate() + 11);
+        }
+
+        let pyStr = pDate.toLocaleDateString('en-CA');
+        let prevSales = salesDict[`${pyStr}_${r.storeId}`] || 0;
+
         return {
             "التاريخ": r.date,
             "المعرض": window.rawData.stores[r.storeId] || r.storeId,
             "المدينة": meta.city || '-',
             "مدير المنطقة": meta.manager || '-',
             "المبيعات": r.sales,
+            "مبيعات السنة السابقة": prevSales,
             "الهدف": r.target,
             "نسبة التحقيق": ach,
             "عدد الفواتير": r.trans,
@@ -200,6 +213,7 @@ async function exportStoreSales(startDate, endDate) {
         { wch: 10 }, // City
         { wch: 15 }, // Manager
         { wch: 10 }, // Sales
+        { wch: 20 }, // Prev Sales
         { wch: 10 }, // Target
         { wch: 10 }, // Achievement
         { wch: 10 }, // Trans
@@ -234,6 +248,14 @@ async function exportEmployeeSales(startDate, endDate) {
 
     let rows = [];
     const empNames = empData.employee_names || {};
+
+    const empSalesDict = {};
+    Object.keys(empData.history || {}).forEach(sid => {
+        (empData.history[sid] || []).forEach(rec => {
+            const [date, empId, sales] = rec;
+            empSalesDict[`${date}_${empId}`] = sales;
+        });
+    });
 
     // List of Store IDs we care about (from Emp Data)
     let targetStoreIds = Object.keys(empData.history || {});
@@ -320,6 +342,16 @@ async function exportEmployeeSales(startDate, endDate) {
                     }
                 }
 
+                // Calculate Previous Year Date
+                let pDate = new Date(date);
+                pDate.setFullYear(pDate.getFullYear() - 1);
+                if (date.startsWith('2026-02')) {
+                    pDate.setDate(pDate.getDate() + 11);
+                }
+
+                let pyStr = pDate.toLocaleDateString('en-CA');
+                let prevSales = empSalesDict[`${pyStr}_${empId}`] || 0;
+
                 rows.push({
                     "التاريخ": date,
                     "المعرض": storeName,
@@ -327,6 +359,7 @@ async function exportEmployeeSales(startDate, endDate) {
                     "الرقم الوظيفي (جديد)": newNumber,
                     "اسم الموظف": name,
                     "المبيعات": sales,
+                    "مبيعات السنة السابقة": prevSales,
                     "الهدف (الشهري)": targetVal,
                     "عدد الفواتير": trans
                 });
@@ -357,6 +390,7 @@ async function exportEmployeeSales(startDate, endDate) {
         { wch: 15 }, // New Number
         { wch: 20 }, // Emp Name
         { wch: 10 }, // Sales
+        { wch: 20 }, // Prev Sales
         { wch: 12 }, // Target
         { wch: 10 }  // Trans
     ];
