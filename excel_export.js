@@ -114,6 +114,22 @@ async function exportStoreSales(startDate, endDate) {
         return dataMap[k];
     };
 
+    // Pre-populate dataMap for all dates in range and all filtered stores
+    const allStoreIds = Object.keys(window.rawData.stores || {});
+    let currentDate = new Date(startDate);
+    const endObj = new Date(endDate);
+
+    while (currentDate <= endObj) {
+        const dStr = currentDate.toLocaleDateString('en-CA');
+        allStoreIds.forEach(s => {
+            // Include store if it passes the filter, even if there are no sales
+            if (passFilter(s)) {
+                ensureEntry(dStr, s);
+            }
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
     const salesDict = {};
     // 1. Process Sales
     if (window.rawData.sales) {
