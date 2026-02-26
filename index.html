@@ -517,7 +517,19 @@
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4">
             <div class="col-12">
-                <h5 class="section-title">تفاصيل الفروع (Detailed Report)</h5>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">تفاصيل الفروع (Detailed Report)</h5>
+                    <div>
+                        <button onclick="exportDetailsPDF()" class="btn btn-warning btn-sm fw-bold text-white me-2"
+                            title="تصدير PDF">
+                            📄 PDF
+                        </button>
+                        <button onclick="exportDetailsExcel()" class="btn btn-success btn-sm fw-bold text-white"
+                            title="تصدير Excel">
+                            📊 Excel
+                        </button>
+                    </div>
+                </div>
                 <div class="card border-0 shadow-sm p-3">
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
@@ -2001,6 +2013,51 @@
 
             // Call function in pdf_export.js
             generatePDF(storeId, isDetailed);
+        }
+
+        function exportDetailsExcel() {
+            const table = document.querySelector('.table-custom');
+            if (!table) {
+                alert("الجدول غير موجود");
+                return;
+            }
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Detailed Report" });
+            const sDate = document.getElementById('startDate').value || 'start';
+            const eDate = document.getElementById('endDate').value || 'end';
+            XLSX.writeFile(wb, `Detailed_Report_${sDate}_${eDate}.xlsx`);
+        }
+
+        function exportDetailsPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const fontName = "Amiri";
+
+            try {
+                if (typeof amiriFontBase64 !== 'undefined') {
+                    doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
+                    doc.addFont("Amiri-Regular.ttf", fontName, "normal");
+                    doc.setFont(fontName);
+                }
+            } catch (e) {
+                console.error("Font loading error:", e);
+                doc.setFont("helvetica");
+            }
+
+            const sDate = document.getElementById('startDate').value || '';
+            const eDate = document.getElementById('endDate').value || '';
+
+            doc.setFontSize(14);
+            doc.text(`تفاصيل الفروع (Detailed Report) - ${sDate} إلى ${eDate}`, 14, 15);
+
+            doc.autoTable({
+                html: '.table-custom',
+                startY: 20,
+                styles: { font: fontName, fontSize: 8, halign: 'center' },
+                headStyles: { fillColor: [254, 121, 0], textColor: 255 },
+                theme: 'grid',
+            });
+
+            doc.save(`Detailed_Report_${sDate}_${eDate}.pdf`);
         }
 
         init();
