@@ -641,37 +641,35 @@
             return d.toLocaleDateString('ar-SA', options);
         }
 
-        // Get current month target date (first day of month)
-        function getCurrentMonthTargetDate() {
-            const today = new Date();
-            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        // Get month target date based on selected date
+        function getTargetDateStr(dateStr) {
+            return dateStr.substring(0, 7) + '-01';
         }
 
-        // Get days in current month
-        function getDaysInCurrentMonth() {
-            const today = new Date();
-            return new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        // Get days in selected month
+        function getDaysInMonth(dateStr) {
+            const [year, month] = dateStr.split('-');
+            return new Date(year, month, 0).getDate();
         }
 
-        // Get current day of month
-        function getCurrentDayOfMonth() {
-            return new Date().getDate();
+        // Get day of month from selected date
+        function getDayOfMonth(dateStr) {
+            return parseInt(dateStr.split('-')[2], 10);
         }
 
-        // Get month-to-date sales for a store
-        function getMonthToDateSales(storeId, allowedBranches) {
+        // Get month-to-date sales for a store based on selected toDate
+        function getMonthToDateSales(storeId, toDateStr) {
             if (!rawData.sales) return 0;
 
-            const today = new Date();
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const firstDayOfMonthStr = getTargetDateStr(toDateStr);
 
             let total = 0;
             rawData.sales.forEach(row => {
-                const date = new Date(row[0]);
+                const dateStr = row[0];
                 const sId = row[1];
                 const value = row[2] || 0;
 
-                if (sId === storeId && date >= firstDayOfMonth && date <= today && value > 0) {
+                if (sId === storeId && dateStr >= firstDayOfMonthStr && dateStr <= toDateStr && value > 0) {
                     total += value;
                 }
             });
@@ -974,7 +972,7 @@
             } else {
                 // Build branch targets map
                 const branchTargets = {};
-                const targetDate = getCurrentMonthTargetDate();
+                const targetDate = getTargetDateStr(toDate);
                 if (rawData.targets) {
                     rawData.targets.forEach(row => {
                         const date = row[0];
@@ -986,13 +984,13 @@
                     });
                 }
 
-                const daysInMonth = getDaysInCurrentMonth();
-                const currentDay = getCurrentDayOfMonth();
+                const daysInMonth = getDaysInMonth(toDate);
+                const currentDay = getDayOfMonth(toDate);
 
                 // Calculate targets for all branches first (for sorting)
                 const branchData = sortedBranches.map(([storeId, sales]) => {
                     const monthlyTarget = branchTargets[storeId] || 0;
-                    const mtdSales = getMonthToDateSales(storeId, allowedBranches);
+                    const mtdSales = getMonthToDateSales(storeId, toDate);
 
                     // Dynamic daily target
                     const remainingTarget = Math.max(0, monthlyTarget - mtdSales);
