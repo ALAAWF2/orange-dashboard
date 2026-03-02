@@ -304,10 +304,19 @@ async function generateEmployeePDF(targetEmps = null) {
             let dailyReq = 0;
             if (!isPrevMode) {
                 // Only relevant for MTD
-                const daysInMonthLabel = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-                const daysPassedLabel = yestDate.getDate();
-                const daysLeftLabel = daysInMonthLabel - daysPassedLabel;
-                dailyReq = daysLeftLabel > 0 ? remaining / daysLeftLabel : 0;
+                let daysInMonthLabel = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                if (today.getFullYear() === 2026 && today.getMonth() === 2) daysInMonthLabel = 19;
+
+                // Safe days passed calculation (handles 1st of month safely)
+                let daysPassedLabel = today.getDate() - 1;
+                if (daysPassedLabel < 0) daysPassedLabel = 0;
+
+                if (today.getFullYear() === 2026 && today.getMonth() === 2 && daysPassedLabel > 18) daysPassedLabel = 18;
+
+                let daysLeftLabel = daysInMonthLabel - daysPassedLabel;
+                if (daysLeftLabel < 1) daysLeftLabel = 1;
+
+                dailyReq = remaining / daysLeftLabel;
             }
 
             // Aggregation
@@ -341,10 +350,18 @@ async function generateEmployeePDF(targetEmps = null) {
         const col2Rem = Math.max(0, col2TotalTarget - col2TotalSales);
         let col2Daily = 0;
         if (!isPrevMode) {
-            const daysInMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-            const daysPassedEnd = yestDate.getDate();
-            const daysLeftEnd = daysInMonthEnd - daysPassedEnd;
-            col2Daily = daysLeftEnd > 0 ? col2Rem / daysLeftEnd : 0;
+            let daysInMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            if (today.getFullYear() === 2026 && today.getMonth() === 2) daysInMonthEnd = 19;
+
+            let daysPassedEnd = today.getDate() - 1;
+            if (daysPassedEnd < 0) daysPassedEnd = 0;
+
+            if (today.getFullYear() === 2026 && today.getMonth() === 2 && daysPassedEnd > 18) daysPassedEnd = 18;
+
+            let daysLeftEnd = daysInMonthEnd - daysPassedEnd;
+            if (daysLeftEnd < 1) daysLeftEnd = 1;
+
+            col2Daily = col2Rem / daysLeftEnd;
         }
 
         tableRows.push([
