@@ -102,6 +102,8 @@
                                             <th>المبيعات</th>
                                             <th>الهدف (Target)</th>
                                             <th>نسبة التحقيق %</th>
+                                            <th>المتبقي</th>
+                                            <th>يومية متبقية</th>
                                             <th>مساهمة %</th>
                                             <th>فواتير</th>
                                             <th>Avg Inv</th>
@@ -130,6 +132,8 @@
                                             <th>المبيعات</th>
                                             <th>الهدف (Target)</th>
                                             <th>نسبة التحقيق %</th>
+                                            <th>المتبقي</th>
+                                            <th>يومية متبقية</th>
                                             <th>مساهمة %</th>
                                             <th>فواتير</th>
                                             <th>Avg Inv</th>
@@ -152,6 +156,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const sid = urlParams.get('sid');
         const branchName = urlParams.get('name');
+
+        // Custom Dates
+        const customStart = urlParams.get('start');
+        const customEnd = urlParams.get('end');
 
         if (branchName) {
             document.title = `تفاصيل: ${branchName}`;
@@ -177,6 +185,7 @@
                 let records = [];
                 let targets = {};
                 let employeeNames = {};
+                let monthlyTargets = {};
 
                 if (allData.history && allData.targets) {
                     // New Structure
@@ -187,6 +196,7 @@
                     records = allData.history[sid];
                     targets = allData.targets;
                     employeeNames = allData.employee_names || {};
+                    monthlyTargets = allData.monthly_targets || {};
                 } else {
                     // Old Structure Fallback (for backwards compatibility if file not regenerated yet)
                     if (!allData[sid]) {
@@ -196,7 +206,7 @@
                     records = allData[sid];
                 }
 
-                renderData(records, targets, employeeNames);
+                renderData(records, targets, employeeNames, monthlyTargets);
 
                 errDiv.style.display = 'none';
                 document.getElementById('content').style.display = 'block';
@@ -207,21 +217,39 @@
             }
         }
 
-        function renderData(records, targets = {}, employeeNames = {}) {
+        function renderData(records, targets = {}, employeeNames = {}, monthlyTargets = {}) {
             // records: [Date, Name, Sales, Trans, Items]
 
             // Dates to Filter
             let today = new Date();
             let yesterday = new Date(today);
             yesterday.setDate(today.getDate() - 1);
-            const dateYest = yesterday.toISOString().split('T')[0];
-            const monthPrefix = dateYest.substring(0, 7); // YYYY-MM
+
+            let dateStart = yesterday.toISOString().split('T')[0];
+            let dateEnd = yesterday.toISOString().split('T')[0];
+            let isCustom = false;
+
+            if (customStart && customEnd) {
+                dateStart = customStart;
+                dateEnd = customEnd;
+                isCustom = true;
+            }
+
+            const monthPrefix = dateStart.substring(0, 7); // YYYY-MM for Target Lookup
 
             // UI Dates
             const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-            document.getElementById('reportDate').textContent = `${dayNames[yesterday.getDay()]} ${dateYest}`;
-            document.getElementById('dateYesterday').textContent = dateYest;
-            document.getElementById('dateMonth').textContent = monthPrefix;
+            const eDateObj = new Date(dateEnd);
+
+            if (isCustom) {
+                document.getElementById('reportDate').textContent = `${dateStart} إلى ${dateEnd}`;
+                document.querySelector('.col-lg-6:nth-child(1) .card-header').innerHTML = `📅 المبيعات اليومية آخر يوم (${dateEnd})`;
+                document.querySelector('.col-lg-6:nth-child(2) .card-header').innerHTML = `📅 إجمالي الفترة (${dateStart} إلى ${dateEnd})`;
+            } else {
+                document.getElementById('reportDate').textContent = `${dayNames[eDateObj.getDay()]} ${dateEnd}`;
+                document.getElementById('dateYesterday').textContent = dateEnd;
+                document.getElementById('dateMonth').textContent = monthPrefix;
+            }
 
             // Aggregation
             let yestStats = {};
@@ -247,18 +275,31 @@
 
                 if (!name || name === 'null') name = "Unknown"; // Fallback
 
-                // Yesterday
-                if (d === dateYest) {
+                // End Date (Usually Yesterday)
+                if (d === dateEnd) {
                     if (!yestStats[name]) yestStats[name] = { s: 0, t: 0 };
                     yestStats[name].s += sales;
                     yestStats[name].t += trans;
                 }
 
-                // Month (accumulate)
-                if (d.startsWith(monthPrefix) && d <= dateYest) {
+                // Range (Usually Month, now Custom if provided)
+                let inRange = false;
+                if (isCustom) {
+                    inRange = (d >= dateStart && d <= dateEnd);
+                } else {
+                    inRange = (d.startsWith(monthPrefix) && d <= dateEnd);
+                }
+
+                if (inRange) {
                     if (!monthStats[name]) {
                         // Lookup Target
-                        let target = (empId && targets[empId]) ? targets[empId] : 0;
+                        const targetKey = `${monthPrefix}-01`;
+                        let target = 0;
+                        if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
+                            target = monthlyTargets[empId][targetKey];
+                        } else if (empId && targets[empId]) {
+                            target = targets[empId];
+                        }
 
                         monthStats[name] = { s: 0, t: 0, target: target };
                     }
@@ -294,6 +335,35 @@
                 return;
             }
 
+            // Calculate Daily Req divisor
+            let dailyReqDivisor = 1;
+            if (showTarget) {
+                if (isCustom) {
+                    // Custom Range Divisor: Total days in range
+                    const s = new Date(dateStart);
+                    const e = new Date(dateEnd);
+                    const diffTime = Math.abs(e - s);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    dailyReqDivisor = diffDays;
+                } else {
+                    // Standard MTD Remaining Divisor
+                    const todayForDaily = new Date();
+                    let lastDayOfMonth = new Date(todayForDaily.getFullYear(), todayForDaily.getMonth() + 1, 0).getDate();
+                    if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2) {
+                        lastDayOfMonth = 19;
+                    }
+                    let todayDate = todayForDaily.getDate() - 1; // Used yesterday as todayDate safely
+                    if (todayDate < 0) todayDate = 0;
+
+                    if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2 && todayDate > 18) {
+                        todayDate = 18;
+                    }
+                    let remainingDays = lastDayOfMonth - todayDate;
+                    if (remainingDays < 1) remainingDays = 1;
+                    dailyReqDivisor = remainingDays;
+                }
+            }
+
             list.forEach(item => {
                 let avg = item.t > 0 ? item.s / item.t : 0;
                 let contrib = totalS > 0 ? (item.s / totalS) * 100 : 0;
@@ -302,6 +372,8 @@
                 let targetCell = '-';
                 let achCell = '-';
                 let achClass = '';
+                let remainingCell = '-';
+                let dailyReqCell = '-';
 
                 if (showTarget) {
                     let t = item.target || 0;
@@ -309,6 +381,12 @@
 
                     let ach = t > 0 ? (item.s / t) * 100 : 0;
                     achCell = ach.toFixed(1) + '%';
+
+                    let remaining = Math.max(0, t - item.s);
+                    remainingCell = remaining > 0 ? remaining.toLocaleString() : '0';
+
+                    let dailyReq = remaining / dailyReqDivisor;
+                    dailyReqCell = dailyReq > 0 ? Math.round(dailyReq).toLocaleString() : '0';
 
                     if (ach >= 100) achClass = 'text-success fw-bold';
                     else if (ach >= 80) achClass = 'text-warning fw-bold';
@@ -321,6 +399,8 @@
                     <td class="fw-bold">${item.s.toLocaleString()}</td>
                     <td class="text-center">${targetCell}</td>
                     <td class="text-center ${achClass}" dir="ltr">${achCell}</td>
+                    <td class="text-center text-danger fw-bold">${remainingCell}</td>
+                    <td class="text-center text-primary fw-bold">${dailyReqCell}</td>
                     <td class="text-primary">${contrib.toFixed(1)}%</td>
                     <td>${item.t}</td>
                     <td>${avg.toFixed(0)}</td>
@@ -330,6 +410,8 @@
 
             // Footer
             let totalAch = (showTarget && totalTarget > 0) ? (totalS / totalTarget) * 100 : 0;
+            let totalRemaining = Math.max(0, totalTarget - totalS);
+            let totalDailyReq = totalRemaining / dailyReqDivisor;
 
             document.getElementById(footId).innerHTML = `
                 <tr>
@@ -337,6 +419,8 @@
                     <td>${totalS.toLocaleString()}</td>
                     <td>${showTarget ? totalTarget.toLocaleString() : '-'}</td>
                     <td dir="ltr">${showTarget ? totalAch.toFixed(1) + '%' : '-'}</td>
+                    <td class="text-danger">${showTarget ? totalRemaining.toLocaleString() : '-'}</td>
+                    <td class="text-primary">${showTarget ? Math.round(totalDailyReq).toLocaleString() : '-'}</td>
                     <td>100%</td>
                     <td>${totalT}</td>
                     <td>${totalT > 0 ? (totalS / totalT).toFixed(0) : 0}</td>

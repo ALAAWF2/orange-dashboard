@@ -193,10 +193,9 @@ async function exportStoreSales(startDate, endDate) {
         const meta = (window.rawData.store_meta && window.rawData.store_meta[r.storeId]) || {};
         const ach = r.target > 0 ? ((r.sales / r.target) * 100).toFixed(1) + '%' : '0%';
 
-        // Calculate Previous Year Date
         let pDate = new Date(r.date);
         pDate.setFullYear(pDate.getFullYear() - 1);
-        if (r.date.startsWith('2026-02')) {
+        if (r.date.startsWith('2026-02') || r.date.startsWith('2026-03')) {
             pDate.setDate(pDate.getDate() + 11);
         }
 
@@ -361,7 +360,7 @@ async function exportEmployeeSales(startDate, endDate) {
                 // Calculate Previous Year Date
                 let pDate = new Date(date);
                 pDate.setFullYear(pDate.getFullYear() - 1);
-                if (date.startsWith('2026-02')) {
+                if (date.startsWith('2026-02') || date.startsWith('2026-03')) {
                     pDate.setDate(pDate.getDate() + 11);
                 }
 

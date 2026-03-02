@@ -1011,6 +1011,15 @@
             });
         }
 
+        // Helper to open Branch Details with current filter dates
+        function openBranchDetails(sid, encodedName) {
+            let url = `branch_details.html?sid=${sid}&name=${encodedName}`;
+            if (window.dashboardState && window.dashboardState.start && window.dashboardState.end) {
+                url += `&start=${window.dashboardState.start}&end=${window.dashboardState.end}`;
+            }
+            window.open(url, '_blank');
+        }
+
         function updateDashboard() {
             if (!rawData) return;
 
@@ -1049,11 +1058,9 @@
                 prevEnd = new Date(currentEnd);
                 prevEnd.setFullYear(prevEnd.getFullYear() - 1);
 
-                // Custom Logic for Feb 2026 (Apply 11-day shift)
-                // If the selected Start Date is in Feb 2026
-                if (currentStart.getFullYear() === 2026 && currentStart.getMonth() === 1) {
+                // Custom Logic for Ramadan 2026 (Apply 11-day shift to Feb and March)
+                if (currentStart.getFullYear() === 2026 && (currentStart.getMonth() === 1 || currentStart.getMonth() === 2)) {
                     // Shift Previous Year Dates by +11 days
-                    // Feb 1 2026 -> Feb 12 2025
                     prevStart.setDate(prevStart.getDate() + 11);
                     prevEnd.setDate(prevEnd.getDate() + 11);
                 }
@@ -1634,7 +1641,7 @@
                 tr.innerHTML = `
                     <td>${i + 1}</td>
                     <td class="fw-bold fs-6">
-                        <a href="branch_details.html?sid=${r.sid}&name=${encodeURIComponent(r.name)}" target="_blank" class="text-decoration-none text-dark hover-primary">${r.name}</a>
+                        <a href="#" onclick="openBranchDetails('${r.sid}', '${encodeURIComponent(r.name)}'); return false;" class="text-decoration-none text-dark hover-primary">${r.name}</a>
                     </td>
                     <td class="fw-bold">${r.salesY.toLocaleString()}</td>
                     <td class="text-secondary">${r.salesLY.toLocaleString()}</td>
@@ -1704,8 +1711,8 @@
                 let lyDate = new Date(loopDate);
                 lyDate.setFullYear(loopDate.getFullYear() - 1);
 
-                // Custom Shift for Feb 2026
-                if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 1) {
+                // Custom Shift for Ramadan 2026 (Feb and March)
+                if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
                     lyDate.setDate(lyDate.getDate() + 11);
                 }
 
