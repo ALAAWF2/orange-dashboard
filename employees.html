@@ -1362,8 +1362,20 @@
 
                 // Calculate dailyReq for sorting
                 const todayForDaily = new Date();
-                const lastDayOfMonth = new Date(todayForDaily.getFullYear(), todayForDaily.getMonth() + 1, 0).getDate();
-                const remainingDays = lastDayOfMonth - todayForDaily.getDate() + 1;
+                let lastDayOfMonth = new Date(todayForDaily.getFullYear(), todayForDaily.getMonth() + 1, 0).getDate();
+
+                // 2026 Ramadan custom target period (March 1-19)
+                if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2) {
+                    lastDayOfMonth = 19;
+                }
+
+                let todayDate = todayForDaily.getDate();
+                if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2 && todayDate > 19) {
+                    todayDate = 19;
+                }
+
+                let remainingDays = lastDayOfMonth - todayDate + 1;
+                if (remainingDays < 1) remainingDays = 1;
 
                 empList.forEach(e => {
                     e.dailyReq = 0;

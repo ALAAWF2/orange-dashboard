@@ -984,8 +984,14 @@
                     });
                 }
 
-                const daysInMonth = getDaysInMonth(toDate);
-                const currentDay = getDayOfMonth(toDate);
+                let daysInMonth = getDaysInMonth(toDate);
+                if (targetDate === '2026-03-01') {
+                    daysInMonth = 19; // Ramadan target period is only 19 days (March 1-19)
+                }
+                let currentDay = getDayOfMonth(toDate);
+                if (targetDate === '2026-03-01' && currentDay > 19) {
+                    currentDay = 19; // Cap at 19 to avoid negative remaining expectations post-Ramadan
+                }
 
                 // Calculate targets for all branches first (for sorting)
                 const branchData = sortedBranches.map(([storeId, sales]) => {
