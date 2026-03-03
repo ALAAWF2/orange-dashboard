@@ -131,6 +131,7 @@ async function exportStoreSales(startDate, endDate) {
     }
 
     const salesDict = {};
+    const visitorsDict = {};
     // 1. Process Sales
     if (window.rawData.sales) {
         window.rawData.sales.forEach(([d, s, v]) => {
@@ -165,6 +166,7 @@ async function exportStoreSales(startDate, endDate) {
     // 3. Process Visitors
     if (window.rawData.visitors) {
         window.rawData.visitors.forEach(([d, s, v]) => {
+            visitorsDict[`${d}_${s}`] = v;
             if (inRange(d) && passFilter(s)) {
                 let entry = ensureEntry(d, s);
                 entry.visitors += v;
@@ -201,6 +203,7 @@ async function exportStoreSales(startDate, endDate) {
 
         let pyStr = pDate.toLocaleDateString('en-CA');
         let prevSales = salesDict[`${pyStr}_${r.storeId}`] || 0;
+        let prevVisitors = visitorsDict[`${pyStr}_${r.storeId}`] || 0;
 
         return {
             "التاريخ": r.date,
@@ -213,6 +216,7 @@ async function exportStoreSales(startDate, endDate) {
             "نسبة التحقيق": ach,
             "عدد الفواتير": r.trans,
             "الزوار": r.visitors,
+            "زوار السنة السابقة": prevVisitors,
             "متوسط الفاتورة": r.trans > 0 ? (r.sales / r.trans).toFixed(0) : 0,
             "نسبة التحويل": r.visitors > 0 ? ((r.trans / r.visitors) * 100).toFixed(1) + '%' : '0%'
         };
@@ -233,6 +237,7 @@ async function exportStoreSales(startDate, endDate) {
         { wch: 10 }, // Achievement
         { wch: 10 }, // Trans
         { wch: 10 }, // Visitors
+        { wch: 20 }, // Prev Visitors
         { wch: 10 }, // Avg
         { wch: 10 }  // Conv
     ];
@@ -341,20 +346,6 @@ async function exportEmployeeSales(startDate, endDate) {
                 let targetVal = 0;
                 if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
                     targetVal = monthlyTargets[empId][targetKey];
-                } else {
-                    // 2. Fallback Logic
-                    // Only use 'targets' (Current Target) if we are reporting on the CURRENT month or a future month.
-                    // If reporting on a past month and no specific target exists, it should be 0.
-
-                    const now = new Date();
-                    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                    const reportMonthKey = `${yyyy}-${mm}`;
-
-                    if (reportMonthKey >= currentMonthKey && targets[empId]) {
-                        targetVal = targets[empId];
-                    } else {
-                        targetVal = 0; // Past month with no target -> 0
-                    }
                 }
 
                 // Calculate Previous Year Date
