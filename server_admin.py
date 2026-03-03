@@ -419,7 +419,11 @@ def get_daily_stats():
             vis_map = {str(row[0]): row[1] for row in vis_data}
             
             # Combine all dates
-            all_dates = set(trans_map.keys()) | set(vis_map.keys()) | set(sales_map.keys())
+            from calendar import monthrange
+            days_in_month = monthrange(int(year), int(mon))[1]
+            all_month_dates = set(f"{year}-{mon}-{str(day).zfill(2)}" for day in range(1, days_in_month + 1))
+            
+            all_dates = all_month_dates | set(trans_map.keys()) | set(vis_map.keys()) | set(sales_map.keys())
             
             result = []
             for d in sorted(all_dates):
