@@ -96,7 +96,7 @@ def normalize_emp_id(raw_id):
 
 # --- API Endpoints ---
 
-@app.route('/api/targets', methods=['GET'])
+@app.route('/api/targets', methods=['GET', 'OPTIONS'])
 @requires_auth
 def get_targets():
     try:
@@ -160,7 +160,7 @@ def get_targets():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/employees', methods=['GET'])
+@app.route('/api/employees', methods=['GET', 'OPTIONS'])
 @requires_auth
 def get_employees_by_store():
     # Helper to get employees for a store (using history or mapping)
@@ -247,7 +247,7 @@ def get_employees_by_store():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/save_store_target', methods=['POST'])
+@app.route('/api/save_store_target', methods=['POST', 'OPTIONS'])
 @requires_auth
 def save_store_target():
     try:
@@ -286,7 +286,7 @@ def save_store_target():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/save_employee_target', methods=['POST'])
+@app.route('/api/save_employee_target', methods=['POST', 'OPTIONS'])
 @requires_auth
 def save_employee_target():
     try:
@@ -505,7 +505,7 @@ def save_daily_visitors():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/update_sales', methods=['POST'])
+@app.route('/api/update_sales', methods=['POST', 'OPTIONS'])
 @requires_auth
 def update_sales():
     """
