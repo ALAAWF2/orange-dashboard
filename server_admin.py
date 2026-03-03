@@ -398,8 +398,32 @@ def get_daily_stats():
                 "end_date": end_date
             }).fetchall()
             
-            sales_map = {str(row[0]): row[1] for row in sales_data}
+            gofrugal_sales_map = {str(row[0]): float(row[1] or 0) for row in sales_data}
             sales_trans_map = {str(row[0]): row[2] for row in sales_data}
+            
+            # Get sales & transactions per day from dynamic_sales_items (main 2026+ data source)
+            dyn_sales_q = text("""
+                SELECT item_date::date as date, SUM(net_amount) as sales, COUNT(DISTINCT transaction_id) as trans_count
+                FROM dynamic_sales_items
+                WHERE store_number = :sid
+                  AND item_date >= :start_date
+                  AND item_date < :end_date
+                GROUP BY item_date
+            """)
+            dyn_sales_data = conn.execute(dyn_sales_q, {
+                "sid": store_id,
+                "start_date": start_date,
+                "end_date": end_date
+            }).fetchall()
+            
+            dyn_sales_map = {str(row[0]): float(row[1] or 0) for row in dyn_sales_data}
+            dyn_trans_map = {str(row[0]): row[2] for row in dyn_sales_data}
+            
+            # Merge sales from both sources (sum where both exist)
+            all_sales_dates = set(gofrugal_sales_map.keys()) | set(dyn_sales_map.keys())
+            sales_map = {}
+            for d in all_sales_dates:
+                sales_map[d] = gofrugal_sales_map.get(d, 0) + dyn_sales_map.get(d, 0)
             
             # Get visitors per day
             vis_q = text("""
@@ -427,8 +451,10 @@ def get_daily_stats():
             
             result = []
             for d in sorted(all_dates):
-                # Use dynamic transactions first, fallback to gofrugal_sales transactions (manual)
+                # Use dynamic transactions first (from bills), then dynamic_sales_items, then gofrugal_sales
                 tr_count = trans_map.get(d, 0)
+                if tr_count == 0:
+                    tr_count = dyn_trans_map.get(d, 0)
                 if tr_count == 0:
                     tr_count = sales_trans_map.get(d, 0)
 
