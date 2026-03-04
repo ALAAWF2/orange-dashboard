@@ -11,6 +11,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="assets/amiri_font.js"></script>
 
     <style>
         :root {
@@ -273,6 +277,28 @@
         }
 
         .btn-excel:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-pdf {
+            background: #c0392b;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-pdf:hover {
+            background: #a93226;
+        }
+
+        .btn-pdf:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
@@ -666,6 +692,7 @@
         <div class="action-bar">
             <button class="btn-search" id="btnSearch" onclick="runSearch()">🔍 بحث</button>
             <button class="btn-excel" id="btnExcel" onclick="exportExcel()" disabled>📊 تصدير Excel</button>
+            <button class="btn-pdf" id="btnPdf" onclick="exportPDF()" disabled>📄 تصدير PDF</button>
             <button class="btn-reset" onclick="resetFilters()">🔄 إعادة تعيين</button>
         </div>
     </div>
@@ -1099,6 +1126,7 @@
             document.getElementById('tableContainer').style.display = 'block';
             document.getElementById('summaryStrip').style.display = 'grid';
             document.getElementById('btnExcel').disabled = false;
+            document.getElementById('btnPdf').disabled = false;
 
             // Summary
             const sumQty = results.reduce((s, r) => s + r.qty, 0);
@@ -1230,6 +1258,92 @@
         }
 
         // =====================
+        // PDF EXPORT
+        // =====================
+        function exportPDF() {
+            if (!CURRENT_RESULTS.length) return;
+
+            showLoading('جاري إنشاء ملف PDF...');
+            setTimeout(() => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4'); // 'p' for portrait
+
+                    // Add Font
+                    if (typeof amiriFontBase64 !== 'undefined') {
+                        doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
+                        doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+                        doc.setFont("Amiri");
+                    } else {
+                        doc.setFont("helvetica");
+                        console.warn("Amiri font not found. Falling back to default font.");
+                    }
+
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+                    const storeFilter = document.getElementById('storeFilter').value;
+                    const storeName = storeFilter === 'all' ? 'الكل' : (META.stores[storeFilter] || storeFilter);
+                    const searchType = document.getElementById('searchType').value;
+
+                    doc.setFontSize(14);
+                    doc.text(`تقرير المبيعات والمخزون - ORANGE REP`, 14, 15);
+
+                    doc.setFontSize(10);
+                    const periodStr = searchType === 'stock_only' ? 'المخزون فقط' : `الفترة: ${dateFrom} إلى ${dateTo}`;
+                    doc.text(`المعرض: ${storeName} | ${periodStr}`, 14, 22);
+
+                    const tableData = CURRENT_RESULTS.map((r, i) => [
+                        i + 1,
+                        r.alias,
+                        r.name,
+                        r.category,
+                        r.price.toLocaleString('ar-SA', { minimumFractionDigits: 2 }),
+                        r.qty.toLocaleString('ar-SA'),
+                        r.amount.toLocaleString('ar-SA', { minimumFractionDigits: 2 }),
+                        r.stock_total.toLocaleString('ar-SA')
+                    ]);
+
+                    // Add Summary row at the end
+                    const sumQty = CURRENT_RESULTS.reduce((s, r) => s + r.qty, 0);
+                    const sumAmt = CURRENT_RESULTS.reduce((s, r) => s + r.amount, 0);
+                    const sumStk = CURRENT_RESULTS.reduce((s, r) => s + r.stock_total, 0);
+                    tableData.push([
+                        '', 'الإجمالي', '-', '-', '-',
+                        sumQty.toLocaleString('ar-SA'),
+                        sumAmt.toLocaleString('ar-SA', { minimumFractionDigits: 2 }),
+                        sumStk.toLocaleString('ar-SA')
+                    ]);
+
+                    doc.autoTable({
+                        startY: 28,
+                        head: [[
+                            '#', 'Alias', 'اسم المنتج', 'الفئة', 'سعر البيع', 'الكمية', 'المبيعات', 'الستوك'
+                        ]],
+                        body: tableData,
+                        theme: 'grid',
+                        styles: { font: 'Amiri', halign: 'right', fontSize: 8 },
+                        headStyles: { fillColor: [254, 121, 0], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                        didParseCell: function (data) {
+                            if (data.row.index === tableData.length - 1) { // Total row
+                                data.cell.styles.fillColor = [240, 240, 240];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                        }
+                    });
+
+                    // Use correct timestamp for filename
+                    const fileNameDate = searchType === 'stock_only' ? new Date().toLocaleDateString('en-CA') : `${dateFrom}_to_${dateTo}`;
+                    doc.save(`REP_Report_${fileNameDate}.pdf`);
+
+                } catch (err) {
+                    console.error('PDF Export error:', err);
+                    alert('خطأ في تصدير PDF: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
+        // =====================
         // RESET
         // =====================
         function resetFilters() {
@@ -1270,6 +1384,7 @@
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('emptyState').querySelector('p').textContent = 'اختر الفلاتر واضغط "بحث" لعرض النتائج';
             document.getElementById('btnExcel').disabled = true;
+            document.getElementById('btnPdf').disabled = true;
         }
 
         // Init on page load
