@@ -1000,7 +1000,6 @@
                                     <th>لحافات فل</th>
                                     <th>لحافات كوين</th>
                                     <th>لحافات كينغ</th>
-                                    <th>أخرى / ستاندرد</th>
                                     <th>إجمالي الستوك المتوفر</th>
                                 </tr>
                             </thead>
@@ -1828,16 +1827,16 @@
             // 3. QUILTS BY PRICE BRACKET (Detailed by Types)
             // Focus on products where name contains 'لحاف'
             const quiltBrackets = {
-                '001-199': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '200-299': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '300-399': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '400-499': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '500-599': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '600-699': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '700-799': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '800-899': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '900-999': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
-                '1000+': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 }
+                '001-199': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '200-299': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '300-399': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '400-499': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '500-599': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '600-699': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '700-799': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '800-899': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '900-999': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 },
+                '1000+': { twin: 0, full: 0, queen: 0, king: 0, totalStock: 0 }
             };
 
             for (const pid in PRODUCTS) {
@@ -1856,11 +1855,13 @@
                 if (prodName.includes('لحاف') || catName.includes('لحاف')) {
 
                     // Determine Type
-                    let qType = 'other';
+                    let qType = null;
                     if (catName.includes('توين') || prodName.includes('توين')) qType = 'twin';
                     else if (catName.includes('فل') || prodName.includes('فل')) qType = 'full';
                     else if (catName.includes('كوين') || prodName.includes('كوين')) qType = 'queen';
                     else if (catName.includes('كينغ') || prodName.includes('كينج') || prodName.includes('كينغ')) qType = 'king';
+
+                    if (!qType) continue; // Skip if it's not one of the requested sizes
 
                     // Calculate stock based on store filter
                     let totalStock = 0;
@@ -1901,7 +1902,6 @@
                 full: quiltBrackets[k].full,
                 queen: quiltBrackets[k].queen,
                 king: quiltBrackets[k].king,
-                other: quiltBrackets[k].other,
                 totalStock: quiltBrackets[k].totalStock
             }));
             CURRENT_ANALYSIS_QUILTS = quiltList;
@@ -1910,7 +1910,7 @@
             const allQuiltsStock = quiltList.reduce((sum, b) => sum + b.totalStock, 0);
 
             if (allQuiltsStock === 0) {
-                quiltHtml = '<tr><td colspan="7" style="text-align:center;">لا توجد مخزونات للحافات ضمن الفلاتر المحددة.</td></tr>';
+                quiltHtml = '<tr><td colspan="6" style="text-align:center;">لا توجد مخزونات للحافات ضمن الفلاتر المحددة.</td></tr>';
             } else {
                 quiltHtml = quiltList.map(b => {
                     return `<tr>
@@ -1919,7 +1919,6 @@
                         <td style="${b.full > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.full.toLocaleString('en-US')}</td>
                         <td style="${b.queen > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.queen.toLocaleString('en-US')}</td>
                         <td style="${b.king > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.king.toLocaleString('en-US')}</td>
-                        <td style="${b.other > 0 ? 'color:#8e44ad;font-weight:700;' : 'color:#ccc;'}">${b.other.toLocaleString('en-US')}</td>
                         <td style="font-weight:700; color:var(--orange)">${b.totalStock.toLocaleString('en-US')}</td>
                     </tr>`;
                 }).join('');
@@ -1929,7 +1928,6 @@
                 const tFull = quiltList.reduce((sum, b) => sum + b.full, 0);
                 const tQueen = quiltList.reduce((sum, b) => sum + b.queen, 0);
                 const tKing = quiltList.reduce((sum, b) => sum + b.king, 0);
-                const tOther = quiltList.reduce((sum, b) => sum + b.other, 0);
 
                 quiltHtml += `<tr style="background:#f8f9fa;">
                     <td style="font-weight:800;">الإجمالي العام</td>
@@ -1937,7 +1935,6 @@
                     <td style="font-weight:800; color:#2c3e50;">${tFull.toLocaleString('en-US')}</td>
                     <td style="font-weight:800; color:#2c3e50;">${tQueen.toLocaleString('en-US')}</td>
                     <td style="font-weight:800; color:#2c3e50;">${tKing.toLocaleString('en-US')}</td>
-                    <td style="font-weight:800; color:#2c3e50;">${tOther.toLocaleString('en-US')}</td>
                     <td style="font-weight:800; color:var(--orange)">${allQuiltsStock.toLocaleString('en-US')}</td>
                 </tr>`;
             }
@@ -1990,7 +1987,6 @@
                         'لحافات فل': b.full,
                         'لحافات كوين': b.queen,
                         'لحافات كينغ': b.king,
-                        'أخرى / ستاندرد': b.other,
                         'إجمالي الستوك المتوفر': b.totalStock
                     }));
                     quiltsRows.push({
@@ -1999,7 +1995,6 @@
                         'لحافات فل': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.full, 0),
                         'لحافات كوين': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.queen, 0),
                         'لحافات كينغ': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.king, 0),
-                        'أخرى / ستاندرد': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.other, 0),
                         'إجمالي الستوك المتوفر': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.totalStock, 0)
                     });
 
@@ -2019,8 +2014,8 @@
 
                     // Sheet 3 (Quilts)
                     const ws3 = XLSX.utils.json_to_sheet(quiltsRows);
-                    ws3['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }];
-                    XLSX.utils.book_append_sheet(wb, ws3, 'تحليل اللحافات');
+                    ws3['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
+                    XLSX.utils.book_append_append_sheet(wb, ws3, 'تحليل اللحافات');
 
                     const fileName = `Strategic_Analysis_${dateFrom}_${dateTo}.xlsx`;
                     XLSX.writeFile(wb, fileName);
