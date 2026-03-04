@@ -553,6 +553,10 @@
 
         /* MOBILE */
         @media (max-width: 768px) {
+            .top-products-container {
+                flex-direction: column;
+            }
+
             .filter-panel {
                 margin: 10px;
                 padding: 16px;
@@ -715,6 +719,104 @@
             <div class="val" id="sumStock">0</div>
             <div class="lbl">إجمالي الستوك الحالي</div>
         </div>
+    </div>
+
+    <!-- Top Products & Categories -->
+    <div class="top-products-container" id="topProductsContainer"
+        style="display:none; margin: 0 20px 20px; gap: 20px; flex-wrap: wrap;">
+        <!-- Top Products by Amount -->
+        <div
+            style="flex: 1; min-width: 300px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #eee; overflow: hidden;">
+            <div
+                style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 10px 16px; font-weight: 700; font-size: 0.95rem;">
+                🏆 المنتجات الأكثر مبيعاً (قيمة)
+            </div>
+            <table class="results-table" style="margin: 0; font-size: 0.85rem;" id="topAmountTable">
+                <thead>
+                    <tr>
+                        <th>Alias</th>
+                        <th>اسم المنتج</th>
+                        <th>القيمة</th>
+                    </tr>
+                </thead>
+                <tbody id="topAmountBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Top Products by Qty -->
+        <div
+            style="flex: 1; min-width: 300px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #eee; overflow: hidden;">
+            <div
+                style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 10px 16px; font-weight: 700; font-size: 0.95rem;">
+                🔥 المنتجات الأكثر مبيعاً (كمية)
+            </div>
+            <table class="results-table" style="margin: 0; font-size: 0.85rem;" id="topQtyTable">
+                <thead>
+                    <tr>
+                        <th>Alias</th>
+                        <th>اسم المنتج</th>
+                        <th>الكمية</th>
+                    </tr>
+                </thead>
+                <tbody id="topQtyBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Top Categories by Amount -->
+        <div
+            style="flex: 1; min-width: 300px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #eee; overflow: hidden;">
+            <div
+                style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 10px 16px; font-weight: 700; font-size: 0.95rem;">
+                📁 الفئات الأكثر مبيعاً (قيمة)
+            </div>
+            <table class="results-table" style="margin: 0; font-size: 0.85rem;" id="topCatAmountTable">
+                <thead>
+                    <tr>
+                        <th>الفئة</th>
+                        <th>القيمة</th>
+                    </tr>
+                </thead>
+                <tbody id="topCatAmountBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Top Categories by Qty -->
+        <div
+            style="flex: 1; min-width: 300px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #eee; overflow: hidden;">
+            <div
+                style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 10px 16px; font-weight: 700; font-size: 0.95rem;">
+                📦 الفئات الأكثر مبيعاً (كمية)
+            </div>
+            <table class="results-table" style="margin: 0; font-size: 0.85rem;" id="topCatQtyTable">
+                <thead>
+                    <tr>
+                        <th>الفئة</th>
+                        <th>الكمية</th>
+                    </tr>
+                </thead>
+                <tbody id="topCatQtyBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top by Qty -->
+    <div
+        style="flex: 1; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #eee; overflow: hidden;">
+        <div
+            style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 10px 16px; font-weight: 700; font-size: 0.95rem;">
+            🔥 الأكثر مبيعاً (حسب الكمية)
+        </div>
+        <table class="results-table" style="margin: 0; font-size: 0.85rem;" id="topQtyTable">
+            <thead>
+                <tr>
+                    <th>Alias</th>
+                    <th>اسم المنتج</th>
+                    <th>الكمية</th>
+                </tr>
+            </thead>
+            <tbody id="topQtyBody"></tbody>
+        </table>
+    </div>
     </div>
 
     <!-- Results Table -->
@@ -1128,6 +1230,66 @@
             document.getElementById('btnExcel').disabled = false;
             document.getElementById('btnPdf').disabled = false;
 
+            const searchType = document.getElementById('searchType').value;
+            if (searchType === 'sales_stock' && results.length > 0) {
+                document.getElementById('topProductsContainer').style.display = 'flex';
+
+                // Aggregate by Category
+                const catAgg = {};
+                for (const r of results) {
+                    const c = r.category || 'غير مصنف';
+                    if (!catAgg[c]) catAgg[c] = { qty: 0, amount: 0 };
+                    catAgg[c].qty += r.qty;
+                    catAgg[c].amount += r.amount;
+                }
+                const categoriesList = Object.keys(catAgg).map(c => ({
+                    category: c,
+                    qty: catAgg[c].qty,
+                    amount: catAgg[c].amount
+                }));
+
+                // Render Top Products by Amount
+                const topAmt = [...results].sort((a, b) => b.amount - a.amount).slice(0, 5);
+                document.getElementById('topAmountBody').innerHTML = topAmt.map(r => `
+                    <tr>
+                        <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                        <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="${r.name}">${r.name}</td>
+                        <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('ar-SA', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `).join('');
+
+                // Render Top Products by Qty
+                const topQty = [...results].sort((a, b) => b.qty - a.qty).slice(0, 5);
+                document.getElementById('topQtyBody').innerHTML = topQty.map(r => `
+                    <tr>
+                        <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                        <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="${r.name}">${r.name}</td>
+                        <td style="font-weight:700">${r.qty.toLocaleString('ar-SA')}</td>
+                    </tr>
+                `).join('');
+
+                // Render Top Categories by Amount
+                const topCatAmt = [...categoriesList].sort((a, b) => b.amount - a.amount).slice(0, 5);
+                document.getElementById('topCatAmountBody').innerHTML = topCatAmt.map(c => `
+                    <tr>
+                        <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="${c.category}">${c.category}</td>
+                        <td style="font-weight:700;color:var(--orange)">${c.amount.toLocaleString('ar-SA', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `).join('');
+
+                // Render Top Categories by Qty
+                const topCatQty = [...categoriesList].sort((a, b) => b.qty - a.qty).slice(0, 5);
+                document.getElementById('topCatQtyBody').innerHTML = topCatQty.map(c => `
+                    <tr>
+                        <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="${c.category}">${c.category}</td>
+                        <td style="font-weight:700">${c.qty.toLocaleString('ar-SA')}</td>
+                    </tr>
+                `).join('');
+
+            } else {
+                document.getElementById('topProductsContainer').style.display = 'none';
+            }
+
             // Summary
             const sumQty = results.reduce((s, r) => s + r.qty, 0);
             const sumAmt = results.reduce((s, r) => s + r.amount, 0);
@@ -1381,6 +1543,7 @@
             CURRENT_RESULTS = [];
             document.getElementById('tableContainer').style.display = 'none';
             document.getElementById('summaryStrip').style.display = 'none';
+            document.getElementById('topProductsContainer').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('emptyState').querySelector('p').textContent = 'اختر الفلاتر واضغط "بحث" لعرض النتائج';
             document.getElementById('btnExcel').disabled = true;
