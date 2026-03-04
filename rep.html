@@ -551,6 +551,75 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            width: 90%;
+            max-width: 1000px;
+            max-height: 90vh;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h5 {
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .analysis-section {
+            margin-bottom: 30px;
+        }
+
+        .analysis-section h6 {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
         /* MOBILE */
         @media (max-width: 768px) {
             .top-products-container {
@@ -700,6 +769,8 @@
         <!-- Actions -->
         <div class="action-bar">
             <button class="btn-search" id="btnSearch" onclick="runSearch()">🔍 بحث</button>
+            <button class="btn-excel" id="btnAnalysis" onclick="showAnalysisModal()"
+                style="display:none; background:#8e44ad;">🧠 التحليل الاستراتيجي</button>
             <button class="btn-excel" id="btnExcel" onclick="exportExcel()" disabled>📊 تصدير Excel</button>
             <button class="btn-excel" id="btnTopExcel" onclick="exportTopExcel()"
                 style="display:none; background:#d35400;">📥 تصدير الأكثر مبيعاً</button>
@@ -848,6 +919,73 @@
                 </thead>
                 <tbody id="resultsBody"></tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Strategic Analysis Modal -->
+    <div class="modal-overlay" id="analysisModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>🧠 التحليل الاستراتيجي (Strategic Analysis)</h5>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-excel" onclick="exportAnalysisExcel()"
+                        style="padding: 6px 12px; font-size: 0.85rem; background: #27ae60;">📥 تصدير التقرير
+                        (Excel)</button>
+                    <button class="btn-close" onclick="closeAnalysisModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+
+                <!-- Sell-Through Rate -->
+                <div class="analysis-section">
+                    <h6>⚡ أعلى 10 منتجات من حيث نسبة البيع للمخزون (Sell-Through Rate)</h6>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-top:-5px; margin-bottom:10px;">
+                        توضح هذه النسبة سرعة دوران المنتج. كلما اقتربت من 100% يعني أن المنتج يكاد ينفد ويحتاج لإعادة
+                        طلب عاجلة.
+                    </p>
+                    <div style="overflow-x:auto;">
+                        <table class="results-table" id="sellThroughTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Alias</th>
+                                    <th>اسم المنتج</th>
+                                    <th>الكمية المباعة</th>
+                                    <th>الإجمالي (مباع + متبقي)</th>
+                                    <th>نسبة البيع (STR)</th>
+                                    <th>تغطية المخزون (أيام)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sellThroughBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Stagnant Code -->
+                <div class="analysis-section">
+                    <h6>🐌 أشد 10 منتجات ركوداً (Stagnant Products)</h6>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-top:-5px; margin-bottom:10px;">
+                        منتجات مخزونها عالي جداً ولم يتم بيع أي قطعة منها (0 مبيعات) خلال الفترة المحددة.
+                    </p>
+                    <div style="overflow-x:auto;">
+                        <table class="results-table" id="stagnantTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Alias</th>
+                                    <th>اسم المنتج</th>
+                                    <th>الفئة</th>
+                                    <th>سعر البيع</th>
+                                    <th>الستوك المكدس</th>
+                                    <th>القيمة المجمدة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stagnantBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
@@ -1300,8 +1438,10 @@
             // Sync Top Excel button visibility
             if (searchType === 'sales_stock' && results.length > 0) {
                 document.getElementById('btnTopExcel').style.display = 'inline-block';
+                document.getElementById('btnAnalysis').style.display = 'inline-block';
             } else {
                 document.getElementById('btnTopExcel').style.display = 'none';
+                document.getElementById('btnAnalysis').style.display = 'none';
             }
 
             // Summary
@@ -1527,6 +1667,217 @@
         }
 
         // =====================
+        // STRATEGIC ANALYSIS MODAL
+        // =====================
+        function calcDays(from, to) {
+            const d1 = new Date(from);
+            const d2 = new Date(to);
+            const diffInMs = Math.abs(d2 - d1);
+            const diffInDays = diffInMs / (1000 * 60 * 60 * 24) + 1; // inclusive
+            return diffInDays || 1;
+        }
+
+        // Store analysis data globally for export
+        let CURRENT_ANALYSIS_STR = [];
+        let CURRENT_ANALYSIS_STAGNANT = [];
+
+        function showAnalysisModal() {
+            if (!CURRENT_RESULTS.length) return;
+
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const daysCount = calcDays(dateFrom, dateTo);
+            const storeFilter = document.getElementById('storeFilter').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const conditions = getConditions();
+
+            // 1. SELL-THROUGH RATE 
+            // Only examine products that have both qty > 0 and stock information
+            let strList = [];
+            for (const r of CURRENT_RESULTS) {
+                if (r.qty > 0 && r.stock_total >= 0) {
+                    const totalAvailable = r.qty + r.stock_total;
+                    const str = (r.qty / totalAvailable) * 100;
+
+                    // Days of supply
+                    const avgDailySales = r.qty / daysCount;
+                    const daysOfSupply = avgDailySales > 0 ? r.stock_total / avgDailySales : Infinity;
+
+                    strList.push({
+                        ...r,
+                        totalAvailable,
+                        str,
+                        daysOfSupply
+                    });
+                }
+            }
+            strList.sort((a, b) => b.str - a.str);
+            CURRENT_ANALYSIS_STR = strList; // Store the full list
+            const topStr = strList.slice(0, 10);
+
+            let strHtml = '';
+            if (topStr.length === 0) {
+                strHtml = '<tr><td colspan="7" style="text-align:center;">لا توجد بيانات كافية للحساب.</td></tr>';
+            } else {
+                strHtml = topStr.map((r, i) => {
+                    let strColor = r.str > 80 ? '#c0392b' : r.str > 50 ? '#d35400' : '#27ae60';
+                    let dosText = r.daysOfSupply === Infinity ? '∞' : Math.round(r.daysOfSupply).toLocaleString('en-US');
+
+                    return `<tr>
+                        <td>${i + 1}</td>
+                        <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                        <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="${r.name}">${r.name}</td>
+                        <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
+                        <td>${r.totalAvailable.toLocaleString('en-US')}</td>
+                        <td style="font-weight:700; color:${strColor}">${r.str.toFixed(1)}%</td>
+                        <td style="font-weight:700">${dosText} يوم</td>
+                    </tr>`;
+                }).join('');
+            }
+            document.getElementById('sellThroughBody').innerHTML = strHtml;
+
+
+            // 2. STAGNANT PRODUCTS
+            // Products with 0 sales but highest stock
+            let stagnantList = [];
+
+            // Re-evaluate PRODUCTS against current filters to find items not in CURRENT_RESULTS
+            for (const pid in PRODUCTS) {
+                const prod = PRODUCTS[pid];
+
+                // Category Filter
+                if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                // Conditions Filter
+                if (!matchConditions(prod, conditions)) continue;
+
+                // Calculate stock based on store filter
+                let totalStock = 0;
+                if (prod.stock) {
+                    if (storeFilter !== 'all') {
+                        totalStock = prod.stock[storeFilter] || 0;
+                    } else {
+                        totalStock = prod.stock.total || 0;
+                    }
+                }
+
+                if (totalStock > 0) {
+                    // Check if it exists in CURRENT_RESULTS (i.e., has sales)
+                    const inResults = CURRENT_RESULTS.find(r => r.item_id === pid);
+                    if (!inResults) {
+                        // 0 sales!
+                        const frozenValue = totalStock * (prod.price || 0);
+                        stagnantList.push({
+                            alias: prod.alias || '',
+                            name: prod.name || '',
+                            category: prod.category || '',
+                            price: prod.price || 0,
+                            stock_total: totalStock,
+                            frozenValue
+                        });
+                    }
+                }
+            }
+
+            stagnantList.sort((a, b) => b.stock_total - a.stock_total); // Sort by highest stuck stock
+            CURRENT_ANALYSIS_STAGNANT = stagnantList; // Store the full list
+            const topStagnant = stagnantList.slice(0, 10);
+
+            let stagHtml = '';
+            if (topStagnant.length === 0) {
+                stagHtml = '<tr><td colspan="7" style="text-align:center;">لا توجد منتجات راكدة مطابقة للفلاتر! العمل ممتاز 🎉</td></tr>';
+            } else {
+                stagHtml = topStagnant.map((r, i) => {
+                    return `<tr>
+                        <td>${i + 1}</td>
+                        <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                        <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="${r.name}">${r.name}</td>
+                        <td>${r.category}</td>
+                        <td>${r.price.toLocaleString('en-US')}</td>
+                        <td style="font-weight:700; color:#c0392b">${r.stock_total.toLocaleString('en-US')}</td>
+                        <td style="font-weight:700">${r.frozenValue.toLocaleString('en-US')}</td>
+                    </tr>`;
+                }).join('');
+            }
+            document.getElementById('stagnantBody').innerHTML = stagHtml;
+
+            document.getElementById('analysisModal').style.display = 'block';
+        }
+
+        function exportAnalysisExcel() {
+            if (!CURRENT_ANALYSIS_STR.length && !CURRENT_ANALYSIS_STAGNANT.length) {
+                alert('لا توجد بيانات للتحليل الاستراتيجي لتصديرها.');
+                return;
+            }
+
+            showLoading('جاري تصدير التحليل الاستراتيجي...');
+
+            setTimeout(() => {
+                try {
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+
+                    // Prepare STR Sheet Data
+                    const strRows = CURRENT_ANALYSIS_STR.map((r, i) => ({
+                        '#': i + 1,
+                        'Alias': r.alias,
+                        'اسم المنتج': r.name,
+                        'الفئة': r.category,
+                        'الكمية المباعة': r.qty,
+                        'الستوك الحالي': r.stock_total,
+                        'الإجمالي (مباع + متبقي)': r.totalAvailable,
+                        'نسبة البيع (STR) %': +(r.str.toFixed(2)),
+                        'تغطية المخزون (أيام) تقديري': r.daysOfSupply === Infinity ? 'لا توجد مبيعات' : Math.round(r.daysOfSupply)
+                    }));
+
+                    // Prepare Stagnant Sheet Data
+                    const stagRows = CURRENT_ANALYSIS_STAGNANT.map((r, i) => ({
+                        '#': i + 1,
+                        'Alias': r.alias,
+                        'اسم المنتج': r.name,
+                        'الفئة': r.category,
+                        'سعر البيع': r.price,
+                        'الستوك المكدس': r.stock_total,
+                        'القيمة المجمدة': +(r.frozenValue.toFixed(2))
+                    }));
+
+                    const wb = XLSX.utils.book_new();
+
+                    // Sheet 1
+                    const ws1 = XLSX.utils.json_to_sheet(strRows);
+                    ws1['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }];
+                    XLSX.utils.book_append_sheet(wb, ws1, 'نسبة البيع للمخزون STR');
+
+                    // Sheet 2
+                    if (stagRows.length > 0) {
+                        const ws2 = XLSX.utils.json_to_sheet(stagRows);
+                        ws2['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
+                        XLSX.utils.book_append_sheet(wb, ws2, 'المنتجات الراكدة');
+                    }
+
+                    const fileName = `Strategic_Analysis_${dateFrom}_${dateTo}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+
+                } catch (err) {
+                    console.error('Analysis export error:', err);
+                    alert('خطأ في تصدير التحليل الاستراتيجي: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
+        function closeAnalysisModal() {
+            document.getElementById('analysisModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('analysisModal');
+            if (event.target === modal) {
+                closeAnalysisModal();
+            }
+        }
+
+        // =====================
         // PDF EXPORT
         // =====================
         function exportPDF() {
@@ -1652,6 +2003,7 @@
             document.getElementById('summaryStrip').style.display = 'none';
             document.getElementById('topProductsContainer').style.display = 'none';
             document.getElementById('btnTopExcel').style.display = 'none';
+            document.getElementById('btnAnalysis').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('emptyState').querySelector('p').textContent = 'اختر الفلاتر واضغط "بحث" لعرض النتائج';
             document.getElementById('btnExcel').disabled = true;
