@@ -469,6 +469,120 @@
             margin-top: 8px;
             text-align: center;
         }
+
+        /* Shift View Styles */
+        .shift-toggle-btn {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #f0e68c;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .shift-toggle-btn:hover {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+        }
+
+        .shift-toggle-btn.active {
+            background: linear-gradient(135deg, #0f3460, #533483);
+            box-shadow: 0 0 12px rgba(83, 52, 131, 0.4);
+        }
+
+        .shift-kpi-section {
+            display: none;
+        }
+
+        .shift-kpi-section.visible {
+            display: block;
+        }
+
+        .shift-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: none;
+            border-radius: var(--card-radius);
+            padding: 14px;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shift-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .shift-card.shift-1::before {
+            background: linear-gradient(90deg, #f59e0b, #f97316);
+        }
+
+        .shift-card.shift-2::before {
+            background: linear-gradient(90deg, #3b82f6, #06b6d4);
+        }
+
+        .shift-card.shift-3::before {
+            background: linear-gradient(90deg, #8b5cf6, #6366f1);
+        }
+
+        .shift-card .shift-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        .shift-card .shift-time {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            margin-bottom: 6px;
+        }
+
+        .shift-card .shift-sales {
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .shift-card .shift-details {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .shift-branch-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .shift-branch-badge {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .shift-branch-badge.s1 {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .shift-branch-badge.s2 {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .shift-branch-badge.s3 {
+            background: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
     </style>
 </head>
 
@@ -542,6 +656,7 @@
                             <option value="monthly">🎯 أعلى تحقيق شهري</option>
                         </select>
                     </div>
+                    <button class="shift-toggle-btn" id="shiftToggle" onclick="toggleShiftView()">🌙 الشفتات</button>
                 </div>
                 <div id="periodLabel" class="period-label" style="display: none;"></div>
             </div>
@@ -588,6 +703,36 @@
                 </div>
             </div>
 
+            <!-- Shift KPI Cards (hidden by default) -->
+            <div id="shiftKpiSection" class="shift-kpi-section mb-3">
+                <div class="row g-2">
+                    <div class="col-4">
+                        <div class="shift-card shift-1">
+                            <div class="shift-label">🌅 الشفت الأول</div>
+                            <div class="shift-time">6:00 ص - 11:30 ص</div>
+                            <div class="shift-sales" id="shift1Sales">0</div>
+                            <div class="shift-details" id="shift1Details">0 فاتورة | 0 زائر</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="shift-card shift-2">
+                            <div class="shift-label">☀️ الشفت الثاني</div>
+                            <div class="shift-time">11:30 ص - 6:00 م</div>
+                            <div class="shift-sales" id="shift2Sales">0</div>
+                            <div class="shift-details" id="shift2Details">0 فاتورة | 0 زائر</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="shift-card shift-3">
+                            <div class="shift-label">🌙 الشفت الثالث</div>
+                            <div class="shift-time">8:00 م - 3:00 ص</div>
+                            <div class="shift-sales" id="shift3Sales">0</div>
+                            <div class="shift-details" id="shift3Details">0 فاتورة | 0 زائر</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Branch List -->
             <h6 class="section-title">📍 مبيعات الفروع اليوم</h6>
             <div id="branchList">
@@ -612,6 +757,7 @@
         let employeeNames = {};
         let currentUser = null;
         let deferredPrompt = null;
+        let shiftViewActive = false;  // Shift view toggle state
 
         // Date Helpers
         function getTodayStr() {
@@ -735,6 +881,169 @@
         function isDateInRange(dateStr) {
             if (!selectedFromDate || !selectedToDate) return dateStr === getTodayStr();
             return dateStr >= selectedFromDate && dateStr <= selectedToDate;
+        }
+
+        // === SHIFT VIEW LOGIC ===
+        function toggleShiftView() {
+            shiftViewActive = !shiftViewActive;
+            const btn = document.getElementById('shiftToggle');
+            const section = document.getElementById('shiftKpiSection');
+            btn.classList.toggle('active', shiftViewActive);
+            section.classList.toggle('visible', shiftViewActive);
+            renderWidget();
+        }
+
+        // Determine which shift an hour belongs to
+        function getShiftForHour(hour) {
+            if (hour >= 6 && hour < 12) return 1;       // 6:00 - 11:30 (use 12 as hour boundary since data is by hour)
+            if (hour >= 12 && hour < 18) return 2;      // 11:30 - 18:00
+            if (hour >= 20 || hour < 3) return 3;        // 20:00 - 03:00
+            return 0; // gap hours (3-6, 18-20)
+        }
+
+        // Get next day string
+        function getNextDayStr(dateStr) {
+            const d = new Date(dateStr);
+            d.setDate(d.getDate() + 1);
+            return d.toISOString().split('T')[0];
+        }
+
+        // Aggregate shift data for all branches in the selected date range
+        function computeShiftData(allowedBranches, fromDate, toDate) {
+            const shiftData = {
+                1: { sales: 0, bills: 0, visitors: 0, byStore: {} },
+                2: { sales: 0, bills: 0, visitors: 0, byStore: {} },
+                3: { sales: 0, bills: 0, visitors: 0, byStore: {} }
+            };
+
+            // Process hourly sales
+            if (rawData.sales_hourly) {
+                // Build a lookup: date_store_hour -> {sales, bills}
+                const salesMap = {};
+                rawData.sales_hourly.forEach(row => {
+                    // Format: [date, store, hour, sales, bills]
+                    const [date, store, hour, sales, bills] = row;
+                    if (!allowedBranches.includes(store)) return;
+                    const key = `${date}_${store}_${hour}`;
+                    salesMap[key] = { sales, bills };
+                });
+
+                // For each date in range, aggregate by shift
+                let d = new Date(fromDate);
+                const endD = new Date(toDate);
+                while (d <= endD) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const nextDateStr = getNextDayStr(dateStr);
+
+                    allowedBranches.forEach(store => {
+                        // Shift 1: hours 6-11 of this date
+                        for (let h = 6; h < 12; h++) {
+                            const entry = salesMap[`${dateStr}_${store}_${h}`];
+                            if (entry) {
+                                shiftData[1].sales += entry.sales;
+                                shiftData[1].bills += entry.bills;
+                                shiftData[1].byStore[store] = (shiftData[1].byStore[store] || 0) + entry.sales;
+                            }
+                        }
+
+                        // Shift 2: hours 12-17 of this date  (11:30 mapped to hour 12+)
+                        for (let h = 12; h < 18; h++) {
+                            const entry = salesMap[`${dateStr}_${store}_${h}`];
+                            if (entry) {
+                                shiftData[2].sales += entry.sales;
+                                shiftData[2].bills += entry.bills;
+                                shiftData[2].byStore[store] = (shiftData[2].byStore[store] || 0) + entry.sales;
+                            }
+                        }
+
+                        // Shift 3: hours 20-23 of this date + hours 0-2 of NEXT date
+                        for (let h = 20; h <= 23; h++) {
+                            const entry = salesMap[`${dateStr}_${store}_${h}`];
+                            if (entry) {
+                                shiftData[3].sales += entry.sales;
+                                shiftData[3].bills += entry.bills;
+                                shiftData[3].byStore[store] = (shiftData[3].byStore[store] || 0) + entry.sales;
+                            }
+                        }
+                        for (let h = 0; h < 3; h++) {
+                            const entry = salesMap[`${nextDateStr}_${store}_${h}`];
+                            if (entry) {
+                                shiftData[3].sales += entry.sales;
+                                shiftData[3].bills += entry.bills;
+                                shiftData[3].byStore[store] = (shiftData[3].byStore[store] || 0) + entry.sales;
+                            }
+                        }
+                    });
+
+                    d.setDate(d.getDate() + 1);
+                }
+            }
+
+            // Process hourly visitors (same logic)
+            if (rawData.visitors_hourly) {
+                const visMap = {};
+                rawData.visitors_hourly.forEach(row => {
+                    // Format: [date, store, hour, count]
+                    const [date, store, hour, count] = row;
+                    if (!allowedBranches.includes(store)) return;
+                    const key = `${date}_${store}_${hour}`;
+                    visMap[key] = (visMap[key] || 0) + count;
+                });
+
+                let d2 = new Date(fromDate);
+                while (d2 <= endD) {
+                    const dateStr = d2.toISOString().split('T')[0];
+                    const nextDateStr = getNextDayStr(dateStr);
+
+                    allowedBranches.forEach(store => {
+                        for (let h = 6; h < 12; h++) {
+                            const v = visMap[`${dateStr}_${store}_${h}`];
+                            if (v) shiftData[1].visitors += v;
+                        }
+                        for (let h = 12; h < 18; h++) {
+                            const v = visMap[`${dateStr}_${store}_${h}`];
+                            if (v) shiftData[2].visitors += v;
+                        }
+                        for (let h = 20; h <= 23; h++) {
+                            const v = visMap[`${dateStr}_${store}_${h}`];
+                            if (v) shiftData[3].visitors += v;
+                        }
+                        for (let h = 0; h < 3; h++) {
+                            const v = visMap[`${nextDateStr}_${store}_${h}`];
+                            if (v) shiftData[3].visitors += v;
+                        }
+                    });
+
+                    d2.setDate(d2.getDate() + 1);
+                }
+            }
+
+            return shiftData;
+        }
+
+        // Render shift KPI cards
+        function renderShiftKPIs(shiftData) {
+            [1, 2, 3].forEach(s => {
+                const d = shiftData[s];
+                document.getElementById(`shift${s}Sales`).textContent = formatNumber(d.sales);
+                const rate = d.visitors > 0 ? ((d.bills / d.visitors) * 100).toFixed(1) : 0;
+                document.getElementById(`shift${s}Details`).textContent =
+                    `${formatNumber(d.bills)} فاتورة | ${formatNumber(d.visitors)} زائر (${rate}%)`;
+            });
+        }
+
+        // Get per-branch shift badges HTML
+        function getShiftBadgesHtml(storeId, shiftData) {
+            if (!shiftViewActive) return '';
+            const s1 = shiftData[1].byStore[storeId] || 0;
+            const s2 = shiftData[2].byStore[storeId] || 0;
+            const s3 = shiftData[3].byStore[storeId] || 0;
+            if (s1 === 0 && s2 === 0 && s3 === 0) return '';
+            return `<div class="shift-branch-row">
+                <span class="shift-branch-badge s1">🌅 ${formatNumber(s1)}</span>
+                <span class="shift-branch-badge s2">☀️ ${formatNumber(s2)}</span>
+                <span class="shift-branch-badge s3">🌙 ${formatNumber(s3)}</span>
+            </div>`;
         }
 
         // Get Employee Name (Arabic if available)
@@ -863,6 +1172,13 @@
             }
 
             const allowedBranches = getUserAllowedBranches();
+
+            // Compute shift data if shift view is active
+            let currentShiftData = null;
+            if (shiftViewActive) {
+                currentShiftData = computeShiftData(allowedBranches, fromDate, toDate);
+                renderShiftKPIs(currentShiftData);
+            }
 
             // Filter sales by selected date range
             let periodSales = {};
@@ -1095,7 +1411,7 @@
                                     </div>
                                     <span class="toggle-icon">▼</span>
                                 </div>
-                            </div>${progressBarsHtml}
+                            </div>${progressBarsHtml}${shiftViewActive && currentShiftData ? getShiftBadgesHtml(storeId, currentShiftData) : ''}
                             <div class="employee-list" id="emp-list-${storeId}">
                                 <div class="text-center py-3 text-muted">جار التحميل...</div>
                             </div>
