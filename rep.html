@@ -701,6 +701,8 @@
         <div class="action-bar">
             <button class="btn-search" id="btnSearch" onclick="runSearch()">🔍 بحث</button>
             <button class="btn-excel" id="btnExcel" onclick="exportExcel()" disabled>📊 تصدير Excel</button>
+            <button class="btn-excel" id="btnTopExcel" onclick="exportTopExcel()"
+                style="display:none; background:#d35400;">📥 تصدير الأكثر مبيعاً</button>
             <button class="btn-pdf" id="btnPdf" onclick="exportPDF()" disabled>📄 تصدير PDF</button>
             <button class="btn-reset" onclick="resetFilters()">🔄 إعادة تعيين</button>
         </div>
@@ -1295,6 +1297,13 @@
                 document.getElementById('topProductsContainer').style.display = 'none';
             }
 
+            // Sync Top Excel button visibility
+            if (searchType === 'sales_stock' && results.length > 0) {
+                document.getElementById('btnTopExcel').style.display = 'inline-block';
+            } else {
+                document.getElementById('btnTopExcel').style.display = 'none';
+            }
+
             // Summary
             const sumQty = results.reduce((s, r) => s + r.qty, 0);
             const sumAmt = results.reduce((s, r) => s + r.amount, 0);
@@ -1425,6 +1434,99 @@
         }
 
         // =====================
+        // TOP EXCEL EXPORT
+        // =====================
+        function exportTopExcel() {
+            if (!CURRENT_RESULTS.length) return;
+
+            showLoading('جاري تصدير الأكثر مبيعاً...');
+
+            setTimeout(() => {
+                try {
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+
+                    // 1. Top Products by Amount
+                    const topAmt = [...CURRENT_RESULTS].sort((a, b) => b.amount - a.amount).map((r, i) => ({
+                        '#': i + 1,
+                        'Alias': r.alias,
+                        'اسم المنتج': r.name,
+                        'الفئة': r.category,
+                        'القيمة': r.amount,
+                        'الكمية المباعة': r.qty
+                    }));
+
+                    // 2. Top Products by Qty
+                    const topQty = [...CURRENT_RESULTS].sort((a, b) => b.qty - a.qty).map((r, i) => ({
+                        '#': i + 1,
+                        'Alias': r.alias,
+                        'اسم المنتج': r.name,
+                        'الفئة': r.category,
+                        'الكمية المباعة': r.qty,
+                        'القيمة': r.amount
+                    }));
+
+                    // 3 & 4. Categories Aggregation
+                    const catAgg = {};
+                    for (const r of CURRENT_RESULTS) {
+                        const c = r.category || 'غير مصنف';
+                        if (!catAgg[c]) catAgg[c] = { qty: 0, amount: 0 };
+                        catAgg[c].qty += r.qty;
+                        catAgg[c].amount += r.amount;
+                    }
+                    const categoriesList = Object.keys(catAgg).map(c => ({
+                        category: c,
+                        qty: catAgg[c].qty,
+                        amount: catAgg[c].amount
+                    }));
+
+                    // Top Categories by Amount
+                    const catTopAmt = [...categoriesList].sort((a, b) => b.amount - a.amount).map((c, i) => ({
+                        '#': i + 1,
+                        'الفئة': c.category,
+                        'القيمة': c.amount,
+                        'الكمية المباعة': c.qty
+                    }));
+
+                    // Top Categories by Qty
+                    const catTopQty = [...categoriesList].sort((a, b) => b.qty - a.qty).map((c, i) => ({
+                        '#': i + 1,
+                        'الفئة': c.category,
+                        'الكمية المباعة': c.qty,
+                        'القيمة': c.amount
+                    }));
+
+                    const wb = XLSX.utils.book_new();
+
+                    // Generate Sheets
+                    const ws1 = XLSX.utils.json_to_sheet(topAmt);
+                    ws1['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws1, 'المنتجات - قيمة');
+
+                    const ws2 = XLSX.utils.json_to_sheet(topQty);
+                    ws2['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws2, 'المنتجات - كمية');
+
+                    const ws3 = XLSX.utils.json_to_sheet(catTopAmt);
+                    ws3['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 15 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws3, 'الفئات - قيمة');
+
+                    const ws4 = XLSX.utils.json_to_sheet(catTopQty);
+                    ws4['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 15 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws4, 'الفئات - كمية');
+
+                    const fileName = `REP_Top_Selling_${dateFrom}_${dateTo}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+
+                } catch (err) {
+                    console.error('Export Top error:', err);
+                    alert('خطأ في تصدير الأكثر مبيعاً: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
+        // =====================
         // PDF EXPORT
         // =====================
         function exportPDF() {
@@ -1549,6 +1651,7 @@
             document.getElementById('tableContainer').style.display = 'none';
             document.getElementById('summaryStrip').style.display = 'none';
             document.getElementById('topProductsContainer').style.display = 'none';
+            document.getElementById('btnTopExcel').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('emptyState').querySelector('p').textContent = 'اختر الفلاتر واضغط "بحث" لعرض النتائج';
             document.getElementById('btnExcel').disabled = true;
