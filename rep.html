@@ -599,6 +599,13 @@
 
         <div class="filter-row">
             <div class="filter-group">
+                <label>🎯 نوع البحث</label>
+                <select id="searchType" onchange="toggleSearchType()">
+                    <option value="sales_stock">المبيعات والمخزون</option>
+                    <option value="stock_only">المخزون فقط (بدون مبيعات)</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <label>📅 من تاريخ</label>
                 <input type="date" id="dateFrom" />
             </div>
@@ -618,22 +625,36 @@
                     <option value="all">الكل</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label>📦 حالة المخزون</label>
+                <select id="stockFilter">
+                    <option value="all">الكل</option>
+                    <option value="in_stock">متوفر (> 0)</option>
+                    <option value="low_stock">منخفض (1-10)</option>
+                    <option value="out_of_stock">نفذت الكمية (0)</option>
+                </select>
+            </div>
         </div>
 
         <!-- Alias Conditions -->
         <div class="conditions-box">
-            <h6>🏷️ شروط البحث بالكود (Alias)</h6>
+            <h6>🏷️ شروط البحث المتقدمة (كود أو اسم المنتج)</h6>
             <div id="conditionsContainer">
                 <div class="condition-row">
                     <select class="cond-operator" style="display:none;">
                         <option value="AND">AND</option>
                         <option value="OR">OR</option>
                     </select>
+                    <select class="cond-field">
+                        <option value="alias">الكود (Alias)</option>
+                        <option value="name">الاسم (Name)</option>
+                    </select>
                     <select class="cond-type">
                         <option value="contains">يحتوي على</option>
                         <option value="is">يساوي</option>
                         <option value="is_not">لا يساوي</option>
                         <option value="starts_with">يبدأ بـ</option>
+                        <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
                     </select>
                     <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." />
                 </div>
@@ -770,6 +791,19 @@
             document.getElementById('loadingOverlay').classList.remove('show');
         }
 
+        function toggleSearchType() {
+            const isStockOnly = document.getElementById('searchType').value === 'stock_only';
+            document.getElementById('dateFrom').disabled = isStockOnly;
+            document.getElementById('dateTo').disabled = isStockOnly;
+            if (isStockOnly) {
+                document.getElementById('dateFrom').style.opacity = '0.5';
+                document.getElementById('dateTo').style.opacity = '0.5';
+            } else {
+                document.getElementById('dateFrom').style.opacity = '1';
+                document.getElementById('dateTo').style.opacity = '1';
+            }
+        }
+
         // =====================
         // CONDITIONS
         // =====================
@@ -782,11 +816,16 @@
                 <option value="AND">AND</option>
                 <option value="OR">OR</option>
             </select>
+            <select class="cond-field">
+                <option value="alias">الكود (Alias)</option>
+                <option value="name">الاسم (Name)</option>
+            </select>
             <select class="cond-type">
                 <option value="contains">يحتوي على</option>
                 <option value="is">يساوي</option>
                 <option value="is_not">لا يساوي</option>
                 <option value="starts_with">يبدأ بـ</option>
+                <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
             </select>
             <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." />
             <button class="btn-remove-cond" onclick="this.parentElement.remove()">✕</button>
@@ -802,6 +841,7 @@
                 if (!val) return;
                 conditions.push({
                     operator: idx === 0 ? 'AND' : row.querySelector('.cond-operator').value,
+                    field: row.querySelector('.cond-field').value,
                     type: row.querySelector('.cond-type').value,
                     value: val
                 });
@@ -809,14 +849,14 @@
             return conditions;
         }
 
-        function matchConditions(alias, conditions) {
+        function matchConditions(prod, conditions) {
             if (!conditions.length) return true;
 
-            let result = evaluateCondition(alias, conditions[0]);
+            let result = evaluateCondition(prod, conditions[0]);
 
             for (let i = 1; i < conditions.length; i++) {
                 const cond = conditions[i];
-                const match = evaluateCondition(alias, cond);
+                const match = evaluateCondition(prod, cond);
                 if (cond.operator === 'AND') {
                     result = result && match;
                 } else {
@@ -826,14 +866,18 @@
             return result;
         }
 
-        function evaluateCondition(alias, cond) {
-            const a = (alias || '').toLowerCase();
+        function evaluateCondition(prod, cond) {
+            const fieldVal = (cond.field === 'name' ? prod.name : prod.alias) || '';
+            const a = fieldVal.toLowerCase();
             const v = cond.value.toLowerCase();
             switch (cond.type) {
                 case 'is': return a === v;
                 case 'is_not': return a !== v;
                 case 'contains': return a.includes(v);
                 case 'starts_with': return a.startsWith(v);
+                case 'in_list':
+                    const list = v.split(/[\s,]+/).filter(x => x);
+                    return list.includes(a);
                 default: return true;
             }
         }
@@ -870,13 +914,15 @@
         // SEARCH
         // =====================
         async function runSearch() {
+            const searchType = document.getElementById('searchType').value;
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
             const storeFilter = document.getElementById('storeFilter').value;
             const categoryFilter = document.getElementById('categoryFilter').value;
+            const stockFilter = document.getElementById('stockFilter').value;
             const conditions = getConditions();
 
-            if (!dateFrom || !dateTo) {
+            if (searchType === 'sales_stock' && (!dateFrom || !dateTo)) {
                 alert('الرجاء تحديد التاريخ');
                 return;
             }
@@ -885,52 +931,57 @@
             showLoading('جاري البحث...');
 
             try {
-                // 1. Load required months
-                const requiredMonths = getRequiredMonths(dateFrom, dateTo);
-                if (!requiredMonths.length) {
-                    alert('لا توجد بيانات للفترة المحددة');
-                    document.getElementById('btnSearch').disabled = false;
-                    hideLoading();
-                    return;
-                }
+                let itemAgg = {};
 
-                // Load all needed months
-                let allRecords = [];
-                for (const m of requiredMonths) {
-                    const records = await loadSalesMonth(m);
-                    allRecords = allRecords.concat(records);
-                }
-
-                // 2. Filter by date range
-                allRecords = allRecords.filter(r => r.d >= dateFrom && r.d <= dateTo);
-
-                // 3. Filter by store
-                if (storeFilter !== 'all') {
-                    allRecords = allRecords.filter(r => r.s === storeFilter);
-                }
-
-                // 4. Aggregate by item_id
-                const itemAgg = {};
-                for (const r of allRecords) {
-                    const pid = r.i;
-                    if (!itemAgg[pid]) {
-                        itemAgg[pid] = { qty: 0, amount: 0 };
+                if (searchType === 'sales_stock') {
+                    // 1. Load required months
+                    const requiredMonths = getRequiredMonths(dateFrom, dateTo);
+                    if (!requiredMonths.length) {
+                        alert('لا توجد بيانات للفترة المحددة');
+                        document.getElementById('btnSearch').disabled = false;
+                        hideLoading();
+                        return;
                     }
-                    itemAgg[pid].qty += r.q;
-                    itemAgg[pid].amount += r.a;
+
+                    // Load all needed months
+                    let allRecords = [];
+                    for (const m of requiredMonths) {
+                        const records = await loadSalesMonth(m);
+                        allRecords = allRecords.concat(records);
+                    }
+
+                    // 2. Filter by date range
+                    allRecords = allRecords.filter(r => r.d >= dateFrom && r.d <= dateTo);
+
+                    // 3. Filter by store
+                    if (storeFilter !== 'all') {
+                        allRecords = allRecords.filter(r => r.s === storeFilter);
+                    }
+
+                    // 4. Aggregate by item_id
+                    for (const r of allRecords) {
+                        const pid = r.i;
+                        if (!itemAgg[pid]) {
+                            itemAgg[pid] = { qty: 0, amount: 0 };
+                        }
+                        itemAgg[pid].qty += r.q;
+                        itemAgg[pid].amount += r.a;
+                    }
                 }
 
                 // 5. Build results with product info + apply filters
                 const results = [];
-                for (const [pid, agg] of Object.entries(itemAgg)) {
+                const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
+
+                for (const pid of pidsToProcess) {
                     const prod = PRODUCTS[pid];
                     if (!prod) continue;
 
                     // Category filter
                     if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
 
-                    // Alias conditions
-                    if (!matchConditions(prod.alias, conditions)) continue;
+                    // Alias and Name conditions
+                    if (!matchConditions(prod, conditions)) continue;
 
                     // Stock
                     let totalStock = 0;
@@ -946,14 +997,22 @@
                         }
                     }
 
+                    // Stock condition filter
+                    if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                    if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                    if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                    const qty = searchType === 'sales_stock' ? itemAgg[pid].qty : 0;
+                    const amount = searchType === 'sales_stock' ? itemAgg[pid].amount : 0;
+
                     results.push({
                         item_id: pid,
                         alias: prod.alias || '',
                         name: prod.name || '',
                         category: prod.category || '',
                         price: prod.price || 0,
-                        qty: agg.qty,
-                        amount: Math.round(agg.amount * 100) / 100,
+                        qty: qty,
+                        amount: Math.round(amount * 100) / 100,
                         stock_total: totalStock,
                         stock_by_store: stockByStore
                     });
@@ -1174,6 +1233,10 @@
         // RESET
         // =====================
         function resetFilters() {
+            document.getElementById('searchType').value = 'sales_stock';
+            document.getElementById('stockFilter').value = 'all';
+            toggleSearchType();
+
             document.getElementById('storeFilter').value = 'all';
             document.getElementById('categoryFilter').value = 'all';
             setDefaultDates();
@@ -1186,11 +1249,16 @@
                     <option value="AND">AND</option>
                     <option value="OR">OR</option>
                 </select>
+                <select class="cond-field">
+                    <option value="alias">الكود (Alias)</option>
+                    <option value="name">الاسم (Name)</option>
+                </select>
                 <select class="cond-type">
                     <option value="contains">يحتوي على</option>
                     <option value="is">يساوي</option>
                     <option value="is_not">لا يساوي</option>
                     <option value="starts_with">يبدأ بـ</option>
+                    <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
                 </select>
                 <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." />
             </div>
