@@ -1229,6 +1229,7 @@
 
             try {
                 let itemAgg = {};
+                window.CURRENT_ALL_RECORDS = []; // Reset for every new search
 
                 if (searchType === 'sales_stock') {
                     // 1. Load required months
@@ -1254,6 +1255,8 @@
                     if (storeFilter !== 'all') {
                         allRecords = allRecords.filter(r => r.s === storeFilter);
                     }
+
+                    window.CURRENT_ALL_RECORDS = allRecords;
 
                     // 4. Aggregate by item_id
                     for (const r of allRecords) {
@@ -2012,7 +2015,91 @@
                     // Sheet 3 (Quilts)
                     const ws3 = XLSX.utils.json_to_sheet(quiltsRows);
                     ws3['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
-                    XLSX.utils.book_append_append_sheet(wb, ws3, 'تحليل اللحافات');
+                    XLSX.utils.book_append_sheet(wb, ws3, 'تحليل اللحافات');
+
+                    // Sheet 4 (Monthly King Quilts)
+                    const conditions = getConditions();
+                    const categoryFilter = document.getElementById('categoryFilter').value;
+                    const mnthKingBrackets = [
+                        '001-199', '200-299', '300-399', '400-499', '500-599',
+                        '600-699', '700-799', '800-899', '900-999', '1000+'
+                    ];
+
+                    const kingM = {};
+                    mnthKingBrackets.forEach(b => kingM[b] = { salesTotal: 0, stockTotal: 0, months: {} });
+                    let allMonthsSet = new Set();
+                    const kingInfo = {}; // pid -> bracket
+
+                    for (const pid in PRODUCTS) {
+                        const p = PRODUCTS[pid];
+                        if (categoryFilter !== 'all' && p.category !== categoryFilter) continue;
+                        if (!matchConditions(p, conditions)) continue;
+
+                        if (p.category === 'لحافات كينغ' || p.category === 'لحافات كينج') {
+                            const price = p.price || 0;
+                            let b = '1000+';
+                            if (price >= 1 && price <= 199) b = '001-199';
+                            else if (price >= 200 && price <= 299) b = '200-299';
+                            else if (price >= 300 && price <= 399) b = '300-399';
+                            else if (price >= 400 && price <= 499) b = '400-499';
+                            else if (price >= 500 && price <= 599) b = '500-599';
+                            else if (price >= 600 && price <= 699) b = '600-699';
+                            else if (price >= 700 && price <= 799) b = '700-799';
+                            else if (price >= 800 && price <= 899) b = '800-899';
+                            else if (price >= 900 && price <= 999) b = '900-999';
+
+                            let totalStock = 0;
+                            if (p.stock) {
+                                if (storeFilter !== 'all') totalStock = p.stock[storeFilter] || 0;
+                                else totalStock = p.stock.total || 0;
+                            }
+
+                            kingInfo[pid] = b;
+                            kingM[b].stockTotal += totalStock;
+                        }
+                    }
+
+                    if (window.CURRENT_ALL_RECORDS) {
+                        for (const r of window.CURRENT_ALL_RECORDS) {
+                            if (kingInfo[r.i]) {
+                                const b = kingInfo[r.i];
+                                const mParts = r.d.split('-');
+                                const mName = parseInt(mParts[1], 10).toString(); // "1", "2"
+
+                                allMonthsSet.add(mName);
+                                if (!kingM[b].months[mName]) kingM[b].months[mName] = 0;
+                                kingM[b].months[mName] += r.q;
+                                kingM[b].salesTotal += r.q;
+                            }
+                        }
+                    }
+
+                    const sortedMonths = Array.from(allMonthsSet).sort((a, b) => parseInt(a) - parseInt(b));
+                    const mkRows = [];
+                    mnthKingBrackets.forEach(b => {
+                        const row = { 'مبيعات لحافات الكينغ العادية حسب الفئة السعرية لسنة 2025/2026': b };
+                        sortedMonths.forEach(m => {
+                            row[m] = kingM[b].months[m] || 0;
+                        });
+                        row['sales'] = kingM[b].salesTotal;
+                        row['STOCK'] = kingM[b].stockTotal;
+                        mkRows.push(row);
+                    });
+
+                    const sumRowMk = { 'مبيعات لحافات الكينغ العادية حسب الفئة السعرية لسنة 2025/2026': 'TOTAL' };
+                    sortedMonths.forEach(m => {
+                        sumRowMk[m] = mkRows.reduce((s, r) => s + (r[m] || 0), 0);
+                    });
+                    sumRowMk['sales'] = mkRows.reduce((s, r) => s + r['sales'], 0);
+                    sumRowMk['STOCK'] = mkRows.reduce((s, r) => s + r['STOCK'], 0);
+                    mkRows.push(sumRowMk);
+
+                    const ws4 = XLSX.utils.json_to_sheet(mkRows);
+                    const colsMk = [{ wch: 35 }];
+                    sortedMonths.forEach(() => colsMk.push({ wch: 10 }));
+                    colsMk.push({ wch: 15 }, { wch: 15 });
+                    ws4['!cols'] = colsMk;
+                    XLSX.utils.book_append_sheet(wb, ws4, 'مبيعات الكينغ حسب الشهر');
 
                     const fileName = `Strategic_Analysis_${dateFrom}_${dateTo}.xlsx`;
                     XLSX.writeFile(wb, fileName);
