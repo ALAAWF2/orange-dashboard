@@ -2017,7 +2017,7 @@
                     ws3['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
                     XLSX.utils.book_append_sheet(wb, ws3, 'تحليل اللحافات');
 
-                    // Sheet 4 (Monthly King Quilts)
+                    // Monthly Quilts Sheets (King, Queen, Full, Twin)
                     const conditions = getConditions();
                     const categoryFilter = document.getElementById('categoryFilter').value;
                     const mnthKingBrackets = [
@@ -2025,81 +2025,114 @@
                         '600-699', '700-799', '800-899', '900-999', '1000+'
                     ];
 
-                    const kingM = {};
-                    mnthKingBrackets.forEach(b => kingM[b] = { salesTotal: 0, stockTotal: 0, months: {} });
-                    let allMonthsSet = new Set();
-                    const kingInfo = {}; // pid -> bracket
+                    const quiltTypes = [
+                        { key: 'king', catMatch: ['لحافات كينغ', 'لحافات كينج'], sheetName: 'مبيعات الكينغ حسب الشهر', title: 'مبيعات لحافات الكينغ العادية حسب الفئة السعرية لسنة 2025/2026' },
+                        { key: 'queen', catMatch: ['لحافات كوين'], sheetName: 'مبيعات الكوين حسب الشهر', title: 'مبيعات لحافات الكوين العادية حسب الفئة السعرية لسنة 2025/2026' },
+                        { key: 'full', catMatch: ['لحافات فل'], sheetName: 'مبيعات الفل حسب الشهر', title: 'مبيعات لحافات الفل العادية حسب الفئة السعرية لسنة 2025/2026' },
+                        { key: 'twin', catMatch: ['لحافات توين'], sheetName: 'مبيعات التوين حسب الشهر', title: 'مبيعات لحافات التوين العادية حسب الفئة السعرية لسنة 2025/2026' }
+                    ];
 
-                    for (const pid in PRODUCTS) {
-                        const p = PRODUCTS[pid];
-                        if (categoryFilter !== 'all' && p.category !== categoryFilter) continue;
-                        if (!matchConditions(p, conditions)) continue;
+                    quiltTypes.forEach(qType => {
+                        const typeMAgg = {};
+                        mnthKingBrackets.forEach(b => typeMAgg[b] = { salesTotal: 0, stockTotal: 0, months: {} });
+                        let allMonthsSet = new Set();
+                        const typeInfo = {}; // pid -> bracket
 
-                        if (p.category === 'لحافات كينغ' || p.category === 'لحافات كينج') {
-                            const price = p.price || 0;
-                            let b = '1000+';
-                            if (price >= 1 && price <= 199) b = '001-199';
-                            else if (price >= 200 && price <= 299) b = '200-299';
-                            else if (price >= 300 && price <= 399) b = '300-399';
-                            else if (price >= 400 && price <= 499) b = '400-499';
-                            else if (price >= 500 && price <= 599) b = '500-599';
-                            else if (price >= 600 && price <= 699) b = '600-699';
-                            else if (price >= 700 && price <= 799) b = '700-799';
-                            else if (price >= 800 && price <= 899) b = '800-899';
-                            else if (price >= 900 && price <= 999) b = '900-999';
+                        for (const pid in PRODUCTS) {
+                            const p = PRODUCTS[pid];
+                            if (categoryFilter !== 'all' && p.category !== categoryFilter) continue;
+                            if (!matchConditions(p, conditions)) continue;
 
-                            let totalStock = 0;
-                            if (p.stock) {
-                                if (storeFilter !== 'all') totalStock = p.stock[storeFilter] || 0;
-                                else totalStock = p.stock.total || 0;
-                            }
+                            if (qType.catMatch.includes(p.category)) {
+                                const price = p.price || 0;
+                                let b = '1000+';
+                                if (price >= 1 && price <= 199) b = '001-199';
+                                else if (price >= 200 && price <= 299) b = '200-299';
+                                else if (price >= 300 && price <= 399) b = '300-399';
+                                else if (price >= 400 && price <= 499) b = '400-499';
+                                else if (price >= 500 && price <= 599) b = '500-599';
+                                else if (price >= 600 && price <= 699) b = '600-699';
+                                else if (price >= 700 && price <= 799) b = '700-799';
+                                else if (price >= 800 && price <= 899) b = '800-899';
+                                else if (price >= 900 && price <= 999) b = '900-999';
 
-                            kingInfo[pid] = b;
-                            kingM[b].stockTotal += totalStock;
-                        }
-                    }
+                                let totalStock = 0;
+                                if (p.stock) {
+                                    if (storeFilter !== 'all') totalStock = p.stock[storeFilter] || 0;
+                                    else totalStock = p.stock.total || 0;
+                                }
 
-                    if (window.CURRENT_ALL_RECORDS) {
-                        for (const r of window.CURRENT_ALL_RECORDS) {
-                            if (kingInfo[r.i]) {
-                                const b = kingInfo[r.i];
-                                const mParts = r.d.split('-');
-                                const mName = parseInt(mParts[1], 10).toString(); // "1", "2"
-
-                                allMonthsSet.add(mName);
-                                if (!kingM[b].months[mName]) kingM[b].months[mName] = 0;
-                                kingM[b].months[mName] += r.q;
-                                kingM[b].salesTotal += r.q;
+                                typeInfo[pid] = b;
+                                typeMAgg[b].stockTotal += totalStock;
                             }
                         }
-                    }
 
-                    const sortedMonths = Array.from(allMonthsSet).sort((a, b) => parseInt(a) - parseInt(b));
-                    const mkRows = [];
-                    mnthKingBrackets.forEach(b => {
-                        const row = { 'مبيعات لحافات الكينغ العادية حسب الفئة السعرية لسنة 2025/2026': b };
-                        sortedMonths.forEach(m => {
-                            row[m] = kingM[b].months[m] || 0;
+                        if (window.CURRENT_ALL_RECORDS) {
+                            for (const r of window.CURRENT_ALL_RECORDS) {
+                                if (typeInfo[r.i]) {
+                                    const b = typeInfo[r.i];
+                                    const mParts = r.d.split('-');
+                                    const mName = parseInt(mParts[1], 10).toString(); // "1", "2"
+
+                                    allMonthsSet.add(mName);
+                                    if (!typeMAgg[b].months[mName]) typeMAgg[b].months[mName] = 0;
+                                    typeMAgg[b].months[mName] += r.q;
+                                    typeMAgg[b].salesTotal += r.q;
+                                }
+                            }
+                        }
+
+                        const sortedMonths = Array.from(allMonthsSet).sort((a, b) => parseInt(a) - parseInt(b));
+
+                        const aoaMk = [];
+                        // Row 1: Merged title
+                        aoaMk.push([qType.title]);
+
+                        // Row 2: Headers
+                        const headerRow = [''];
+                        sortedMonths.forEach(m => headerRow.push(m.toString()));
+                        headerRow.push('sales', 'STOCK');
+                        aoaMk.push(headerRow);
+
+                        // Rows 3+: Data
+                        mnthKingBrackets.forEach(b => {
+                            const row = [b];
+                            sortedMonths.forEach(m => {
+                                row.push(typeMAgg[b].months[m] || 0);
+                            });
+                            row.push(typeMAgg[b].salesTotal);
+                            row.push(typeMAgg[b].stockTotal);
+                            aoaMk.push(row);
                         });
-                        row['sales'] = kingM[b].salesTotal;
-                        row['STOCK'] = kingM[b].stockTotal;
-                        mkRows.push(row);
-                    });
 
-                    const sumRowMk = { 'مبيعات لحافات الكينغ العادية حسب الفئة السعرية لسنة 2025/2026': 'TOTAL' };
-                    sortedMonths.forEach(m => {
-                        sumRowMk[m] = mkRows.reduce((s, r) => s + (r[m] || 0), 0);
-                    });
-                    sumRowMk['sales'] = mkRows.reduce((s, r) => s + r['sales'], 0);
-                    sumRowMk['STOCK'] = mkRows.reduce((s, r) => s + r['STOCK'], 0);
-                    mkRows.push(sumRowMk);
+                        // Final Row: TOTAL
+                        const sumRowMk = ['TOTAL'];
+                        sortedMonths.forEach(m => {
+                            let totalM = 0;
+                            mnthKingBrackets.forEach(b => totalM += (typeMAgg[b].months[m] || 0));
+                            sumRowMk.push(totalM);
+                        });
+                        let totalSales = 0, totalStock = 0;
+                        mnthKingBrackets.forEach(b => {
+                            totalSales += typeMAgg[b].salesTotal;
+                            totalStock += typeMAgg[b].stockTotal;
+                        });
+                        sumRowMk.push(totalSales, totalStock);
+                        aoaMk.push(sumRowMk);
 
-                    const ws4 = XLSX.utils.json_to_sheet(mkRows);
-                    const colsMk = [{ wch: 35 }];
-                    sortedMonths.forEach(() => colsMk.push({ wch: 10 }));
-                    colsMk.push({ wch: 15 }, { wch: 15 });
-                    ws4['!cols'] = colsMk;
-                    XLSX.utils.book_append_sheet(wb, ws4, 'مبيعات الكينغ حسب الشهر');
+                        const wsQ = XLSX.utils.aoa_to_sheet(aoaMk);
+
+                        // Merge title row across all columns
+                        const totalCols = headerRow.length;
+                        wsQ['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }];
+
+                        const colsMk = [{ wch: 15 }];
+                        sortedMonths.forEach(() => colsMk.push({ wch: 10 }));
+                        colsMk.push({ wch: 15 }, { wch: 15 });
+                        wsQ['!cols'] = colsMk;
+
+                        XLSX.utils.book_append_sheet(wb, wsQ, qType.sheetName);
+                    });
 
                     const fileName = `Strategic_Analysis_${dateFrom}_${dateTo}.xlsx`;
                     XLSX.writeFile(wb, fileName);
