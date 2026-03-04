@@ -911,24 +911,21 @@
         // Aggregate shift data for all branches in the selected date range
         function computeShiftData(allowedBranches, fromDate, toDate) {
             const shiftData = {
-                1: { sales: 0, bills: 0, visitors: 0, byStore: {} },
-                2: { sales: 0, bills: 0, visitors: 0, byStore: {} },
-                3: { sales: 0, bills: 0, visitors: 0, byStore: {} }
+                1: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} },
+                2: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} },
+                3: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} }
             };
 
             // Process hourly sales
             if (rawData.sales_hourly) {
-                // Build a lookup: date_store_hour -> {sales, bills}
                 const salesMap = {};
                 rawData.sales_hourly.forEach(row => {
-                    // Format: [date, store, hour, sales, bills]
                     const [date, store, hour, sales, bills] = row;
                     if (!allowedBranches.includes(store)) return;
                     const key = `${date}_${store}_${hour}`;
                     salesMap[key] = { sales, bills };
                 });
 
-                // For each date in range, aggregate by shift
                 let d = new Date(fromDate);
                 const endD = new Date(toDate);
                 while (d <= endD) {
@@ -936,33 +933,34 @@
                     const nextDateStr = getNextDayStr(dateStr);
 
                     allowedBranches.forEach(store => {
-                        // Shift 1: hours 6-11 of this date
+                        // Shift 1: hours 6-11
                         for (let h = 6; h < 12; h++) {
                             const entry = salesMap[`${dateStr}_${store}_${h}`];
                             if (entry) {
                                 shiftData[1].sales += entry.sales;
                                 shiftData[1].bills += entry.bills;
                                 shiftData[1].byStore[store] = (shiftData[1].byStore[store] || 0) + entry.sales;
+                                shiftData[1].byStoreBills[store] = (shiftData[1].byStoreBills[store] || 0) + entry.bills;
                             }
                         }
-
-                        // Shift 2: hours 12-17 of this date  (11:30 mapped to hour 12+)
+                        // Shift 2: hours 12-17
                         for (let h = 12; h < 18; h++) {
                             const entry = salesMap[`${dateStr}_${store}_${h}`];
                             if (entry) {
                                 shiftData[2].sales += entry.sales;
                                 shiftData[2].bills += entry.bills;
                                 shiftData[2].byStore[store] = (shiftData[2].byStore[store] || 0) + entry.sales;
+                                shiftData[2].byStoreBills[store] = (shiftData[2].byStoreBills[store] || 0) + entry.bills;
                             }
                         }
-
-                        // Shift 3: hours 20-23 of this date + hours 0-2 of NEXT date
+                        // Shift 3: hours 20-23 today + 0-2 next day
                         for (let h = 20; h <= 23; h++) {
                             const entry = salesMap[`${dateStr}_${store}_${h}`];
                             if (entry) {
                                 shiftData[3].sales += entry.sales;
                                 shiftData[3].bills += entry.bills;
                                 shiftData[3].byStore[store] = (shiftData[3].byStore[store] || 0) + entry.sales;
+                                shiftData[3].byStoreBills[store] = (shiftData[3].byStoreBills[store] || 0) + entry.bills;
                             }
                         }
                         for (let h = 0; h < 3; h++) {
@@ -971,6 +969,7 @@
                                 shiftData[3].sales += entry.sales;
                                 shiftData[3].bills += entry.bills;
                                 shiftData[3].byStore[store] = (shiftData[3].byStore[store] || 0) + entry.sales;
+                                shiftData[3].byStoreBills[store] = (shiftData[3].byStoreBills[store] || 0) + entry.bills;
                             }
                         }
                     });
@@ -979,11 +978,10 @@
                 }
             }
 
-            // Process hourly visitors (same logic)
+            // Process hourly visitors
             if (rawData.visitors_hourly) {
                 const visMap = {};
                 rawData.visitors_hourly.forEach(row => {
-                    // Format: [date, store, hour, count]
                     const [date, store, hour, count] = row;
                     if (!allowedBranches.includes(store)) return;
                     const key = `${date}_${store}_${hour}`;
@@ -991,6 +989,7 @@
                 });
 
                 let d2 = new Date(fromDate);
+                const endD = new Date(toDate);
                 while (d2 <= endD) {
                     const dateStr = d2.toISOString().split('T')[0];
                     const nextDateStr = getNextDayStr(dateStr);
@@ -998,19 +997,19 @@
                     allowedBranches.forEach(store => {
                         for (let h = 6; h < 12; h++) {
                             const v = visMap[`${dateStr}_${store}_${h}`];
-                            if (v) shiftData[1].visitors += v;
+                            if (v) { shiftData[1].visitors += v; shiftData[1].byStoreVisitors[store] = (shiftData[1].byStoreVisitors[store] || 0) + v; }
                         }
                         for (let h = 12; h < 18; h++) {
                             const v = visMap[`${dateStr}_${store}_${h}`];
-                            if (v) shiftData[2].visitors += v;
+                            if (v) { shiftData[2].visitors += v; shiftData[2].byStoreVisitors[store] = (shiftData[2].byStoreVisitors[store] || 0) + v; }
                         }
                         for (let h = 20; h <= 23; h++) {
                             const v = visMap[`${dateStr}_${store}_${h}`];
-                            if (v) shiftData[3].visitors += v;
+                            if (v) { shiftData[3].visitors += v; shiftData[3].byStoreVisitors[store] = (shiftData[3].byStoreVisitors[store] || 0) + v; }
                         }
                         for (let h = 0; h < 3; h++) {
                             const v = visMap[`${nextDateStr}_${store}_${h}`];
-                            if (v) shiftData[3].visitors += v;
+                            if (v) { shiftData[3].visitors += v; shiftData[3].byStoreVisitors[store] = (shiftData[3].byStoreVisitors[store] || 0) + v; }
                         }
                     });
 
@@ -1032,17 +1031,43 @@
             });
         }
 
-        // Get per-branch shift badges HTML
+        // Get per-branch shift detail HTML
         function getShiftBadgesHtml(storeId, shiftData) {
             if (!shiftViewActive) return '';
             const s1 = shiftData[1].byStore[storeId] || 0;
             const s2 = shiftData[2].byStore[storeId] || 0;
             const s3 = shiftData[3].byStore[storeId] || 0;
             if (s1 === 0 && s2 === 0 && s3 === 0) return '';
-            return `<div class="shift-branch-row">
-                <span class="shift-branch-badge s1">🌅 ${formatNumber(s1)}</span>
-                <span class="shift-branch-badge s2">☀️ ${formatNumber(s2)}</span>
-                <span class="shift-branch-badge s3">🌙 ${formatNumber(s3)}</span>
+
+            const b1 = shiftData[1].byStoreBills[storeId] || 0;
+            const b2 = shiftData[2].byStoreBills[storeId] || 0;
+            const b3 = shiftData[3].byStoreBills[storeId] || 0;
+            const v1 = shiftData[1].byStoreVisitors[storeId] || 0;
+            const v2 = shiftData[2].byStoreVisitors[storeId] || 0;
+            const v3 = shiftData[3].byStoreVisitors[storeId] || 0;
+
+            return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
+                <div style="display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
+                    <span style="font-weight:600; color:#888;"></span>
+                    <span style="text-align:center; font-weight:600; color:#888;">مبيعات</span>
+                    <span style="text-align:center; font-weight:600; color:#888;">فواتير</span>
+                    <span style="text-align:center; font-weight:600; color:#888;">زوار</span>
+
+                    <span class="shift-branch-badge s1">🌅 ش1</span>
+                    <span style="text-align:center; font-weight:700;">${formatNumber(s1)}</span>
+                    <span style="text-align:center;">${b1}</span>
+                    <span style="text-align:center;">${v1 || '-'}</span>
+
+                    <span class="shift-branch-badge s2">☀️ ش2</span>
+                    <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
+                    <span style="text-align:center;">${b2}</span>
+                    <span style="text-align:center;">${v2 || '-'}</span>
+
+                    <span class="shift-branch-badge s3">🌙 ش3</span>
+                    <span style="text-align:center; font-weight:700;">${formatNumber(s3)}</span>
+                    <span style="text-align:center;">${b3}</span>
+                    <span style="text-align:center;">${v3 || '-'}</span>
+                </div>
             </div>`;
         }
 
