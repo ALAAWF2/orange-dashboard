@@ -985,6 +985,30 @@
                     </div>
                 </div>
 
+                <!-- Quilts by Price Bracket -->
+                <div class="analysis-section">
+                    <h6>🛏️ تحليل مخزون اللحافات حسب الفئة السعرية (Quilts by Price Bracket)</h6>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-top:-5px; margin-bottom:10px;">
+                        يعرض كميات مخزون جميع المنتجات التي تحتوي كلمة (لحاف) بناءً على نطاق سعر البيع.
+                    </p>
+                    <div style="overflow-x:auto;">
+                        <table class="results-table" id="quiltsTable">
+                            <thead>
+                                <tr>
+                                    <th>الفئة السعرية (ر.س)</th>
+                                    <th>لحافات توين</th>
+                                    <th>لحافات فل</th>
+                                    <th>لحافات كوين</th>
+                                    <th>لحافات كينغ</th>
+                                    <th>أخرى / ستاندرد</th>
+                                    <th>إجمالي الستوك المتوفر</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quiltsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -1680,6 +1704,7 @@
         // Store analysis data globally for export
         let CURRENT_ANALYSIS_STR = [];
         let CURRENT_ANALYSIS_STAGNANT = [];
+        let CURRENT_ANALYSIS_QUILTS = [];
 
         function showAnalysisModal() {
             if (!CURRENT_RESULTS.length) return;
@@ -1800,6 +1825,124 @@
             }
             document.getElementById('stagnantBody').innerHTML = stagHtml;
 
+            // 3. QUILTS BY PRICE BRACKET (Detailed by Types)
+            // Focus on products where name contains 'لحاف'
+            const quiltBrackets = {
+                '001-199': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '200-299': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '300-399': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '400-499': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '500-599': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '600-699': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '700-799': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '800-899': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '900-999': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 },
+                '1000+': { twin: 0, full: 0, queen: 0, king: 0, other: 0, totalStock: 0 }
+            };
+
+            for (const pid in PRODUCTS) {
+                const prod = PRODUCTS[pid];
+                if (!prod.name) continue;
+
+                // Category Filter (Apply if selected, otherwise ignore)
+                if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                // Conditions Filter
+                if (!matchConditions(prod, conditions)) continue;
+
+                const catName = prod.category || '';
+                const prodName = prod.name || '';
+
+                // Check if it's a quilt (لحاف)
+                if (prodName.includes('لحاف') || catName.includes('لحاف')) {
+
+                    // Determine Type
+                    let qType = 'other';
+                    if (catName.includes('توين') || prodName.includes('توين')) qType = 'twin';
+                    else if (catName.includes('فل') || prodName.includes('فل')) qType = 'full';
+                    else if (catName.includes('كوين') || prodName.includes('كوين')) qType = 'queen';
+                    else if (catName.includes('كينغ') || prodName.includes('كينج') || prodName.includes('كينغ')) qType = 'king';
+
+                    // Calculate stock based on store filter
+                    let totalStock = 0;
+                    if (prod.stock) {
+                        if (storeFilter !== 'all') {
+                            totalStock = prod.stock[storeFilter] || 0;
+                        } else {
+                            totalStock = prod.stock.total || 0;
+                        }
+                    }
+
+                    if (totalStock > 0) {
+                        const price = prod.price || 0;
+                        let bracket = '';
+                        if (price >= 1 && price <= 199) bracket = '001-199';
+                        else if (price >= 200 && price <= 299) bracket = '200-299';
+                        else if (price >= 300 && price <= 399) bracket = '300-399';
+                        else if (price >= 400 && price <= 499) bracket = '400-499';
+                        else if (price >= 500 && price <= 599) bracket = '500-599';
+                        else if (price >= 600 && price <= 699) bracket = '600-699';
+                        else if (price >= 700 && price <= 799) bracket = '700-799';
+                        else if (price >= 800 && price <= 899) bracket = '800-899';
+                        else if (price >= 900 && price <= 999) bracket = '900-999';
+                        else if (price >= 1000) bracket = '1000+';
+
+                        if (bracket) {
+                            quiltBrackets[bracket][qType] += totalStock;
+                            quiltBrackets[bracket].totalStock += totalStock;
+                        }
+                    }
+                }
+            }
+
+            // Convert to array for rendering and export
+            const quiltList = Object.keys(quiltBrackets).map(k => ({
+                bracket: k,
+                twin: quiltBrackets[k].twin,
+                full: quiltBrackets[k].full,
+                queen: quiltBrackets[k].queen,
+                king: quiltBrackets[k].king,
+                other: quiltBrackets[k].other,
+                totalStock: quiltBrackets[k].totalStock
+            }));
+            CURRENT_ANALYSIS_QUILTS = quiltList;
+
+            let quiltHtml = '';
+            const allQuiltsStock = quiltList.reduce((sum, b) => sum + b.totalStock, 0);
+
+            if (allQuiltsStock === 0) {
+                quiltHtml = '<tr><td colspan="7" style="text-align:center;">لا توجد مخزونات للحافات ضمن الفلاتر المحددة.</td></tr>';
+            } else {
+                quiltHtml = quiltList.map(b => {
+                    return `<tr>
+                        <td style="font-weight:700;font-family:monospace;">${b.bracket}</td>
+                        <td style="${b.twin > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.twin.toLocaleString('en-US')}</td>
+                        <td style="${b.full > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.full.toLocaleString('en-US')}</td>
+                        <td style="${b.queen > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.queen.toLocaleString('en-US')}</td>
+                        <td style="${b.king > 0 ? 'color:#2980b9;font-weight:700;' : 'color:#ccc;'}">${b.king.toLocaleString('en-US')}</td>
+                        <td style="${b.other > 0 ? 'color:#8e44ad;font-weight:700;' : 'color:#ccc;'}">${b.other.toLocaleString('en-US')}</td>
+                        <td style="font-weight:700; color:var(--orange)">${b.totalStock.toLocaleString('en-US')}</td>
+                    </tr>`;
+                }).join('');
+
+                // Add total row
+                const tTwin = quiltList.reduce((sum, b) => sum + b.twin, 0);
+                const tFull = quiltList.reduce((sum, b) => sum + b.full, 0);
+                const tQueen = quiltList.reduce((sum, b) => sum + b.queen, 0);
+                const tKing = quiltList.reduce((sum, b) => sum + b.king, 0);
+                const tOther = quiltList.reduce((sum, b) => sum + b.other, 0);
+
+                quiltHtml += `<tr style="background:#f8f9fa;">
+                    <td style="font-weight:800;">الإجمالي العام</td>
+                    <td style="font-weight:800; color:#2c3e50;">${tTwin.toLocaleString('en-US')}</td>
+                    <td style="font-weight:800; color:#2c3e50;">${tFull.toLocaleString('en-US')}</td>
+                    <td style="font-weight:800; color:#2c3e50;">${tQueen.toLocaleString('en-US')}</td>
+                    <td style="font-weight:800; color:#2c3e50;">${tKing.toLocaleString('en-US')}</td>
+                    <td style="font-weight:800; color:#2c3e50;">${tOther.toLocaleString('en-US')}</td>
+                    <td style="font-weight:800; color:var(--orange)">${allQuiltsStock.toLocaleString('en-US')}</td>
+                </tr>`;
+            }
+            document.getElementById('quiltsBody').innerHTML = quiltHtml;
+
             document.getElementById('analysisModal').style.display = 'block';
         }
 
@@ -1840,6 +1983,26 @@
                         'القيمة المجمدة': +(r.frozenValue.toFixed(2))
                     }));
 
+                    // Prepare Quilts Sheet Data
+                    const quiltsRows = CURRENT_ANALYSIS_QUILTS.map(b => ({
+                        'الفئة السعرية': b.bracket,
+                        'لحافات توين': b.twin,
+                        'لحافات فل': b.full,
+                        'لحافات كوين': b.queen,
+                        'لحافات كينغ': b.king,
+                        'أخرى / ستاندرد': b.other,
+                        'إجمالي الستوك المتوفر': b.totalStock
+                    }));
+                    quiltsRows.push({
+                        'الفئة السعرية': 'الإجمالي العام',
+                        'لحافات توين': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.twin, 0),
+                        'لحافات فل': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.full, 0),
+                        'لحافات كوين': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.queen, 0),
+                        'لحافات كينغ': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.king, 0),
+                        'أخرى / ستاندرد': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.other, 0),
+                        'إجمالي الستوك المتوفر': CURRENT_ANALYSIS_QUILTS.reduce((sum, b) => sum + b.totalStock, 0)
+                    });
+
                     const wb = XLSX.utils.book_new();
 
                     // Sheet 1
@@ -1853,6 +2016,11 @@
                         ws2['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
                         XLSX.utils.book_append_sheet(wb, ws2, 'المنتجات الراكدة');
                     }
+
+                    // Sheet 3 (Quilts)
+                    const ws3 = XLSX.utils.json_to_sheet(quiltsRows);
+                    ws3['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }];
+                    XLSX.utils.book_append_sheet(wb, ws3, 'تحليل اللحافات');
 
                     const fileName = `Strategic_Analysis_${dateFrom}_${dateTo}.xlsx`;
                     XLSX.writeFile(wb, fileName);
