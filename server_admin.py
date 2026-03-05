@@ -419,11 +419,17 @@ def get_daily_stats():
             dyn_sales_map = {str(row[0]): float(row[1] or 0) for row in dyn_sales_data}
             dyn_trans_map = {str(row[0]): row[2] for row in dyn_sales_data}
             
-            # Merge sales from both sources (sum where both exist)
+            # Merge sales from both sources
             all_sales_dates = set(gofrugal_sales_map.keys()) | set(dyn_sales_map.keys())
             sales_map = {}
             for d in all_sales_dates:
-                sales_map[d] = gofrugal_sales_map.get(d, 0) + dyn_sales_map.get(d, 0)
+                if d >= '2026-01-01':
+                    if d in gofrugal_sales_map:
+                        sales_map[d] = gofrugal_sales_map[d]
+                    else:
+                        sales_map[d] = dyn_sales_map.get(d, 0)
+                else:
+                    sales_map[d] = gofrugal_sales_map.get(d, 0) + dyn_sales_map.get(d, 0)
             
             # Get visitors per day
             vis_q = text("""
