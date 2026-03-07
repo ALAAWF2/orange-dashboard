@@ -1467,7 +1467,9 @@
                     <td class="text-center fw-bold text-danger">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center">${b.avgInv.toFixed(0)}</td>
-                    <td class="text-center">${b.visitors.toLocaleString()}</td>
+                    <td class="text-center fw-bold">
+                        <a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                    </td>
                     <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
                     <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
                     <td class="text-center">${b.conv.toFixed(1)}%</td>
@@ -1652,7 +1654,9 @@
                     <td>${r.transY.toLocaleString()}</td>
                     <td>${r.avgInv.toFixed(0)}</td>
                     <td class="fw-bold">${r.custVal.toFixed(0)}</td>
-                    <td>${r.visitY.toLocaleString()}</td>
+                    <td class="fw-bold">
+                        <a href="#" onclick="showHourlyVisitors('${r.sid}', '${encodeURIComponent(r.name)}', new Date('${dateYest}'), new Date('${dateYest}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitY.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                    </td>
                     <td class="text-secondary">${r.visitLY.toLocaleString()}</td>
                     <td>${r.conv.toFixed(1)}%</td>
                 `;
@@ -1773,7 +1777,9 @@
                     <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
                     <td class="text-center">${r.trans.toLocaleString()}</td>
                     <td class="text-center">${r.avgInv.toLocaleString()}</td>
-                    <td class="text-center">${r.visitors.toLocaleString()}</td>
+                    <td class="text-center fw-bold">
+                        <a href="#" onclick="showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                    </td>
                     <td class="text-center text-muted">${r.visitorsLY.toLocaleString()}</td>
                     <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
                     <td class="text-center">${r.conv.toFixed(1)}%</td>
@@ -2122,6 +2128,149 @@
             </div>
         </div>
     </div>
+
+    <!-- Hourly Visitors Modal -->
+    <div class="modal fade" id="hourlyVisitorsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-people-fill text-primary me-2"></i>
+                        الزوار بالساعة - <span id="hourlyStoreName" class="text-primary"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="bg-white p-3 text-center border-bottom">
+                        <div class="text-muted small mb-1">الفترة الزمنية المحددة</div>
+                        <div id="hourlyPeriod" class="fw-bold"></div>
+                        <div class="mt-2 text-primary">إجمالي الزوار بالطريقة الدقيقة: <span id="hourlyTotalVis"
+                                class="fw-bold fs-5">0</span></div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table table-hover table-striped mb-0 text-center align-middle">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th>الساعة</th>
+                                    <th>عدد الزوار</th>
+                                    <th>نسبة من اليوم</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hourlyTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="hourlyNoDataMsg" class="text-center p-4 text-muted" style="display: none;">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        لا توجد بيانات تفصيلية بالساعة لهذه الفترة.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2 border-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Hourly Visitors Helper ---
+        function showHourlyVisitors(storeId, encodedName, startDate, endDate) {
+            if (!rawData || !rawData.visitors_hourly) {
+                alert("بيانات الزوار بالساعة غير متوفرة في هذا التحديث.");
+                return;
+            }
+
+            const storeName = decodeURIComponent(encodedName);
+            document.getElementById('hourlyStoreName').textContent = storeName;
+
+            // Format Dates
+            const sStr = startDate.toLocaleDateString('en-CA');
+            const eStr = endDate.toLocaleDateString('en-CA');
+
+            if (sStr === eStr) {
+                document.getElementById('hourlyPeriod').textContent = sStr;
+            } else {
+                document.getElementById('hourlyPeriod').textContent = `${sStr} إلى ${eStr}`;
+            }
+
+            let sTime = startDate.getTime();
+            // End of day
+            let eTime = new Date(endDate);
+            eTime.setHours(23, 59, 59, 999);
+            eTime = eTime.getTime();
+
+            // Aggregate hourly data
+            let hourlyCounts = {};
+            let totalVis = 0;
+
+            for (let i = 0; i < 24; i++) {
+                hourlyCounts[i] = 0;
+            }
+
+            rawData.visitors_hourly.forEach(([d, s, h, v]) => {
+                let dTime = new Date(d).getTime();
+                if (s === storeId && dTime >= sTime && dTime <= eTime) {
+                    hourlyCounts[h] += v;
+                    totalVis += v;
+                }
+            });
+
+            document.getElementById('hourlyTotalVis').textContent = totalVis.toLocaleString();
+
+            const tbody = document.getElementById('hourlyTableBody');
+            const noDataMsg = document.getElementById('hourlyNoDataMsg');
+            tbody.innerHTML = '';
+
+            if (totalVis === 0) {
+                tbody.parentElement.style.display = 'none';
+                noDataMsg.style.display = 'block';
+            } else {
+                tbody.parentElement.style.display = 'table';
+                noDataMsg.style.display = 'none';
+
+                // Render non-zero hours, or all active hours
+                for (let h = 0; h < 24; h++) {
+                    let count = hourlyCounts[h];
+                    if (count > 0 || (h >= 9 && h <= 23)) { // Show typical working hours even if 0, for context
+                        let ampm = h >= 12 ? 'PM' : 'AM';
+                        let dispH = h % 12;
+                        if (dispH === 0) dispH = 12;
+
+                        // Format: e.g. "04:00 PM - 05:00 PM"
+                        let nextH = h + 1;
+                        let nextAmpm = nextH >= 12 && nextH < 24 ? 'PM' : 'AM';
+                        let nextDispH = nextH % 12;
+                        if (nextDispH === 0) nextDispH = 12;
+
+                        let timeLabel = `${dispH}:00 ${ampm} - ${nextDispH}:00 ${nextAmpm}`;
+                        let pct = totalVis > 0 ? (count / totalVis) * 100 : 0;
+
+                        let tr = document.createElement('tr');
+                        // Highlight peak hour
+                        if (pct > 15) tr.className = 'table-warning fw-bold';
+
+                        tr.innerHTML = `
+                            <td class="text-start" dir="ltr"><span class="badge bg-secondary me-2">${h.toString().padStart(2, '0')}:00</span> ${timeLabel}</td>
+                            <td class="fw-bold">${count.toLocaleString()}</td>
+                            <td class="text-muted small">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <span style="width: 40px;" class="fw-bold text-dark">${pct.toFixed(1)}%</span>
+                                    <div class="progress" style="width: 50px; height: 5px; margin-right: 5px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                }
+            }
+
+            const modalInfo = new bootstrap.Modal(document.getElementById('hourlyVisitorsModal'));
+            modalInfo.show();
+        }
+    </script>
 </body>
 
 </html>
