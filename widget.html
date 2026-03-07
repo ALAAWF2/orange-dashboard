@@ -1430,7 +1430,8 @@
                                             ${branchVisitors[storeId] ? (() => {
                             const v = branchVisitors[storeId];
                             const rate = v > 0 ? ((trans / v) * 100).toFixed(1) : 0;
-                            return `<span class="branch-visitors">| ${v} زائر (${rate}%)</span>`;
+                            // Make it clickable to show hourly visitors modal
+                            return `<span class="branch-visitors" style="cursor: pointer; text-decoration: underline;" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', '${fromDate}', '${toDate}')">| ${v} زائر (${rate}%) <i class="bi bi-clock-history"></i></span>`;
                         })() : ''}
                                         </div>
                                     </div>
@@ -1585,6 +1586,142 @@
                 document.getElementById('installBanner').classList.add('hidden');
             }
         });
+    </script>
+    <!-- Hourly Visitors Modal -->
+    <div class="modal fade" id="hourlyVisitorsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: var(--card-radius); overflow: hidden;">
+                <div class="modal-header bg-light border-0">
+                    <h5 class="modal-title fw-bold" style="font-size: 1.1rem;">
+                        <span style="color: var(--bs-primary);">📊 الزوار بالساعة</span> - <span id="hourlyStoreName"
+                            class="text-dark"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 bg-white">
+                    <div class="p-3 text-center" style="background: #fafafa; border-bottom: 1px solid #eee;">
+                        <div class="text-muted" style="font-size: 0.8rem; margin-bottom: 2px;">الفترة الزمنية المحددة
+                        </div>
+                        <div id="hourlyPeriod" class="fw-bold fs-6 text-dark mb-2"></div>
+                        <div style="color: var(--bs-primary); font-size: 0.9rem;">
+                            إجمالي الزوار بالطريقة الدقيقة: <span id="hourlyTotalVis" class="fw-bold fs-5">0</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 50vh;">
+                        <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="py-2 text-muted fw-bold">الساعة</th>
+                                    <th class="py-2 text-muted fw-bold">عدد الزوار</th>
+                                    <th class="py-2 text-muted fw-bold">نسبة من اليوم</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hourlyTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="hourlyNoDataMsg" class="text-center p-4 text-muted" style="display: none;">
+                        <div style="font-size: 2rem; opacity: 0.3; margin-bottom: 10px;">📉</div>
+                        لا توجد بيانات تفصيلية بالساعة لهذه الفترة.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2 border-0 justify-content-center">
+                    <button type="button" class="btn btn-secondary btn-sm px-4"
+                        style="border-radius: 20px; font-weight: bold;" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Hourly Visitors Helper ---
+        function showHourlyVisitors(storeId, encodedName, fromDateStr, toDateStr) {
+            if (!rawData || !rawData.visitors_hourly) {
+                alert("بيانات الزوار بالساعة غير متوفرة في هذا التحديث.");
+                return;
+            }
+
+            const storeName = decodeURIComponent(encodedName);
+            document.getElementById('hourlyStoreName').textContent = storeName;
+
+            if (fromDateStr === toDateStr) {
+                document.getElementById('hourlyPeriod').textContent = formatArabicDate(fromDateStr);
+            } else {
+                document.getElementById('hourlyPeriod').textContent = `${formatArabicDate(fromDateStr)} إلى ${formatArabicDate(toDateStr)}`;
+            }
+
+            // Aggregate hourly data
+            let hourlyCounts = {};
+            let totalVis = 0;
+
+            for (let i = 0; i < 24; i++) {
+                hourlyCounts[i] = 0;
+            }
+
+            rawData.visitors_hourly.forEach(([d, s, h, v]) => {
+                if (s === storeId && d >= fromDateStr && d <= toDateStr) {
+                    hourlyCounts[h] += v;
+                    totalVis += v;
+                }
+            });
+
+            document.getElementById('hourlyTotalVis').textContent = formatNumber(totalVis);
+
+            const tbody = document.getElementById('hourlyTableBody');
+            const noDataMsg = document.getElementById('hourlyNoDataMsg');
+            tbody.innerHTML = '';
+
+            if (totalVis === 0) {
+                tbody.parentElement.style.display = 'none';
+                noDataMsg.style.display = 'block';
+            } else {
+                tbody.parentElement.style.display = 'table';
+                noDataMsg.style.display = 'none';
+
+                // Render non-zero hours, or all active hours
+                for (let h = 0; h < 24; h++) {
+                    let count = hourlyCounts[h];
+                    if (count > 0 || (h >= 9 && h <= 23)) { // Show typical working hours even if 0, for context
+                        let ampm = h >= 12 ? 'PM' : 'AM';
+                        let dispH = h % 12;
+                        if (dispH === 0) dispH = 12;
+
+                        // Format: e.g. "04:00 PM - 05:00 PM"
+                        let nextH = h + 1;
+                        let nextAmpm = nextH >= 12 && nextH < 24 ? 'PM' : 'AM';
+                        let nextDispH = nextH % 12;
+                        if (nextDispH === 0) nextDispH = 12;
+
+                        let timeLabel = `${dispH}:00 ${ampm} - ${nextDispH}:00 ${nextAmpm}`;
+                        let pct = totalVis > 0 ? (count / totalVis) * 100 : 0;
+
+                        let tr = document.createElement('tr');
+                        // Highlight peak hour
+                        if (pct > 15) tr.style.backgroundColor = '#fff3e0';
+
+                        tr.innerHTML = `
+                            <td class="text-start" dir="ltr" style="font-size: 0.75rem;"><span style="display:inline-block; background:#e9ecef; border-radius:4px; padding:2px 6px; margin-right:6px; color:#495057; font-weight:bold;">${h.toString().padStart(2, '0')}:00</span> ${timeLabel}</td>
+                            <td class="fw-bold" style="font-size: 0.95rem; color:#000;">${formatNumber(count)}</td>
+                            <td class="text-muted">
+                                <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                                    <span style="width: 35px; font-weight: bold; color: #495057; font-size:0.75rem;">${pct.toFixed(1)}%</span>
+                                    <div style="height: 6px; width: 40px; background: #e9ecef; border-radius: 3px; overflow: hidden; display: flex;">
+                                        <div style="width: ${pct}%; background: ${pct > 15 ? '#fe7900' : '#888'};"></div>
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                }
+            }
+
+            const modalInfo = new bootstrap.Modal(document.getElementById('hourlyVisitorsModal'));
+            modalInfo.show();
+        }
     </script>
 </body>
 
