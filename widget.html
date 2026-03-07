@@ -1681,41 +1681,39 @@
                 tbody.parentElement.style.display = 'table';
                 noDataMsg.style.display = 'none';
 
-                // Render non-zero hours, or all active hours
+                // Render all 24 hours
                 for (let h = 0; h < 24; h++) {
                     let count = hourlyCounts[h];
-                    if (count > 0 || (h >= 9 && h <= 23)) { // Show typical working hours even if 0, for context
-                        let ampm = h >= 12 ? 'PM' : 'AM';
-                        let dispH = h % 12;
-                        if (dispH === 0) dispH = 12;
+                    let ampm = h >= 12 ? 'PM' : 'AM';
+                    let dispH = h % 12;
+                    if (dispH === 0) dispH = 12;
 
-                        // Format: e.g. "04:00 PM - 05:00 PM"
-                        let nextH = h + 1;
-                        let nextAmpm = nextH >= 12 && nextH < 24 ? 'PM' : 'AM';
-                        let nextDispH = nextH % 12;
-                        if (nextDispH === 0) nextDispH = 12;
+                    // Format: e.g. "04:00 PM - 05:00 PM"
+                    let nextH = h + 1;
+                    let nextAmpm = nextH >= 12 && nextH < 24 ? 'PM' : 'AM';
+                    let nextDispH = nextH % 12;
+                    if (nextDispH === 0) nextDispH = 12;
 
-                        let timeLabel = `${dispH}:00 ${ampm} - ${nextDispH}:00 ${nextAmpm}`;
-                        let pct = totalVis > 0 ? (count / totalVis) * 100 : 0;
+                    let timeLabel = `${dispH}:00 ${ampm} - ${nextDispH}:00 ${nextAmpm}`;
+                    let pct = totalVis > 0 ? (count / totalVis) * 100 : 0;
 
-                        let tr = document.createElement('tr');
-                        // Highlight peak hour
-                        if (pct > 15) tr.style.backgroundColor = '#fff3e0';
+                    let tr = document.createElement('tr');
+                    // Highlight peak hour
+                    if (pct > 15) tr.style.backgroundColor = '#fff3e0';
 
-                        tr.innerHTML = `
-                            <td class="text-start" dir="ltr" style="font-size: 0.75rem;"><span style="display:inline-block; background:#e9ecef; border-radius:4px; padding:2px 6px; margin-right:6px; color:#495057; font-weight:bold;">${h.toString().padStart(2, '0')}:00</span> ${timeLabel}</td>
-                            <td class="fw-bold" style="font-size: 0.95rem; color:#000;">${formatNumber(count)}</td>
-                            <td class="text-muted">
-                                <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
-                                    <span style="width: 35px; font-weight: bold; color: #495057; font-size:0.75rem;">${pct.toFixed(1)}%</span>
-                                    <div style="height: 6px; width: 40px; background: #e9ecef; border-radius: 3px; overflow: hidden; display: flex;">
-                                        <div style="width: ${pct}%; background: ${pct > 15 ? '#fe7900' : '#888'};"></div>
-                                    </div>
+                    tr.innerHTML = `
+                        <td class="text-start" dir="ltr" style="font-size: 0.75rem;"><span style="display:inline-block; background:#e9ecef; border-radius:4px; padding:2px 6px; margin-right:6px; color:#495057; font-weight:bold;">${h.toString().padStart(2, '0')}:00</span> ${timeLabel}</td>
+                        <td class="fw-bold" style="font-size: 0.95rem; color:#000;">${formatNumber(count)}</td>
+                        <td class="text-muted">
+                            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                                <span style="width: 35px; font-weight: bold; color: #495057; font-size:0.75rem;">${pct.toFixed(1)}%</span>
+                                <div style="height: 6px; width: 40px; background: #e9ecef; border-radius: 3px; overflow: hidden; display: flex;">
+                                    <div style="width: ${pct}%; background: ${pct > 15 ? '#fe7900' : '#888'};"></div>
                                 </div>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    }
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 }
             }
 
