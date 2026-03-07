@@ -2229,41 +2229,40 @@
                 tbody.parentElement.style.display = 'table';
                 noDataMsg.style.display = 'none';
 
-                // Render non-zero hours, or all active hours
+                // Render all 24 hours
                 for (let h = 0; h < 24; h++) {
                     let count = hourlyCounts[h];
-                    if (count > 0 || (h >= 9 && h <= 23)) { // Show typical working hours even if 0, for context
-                        let ampm = h >= 12 ? 'PM' : 'AM';
-                        let dispH = h % 12;
-                        if (dispH === 0) dispH = 12;
 
-                        // Format: e.g. "04:00 PM - 05:00 PM"
-                        let nextH = h + 1;
-                        let nextAmpm = nextH >= 12 && nextH < 24 ? 'PM' : 'AM';
-                        let nextDispH = nextH % 12;
-                        if (nextDispH === 0) nextDispH = 12;
+                    let ampm = h >= 12 ? 'PM' : 'AM';
+                    let dispH = h % 12;
+                    if (dispH === 0) dispH = 12;
 
-                        let timeLabel = `${dispH}:00 ${ampm} - ${nextDispH}:00 ${nextAmpm}`;
-                        let pct = totalVis > 0 ? (count / totalVis) * 100 : 0;
+                    // Format: e.g. "04:00 PM - 05:00 PM"
+                    let nextH = h + 1;
+                    let nextAmpm = nextH >= 12 && nextH < 24 ? 'PM' : 'AM';
+                    let nextDispH = nextH % 12;
+                    if (nextDispH === 0) nextDispH = 12;
 
-                        let tr = document.createElement('tr');
-                        // Highlight peak hour
-                        if (pct > 15) tr.className = 'table-warning fw-bold';
+                    let timeLabel = `${dispH}:00 ${ampm} - ${nextDispH}:00 ${nextAmpm}`;
+                    let pct = totalVis > 0 ? (count / totalVis) * 100 : 0;
 
-                        tr.innerHTML = `
-                            <td class="text-start" dir="ltr"><span class="badge bg-secondary me-2">${h.toString().padStart(2, '0')}:00</span> ${timeLabel}</td>
-                            <td class="fw-bold">${count.toLocaleString()}</td>
-                            <td class="text-muted small">
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <span style="width: 40px;" class="fw-bold text-dark">${pct.toFixed(1)}%</span>
-                                    <div class="progress" style="width: 50px; height: 5px; margin-right: 5px;">
-                                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%"></div>
-                                    </div>
+                    let tr = document.createElement('tr');
+                    // Highlight peak hour
+                    if (pct > 15) tr.className = 'table-warning fw-bold';
+
+                    tr.innerHTML = `
+                        <td class="text-start" dir="ltr"><span class="badge bg-secondary me-2">${h.toString().padStart(2, '0')}:00</span> ${timeLabel}</td>
+                        <td class="fw-bold">${count.toLocaleString()}</td>
+                        <td class="text-muted small">
+                            <div class="d-flex align-items-center justify-content-center">
+                                <span style="width: 40px;" class="fw-bold text-dark">${pct.toFixed(1)}%</span>
+                                <div class="progress" style="width: 50px; height: 5px; margin-right: 5px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%"></div>
                                 </div>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    }
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 }
             }
 
