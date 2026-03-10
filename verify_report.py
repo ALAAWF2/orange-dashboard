@@ -60,7 +60,7 @@ grouped_data = {}
 for r in results:
     mapped_category = cat_map.get(str(r['alias'])) or cat_map.get(str(r['item_id']))
     
-    group_key = f"CAT_{mapped_category}" if mapped_category else f"PID_{r['item_id']}"
+    group_key = f"CAT_{mapped_category}" if mapped_category and mapped_category != 'غير مصنف' else f"PID_{r['item_id']}"
     
     if group_key not in grouped_data:
         grouped_data[group_key] = {
