@@ -58,7 +58,7 @@ for pid, val in item_agg.items():
 grouped_data = {}
 
 for r in results:
-    mapped_category = cat_map.get(str(r['item_id']))
+    mapped_category = cat_map.get(str(r['alias'])) or cat_map.get(str(r['item_id']))
     
     group_key = f"CAT_{mapped_category}" if mapped_category else f"PID_{r['item_id']}"
     
