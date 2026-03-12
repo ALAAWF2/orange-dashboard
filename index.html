@@ -236,6 +236,9 @@
                 <a href="product_analysis.html" class="btn btn-outline-primary btn-sm fw-bold">
                     📦 <span class="d-none d-lg-inline">تحليل المنتجات</span>
                 </a>
+                <button onclick="openSimulationModal()" class="btn btn-outline-info btn-sm fw-bold text-dark" title="محاكاة التوقعات">
+                    🔮 <span class="d-none d-lg-inline">محاكاة التوقعات</span>
+                </button>
                 <button onclick="openPdfModal()" class="btn btn-warning btn-sm fw-bold text-white">
                     📄 <span class="d-none d-lg-inline">PDF</span>
                 </button>
@@ -2173,6 +2176,83 @@
         </div>
     </div>
 
+    <!-- What-If Simulation Modal -->
+    <div class="modal fade" id="whatIfModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">🔮 محاكاة التوقعات (What-If Simulation)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <div class="row g-4">
+                        <!-- Base Metrics -->
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white fw-bold">الوضع الحالي (Base)</div>
+                                <div class="card-body">
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2 text-muted small">المبيعات: <strong class="text-dark fs-6" id="simBaseSales">0</strong></li>
+                                        <li class="mb-2 text-muted small">الزوار: <strong class="text-dark fs-6" id="simBaseVis">0</strong></li>
+                                        <li class="mb-2 text-muted small">نسبة التحويل: <strong class="text-dark fs-6" id="simBaseConv">0%</strong></li>
+                                        <li class="text-muted small">متوسط الفاتورة: <strong class="text-dark fs-6" id="simBaseAvg">0</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Controls -->
+                        <div class="col-md-8">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white fw-bold">تغيير المتغيرات (Adjust Variables)</div>
+                                <div class="card-body">
+                                    <label class="form-label small fw-bold mt-2">زيادة الزوار (Visitors + %)</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="range" class="form-range" id="simVisRange" min="-50" max="100" step="1" value="0">
+                                        <span class="badge bg-secondary" style="width: 60px;" id="simVisVal">0%</span>
+                                    </div>
+
+                                    <label class="form-label small fw-bold mt-3">تغيير نسبة التحويل (Conv. Rate %)</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="range" class="form-range" id="simConvRange" min="-10" max="20" step="0.5" value="0">
+                                        <span class="badge bg-secondary" style="width: 60px;" id="simConvVal">0%</span>
+                                    </div>
+
+                                    <label class="form-label small fw-bold mt-3">زيادة متوسط الفاتورة (Avg Ticket + %)</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="range" class="form-range" id="simAvgRange" min="-20" max="50" step="1" value="0">
+                                        <span class="badge bg-secondary" style="width: 60px;" id="simAvgVal">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Projection Result -->
+                    <div class="card border-0 shadow mt-4 border-top border-4 border-success">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted fw-bold mb-3">النتيجة المتوقعة (Projected Result)</h6>
+                            <div class="row align-items-center">
+                                <div class="col-md-6 border-end border-md-end">
+                                    <div class="fs-6 text-muted mb-1">المبيعات المتوقعة</div>
+                                    <div class="fs-2 fw-bold text-success" id="simProjSales">0</div>
+                                </div>
+                                <div class="col-md-6 mt-3 mt-md-0">
+                                    <div class="fs-6 text-muted mb-1">الزيادة/النقص في الإيرادات</div>
+                                    <div class="fs-3 fw-bold text-primary" id="simRevenueInc">+0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="resetSimulation()">إعادة ضبط (Reset)</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Hourly Visitors Helper ---
         function showHourlyVisitors(storeId, encodedName, startDate, endDate) {
@@ -2269,6 +2349,75 @@
             const modalInfo = new bootstrap.Modal(document.getElementById('hourlyVisitorsModal'));
             modalInfo.show();
         }
+
+        // --- What-If Simulation ---
+        let simBaseData = { sales: 0, vis: 0, conv: 0, avg: 0 };
+
+        function openSimulationModal() {
+            // Read current displayed values
+            let salesStr = document.getElementById('totalSales').textContent.replace(/,/g, '');
+            let visStr = document.getElementById('totalVisitors').textContent.replace(/,/g, '');
+            let convStr = document.getElementById('convRate').textContent.replace('%', '');
+            let avgStr = document.getElementById('avgTicket').textContent.replace(/,/g, '');
+
+            simBaseData.sales = parseFloat(salesStr) || 0;
+            simBaseData.vis = parseFloat(visStr) || 0;
+            simBaseData.conv = parseFloat(convStr) || 0;
+            simBaseData.avg = parseFloat(avgStr) || 0;
+
+            document.getElementById('simBaseSales').textContent = simBaseData.sales.toLocaleString();
+            document.getElementById('simBaseVis').textContent = simBaseData.vis.toLocaleString();
+            document.getElementById('simBaseConv').textContent = simBaseData.conv.toFixed(1) + '%';
+            document.getElementById('simBaseAvg').textContent = simBaseData.avg.toLocaleString();
+
+            resetSimulation();
+            
+            let modal = new bootstrap.Modal(document.getElementById('whatIfModal'));
+            modal.show();
+        }
+
+        function calculateSimulation() {
+            let visPct = parseFloat(document.getElementById('simVisRange').value) / 100;
+            let convAdd = parseFloat(document.getElementById('simConvRange').value);
+            let avgPct = parseFloat(document.getElementById('simAvgRange').value) / 100;
+
+            document.getElementById('simVisVal').textContent = (visPct > 0 ? '+' : '') + (visPct*100).toFixed(0) + '%';
+            document.getElementById('simConvVal').textContent = (convAdd > 0 ? '+' : '') + convAdd.toFixed(1) + '%';
+            document.getElementById('simAvgVal').textContent = (avgPct > 0 ? '+' : '') + (avgPct*100).toFixed(0) + '%';
+
+            let projVis = simBaseData.vis * (1 + visPct);
+            let projConv = (simBaseData.conv + convAdd) / 100;
+            if (projConv < 0) projConv = 0;
+            if (projConv > 1) projConv = 1;
+            let projAvg = simBaseData.avg * (1 + avgPct);
+
+            let projSales = projVis * projConv * projAvg;
+            let revenueInc = projSales - simBaseData.sales;
+
+            document.getElementById('simProjSales').textContent = Math.round(projSales).toLocaleString();
+            
+            let incEl = document.getElementById('simRevenueInc');
+            if (revenueInc >= 0) {
+                incEl.textContent = '+' + Math.round(revenueInc).toLocaleString();
+                incEl.className = 'fs-3 fw-bold text-success';
+            } else {
+                incEl.textContent = Math.round(revenueInc).toLocaleString();
+                incEl.className = 'fs-3 fw-bold text-danger';
+            }
+        }
+
+        function resetSimulation() {
+            document.getElementById('simVisRange').value = 0;
+            document.getElementById('simConvRange').value = 0;
+            document.getElementById('simAvgRange').value = 0;
+            calculateSimulation();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('simVisRange').addEventListener('input', calculateSimulation);
+            document.getElementById('simConvRange').addEventListener('input', calculateSimulation);
+            document.getElementById('simAvgRange').addEventListener('input', calculateSimulation);
+        });
     </script>
 </body>
 
