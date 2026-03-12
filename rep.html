@@ -726,6 +726,13 @@
                     <option value="out_of_stock">نفذت الكمية (0)</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label>🏪 طريقة العرض</label>
+                <select id="viewMode">
+                    <option value="by_item">مجمع حسب المنتج</option>
+                    <option value="by_store">مفصل حسب المعرض</option>
+                </select>
+            </div>
         </div>
 
         <!-- Alias Conditions -->
@@ -897,7 +904,7 @@
         <div style="overflow-x:auto; -webkit-overflow-scrolling: touch; max-height: 70vh;">
             <table class="results-table" id="resultsTable">
                 <thead>
-                    <tr>
+                    <tr id="mainTableHead">
                         <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
                         <th onclick="sortTable(1)">Alias<span class="sort-icon">▼</span></th>
                         <th onclick="sortTable(2)">اسم المنتج<span class="sort-icon">▼</span></th>
@@ -1167,6 +1174,7 @@
             const storeFilter = document.getElementById('storeFilter').value;
             const categoryFilter = document.getElementById('categoryFilter').value;
             const stockFilter = document.getElementById('stockFilter').value;
+            const viewMode = document.getElementById('viewMode').value;
             const conditions = getConditions();
 
             if (searchType === 'sales_stock' && (!dateFrom || !dateTo)) {
@@ -1208,67 +1216,117 @@
 
                     window.CURRENT_ALL_RECORDS = allRecords;
 
-                    // 4. Aggregate by item_id
-                    for (const r of allRecords) {
-                        const pid = r.i;
-                        if (!itemAgg[pid]) {
-                            itemAgg[pid] = { qty: 0, amount: 0 };
+                    // 4. Aggregate
+                    if (viewMode === 'by_store') {
+                        // Aggregate by store_id + item_id
+                        for (const r of allRecords) {
+                            const key = r.s + '_' + r.i;
+                            if (!itemAgg[key]) {
+                                itemAgg[key] = { qty: 0, amount: 0, store_id: r.s, item_id: r.i };
+                            }
+                            itemAgg[key].qty += r.q;
+                            itemAgg[key].amount += r.a;
                         }
-                        itemAgg[pid].qty += r.q;
-                        itemAgg[pid].amount += r.a;
+                    } else {
+                        // Aggregate by item_id only (default)
+                        for (const r of allRecords) {
+                            const pid = r.i;
+                            if (!itemAgg[pid]) {
+                                itemAgg[pid] = { qty: 0, amount: 0 };
+                            }
+                            itemAgg[pid].qty += r.q;
+                            itemAgg[pid].amount += r.a;
+                        }
                     }
                 }
 
                 // 5. Build results with product info + apply filters
                 const results = [];
-                const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
 
-                for (const pid of pidsToProcess) {
-                    // Hide specified products starting with 300 and 290
-                    if (pid.startsWith('300') || pid.startsWith('290')) continue;
+                if (viewMode === 'by_store' && searchType === 'sales_stock') {
+                    // Per-store mode: iterate aggregation keys
+                    for (const key of Object.keys(itemAgg)) {
+                        const agg = itemAgg[key];
+                        const pid = agg.item_id;
+                        const storeId = agg.store_id;
 
-                    const prod = PRODUCTS[pid];
-                    if (!prod) continue;
+                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
-                    // Category filter
-                    if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                        const prod = PRODUCTS[pid];
+                        if (!prod) continue;
 
-                    // Alias and Name conditions
-                    if (!matchConditions(prod, conditions)) continue;
+                        if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                        if (!matchConditions(prod, conditions)) continue;
 
-                    // Stock
-                    let totalStock = 0;
-                    let stockByStore = {};
-                    if (prod.stock) {
-                        if (storeFilter !== 'all') {
-                            totalStock = prod.stock[storeFilter] || 0;
-                            stockByStore = { [storeFilter]: totalStock };
-                        } else {
-                            totalStock = prod.stock.total || 0;
-                            stockByStore = { ...prod.stock };
-                            delete stockByStore.total;
+                        // Stock for this specific store
+                        let totalStock = 0;
+                        if (prod.stock) {
+                            totalStock = prod.stock[storeId] || 0;
                         }
+
+                        if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                        if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                        if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                        results.push({
+                            item_id: pid,
+                            alias: prod.alias || '',
+                            name: prod.name || '',
+                            category: prod.category || '',
+                            price: prod.price || 0,
+                            qty: agg.qty,
+                            amount: Math.round(agg.amount * 100) / 100,
+                            stock_total: totalStock,
+                            stock_by_store: { [storeId]: totalStock },
+                            store_id: storeId,
+                            store_name: META.stores[storeId] || storeId
+                        });
                     }
+                } else {
+                    // Default aggregated mode
+                    const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
 
-                    // Stock condition filter
-                    if (stockFilter === 'in_stock' && totalStock <= 0) continue;
-                    if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
-                    if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+                    for (const pid of pidsToProcess) {
+                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
-                    const qty = searchType === 'sales_stock' ? itemAgg[pid].qty : 0;
-                    const amount = searchType === 'sales_stock' ? itemAgg[pid].amount : 0;
+                        const prod = PRODUCTS[pid];
+                        if (!prod) continue;
 
-                    results.push({
-                        item_id: pid,
-                        alias: prod.alias || '',
-                        name: prod.name || '',
-                        category: prod.category || '',
-                        price: prod.price || 0,
-                        qty: qty,
-                        amount: Math.round(amount * 100) / 100,
-                        stock_total: totalStock,
-                        stock_by_store: stockByStore
-                    });
+                        if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                        if (!matchConditions(prod, conditions)) continue;
+
+                        let totalStock = 0;
+                        let stockByStore = {};
+                        if (prod.stock) {
+                            if (storeFilter !== 'all') {
+                                totalStock = prod.stock[storeFilter] || 0;
+                                stockByStore = { [storeFilter]: totalStock };
+                            } else {
+                                totalStock = prod.stock.total || 0;
+                                stockByStore = { ...prod.stock };
+                                delete stockByStore.total;
+                            }
+                        }
+
+                        if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                        if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                        if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                        const qty = searchType === 'sales_stock' ? itemAgg[pid].qty : 0;
+                        const amount = searchType === 'sales_stock' ? itemAgg[pid].amount : 0;
+
+                        results.push({
+                            item_id: pid,
+                            alias: prod.alias || '',
+                            name: prod.name || '',
+                            category: prod.category || '',
+                            price: prod.price || 0,
+                            qty: qty,
+                            amount: Math.round(amount * 100) / 100,
+                            stock_total: totalStock,
+                            stock_by_store: stockByStore
+                        });
+                    }
                 }
 
                 // Sort by default (amount desc)
@@ -1291,19 +1349,37 @@
         function applySorting() {
             const col = CURRENT_SORT.col;
             const asc = CURRENT_SORT.asc;
+            const viewMode = document.getElementById('viewMode').value;
+            const isByStore = viewMode === 'by_store';
 
             CURRENT_RESULTS.sort((a, b) => {
                 let va, vb;
-                switch (col) {
-                    case 0: return 0; // row number — no sort
-                    case 1: va = a.alias; vb = b.alias; break;
-                    case 2: va = a.name; vb = b.name; break;
-                    case 3: va = a.category; vb = b.category; break;
-                    case 4: va = a.price; vb = b.price; break;
-                    case 5: va = a.qty; vb = b.qty; break;
-                    case 6: va = a.amount; vb = b.amount; break;
-                    case 7: va = a.stock_total; vb = b.stock_total; break;
-                    default: return 0;
+                if (isByStore) {
+                    // Columns: 0=#, 1=معرض, 2=Alias, 3=اسم, 4=فئة, 5=سعر, 6=كمية, 7=مبيعات, 8=ستوك
+                    switch (col) {
+                        case 0: return 0;
+                        case 1: va = a.store_name || ''; vb = b.store_name || ''; break;
+                        case 2: va = a.alias; vb = b.alias; break;
+                        case 3: va = a.name; vb = b.name; break;
+                        case 4: va = a.category; vb = b.category; break;
+                        case 5: va = a.price; vb = b.price; break;
+                        case 6: va = a.qty; vb = b.qty; break;
+                        case 7: va = a.amount; vb = b.amount; break;
+                        case 8: va = a.stock_total; vb = b.stock_total; break;
+                        default: return 0;
+                    }
+                } else {
+                    switch (col) {
+                        case 0: return 0;
+                        case 1: va = a.alias; vb = b.alias; break;
+                        case 2: va = a.name; vb = b.name; break;
+                        case 3: va = a.category; vb = b.category; break;
+                        case 4: va = a.price; vb = b.price; break;
+                        case 5: va = a.qty; vb = b.qty; break;
+                        case 6: va = a.amount; vb = b.amount; break;
+                        case 7: va = a.stock_total; vb = b.stock_total; break;
+                        default: return 0;
+                    }
                 }
                 if (typeof va === 'string') {
                     return asc ? va.localeCompare(vb) : vb.localeCompare(va);
@@ -1322,7 +1398,7 @@
             }
 
             // Update header icons
-            document.querySelectorAll('.results-table thead th').forEach((th, i) => {
+            document.querySelectorAll('#mainTableHead th').forEach((th, i) => {
                 th.classList.toggle('sorted', i === colIdx);
                 const icon = th.querySelector('.sort-icon');
                 if (icon) icon.textContent = (i === colIdx && !CURRENT_SORT.asc) ? '▲' : '▼';
@@ -1338,6 +1414,35 @@
         function renderResults() {
             const tbody = document.getElementById('resultsBody');
             const results = CURRENT_RESULTS;
+            const viewMode = document.getElementById('viewMode').value;
+            const isByStore = viewMode === 'by_store';
+
+            // Update table headers based on view mode
+            const thead = document.getElementById('mainTableHead');
+            if (isByStore) {
+                thead.innerHTML = `
+                    <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(1)">المعرض<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(2)">Alias<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(3)">اسم المنتج<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(4)">الفئة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(5)">سعر البيع<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(8)">ستوك المعرض<span class="sort-icon">▼</span></th>
+                `;
+            } else {
+                thead.innerHTML = `
+                    <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(1)">Alias<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(2)">اسم المنتج<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(3)">الفئة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(4)">سعر البيع<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(5)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">الستوك الحالي<span class="sort-icon">▼</span></th>
+                `;
+            }
 
             if (!results.length) {
                 document.getElementById('tableContainer').style.display = 'none';
@@ -1441,50 +1546,68 @@
             document.getElementById('sumStock').textContent = sumStk.toLocaleString('en-US');
             document.getElementById('resultCount').textContent = results.length.toLocaleString() + ' صنف';
 
-            // Table rows (render in chunks for performance)
+            // Table rows
             const storeFilter = document.getElementById('storeFilter').value;
             let html = '';
-            const maxRender = 5000; // limit for browser perf
+            const maxRender = 5000;
             const renderCount = Math.min(results.length, maxRender);
+            const colSpan = isByStore ? 9 : 8;
 
             for (let i = 0; i < renderCount; i++) {
                 const r = results[i];
                 const stockClass = r.stock_total > 10 ? 'stock-ok' : r.stock_total > 0 ? 'stock-low' : 'stock-zero';
 
-                // Stock tooltip with store breakdown
-                let tooltipHtml = '';
-                if (storeFilter === 'all' && Object.keys(r.stock_by_store).length > 0) {
-                    tooltipHtml = '<div class="stock-tooltip"><table>';
-                    const entries = Object.entries(r.stock_by_store)
-                        .filter(([k]) => k !== 'total')
-                        .sort((a, b) => b[1] - a[1]);
-                    for (const [sid, qty] of entries.slice(0, 15)) {
-                        const sname = META.stores[sid] || sid;
-                        tooltipHtml += `<tr><td>${sname}</td><td style="text-align:left;font-weight:700">${qty}</td></tr>`;
+                if (isByStore) {
+                    // Per-store row: no tooltip needed
+                    html += `<tr>
+                    <td>${i + 1}</td>
+                    <td style="font-weight:600;white-space:nowrap">${r.store_name || ''}</td>
+                    <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                    <td>${r.name}</td>
+                    <td>${r.category}</td>
+                    <td>${r.price.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
+                    <td class="stock-cell">
+                        <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
+                    </td>
+                </tr>`;
+                } else {
+                    // Aggregated row with tooltip
+                    let tooltipHtml = '';
+                    if (storeFilter === 'all' && Object.keys(r.stock_by_store).length > 0) {
+                        tooltipHtml = '<div class="stock-tooltip"><table>';
+                        const entries = Object.entries(r.stock_by_store)
+                            .filter(([k]) => k !== 'total')
+                            .sort((a, b) => b[1] - a[1]);
+                        for (const [sid, qty] of entries.slice(0, 15)) {
+                            const sname = META.stores[sid] || sid;
+                            tooltipHtml += `<tr><td>${sname}</td><td style="text-align:left;font-weight:700">${qty}</td></tr>`;
+                        }
+                        if (entries.length > 15) {
+                            tooltipHtml += `<tr><td colspan="2" style="text-align:center;opacity:0.6">+${entries.length - 15} معرض آخر</td></tr>`;
+                        }
+                        tooltipHtml += '</table></div>';
                     }
-                    if (entries.length > 15) {
-                        tooltipHtml += `<tr><td colspan="2" style="text-align:center;opacity:0.6">+${entries.length - 15} معرض آخر</td></tr>`;
-                    }
-                    tooltipHtml += '</table></div>';
-                }
 
-                html += `<tr>
-                <td>${i + 1}</td>
-                <td style="font-family:monospace;font-weight:700">${r.alias}</td>
-                <td>${r.name}</td>
-                <td>${r.category}</td>
-                <td>${r.price.toLocaleString('en-US')}</td>
-                <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
-                <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
-                <td class="stock-cell">
-                    <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
-                    ${tooltipHtml}
-                </td>
-            </tr>`;
+                    html += `<tr>
+                    <td>${i + 1}</td>
+                    <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                    <td>${r.name}</td>
+                    <td>${r.category}</td>
+                    <td>${r.price.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
+                    <td class="stock-cell">
+                        <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
+                        ${tooltipHtml}
+                    </td>
+                </tr>`;
+                }
             }
 
             if (results.length > maxRender) {
-                html += `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px;">
+                html += `<tr><td colspan="${colSpan}" style="text-align:center;color:var(--text-muted);padding:16px;">
                 يتم عرض أول ${maxRender.toLocaleString()} من ${results.length.toLocaleString()} نتيجة. استخدم الفلاتر لتضييق البحث.
             </td></tr>`;
             }
@@ -1507,16 +1630,21 @@
                     const storeFilter = document.getElementById('storeFilter').value;
                     const storeName = storeFilter === 'all' ? 'الكل' : META.stores[storeFilter] || storeFilter;
 
-                    const rows = CURRENT_RESULTS.map((r, i) => ({
-                        '#': i + 1,
-                        'Alias': r.alias,
-                        'اسم المنتج': r.name,
-                        'الفئة': r.category,
-                        'سعر البيع': r.price,
-                        'الكمية المباعة': r.qty,
-                        'إجمالي المبيعات': r.amount,
-                        'الستوك الحالي': r.stock_total
-                    }));
+                    const viewMode = document.getElementById('viewMode').value;
+                    const isByStore = viewMode === 'by_store';
+
+                    const rows = CURRENT_RESULTS.map((r, i) => {
+                        const row = { '#': i + 1 };
+                        if (isByStore) row['المعرض'] = r.store_name || '';
+                        row['Alias'] = r.alias;
+                        row['اسم المنتج'] = r.name;
+                        row['الفئة'] = r.category;
+                        row['سعر البيع'] = r.price;
+                        row['الكمية المباعة'] = r.qty;
+                        row['إجمالي المبيعات'] = r.amount;
+                        row[isByStore ? 'ستوك المعرض' : 'الستوك الحالي'] = r.stock_total;
+                        return row;
+                    });
 
                     // Summary row
                     rows.push({});
@@ -2169,6 +2297,7 @@
         function resetFilters() {
             document.getElementById('searchType').value = 'sales_stock';
             document.getElementById('stockFilter').value = 'all';
+            document.getElementById('viewMode').value = 'by_item';
             toggleSearchType();
 
             document.getElementById('storeFilter').value = 'all';
