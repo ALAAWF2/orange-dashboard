@@ -108,14 +108,15 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         const nowReq = new Date();
         let lastDayOfMonth = new Date(nowReq.getFullYear(), nowReq.getMonth() + 1, 0).getDate();
 
-        // 2026 Ramadan custom target period (March 1-19)
-        if (nowReq.getFullYear() === 2026 && nowReq.getMonth() === 2) {
-            lastDayOfMonth = 19;
-        }
-
+        // 2026 March: Split into two target periods (1-19 Ramadan, 20-31 post-Ramadan)
         let todayDate = nowReq.getDate();
-        if (nowReq.getFullYear() === 2026 && nowReq.getMonth() === 2 && todayDate > 19) {
-            todayDate = 19;
+        if (nowReq.getFullYear() === 2026 && nowReq.getMonth() === 2) {
+            if (todayDate <= 19) {
+                lastDayOfMonth = 19;
+            } else {
+                lastDayOfMonth = 12; // 12 days in post-Ramadan period (20-31)
+                todayDate = todayDate - 19; // Convert to period-relative day
+            }
         }
 
         let remainingDays = lastDayOfMonth - todayDate + 1;

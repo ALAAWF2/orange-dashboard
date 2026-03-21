@@ -1120,9 +1120,22 @@
 
                     // 1. Check Current
                     if (periodFilter === 'mtd') {
-                        if (dYear === todayYear && dMonth === todayMonth && dVal <= todayVal) status = 1;
+                        if (dYear === todayYear && dMonth === todayMonth && dVal <= todayVal) {
+                            // 2026 March post-Ramadan: Only include sales from March 20+
+                            if (todayYear === 2026 && todayMonth === 2 && todayDay > 19 && dDay < 20) {
+                                // Skip days 1-19 for post-Ramadan MTD
+                            } else {
+                                status = 1;
+                            }
+                        }
                     } else if (periodFilter === 'mtd_yest') {
-                        if (dYear === todayYear && dMonth === todayMonth && dVal < todayVal) status = 1;
+                        if (dYear === todayYear && dMonth === todayMonth && dVal < todayVal) {
+                            if (todayYear === 2026 && todayMonth === 2 && todayDay > 19 && dDay < 20) {
+                                // Skip days 1-19
+                            } else {
+                                status = 1;
+                            }
+                        }
                     } else if (periodFilter === 'prev_month') {
                         // Previous Month
                         if (dYear === prevYear && dMonth === prevMonth) status = 1;
@@ -1227,6 +1240,10 @@
                         if (!empAgg[key]) {
                             // Determine Target Date based on Filter
                             let tDateStr = `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-01`; // Default MTD
+                            // 2026 March: Split target periods (1-19 = '2026-03-01', 20-31 = '2026-03-20')
+                            if (todayYear === 2026 && todayMonth === 2 && todayDay > 19 && periodFilter !== 'prev_month') {
+                                tDateStr = '2026-03-20';
+                            }
                             if (periodFilter === 'prev_month') {
                                 tDateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
                             }

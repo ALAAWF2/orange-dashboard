@@ -62,7 +62,11 @@ async function generateEmployeePDF(targetEmps = null) {
     const yestStrFinal = formatDate(yestDate);
 
     // MTD Start (1st of Current Month)
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    let monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    // 2026 March: post-Ramadan MTD starts from March 20
+    if (today.getFullYear() === 2026 && today.getMonth() === 2 && today.getDate() > 19) {
+        monthStart = new Date(2026, 2, 20);
+    }
     const monthStartStr = formatDate(monthStart);
 
     // Previous Month Logic (Robust)
@@ -258,7 +262,11 @@ async function generateEmployeePDF(targetEmps = null) {
 
             // --- Monthly Target Override ---
             const monthlyTargets = (typeof window.monthlyTargetsData !== 'undefined') ? window.monthlyTargetsData : {};
-            const tDateStr = isPrevMode ? prevMonthStartStr : monthStartStr;
+            let tDateStr = isPrevMode ? prevMonthStartStr : monthStartStr;
+            // 2026 March: Split target periods (1-19 = monthStartStr, 20-31 = '2026-03-20')
+            if (!isPrevMode && today.getFullYear() === 2026 && today.getMonth() === 2 && today.getDate() > 19) {
+                tDateStr = '2026-03-20';
+            }
 
             if (monthlyTargets[empKey] && monthlyTargets[empKey][tDateStr]) {
                 target = monthlyTargets[empKey][tDateStr];
@@ -300,18 +308,23 @@ async function generateEmployeePDF(targetEmps = null) {
             const ach = target > 0 ? (dataCol2.sales / target) * 100 : 0;
             const remaining = Math.max(0, target - dataCol2.sales);
 
-            // Daily Req Logic
             let dailyReq = 0;
             if (!isPrevMode) {
                 // Only relevant for MTD
                 let daysInMonthLabel = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-                if (today.getFullYear() === 2026 && today.getMonth() === 2) daysInMonthLabel = 19;
-
-                // Safe days passed calculation (handles 1st of month safely)
                 let daysPassedLabel = today.getDate() - 1;
                 if (daysPassedLabel < 0) daysPassedLabel = 0;
 
-                if (today.getFullYear() === 2026 && today.getMonth() === 2 && daysPassedLabel > 18) daysPassedLabel = 18;
+                // 2026 March: Split into two target periods
+                if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+                    if (today.getDate() <= 19) {
+                        daysInMonthLabel = 19;
+                    } else {
+                        daysInMonthLabel = 12; // post-Ramadan period (20-31)
+                        daysPassedLabel = today.getDate() - 20; // days passed since March 20
+                        if (daysPassedLabel < 0) daysPassedLabel = 0;
+                    }
+                }
 
                 let daysLeftLabel = daysInMonthLabel - daysPassedLabel;
                 if (daysLeftLabel < 1) daysLeftLabel = 1;
@@ -351,12 +364,19 @@ async function generateEmployeePDF(targetEmps = null) {
         let col2Daily = 0;
         if (!isPrevMode) {
             let daysInMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-            if (today.getFullYear() === 2026 && today.getMonth() === 2) daysInMonthEnd = 19;
-
             let daysPassedEnd = today.getDate() - 1;
             if (daysPassedEnd < 0) daysPassedEnd = 0;
 
-            if (today.getFullYear() === 2026 && today.getMonth() === 2 && daysPassedEnd > 18) daysPassedEnd = 18;
+            // 2026 March: Split into two target periods
+            if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+                if (today.getDate() <= 19) {
+                    daysInMonthEnd = 19;
+                } else {
+                    daysInMonthEnd = 12;
+                    daysPassedEnd = today.getDate() - 20;
+                    if (daysPassedEnd < 0) daysPassedEnd = 0;
+                }
+            }
 
             let daysLeftEnd = daysInMonthEnd - daysPassedEnd;
             if (daysLeftEnd < 1) daysLeftEnd = 1;
