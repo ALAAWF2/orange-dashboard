@@ -706,28 +706,20 @@
             <!-- Shift KPI Cards (hidden by default) -->
             <div id="shiftKpiSection" class="shift-kpi-section mb-3">
                 <div class="row g-2">
-                    <div class="col-4">
+                    <div class="col-6">
                         <div class="shift-card shift-1">
-                            <div class="shift-label">🌅 الشفت الأول</div>
-                            <div class="shift-time">6:00 ص - 11:30 ص</div>
+                            <div class="shift-label">🌅 شفت الصباح</div>
+                            <div class="shift-time">10:00 ص - 2:00 م</div>
                             <div class="shift-sales" id="shift1Sales">0</div>
                             <div class="shift-details" id="shift1Details">0 فاتورة | 0 زائر</div>
                         </div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-6">
                         <div class="shift-card shift-2">
-                            <div class="shift-label">☀️ الشفت الثاني</div>
-                            <div class="shift-time">11:30 ص - 6:00 م</div>
+                            <div class="shift-label">☀️ شفت المساء</div>
+                            <div class="shift-time">2:00 م - 12:00 ص</div>
                             <div class="shift-sales" id="shift2Sales">0</div>
                             <div class="shift-details" id="shift2Details">0 فاتورة | 0 زائر</div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="shift-card shift-3">
-                            <div class="shift-label">🌙 الشفت الثالث</div>
-                            <div class="shift-time">6:00 م - 3:00 ص</div>
-                            <div class="shift-sales" id="shift3Sales">0</div>
-                            <div class="shift-details" id="shift3Details">0 فاتورة | 0 زائر</div>
                         </div>
                     </div>
                 </div>
@@ -907,10 +899,9 @@
 
         // Determine which shift an hour belongs to
         function getShiftForHour(hour) {
-            if (hour >= 6 && hour < 12) return 1;       // 6:00 - 11:30 (use 12 as hour boundary since data is by hour)
-            if (hour >= 12 && hour < 18) return 2;      // 11:30 - 18:00
-            if (hour >= 20 || hour < 3) return 3;        // 20:00 - 03:00
-            return 0; // gap hours (3-6, 18-20)
+            if (hour >= 10 && hour < 14) return 1;
+            if (hour >= 14 && hour < 24) return 2;
+            return 0;
         }
 
         // Get next day string
@@ -921,14 +912,12 @@
         }
 
         // Aggregate shift data for all branches in the selected date range
-        function computeShiftData(allowedBranches, fromDate, toDate) {
+                function computeShiftData(allowedBranches, fromDate, toDate) {
             const shiftData = {
                 1: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} },
-                2: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} },
-                3: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} }
+                2: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} }
             };
 
-            // Process hourly sales
             if (rawData.sales_hourly) {
                 const salesMap = {};
                 rawData.sales_hourly.forEach(row => {
@@ -942,11 +931,9 @@
                 const endD = new Date(toDate);
                 while (d <= endD) {
                     const dateStr = d.toISOString().split('T')[0];
-                    const nextDateStr = getNextDayStr(dateStr);
 
                     allowedBranches.forEach(store => {
-                        // Shift 1: hours 6-11
-                        for (let h = 6; h < 12; h++) {
+                        for (let h = 10; h < 14; h++) {
                             const entry = salesMap[`${dateStr}_${store}_${h}`];
                             if (entry) {
                                 shiftData[1].sales += entry.sales;
@@ -955,8 +942,7 @@
                                 shiftData[1].byStoreBills[store] = (shiftData[1].byStoreBills[store] || 0) + entry.bills;
                             }
                         }
-                        // Shift 2: hours 12-17
-                        for (let h = 12; h < 18; h++) {
+                        for (let h = 14; h < 24; h++) {
                             const entry = salesMap[`${dateStr}_${store}_${h}`];
                             if (entry) {
                                 shiftData[2].sales += entry.sales;
@@ -965,32 +951,11 @@
                                 shiftData[2].byStoreBills[store] = (shiftData[2].byStoreBills[store] || 0) + entry.bills;
                             }
                         }
-                        // Shift 3: hours 20-23 today + 0-2 next day
-                        for (let h = 18; h <= 23; h++) {
-                            const entry = salesMap[`${dateStr}_${store}_${h}`];
-                            if (entry) {
-                                shiftData[3].sales += entry.sales;
-                                shiftData[3].bills += entry.bills;
-                                shiftData[3].byStore[store] = (shiftData[3].byStore[store] || 0) + entry.sales;
-                                shiftData[3].byStoreBills[store] = (shiftData[3].byStoreBills[store] || 0) + entry.bills;
-                            }
-                        }
-                        for (let h = 0; h < 3; h++) {
-                            const entry = salesMap[`${nextDateStr}_${store}_${h}`];
-                            if (entry) {
-                                shiftData[3].sales += entry.sales;
-                                shiftData[3].bills += entry.bills;
-                                shiftData[3].byStore[store] = (shiftData[3].byStore[store] || 0) + entry.sales;
-                                shiftData[3].byStoreBills[store] = (shiftData[3].byStoreBills[store] || 0) + entry.bills;
-                            }
-                        }
                     });
-
                     d.setDate(d.getDate() + 1);
                 }
             }
 
-            // Process hourly visitors
             if (rawData.visitors_hourly) {
                 const visMap = {};
                 rawData.visitors_hourly.forEach(row => {
@@ -1004,27 +969,17 @@
                 const endD = new Date(toDate);
                 while (d2 <= endD) {
                     const dateStr = d2.toISOString().split('T')[0];
-                    const nextDateStr = getNextDayStr(dateStr);
 
                     allowedBranches.forEach(store => {
-                        for (let h = 6; h < 12; h++) {
+                        for (let h = 10; h < 14; h++) {
                             const v = visMap[`${dateStr}_${store}_${h}`];
                             if (v) { shiftData[1].visitors += v; shiftData[1].byStoreVisitors[store] = (shiftData[1].byStoreVisitors[store] || 0) + v; }
                         }
-                        for (let h = 12; h < 18; h++) {
+                        for (let h = 14; h < 24; h++) {
                             const v = visMap[`${dateStr}_${store}_${h}`];
                             if (v) { shiftData[2].visitors += v; shiftData[2].byStoreVisitors[store] = (shiftData[2].byStoreVisitors[store] || 0) + v; }
                         }
-                        for (let h = 18; h <= 23; h++) {
-                            const v = visMap[`${dateStr}_${store}_${h}`];
-                            if (v) { shiftData[3].visitors += v; shiftData[3].byStoreVisitors[store] = (shiftData[3].byStoreVisitors[store] || 0) + v; }
-                        }
-                        for (let h = 0; h < 3; h++) {
-                            const v = visMap[`${nextDateStr}_${store}_${h}`];
-                            if (v) { shiftData[3].visitors += v; shiftData[3].byStoreVisitors[store] = (shiftData[3].byStoreVisitors[store] || 0) + v; }
-                        }
                     });
-
                     d2.setDate(d2.getDate() + 1);
                 }
             }
@@ -1033,8 +988,8 @@
         }
 
         // Render shift KPI cards
-        function renderShiftKPIs(shiftData) {
-            [1, 2, 3].forEach(s => {
+                function renderShiftKPIs(shiftData) {
+            [1, 2].forEach(s => {
                 const d = shiftData[s];
                 document.getElementById(`shift${s}Sales`).textContent = formatNumber(d.sales);
                 const rate = d.visitors > 0 ? ((d.bills / d.visitors) * 100).toFixed(1) : 0;
@@ -1044,19 +999,16 @@
         }
 
         // Get per-branch shift detail HTML
-        function getShiftBadgesHtml(storeId, shiftData) {
+                function getShiftBadgesHtml(storeId, shiftData) {
             if (!shiftViewActive) return '';
             const s1 = shiftData[1].byStore[storeId] || 0;
             const s2 = shiftData[2].byStore[storeId] || 0;
-            const s3 = shiftData[3].byStore[storeId] || 0;
-            if (s1 === 0 && s2 === 0 && s3 === 0) return '';
+            if (s1 === 0 && s2 === 0) return '';
 
             const b1 = shiftData[1].byStoreBills[storeId] || 0;
             const b2 = shiftData[2].byStoreBills[storeId] || 0;
-            const b3 = shiftData[3].byStoreBills[storeId] || 0;
             const v1 = shiftData[1].byStoreVisitors[storeId] || 0;
             const v2 = shiftData[2].byStoreVisitors[storeId] || 0;
-            const v3 = shiftData[3].byStoreVisitors[storeId] || 0;
 
             return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
                 <div style="display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
@@ -1074,11 +1026,6 @@
                     <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
                     <span style="text-align:center;">${b2}</span>
                     <span style="text-align:center;">${v2 || '-'}</span>
-
-                    <span class="shift-branch-badge s3">🌙 ش3</span>
-                    <span style="text-align:center; font-weight:700;">${formatNumber(s3)}</span>
-                    <span style="text-align:center;">${b3}</span>
-                    <span style="text-align:center;">${v3 || '-'}</span>
                 </div>
             </div>`;
         }
