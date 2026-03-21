@@ -789,17 +789,29 @@
 
         // Get month target date based on selected date
         function getTargetDateStr(dateStr) {
+            if (dateStr >= '2026-03-20' && dateStr <= '2026-03-31') {
+                return '2026-03-20';
+            }
             return dateStr.substring(0, 7) + '-01';
         }
 
-        // Get days in selected month
+        // Get days in selected month (or target period)
         function getDaysInMonth(dateStr) {
+            if (dateStr >= '2026-03-20' && dateStr <= '2026-03-31') {
+                return 12;
+            }
+            if (dateStr >= '2026-03-01' && dateStr <= '2026-03-19') {
+                return 19;
+            }
             const [year, month] = dateStr.split('-');
             return new Date(year, month, 0).getDate();
         }
 
-        // Get day of month from selected date
+        // Get day of month from selected date (relative to target start)
         function getDayOfMonth(dateStr) {
+            if (dateStr >= '2026-03-20' && dateStr <= '2026-03-31') {
+                return parseInt(dateStr.split('-')[2], 10) - 19;
+            }
             return parseInt(dateStr.split('-')[2], 10);
         }
 
@@ -1326,11 +1338,8 @@
                 }
 
                 let daysInMonth = getDaysInMonth(toDate);
-                if (targetDate === '2026-03-01') {
-                    daysInMonth = 19; // Ramadan target period is only 19 days (March 1-19)
-                }
                 let currentDay = getDayOfMonth(toDate);
-                if (targetDate === '2026-03-01' && currentDay > 19) {
+                if (targetDate === '2026-03-01' && parseInt(toDate.split('-')[2], 10) > 19) {
                     currentDay = 19; // Cap at 19 to avoid negative remaining expectations post-Ramadan
                 }
 
