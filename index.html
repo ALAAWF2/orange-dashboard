@@ -1124,6 +1124,11 @@
                     // Cap at today if future
                     let now = new Date();
                     if (currentEnd > now) currentEnd = now;
+
+                    // March 2026 post-Ramadan: Show only current sub-period (March 20+)
+                    if (selYear === 2026 && parseInt(selMonth) === 3 && now.getDate() >= 20) {
+                        currentStart = new Date(2026, 2, 20);
+                    }
                 }
 
                 // Previous Range (Fair Comparison) using Month/Year logic to catch Leap Years
@@ -1140,6 +1145,13 @@
                     prevEnd = new Date(prevStart.getTime() + durationTime);
                     prevEnd.setHours(23, 59, 59, 999);
 
+                } else if (selYear === 2026 && parseInt(selMonth) === 3 && new Date().getDate() >= 20) {
+                    // Post-Ramadan March 2026: Compare with equivalent period shifted +11 days in 2025
+                    prevStart = new Date(2025, 2, 20);
+                    prevStart.setDate(prevStart.getDate() + 11); // = March 31, 2025
+                    let durationTime = currentEnd.getTime() - currentStart.getTime();
+                    prevEnd = new Date(prevStart.getTime() + durationTime);
+                    prevEnd.setHours(23, 59, 59, 999);
                 } else if (selMonth === 'all') {
                     prevStart = new Date(currentStart);
                     prevStart.setFullYear(prevStart.getFullYear() - 1);
