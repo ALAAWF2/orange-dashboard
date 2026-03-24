@@ -196,12 +196,15 @@ async function generateEmployeePDF(targetEmps = null) {
             // Filter by Allowed IDs (if provided)
             if (targetEmps && !targetEmps.includes(e.id)) return;
 
-            // Check Activity based on Mode
-            const hasActivity = isPrevMode
-                ? (e.globalPrev.sales > 0 || e.globalPrev.trans > 0)
-                : (e.globalMtd.sales > 0 || e.globalMtd.trans > 0);
+            // Check Activity based on Mode (skip if user explicitly selected this employee)
+            if (!targetEmps) {
+                const hasActivity = isPrevMode
+                    ? (e.globalPrev.sales > 0 || e.globalPrev.trans > 0)
+                    : (e.globalMtd.sales > 0 || e.globalMtd.trans > 0);
+                if (!hasActivity) return;
+            }
 
-            if (e.primaryStore === storeId && hasActivity) {
+            if (e.primaryStore === storeId) {
                 empKeys.push(e.id);
             }
         });
