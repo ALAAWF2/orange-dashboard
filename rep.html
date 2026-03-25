@@ -1802,6 +1802,7 @@
                     // We also keep track of the TOP selling product (by amount) in that group to represent it.
 
                     let groupedData = {};
+                    const storeFilter = document.getElementById('storeFilter').value;
 
                     for (const r of CURRENT_RESULTS) {
                         // Use category from the JSON map, fallback to individual item ID if not present
@@ -1816,18 +1817,58 @@
                                 stock: 0,
                                 topProduct: r,
                                 _maxAmount: -1,
-                                isMapped: !!mappedCategory
+                                isMapped: !!mappedCategory,
+                                _categoryName: mappedCategory || null
                             };
                         }
 
                         groupedData[groupKey].qty += r.qty;
                         groupedData[groupKey].amount += r.amount;
-                        groupedData[groupKey].stock += r.stock_total;
 
                         // Identify the top product to represent this category
                         if (r.amount > groupedData[groupKey]._maxAmount) {
                             groupedData[groupKey]._maxAmount = r.amount;
                             groupedData[groupKey].topProduct = r;
+                        }
+                    }
+
+                    // Calculate full category stock from ALL products (not just sold ones)
+                    // Build reverse map: category name -> groupKey
+                    const catToGroupKey = {};
+                    for (const [gk, gd] of Object.entries(groupedData)) {
+                        if (gd._categoryName) {
+                            catToGroupKey[gd._categoryName] = gk;
+                        }
+                    }
+
+                    for (const [pid, prod] of Object.entries(PRODUCTS)) {
+                        if (!prod.stock) continue;
+                        const prodAlias = prod.alias || '';
+                        const mappedCat = CATEGORY_MAP[prodAlias] || CATEGORY_MAP[pid];
+                        if (!mappedCat || mappedCat === 'غير مصنف') {
+                            // Individual product — only add stock if it's already in groupedData
+                            const pKey = `PID_${pid}`;
+                            if (groupedData[pKey]) {
+                                let st = 0;
+                                if (storeFilter !== 'all') {
+                                    st = prod.stock[storeFilter] || 0;
+                                } else {
+                                    st = prod.stock.total || 0;
+                                }
+                                groupedData[pKey].stock = st;
+                            }
+                        } else {
+                            // Mapped category — add stock even if this product didn't sell
+                            const gk = catToGroupKey[mappedCat];
+                            if (gk) {
+                                let st = 0;
+                                if (storeFilter !== 'all') {
+                                    st = prod.stock[storeFilter] || 0;
+                                } else {
+                                    st = prod.stock.total || 0;
+                                }
+                                groupedData[gk].stock += st;
+                            }
                         }
                     }
 
