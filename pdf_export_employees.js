@@ -249,19 +249,10 @@ async function generateEmployeePDF(targetEmps = null) {
         empKeys.forEach(empKey => {
             const emp = globalEmpMap[empKey];
 
-            // Robust Target Lookup:
-            // 1. Try window.targetsData if targetsData is not in scope.
-            // 2. Try the exact key (string).
-            // 3. Try the key as number (if mismatch).
-            // 4. Fallback to 0.
+            // Robust Target Lookup
+            // Legacy Default
             let relevantTargets = (typeof targetsData !== 'undefined') ? targetsData : (window.targetsData || {});
-            let target = relevantTargets[empKey];
-
-            if (target === undefined) {
-                // Try converting key to int or string
-                // keys in JSON might be integers
-                target = relevantTargets[parseInt(empKey)] || relevantTargets[empKey.toString()] || 0;
-            }
+            let target = 0;
 
             // --- Monthly Target Override ---
             const monthlyTargets = (typeof window.monthlyTargetsData !== 'undefined') ? window.monthlyTargetsData : {};
@@ -271,10 +262,19 @@ async function generateEmployeePDF(targetEmps = null) {
                 tDateStr = '2026-03-20';
             }
 
-            if (monthlyTargets[empKey] && monthlyTargets[empKey][tDateStr]) {
-                target = monthlyTargets[empKey][tDateStr];
-            } else if (monthlyTargets[parseInt(empKey)] && monthlyTargets[parseInt(empKey)][tDateStr]) {
-                target = monthlyTargets[parseInt(empKey)][tDateStr];
+            if (monthlyTargets && Object.keys(monthlyTargets).length > 0) {
+                // Strict lookup
+                if (monthlyTargets[empKey] && monthlyTargets[empKey][tDateStr]) {
+                    target = monthlyTargets[empKey][tDateStr];
+                } else if (monthlyTargets[parseInt(empKey)] && monthlyTargets[parseInt(empKey)][tDateStr]) {
+                    target = monthlyTargets[parseInt(empKey)][tDateStr];
+                }
+            } else {
+                // Fallback to legacy
+                target = relevantTargets[empKey];
+                if (target === undefined) {
+                    target = relevantTargets[parseInt(empKey)] || relevantTargets[empKey.toString()] || 0;
+                }
             }
 
             // Define Data Sources based on Mode

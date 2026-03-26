@@ -293,12 +293,21 @@
                 if (inRange) {
                     if (!monthStats[name]) {
                         // Lookup Target
-                        const targetKey = `${monthPrefix}-01`;
+                        let targetKey = `${monthPrefix}-01`;
+                        
+                        // 2026 March Override
+                        const tObj = new Date();
+                        if (!isCustom && tObj.getFullYear() === 2026 && tObj.getMonth() === 2 && tObj.getDate() > 19) {
+                            targetKey = '2026-03-20';
+                        }
+                        
                         let target = 0;
-                        if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
-                            target = monthlyTargets[empId][targetKey];
-                        } else if (empId && targets[empId]) {
-                            target = targets[empId];
+                        if (monthlyTargets && Object.keys(monthlyTargets).length > 0) {
+                            if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
+                                target = monthlyTargets[empId][targetKey];
+                            }
+                        } else {
+                            if (empId && targets[empId]) target = targets[empId];
                         }
 
                         monthStats[name] = { s: 0, t: 0, target: target };

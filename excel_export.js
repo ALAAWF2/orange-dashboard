@@ -341,11 +341,20 @@ async function exportEmployeeSales(startDate, endDate) {
                 const dObj = new Date(date);
                 const yyyy = dObj.getFullYear();
                 const mm = String(dObj.getMonth() + 1).padStart(2, '0');
-                const targetKey = `${yyyy}-${mm}-01`;
+                let targetKey = `${yyyy}-${mm}-01`;
+                
+                // 2026 March: Split target periods
+                if (yyyy === 2026 && dObj.getMonth() === 2 && dObj.getDate() > 19) {
+                    targetKey = '2026-03-20';
+                }
 
                 let targetVal = 0;
-                if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
-                    targetVal = monthlyTargets[empId][targetKey];
+                if (monthlyTargets && Object.keys(monthlyTargets).length > 0) {
+                    if (monthlyTargets[empId] && monthlyTargets[empId][targetKey]) {
+                        targetVal = monthlyTargets[empId][targetKey];
+                    }
+                } else {
+                    if (targets && targets[empId]) targetVal = targets[empId];
                 }
 
                 // Calculate Previous Year Date
