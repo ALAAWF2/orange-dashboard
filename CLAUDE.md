@@ -1,6 +1,7 @@
 # CLAUDE.md — Orange Dashboard
 
 A comprehensive guide for AI assistants working in this codebase.
+**CRITICAL INSTRUCTION FOR AI:** You MUST read this entire document before answering any user query or modifying code. Pay special attention to the Shift Logic and Data Pipeline sections.
 
 ---
 
@@ -17,14 +18,14 @@ A comprehensive guide for AI assistants working in this codebase.
 ## Architecture
 
 ```
-Browser (Vanilla JS + Bootstrap 5 RTL)
+Browser (Vanilla JS + Bootstrap 5 RTL in /allorangedashboard)
     |
     |-- Loads large JSON files directly (no API for reads)
     |-- Calls Flask API (admin_logic.js) for writes/targets
     |
-Flask Backend (server_admin.py)
+Flask Backend & Python ETL (in parent directory /orangedata)
     |
-    PostgreSQL (GoFrugal ERP data)
+    PostgreSQL (Dynamics 365 / GoFrugal ERP)
 ```
 
 This is a **traditional multi-page application**:
@@ -37,45 +38,71 @@ This is a **traditional multi-page application**:
 
 ## Directory Layout
 
+**Note:** The HTML/JS files are inside `allorangedashboard/`, while the Python ETL scripts that generate the data are in the parent directory (`../orangedata/`).
+
 ```
-/
-├── index.html                  # Main sales dashboard
-├── login.html                  # Authentication entry point
-├── widget.html                 # Mobile/quick view (PWA start URL)
-├── employees.html              # Employee performance analytics
-├── product_analysis.html       # Product sales analysis
-├── offers_analysis.html        # Promotional offers tracking
-├── admin_targets.html          # Admin target management UI
-├── target_setting.html         # Manager target setting
-├── data_audit.html             # Data validation/auditing
-├── branch_details.html         # Branch information
-├── chatbot.html                # Chat interface
-├── rep.html                    # Reports
-├── stagnant_products.html      # Stagnant product analysis
-│
-├── admin_logic.js              # Flask API calls, target CRUD, auth
-├── target_logic.js             # YoY comparison, target aggregation
-├── excel_export.js             # Excel report generation (SheetJS)
-├── pdf_export.js               # PDF sales reports (jsPDF)
-├── pdf_export_employees.js     # Employee PDF reports
-├── product_pdf_export.js       # Product analysis PDFs
-├── users.js                    # Client-side user credentials & roles
-│
+/orangedata/ (Parent Directory)
+├── generate_management_data.py # CRITICAL ETL: Merges Legacy & Dynamics data into JSON
 ├── server_admin.py             # Flask backend (main API server)
+├── import_dynamics_raw.py      # Extracts ERP Dynamics data
+├── visitors/                   # Visitor Python scripts
+│   ├── process_visitors_db.py  # SenseMax Excel to DB
+│   ├── fetch_vcount_hourly.py  # VCount API to DB
 │
-├── management_data.json        # ~5 MB — stores, sales, targets, visitors
-├── employees_data.json         # ~11 MB — employee transaction history
-├── product_analysis_data.json  # ~67 MB — product analytics
-├── offers_data.json            # ~18 MB — offers/deals
-├── products.json               # ~3.4 MB — product catalog
-│
-├── ceo_data/                   # Historical monthly sales (sales_YYYY_MM.json)
-├── assets/amiri_font.js        # Arabic Amiri font as base64
-│
-├── manifest.json               # PWA manifest
-│
-└── *.py                        # Utility/data-processing scripts (not part of app)
+└── allorangedashboard/         # (Frontend Folder - Where you are likely working)
+    ├── index.html              # Main sales dashboard
+    ├── login.html              # Authentication entry point
+    ├── widget.html             # Mobile/quick view (PWA start URL)
+    ├── employees.html          # Employee performance analytics
+    ├── product_analysis.html   # Product sales analysis
+    ├── offers_analysis.html    # Promotional offers tracking
+    ├── admin_targets.html      # Admin target management UI
+    ├── target_setting.html     # Manager target setting
+    ├── data_audit.html         # Data validation/auditing
+    ├── branch_details.html     # Branch information
+    ├── chatbot.html            # Chat interface
+    ├── rep.html                # Reports
+    ├── cross-outlet-search.html # Cross-branch operations
+    ├── maintenance.html        # Maintenance requests (Supabase backend)
+    ├── stagnant_products.html  # Stagnant product analysis
+    │
+    ├── admin_logic.js          # Flask API calls, target CRUD, auth
+    ├── target_logic.js         # YoY comparison, target aggregation
+    ├── excel_export.js         # Excel report generation (SheetJS)
+    ├── pdf_export.js           # PDF sales reports (jsPDF)
+    ├── pdf_export_employees.js # Employee PDF reports
+    ├── product_pdf_export.js   # Product analysis PDFs
+    ├── users.js                # Client-side user credentials & roles
+    │
+    ├── management_data.json    # ~5 MB — stores, sales, targets, visitors (daily & hourly)
+    ├── employees_data.json     # ~11 MB — employee transaction history
+    ├── product_analysis_data.json  # ~67 MB — product analytics
+    ├── offers_data.json        # ~18 MB — offers/deals details
+    ├── products.json           # ~3.4 MB — product catalog
+    ├── stock_data.json         # Live stock JSON
+    │
+    ├── ceo_data/               # Historical monthly sales (sales_YYYY_MM.json)
+    ├── assets/amiri_font.js    # Arabic Amiri font as base64
+    │
+    ├── manifest.json           # PWA manifest
+    │
+    └── *.py                    # Utility/data-processing scripts
 ```
+
+---
+
+## Data Pipeline & Business Logic (CRITICAL)
+
+The Python scripts located in the root `orangedata/` are **NOT** optional side-tools; they form the core ETL (Extract, Transform, Load) pipeline.
+
+1. **Data Aggregation Rules**: `generate_management_data.py` merges completely different historical epochs dynamically:
+   - **Legacy (<= 2025)**: Reads from `gofrugal_sales`.
+   - **Modern (>= 2026)**: Reads from `dynamic_sales_items` (Dynamics 365).
+   - **Manual Overwrites**: Manual entries for platforms/warehouses overwrite automated data based on identical date/store keys.
+2. **Shift & Time Logic (WARNING)**: The retail day does NOT end at 12:00 AM.
+   - Sales occurring after midnight (up to 3:00 AM) are shifted to the *previous* date. This is critical for all calculations.
+   - **Ramadan Exception**: During Ramadan dates (e.g., Feb 18 - Mar 20, 2026), visitor counting hours and sales targets drastically shift. Always verify if a date falls within Ramadan (`metadata.ramadan_dates` in JSON) before modifying time-series extraction logic. The Python scripts natively handle these shifts.
+3. **Data Refresh**: A 15-minute scheduled Python task updates the JSON data files. **Never edit the data JSON files manually.**
 
 ---
 
@@ -84,7 +111,7 @@ This is a **traditional multi-page application**:
 | Concern | Technology / CDN |
 |---|---|
 | UI framework | Bootstrap 5.3.0 RTL |
-| Charts | Chart.js |
+| Charts | Chart.js 4+ |
 | PDF export | jsPDF 2.5.1 + jsPDF AutoTable 3.5.28 |
 | Excel export | SheetJS (XLSX) 0.18.5 |
 | Icons | Font Awesome 6.4.0 |
@@ -102,8 +129,7 @@ No npm, no webpack, no TypeScript, no framework (React/Vue/etc.).
 | Framework | Flask (Python) |
 | CORS | Flask-CORS |
 | ORM | SQLAlchemy |
-| Database | PostgreSQL (GoFrugal ERP) |
-| Environment | python-dotenv |
+| Database | PostgreSQL (GoFrugal ERP / Dynamics) & Supabase (Maintenance) |
 | Auth | HTTP Basic Auth |
 
 ---
@@ -113,18 +139,11 @@ No npm, no webpack, no TypeScript, no framework (React/Vue/etc.).
 ### Naming
 | Asset | Convention | Example |
 |---|---|---|
-| HTML files | snake_case | `admin_targets.html` |
+| HTML files | snake_case or kebab-case | `admin_targets.html`, `cross-outlet-search.html` |
 | JS functions | camelCase | `updateDashboard()`, `generateExcelReport()` |
 | CSS classes | kebab-case | `kpi-card`, `chart-container` |
 | JSON data files | snake_case | `management_data.json` |
 | Global JS vars | camelCase or UPPER_CASE | `rawData`, `API_BASE` |
-| Python functions | snake_case | `normalize_emp_id()`, `check_auth()` |
-
-### File Organization
-- All HTML pages live at the **root** — no `pages/` or `src/` directory.
-- All JS logic files live at the **root** alongside HTML.
-- Historical monthly data lives in `ceo_data/`.
-- Static assets (fonts, icons) live in `assets/`.
 
 ### Script Loading in HTML
 Each page includes its own ordered `<script>` tags in the `<body>`:
@@ -170,7 +189,7 @@ User Action (filter/click)
 ## Authentication
 
 - **Frontend**: Client-side user list in `users.js`; PIN validated in the browser; user stored in `localStorage`.
-- **Backend**: HTTP Basic Auth on all Flask routes (`requires_auth` decorator); token stored in `sessionStorage`.
+- **Backend (API)**: HTTP Basic Auth on all Flask routes (`requires_auth` decorator); token stored in `sessionStorage`.
 - **Note**: `users.js` contains credentials in plain text — do not add sensitive secrets here.
 
 ---
@@ -180,15 +199,19 @@ User Action (filter/click)
 ### `management_data.json` (core data file)
 ```json
 {
-  "metadata": { "generated_at": "...", "total_records": 0 },
+  "metadata": { "generated_at": "...", "total_records": 0, "ramadan_dates": [...] },
   "stores":    { "1001": "Store Name" },
   "store_meta": { "1001": { "manager": "...", "city": "...", "type": "..." } },
   "sales":        [[date, storeId, amount]],
   "targets":      [[date, storeId, target]],
   "visitors":     [[date, storeId, count]],
-  "transactions": [[date, storeId, count]]
+  "transactions": [[date, storeId, count]],
+  "sales_hourly": [[date, storeId, hour, amount, bill_count]],
+  "visitors_hourly": [[date, storeId, hour, count]],
+  "offers_analysis": [...]
 }
 ```
+*Note: The frontend `Shift View` and Hourly charts rely exclusively on the `_hourly` arrays and map hours (0-23) based on the shift logic.*
 
 ### `ceo_data/sales_YYYY_MM.json`
 Monthly historical sales snapshots used for year-over-year comparisons.
@@ -212,11 +235,7 @@ All endpoints require HTTP Basic Auth. Include the `ngrok-skip-browser-warning` 
 python server_admin.py
 ```
 
-The server reads credentials from a `.env` file (not committed):
-```
-ADMIN_USERNAME=...
-ADMIN_PASSWORD=...
-```
+The server reads credentials from a `.env` file (not committed).
 
 ---
 
@@ -230,8 +249,8 @@ ADMIN_PASSWORD=...
 
 ## Automation / Data Refresh
 
-- A 15-minute automated update cycle rewrites the JSON data files and commits them (see `update_log.txt`, `update_15m_log.txt`).
-- Do **not** manually edit the large JSON data files — they are auto-generated.
+- A 15-minute automated Python cycle rewrites the JSON data files and commits them.
+- Do **not** manually edit the large JSON data files (`management_data.json`, `employees_data.json`, `product_analysis_data.json`, `offers_data.json`, `stock_data.json`) — they are auto-generated.
 
 ---
 
@@ -249,16 +268,17 @@ ADMIN_PASSWORD=...
 
 - There is **no build step**. Edit HTML/JS/CSS directly and refresh the browser.
 - There are **no automated tests** (no Jest, Pytest, etc.). Validate changes manually.
-- Python utility scripts (`check_dups.py`, `inspect_data.py`, etc.) are one-off data tools, not part of the app itself.
 
 ---
 
 ## What to Avoid
 
-- **Do not** introduce a bundler or framework without explicit agreement — this breaks the no-build convention.
-- **Do not** edit large auto-generated JSON files (`management_data.json`, `employees_data.json`, `product_analysis_data.json`, `offers_data.json`).
+- **Do not** introduce a bundler, Tailwind, or framework (React/Vue/etc.) without explicit agreement — this breaks the no-build convention.
+- **Do not** assume scripts and HTML are in the same folder. Pay attention to `orangedata/` (Python ETL) vs `allorangedashboard/` (Frontend UI).
+- **Do not** edit Python ETL logic (like `generate_management_data.py` or `.py` files in root) without extremely careful accounting for the midnight-shift logic and legacy VS modern data merging constraints.
+- **Do not** edit large auto-generated JSON files.
 - **Do not** add secrets or real credentials to `users.js` or commit `.env`.
-- **Do not** load additional large libraries via CDN without considering page load impact (the product analysis page already loads 67 MB of JSON).
+- **Do not** load additional large libraries via CDN without considering page load impact.
 - **Do not** use `document.write()` or synchronous XHR; use `fetch()` for all async data loading.
 - **Do not** break RTL layout — always test UI changes with Arabic text and RTL direction.
 
@@ -273,7 +293,7 @@ ADMIN_PASSWORD=...
 4. Link the new page from `index.html` or the navbar.
 
 ### Add a new API endpoint
-1. Open `server_admin.py`.
+1. Open `../server_admin.py` in the parent directory.
 2. Add a new route decorated with `@app.route(...)` and `@requires_auth`.
 3. Call the endpoint from `admin_logic.js` using `fetch()` with Basic Auth headers.
 
