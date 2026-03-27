@@ -128,6 +128,90 @@
             font-size: 0.8rem;
         }
 
+        /* Store Drill-down Expandable Row */
+        .store-detail-row td {
+            padding: 0 !important;
+            background: #f8f9fa;
+        }
+        .store-detail-content {
+            padding: 15px 20px;
+        }
+        .drill-tabs .nav-link {
+            color: #666;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            padding: 8px 16px;
+        }
+        .drill-tabs .nav-link.active {
+            color: #fe7900;
+            border-bottom: 3px solid #fe7900;
+            background: transparent;
+        }
+        .drill-table {
+            font-size: 0.85rem;
+        }
+        .drill-table thead th {
+            background: #343a40;
+            color: white;
+            font-weight: 500;
+            font-size: 0.8rem;
+            padding: 6px 10px;
+        }
+        .drill-table tbody td {
+            padding: 5px 10px;
+        }
+        .drill-table tbody tr:hover {
+            background: #fff3e0 !important;
+        }
+        .cat-clickable {
+            cursor: pointer;
+            color: #fe7900;
+            font-weight: 600;
+            text-decoration: underline;
+        }
+        .cat-clickable:hover {
+            color: #cc6000;
+        }
+        .share-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: #e9ecef;
+            min-width: 60px;
+            display: inline-block;
+        }
+        .share-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: #fe7900;
+        }
+        .items-sub-table {
+            background: #fff;
+            border-radius: 8px;
+            margin-top: 8px;
+            padding: 10px;
+            border: 1px solid #eee;
+        }
+        .store-name-toggle {
+            cursor: pointer;
+            position: relative;
+        }
+        .store-name-toggle::before {
+            content: '◀';
+            margin-left: 5px;
+            font-size: 0.7em;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .store-name-toggle.expanded::before {
+            transform: rotate(-90deg);
+        }
+        .drill-loading {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+
         /* Tooltip Customization */
         .custom-tooltip {
             --bs-tooltip-bg: #343a40;
@@ -1473,10 +1557,15 @@
             branchList.forEach((b, i) => {
                 let tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
-                tr.onclick = () => showBranchDailyDetails(b.sid, b.name);
+                tr.id = `store-row-${b.sid}`;
+                tr.onclick = (e) => {
+                    // If clicked on the store name, toggle drill-down instead
+                    if (e.target.closest('.store-name-toggle')) return;
+                    showBranchDailyDetails(b.sid, b.name);
+                };
                 tr.innerHTML = `
                     <td class="text-center"><span class="rank-badge">${i + 1}</span></td>
-                    <td class="fw-bold fs-6 text-primary">${b.name}</td>
+                    <td class="fw-bold fs-6 text-primary store-name-toggle" onclick="event.stopPropagation(); toggleStoreDrillDown('${b.sid}', '${b.name.replace(/'/g, "\\'")}', this)">${b.name}</td>
                     <td class="text-center">${b.val.toLocaleString()}</td>
                     <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
                     <td class="text-center">${b.target.toLocaleString()}</td>
@@ -1836,6 +1925,301 @@
 
         // --- Helpers ---
         // Helper: Get daily data for a specific store and date
+        // ========== STORE DRILL-DOWN (Employees + Categories) ==========
+        let _empCache = null;  // Cached employees_data.json
+        let _ceoProductsCache = null;  // Cached ceo_data/products.json
+        let _ceoSalesCache = {};  // Cached ceo_data/sales_YYYY_MM.json per month
+        let _drillLoadingPromise = null;
+
+        async function loadDrillData() {
+            if (_empCache && _ceoProductsCache) return;
+            if (_drillLoadingPromise) return _drillLoadingPromise;
+            _drillLoadingPromise = (async () => {
+                const [empRes, prodRes] = await Promise.all([
+                    fetch('employees_data.json?t=' + Date.now()),
+                    fetch('ceo_data/products.json?t=' + Date.now())
+                ]);
+                _empCache = await empRes.json();
+                const prodRaw = await prodRes.json();
+                // products.json is wrapped: { products: { item_id: {name, category, ...} } }
+                _ceoProductsCache = prodRaw.products || prodRaw;
+            })();
+            return _drillLoadingPromise;
+        }
+
+        async function loadCeoSalesForRange(startDate, endDate) {
+            // Determine which months we need
+            const months = new Set();
+            let d = new Date(startDate);
+            while (d <= endDate) {
+                months.add(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+                d.setMonth(d.getMonth() + 1);
+                d.setDate(1);
+            }
+            // Also add end month
+            months.add(endDate.getFullYear() + '-' + String(endDate.getMonth() + 1).padStart(2, '0'));
+
+            const toLoad = [...months].filter(m => !_ceoSalesCache[m]);
+            if (toLoad.length > 0) {
+                const results = await Promise.all(toLoad.map(m => {
+                    const fname = `ceo_data/sales_${m.replace('-', '_')}.json?t=${Date.now()}`;
+                    return fetch(fname).then(r => r.ok ? r.json() : null).catch(() => null);
+                }));
+                toLoad.forEach((m, i) => {
+                    _ceoSalesCache[m] = results[i];
+                });
+            }
+        }
+
+        function toggleStoreDrillDown(storeId, storeName, el) {
+            const existingRow = document.getElementById(`drill-${storeId}`);
+            if (existingRow) {
+                existingRow.remove();
+                el.classList.remove('expanded');
+                return;
+            }
+
+            // Close any other open drill-downs
+            document.querySelectorAll('.store-detail-row').forEach(r => r.remove());
+            document.querySelectorAll('.store-name-toggle.expanded').forEach(e => e.classList.remove('expanded'));
+
+            el.classList.add('expanded');
+
+            // Insert loading row
+            const storeRow = document.getElementById(`store-row-${storeId}`);
+            const detailRow = document.createElement('tr');
+            detailRow.id = `drill-${storeId}`;
+            detailRow.className = 'store-detail-row';
+            detailRow.innerHTML = `<td colspan="15"><div class="drill-loading">جاري تحميل البيانات...</div></td>`;
+            storeRow.after(detailRow);
+
+            // Load data and render
+            renderStoreDrillDown(storeId, storeName, detailRow);
+        }
+
+        async function renderStoreDrillDown(storeId, storeName, detailRow) {
+            try {
+                await loadDrillData();
+
+                const startDate = window.dashboardState.start;
+                const endDate = window.dashboardState.end;
+                const startStr = startDate.toLocaleDateString('en-CA');
+                const endStr = endDate.toLocaleDateString('en-CA');
+
+                await loadCeoSalesForRange(startDate, endDate);
+
+                // === 1. Employee Data ===
+                const empHistory = _empCache.history[storeId] || [];
+                const empNames = _empCache.employee_names || {};
+                const empAgg = {};
+
+                empHistory.forEach(rec => {
+                    const [date, rawName, sales, trans, items] = rec;
+                    if (date < startStr || date > endStr) return;
+                    if (!rawName || rawName === 'None' || rawName === '') return;
+
+                    let empId = rawName;
+                    let empName = rawName;
+                    if (rawName.includes('-')) {
+                        empId = rawName.split('-')[0].trim();
+                        empName = rawName.split('-').slice(1).join('-').trim();
+                    }
+                    if (empNames[empId]) empName = empNames[empId];
+                    if (empName === 'مرتجع' || empName === 'R') return;
+
+                    if (!empAgg[empId]) empAgg[empId] = { name: empName, sales: 0, trans: 0, items: 0 };
+                    empAgg[empId].sales += sales || 0;
+                    empAgg[empId].trans += trans || 0;
+                    empAgg[empId].items += items || 0;
+                });
+
+                const empList = Object.values(empAgg).filter(e => e.sales !== 0).sort((a, b) => b.sales - a.sales);
+                const totalEmpSales = empList.reduce((s, e) => s + e.sales, 0);
+
+                // === 2. Category/Product Data ===
+                const catAgg = {};
+                const itemAgg = {};
+
+                Object.values(_ceoSalesCache).forEach(monthData => {
+                    if (!monthData || !monthData.records) return;
+                    monthData.records.forEach(r => {
+                        if (r.s !== storeId) return;
+                        if (r.d < startStr || r.d > endStr) return;
+
+                        const product = _ceoProductsCache[r.i];
+                        const catName = product ? product.category : 'أخرى';
+                        const itemName = product ? product.name : r.i;
+
+                        if (!catAgg[catName]) catAgg[catName] = { sales: 0, qty: 0, items: {} };
+                        catAgg[catName].sales += r.a || 0;
+                        catAgg[catName].qty += Math.abs(r.q || 0);
+
+                        const itemKey = r.i;
+                        if (!catAgg[catName].items[itemKey]) {
+                            catAgg[catName].items[itemKey] = { name: itemName, sales: 0, qty: 0 };
+                        }
+                        catAgg[catName].items[itemKey].sales += r.a || 0;
+                        catAgg[catName].items[itemKey].qty += Math.abs(r.q || 0);
+                    });
+                });
+
+                const catList = Object.entries(catAgg)
+                    .map(([name, data]) => ({ name, ...data }))
+                    .filter(c => c.sales !== 0)
+                    .sort((a, b) => b.sales - a.sales);
+                const totalCatSales = catList.reduce((s, c) => s + c.sales, 0);
+
+                // === Render ===
+                const uid = storeId.replace(/[^a-zA-Z0-9]/g, '');
+                detailRow.innerHTML = `<td colspan="15">
+                    <div class="store-detail-content">
+                        <ul class="nav drill-tabs mb-3" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active" onclick="switchDrillTab('${uid}', 'emp', this)">👤 الموظفين (${empList.length})</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" onclick="switchDrillTab('${uid}', 'cat', this)">📦 الفئات (${catList.length})</button>
+                            </li>
+                        </ul>
+
+                        <div id="drill-emp-${uid}" class="drill-tab-pane">
+                            ${renderEmpDrill(empList, totalEmpSales)}
+                        </div>
+
+                        <div id="drill-cat-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderCatDrill(catList, totalCatSales, uid)}
+                        </div>
+                    </div>
+                </td>`;
+
+            } catch (err) {
+                console.error('Drill-down error:', err);
+                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading text-danger">خطأ في تحميل البيانات: ${err.message}</div></td>`;
+            }
+        }
+
+        function switchDrillTab(uid, tab, btn) {
+            // Hide all panes
+            btn.closest('.store-detail-content').querySelectorAll('.drill-tab-pane').forEach(p => p.style.display = 'none');
+            // Show selected
+            document.getElementById(`drill-${tab}-${uid}`).style.display = '';
+            // Update active state
+            btn.closest('.drill-tabs').querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function renderEmpDrill(empList, totalSales) {
+            if (empList.length === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات موظفين</div>';
+
+            let html = `<div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                <table class="table table-sm drill-table mb-0">
+                    <thead><tr>
+                        <th>#</th>
+                        <th>الموظف</th>
+                        <th class="text-end">المبيعات</th>
+                        <th class="text-center">النسبة</th>
+                        <th class="text-center">الفواتير</th>
+                        <th class="text-end">معدل الفاتورة</th>
+                    </tr></thead><tbody>`;
+
+            empList.forEach((e, i) => {
+                const share = totalSales > 0 ? (e.sales / totalSales * 100) : 0;
+                const avgInv = e.trans > 0 ? Math.round(e.sales / e.trans) : 0;
+                html += `<tr>
+                    <td>${i + 1}</td>
+                    <td class="fw-bold">${e.name}</td>
+                    <td class="text-end ${e.sales < 0 ? 'text-danger' : 'text-success'} fw-bold">${Math.round(e.sales).toLocaleString()}</td>
+                    <td class="text-center">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <div class="share-bar"><div class="share-bar-fill" style="width:${Math.min(share, 100)}%"></div></div>
+                            <small>${share.toFixed(1)}%</small>
+                        </div>
+                    </td>
+                    <td class="text-center">${e.trans}</td>
+                    <td class="text-end">${avgInv.toLocaleString()}</td>
+                </tr>`;
+            });
+
+            html += `</tbody>
+                <tfoot class="table-warning fw-bold"><tr>
+                    <td colspan="2">المجموع</td>
+                    <td class="text-end">${Math.round(totalSales).toLocaleString()}</td>
+                    <td class="text-center">100%</td>
+                    <td class="text-center">${empList.reduce((s, e) => s + e.trans, 0).toLocaleString()}</td>
+                    <td></td>
+                </tr></tfoot>
+            </table></div>`;
+            return html;
+        }
+
+        function renderCatDrill(catList, totalSales, uid) {
+            if (catList.length === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات فئات</div>';
+
+            let html = `<div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                <table class="table table-sm drill-table mb-0">
+                    <thead><tr>
+                        <th>#</th>
+                        <th>الفئة</th>
+                        <th class="text-end">المبيعات</th>
+                        <th class="text-center">النسبة</th>
+                        <th class="text-center">الكمية</th>
+                    </tr></thead><tbody>`;
+
+            catList.forEach((c, i) => {
+                const share = totalSales > 0 ? (c.sales / totalSales * 100) : 0;
+                const itemsArr = Object.values(c.items).sort((a, b) => b.sales - a.sales);
+                html += `<tr>
+                    <td>${i + 1}</td>
+                    <td class="cat-clickable" onclick="toggleCatItems('${uid}-cat-${i}')">${c.name}</td>
+                    <td class="text-end fw-bold">${Math.round(c.sales).toLocaleString()}</td>
+                    <td class="text-center">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <div class="share-bar"><div class="share-bar-fill" style="width:${Math.min(share, 100)}%"></div></div>
+                            <small>${share.toFixed(1)}%</small>
+                        </div>
+                    </td>
+                    <td class="text-center">${c.qty.toLocaleString()}</td>
+                </tr>
+                <tr id="${uid}-cat-${i}" style="display:none;">
+                    <td colspan="5" style="padding:0 0 0 30px !important;">
+                        <div class="items-sub-table">
+                            <table class="table table-sm mb-0" style="font-size:0.8rem;">
+                                <thead class="table-light"><tr>
+                                    <th>#</th><th>المنتج</th><th class="text-end">المبيعات</th><th class="text-center">الكمية</th>
+                                </tr></thead>
+                                <tbody>${itemsArr.slice(0, 15).map((item, j) => `
+                                    <tr>
+                                        <td>${j + 1}</td>
+                                        <td>${item.name}</td>
+                                        <td class="text-end fw-bold">${Math.round(item.sales).toLocaleString()}</td>
+                                        <td class="text-center">${Math.abs(item.qty)}</td>
+                                    </tr>
+                                `).join('')}
+                                ${itemsArr.length > 15 ? `<tr><td colspan="4" class="text-center text-muted">... و ${itemsArr.length - 15} منتج آخر</td></tr>` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+
+            html += `</tbody>
+                <tfoot class="table-warning fw-bold"><tr>
+                    <td colspan="2">المجموع</td>
+                    <td class="text-end">${Math.round(totalSales).toLocaleString()}</td>
+                    <td class="text-center">100%</td>
+                    <td class="text-center">${catList.reduce((s, c) => s + c.qty, 0).toLocaleString()}</td>
+                </tr></tfoot>
+            </table></div>`;
+            return html;
+        }
+
+        function toggleCatItems(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+        }
+        // ========== END STORE DRILL-DOWN ==========
+
         function getDayData(storeId, dateStr) {
             if (!rawData) return { sales: 0, target: 0, visitors: 0, trans: 0 };
             const findValue = (arr) => {
