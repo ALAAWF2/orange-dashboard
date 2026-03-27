@@ -518,6 +518,15 @@
             }
         }
 
+        /* Custom date inputs on mobile */
+        @media (max-width: 768px) {
+            #customDateContainer,
+            #customDateToContainer {
+                flex: 0 0 50% !important;
+                max-width: 50% !important;
+            }
+        }
+
         /* Container padding Mobile */
         @media (max-width: 768px) {
             .container-fluid.px-4 {
@@ -612,14 +621,24 @@
                     </select>
                 </div>
                 <!-- Period -->
-                <div class="col-md-3 col-lg-3">
+                <div class="col-md-2 col-lg-2">
                     <label class="form-label small text-muted fw-bold mb-1">الفترة</label>
-                    <select id="periodFilter" class="form-select form-select-sm" onchange="updatePage()">
+                    <select id="periodFilter" class="form-select form-select-sm" onchange="onPeriodChange()">
                         <option value="mtd" selected>الشهر الحالي (MTD)</option>
                         <option value="prev_month">الشهر السابق (Previous Month)</option>
                         <option value="yesterday">يوم أمس (Yesterday)</option>
                         <option value="today">اليوم (Today)</option>
+                        <option value="custom">نطاق مخصص (Custom Range)</option>
                     </select>
+                </div>
+                <!-- Custom Date Range -->
+                <div class="col-md-2 col-lg-2" id="customDateContainer" style="display:none;">
+                    <label class="form-label small text-muted fw-bold mb-1">من</label>
+                    <input type="date" id="dateFrom" class="form-control form-control-sm" onchange="updatePage()">
+                </div>
+                <div class="col-md-2 col-lg-2" id="customDateToContainer" style="display:none;">
+                    <label class="form-label small text-muted fw-bold mb-1">إلى</label>
+                    <input type="date" id="dateTo" class="form-control form-control-sm" onchange="updatePage()">
                 </div>
                 <!-- View Mode (HR Only) -->
                 <div class="col-md-2 col-lg-2" id="viewModeContainer" style="display:none;">
@@ -869,9 +888,38 @@
                 <hr>
 
                 <!-- 3. Trend Chart -->
-                <h6 class="fw-bold mb-3">📈 تطور المبيعات (MTD)</h6>
+                <h6 class="fw-bold mb-3">📈 تطور المبيعات</h6>
                 <div style="height: 200px;">
                     <canvas id="empTrendChart"></canvas>
+                </div>
+
+                <hr>
+
+                <!-- 4. Daily Breakdown Table -->
+                <h6 class="fw-bold mb-3">📋 تفاصيل المبيعات اليومية</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th class="text-end">المبيعات</th>
+                                <th class="text-center">الفواتير</th>
+                                <th class="text-center">القطع</th>
+                                <th class="text-end">معدل الفاتورة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="panelDailyBody">
+                        </tbody>
+                        <tfoot class="table-warning fw-bold">
+                            <tr>
+                                <td>المجموع</td>
+                                <td class="text-end" id="panelDailyTotalSales">0</td>
+                                <td class="text-center" id="panelDailyTotalInv">0</td>
+                                <td class="text-center" id="panelDailyTotalItems">0</td>
+                                <td class="text-end" id="panelDailyTotalAvg">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
         </div>
@@ -972,6 +1020,24 @@
 
             let branchStats = {}; // Map storeId -> {current, transactions, items}
             let monthlyTargetsData = {}; // Global for new targets
+
+            // Period Change Handler
+            function onPeriodChange() {
+                const period = document.getElementById('periodFilter').value;
+                const showCustom = period === 'custom';
+                document.getElementById('customDateContainer').style.display = showCustom ? '' : 'none';
+                document.getElementById('customDateToContainer').style.display = showCustom ? '' : 'none';
+                if (showCustom && !document.getElementById('dateFrom').value) {
+                    // Default: first of current month to today
+                    const today = new Date();
+                    const y = today.getFullYear();
+                    const m = String(today.getMonth() + 1).padStart(2, '0');
+                    const d = String(today.getDate()).padStart(2, '0');
+                    document.getElementById('dateFrom').value = `${y}-${m}-01`;
+                    document.getElementById('dateTo').value = `${y}-${m}-${d}`;
+                }
+                updatePage();
+            }
 
             // Fetch Data
             async function loadData() {
@@ -1114,12 +1180,21 @@
                 const yesterdayStr = toLocalYMD(yesterday);
                 const yesterdayDay = yesterday.getDate();
 
+                // Custom date range values
+                const customFrom = document.getElementById('dateFrom').value; // 'YYYY-MM-DD' or ''
+                const customTo = document.getElementById('dateTo').value;
+
                 const checkPeriod = (dYear, dMonth, dDay, dVal, dDateStr) => {
                     // Returns: 0 (None), 1 (Current), 2 (Previous)
                     let status = 0;
 
                     // 1. Check Current
-                    if (periodFilter === 'mtd') {
+                    if (periodFilter === 'custom') {
+                        if (customFrom && customTo && dDateStr >= customFrom && dDateStr <= customTo) {
+                            return 1;
+                        }
+                        return 0;
+                    } else if (periodFilter === 'mtd') {
                         if (dYear === todayYear && dMonth === todayMonth && dVal <= todayVal) {
                             // 2026 March post-Ramadan: Only include sales from March 20+
                             if (todayYear === 2026 && todayMonth === 2 && todayDay > 19 && dDay < 20) {
@@ -2001,10 +2076,63 @@
                 // 3. Render Trend Chart
                 renderEmpTrendChart(empId);
 
+                // 4. Render Daily Breakdown Table
+                renderEmpDailyTable(empId);
+
                 // Show Offcanvas
                 const offcanvasEl = document.getElementById('empInsightPanel');
                 const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
                 bsOffcanvas.show();
+            }
+
+            function renderEmpDailyTable(empId) {
+                const tbody = document.getElementById('panelDailyBody');
+                const dailyData = employeeDailyMaps[empId] || {};
+                let daily = Object.values(dailyData);
+
+                // Sort by date descending (newest first)
+                daily.sort((a, b) => b.date.localeCompare(a.date));
+
+                if (daily.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">لا توجد بيانات يومية</td></tr>';
+                    document.getElementById('panelDailyTotalSales').textContent = '0';
+                    document.getElementById('panelDailyTotalInv').textContent = '0';
+                    document.getElementById('panelDailyTotalItems').textContent = '0';
+                    document.getElementById('panelDailyTotalAvg').textContent = '0';
+                    return;
+                }
+
+                let totalSales = 0, totalInv = 0, totalItems = 0;
+
+                tbody.innerHTML = daily.map(d => {
+                    totalSales += d.sales || 0;
+                    totalInv += d.inv || 0;
+                    totalItems += d.items || 0;
+                    const avgTicket = d.inv > 0 ? (d.sales / d.inv) : 0;
+
+                    // Format date as DD/MM
+                    const dateObj = new Date(d.date);
+                    const dayName = dateObj.toLocaleDateString('ar-SA', { weekday: 'short' });
+                    const dateDisplay = `${dayName} ${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+
+                    // Color sales
+                    const salesClass = d.sales < 0 ? 'text-danger' : d.sales === 0 ? 'text-muted' : 'text-success';
+
+                    return `<tr>
+                        <td class="small">${dateDisplay}</td>
+                        <td class="text-end fw-bold ${salesClass}">${Math.round(d.sales).toLocaleString()}</td>
+                        <td class="text-center">${d.inv}</td>
+                        <td class="text-center">${Math.abs(d.items)}</td>
+                        <td class="text-end small">${Math.round(avgTicket).toLocaleString()}</td>
+                    </tr>`;
+                }).join('');
+
+                // Totals
+                const totalAvg = totalInv > 0 ? totalSales / totalInv : 0;
+                document.getElementById('panelDailyTotalSales').textContent = Math.round(totalSales).toLocaleString();
+                document.getElementById('panelDailyTotalInv').textContent = totalInv.toLocaleString();
+                document.getElementById('panelDailyTotalItems').textContent = Math.abs(totalItems).toLocaleString();
+                document.getElementById('panelDailyTotalAvg').textContent = Math.round(totalAvg).toLocaleString();
             }
 
             function renderCompMetric(idSuffix, empVal, branchVal, higherIsBetter) {
@@ -2041,23 +2169,11 @@
             function renderEmpTrendChart(empId) {
                 const ctx = document.getElementById('empTrendChart').getContext('2d');
 
-                // Get Daily Data (Last 7 days active)
                 // Get Daily Data
-                // Convert Map back to Array
                 let daily = Object.values(employeeDailyMaps[empId] || {});
 
-                // Filter: Start of Current Month to Today
-                const today = new Date();
-                const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-                // Reset time for accurate comparison
-                startOfMonth.setHours(0, 0, 0, 0);
-
-                let filtered = daily.filter(d => {
-                    const recordDate = new Date(d.date);
-                    recordDate.setHours(0, 0, 0, 0);
-                    return recordDate >= startOfMonth;
-                });
+                // All daily data is already filtered by checkPeriod (current period only)
+                let filtered = [...daily];
 
                 // Sort by date ASCII (YYYY-MM-DD works) or Date object
                 filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
