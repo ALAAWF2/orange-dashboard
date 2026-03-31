@@ -907,6 +907,27 @@
 
                 <hr>
 
+                <!-- 3.5 Top Products & Categories -->
+                <div id="panelProductsCategories" style="display:none;" class="mb-3">
+                    <h6 class="fw-bold mb-3">🔥 الأكثر مبيعاً (للفترة المحددة)</h6>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm p-2 h-100 bg-light">
+                                <div class="fw-bold small text-orange mb-2 border-bottom pb-1">الفئات Top 5</div>
+                                <div id="panelTopCategories" class="small"></div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm p-2 h-100 bg-light">
+                                <div class="fw-bold small text-primary mb-2 border-bottom pb-1">المنتجات Top 5</div>
+                                <div id="panelTopItems" class="small"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
                 <!-- 4. Daily Breakdown Table -->
                 <h6 class="fw-bold mb-3">📋 تفاصيل المبيعات اليومية</h6>
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
@@ -1019,6 +1040,7 @@
             let storesData = {};
             let storeMeta = {}; // To store manager info
             let employeeNames = {}; // New: Arabic names map
+            let employeeProductsData = {}; // NEW: Employee Top Products
             let top10Chart, branchChart;
 
             // Sorting State
@@ -1056,9 +1078,10 @@
                 // ... existing loadData code ...
                 const timestamp = new Date().getTime();
                 try {
-                    const [empRes, mgmtRes] = await Promise.all([
+                    const [empRes, mgmtRes, prodRes] = await Promise.all([
                         fetch('employees_data.json?v=' + timestamp),
-                        fetch('management_data.json?v=' + timestamp)
+                        fetch('management_data.json?v=' + timestamp),
+                        fetch('employee_products_data.json?v=' + timestamp).catch(() => null)
                     ]);
 
                     const empJson = await empRes.json();
@@ -1078,6 +1101,11 @@
                     const mgmtJson = await mgmtRes.json();
                     storesData = mgmtJson.stores;
                     storeMeta = mgmtJson.store_meta || {};
+
+                    if (prodRes && prodRes.ok) {
+                        const prodJson = await prodRes.json();
+                        employeeProductsData = prodJson.periods || {};
+                    }
 
                     window.storesData = storesData;
                     window.storeMeta = storeMeta;
@@ -2088,6 +2116,9 @@
                 // 3. Render Trend Chart
                 renderEmpTrendChart(empId);
 
+                // 3.5. Render Top Products
+                renderEmpProducts(empId);
+
                 // 4. Render Daily Breakdown Table
                 renderEmpDailyTable(empId);
 
@@ -2095,6 +2126,63 @@
                 const offcanvasEl = document.getElementById('empInsightPanel');
                 const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
                 bsOffcanvas.show();
+            }
+
+            function renderEmpProducts(empId) {
+                const container = document.getElementById('panelProductsCategories');
+                const catContainer = document.getElementById('panelTopCategories');
+                const itemContainer = document.getElementById('panelTopItems');
+                
+                const periodFilter = document.getElementById('periodFilter').value || 'mtd';
+                
+                // Map filter to json keys ("mtd", "yest", "7d", "14d", "30d")
+                let pKey = 'mtd';
+                if (periodFilter === 'yesterday') pKey = 'yest';
+                else if (periodFilter === 'today') pKey = 'today';
+                
+                // Fallback
+                if (!employeeProductsData[pKey]) pKey = 'mtd';
+                
+                const periodData = employeeProductsData[pKey];
+                
+                let empProdData = null;
+                if (periodData) {
+                    const cleanId = empId.toString().replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
+                    const paddedId = cleanId.padStart(4, '0');
+                    
+                    empProdData = periodData[empId] || periodData[cleanId] || periodData[paddedId];
+                }
+                
+                if (!empProdData || (!empProdData.categories && !empProdData.items)) {
+                    container.style.display = 'none';
+                    return;
+                }
+                
+                container.style.display = 'block';
+                
+                // Cats
+                if (empProdData.categories && empProdData.categories.length > 0) {
+                    catContainer.innerHTML = empProdData.categories.map(c => 
+                        `<div class="d-flex justify-content-between border-bottom border-light py-1">
+                            <span class="text-truncate ps-1" style="max-width: 65%;" title="${c.name}">${c.name}</span>
+                            <span class="fw-bold pe-1">${c.amt.toLocaleString()} </span>
+                        </div>`
+                    ).join('');
+                } else {
+                    catContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للفئات</span>';
+                }
+                
+                // Items
+                if (empProdData.items && empProdData.items.length > 0) {
+                    itemContainer.innerHTML = empProdData.items.map(i => 
+                        `<div class="d-flex justify-content-between border-bottom border-light py-1">
+                            <span class="text-truncate ps-1" style="max-width: 65%;" title="${i.name}">${i.name}</span>
+                            <span class="fw-bold text-primary pe-1">${i.amt.toLocaleString()}</span>
+                        </div>`
+                    ).join('');
+                } else {
+                    itemContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للمنتجات</span>';
+                }
             }
 
             function renderEmpDailyTable(empId) {
