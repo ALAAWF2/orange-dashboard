@@ -520,6 +520,7 @@
 
         /* Custom date inputs on mobile */
         @media (max-width: 768px) {
+
             #customDateContainer,
             #customDateToContainer {
                 flex: 0 0 50% !important;
@@ -575,7 +576,8 @@
                 <button onclick="openEmployeeSelectionModal('pdf')" class="btn btn-warning btn-sm fw-bold text-white">📄
                     تصدير
                     PDF</button>
-                <button onclick="openEmployeePortal()" class="btn btn-info btn-sm fw-bold text-white">⚙️ إدارة الموظفين</button>
+                <button onclick="openEmployeePortal()" class="btn btn-info btn-sm fw-bold text-white">⚙️ إدارة
+                    الموظفين</button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
@@ -2132,52 +2134,52 @@
                 const container = document.getElementById('panelProductsCategories');
                 const catContainer = document.getElementById('panelTopCategories');
                 const itemContainer = document.getElementById('panelTopItems');
-                
+
                 const periodFilter = document.getElementById('periodFilter').value || 'mtd';
-                
+
                 // Map filter to json keys ("mtd", "yest", "7d", "14d", "30d")
                 let pKey = 'mtd';
                 if (periodFilter === 'yesterday') pKey = 'yest';
                 else if (periodFilter === 'today') pKey = 'today';
-                
+
                 // Fallback
                 if (!employeeProductsData[pKey]) pKey = 'mtd';
-                
+
                 const periodData = employeeProductsData[pKey];
-                
+
                 let empProdData = null;
                 if (periodData) {
                     const cleanId = empId.toString().replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
                     const paddedId = cleanId.padStart(4, '0');
-                    
+
                     empProdData = periodData[empId] || periodData[cleanId] || periodData[paddedId];
                 }
-                
+
                 if (!empProdData || (!empProdData.categories && !empProdData.items)) {
                     container.style.display = 'none';
                     return;
                 }
-                
+
                 container.style.display = 'block';
-                
+
                 // Cats
                 if (empProdData.categories && empProdData.categories.length > 0) {
-                    catContainer.innerHTML = empProdData.categories.map(c => 
+                    catContainer.innerHTML = empProdData.categories.map(c =>
                         `<div class="d-flex justify-content-between border-bottom border-light py-1">
-                            <span class="text-truncate ps-1" style="max-width: 65%;" title="${c.name}">${c.name}</span>
-                            <span class="fw-bold pe-1">${c.amt.toLocaleString()} </span>
+                            <span class="text-truncate ps-1" style="max-width: 45%;" title="${c.name}">${c.name}</span>
+                            <span class="text-end fw-bold text-dark" style="font-size: 0.82rem;">الكمية: ${c.qty} | المجموع: ${c.amt.toLocaleString()}</span>
                         </div>`
                     ).join('');
                 } else {
                     catContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للفئات</span>';
                 }
-                
+
                 // Items
                 if (empProdData.items && empProdData.items.length > 0) {
-                    itemContainer.innerHTML = empProdData.items.map(i => 
+                    itemContainer.innerHTML = empProdData.items.map(i =>
                         `<div class="d-flex justify-content-between border-bottom border-light py-1">
-                            <span class="text-truncate ps-1" style="max-width: 65%;" title="${i.name}">${i.name}</span>
-                            <span class="fw-bold text-primary pe-1">${i.amt.toLocaleString()}</span>
+                            <span class="text-truncate ps-1" style="max-width: 45%;" title="${i.name}">${i.name}</span>
+                            <span class="text-end fw-bold text-primary" style="font-size: 0.82rem;">الكمية: ${i.qty} | المجموع: ${i.amt.toLocaleString()}</span>
                         </div>`
                     ).join('');
                 } else {
