@@ -2334,16 +2334,20 @@
                     rawData.sales_hourly.forEach(([d, s, h, amt, bills]) => {
                         if (s != storeId || d < startStr || d > endStr) return;
                         const dow = new Date(d).getDay();
-                        rhythmSales[dow][h].sales += amt || 0;
-                        rhythmSales[dow][h].trans += bills || 0;
-                        rhythmSales[dow][h].count++;
+                        let safeH = h >= 24 ? h % 24 : h;
+                        safeH = Math.max(0, Math.min(23, safeH));
+                        rhythmSales[dow][safeH].sales += amt || 0;
+                        rhythmSales[dow][safeH].trans += bills || 0;
+                        rhythmSales[dow][safeH].count++;
                     });
                 }
                 if (rawData.visitors_hourly) {
                     rawData.visitors_hourly.forEach(([d, s, h, v]) => {
                         if (s != storeId || d < startStr || d > endStr) return;
                         const dow = new Date(d).getDay();
-                        rhythmVisitors[dow][h] += v || 0;
+                        let safeH = h >= 24 ? h % 24 : h;
+                        safeH = Math.max(0, Math.min(23, safeH));
+                        rhythmVisitors[dow][safeH] += v || 0;
                     });
                 }
 
