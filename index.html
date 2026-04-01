@@ -2351,9 +2351,30 @@
                     });
                 }
 
+                // === 5. Top Products Data ===
+                const topProductsList = [];
+                Object.values(catAgg).forEach(cat => {
+                    Object.values(cat.items).forEach(item => {
+                        topProductsList.push(item);
+                    });
+                });
+                topProductsList.sort((a, b) => b.qty - a.qty);
+                
+                // === 6. Basket Analysis Data ===
+                const basketData = { '1': { bills: 0, items: 0 }, '2': { bills: 0, items: 0 }, '3+': { bills: 0, items: 0 } };
+                if (rawData.basket_analysis) {
+                    rawData.basket_analysis.forEach(([d, s, size, bills, items]) => {
+                        if (s != storeId || d < startStr || d > endStr) return;
+                        if (basketData[size]) {
+                            basketData[size].bills += bills || 0;
+                            basketData[size].items += items || 0;
+                        }
+                    });
+                }
+
                 // === Cache data for Excel export ===
                 const uid = storeId.replace(/[^a-zA-Z0-9]/g, '');
-                _drillDataCache[uid] = { storeName, startStr, endStr, dailyRows, empList, catList, grandSales, grandSalesLY, grandTrans, grandVisitors, grandTarget, rhythmSales, rhythmVisitors };
+                _drillDataCache[uid] = { storeName, startStr, endStr, dailyRows, empList, catList, grandSales, grandSalesLY, grandTrans, grandVisitors, grandTarget, rhythmSales, rhythmVisitors, topProductsList, basketData };
 
                 // === RENDER ===
                 detailRow.innerHTML = `<td colspan="15"><div class="drill-panel">
@@ -2396,10 +2417,12 @@
 
                     <!-- Tabs -->
                     <div class="drill-tabs">
-                        <button class="drill-tab active" onclick="switchDrillTab('${uid}', 'daily', this)">📅 المبيعات اليومية <span class="tab-count">${dailyRows.length}</span></button>
-                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'emp', this)">👤 الموظفين <span class="tab-count">${empList.length}</span></button>
-                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'cat', this)">📦 الفئات <span class="tab-count">${catList.length}</span></button>
-                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'rhythm', this)">⏰ إيقاع الفرع</button>
+                        <button class="drill-tab active" onclick="switchDrillTab('${uid}', 'daily', this)">المبيعات اليومية <span class="tab-count">${dailyRows.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'emp', this)">الموظفين <span class="tab-count">${empList.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'cat', this)">الفئات <span class="tab-count">${catList.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'top', this)">⭐ أفضل المنتجات</button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'basket', this)">🛒 تحليل السلة</button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'rhythm', this)">تحليل الساعات</button>
                     </div>
 
                     <!-- Tab Panes -->
@@ -2412,6 +2435,12 @@
                         </div>
                         <div id="drill-cat-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderCatDrill(catList, totalCatSales, uid)}
+                        </div>
+                        <div id="drill-top-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderTopProductsDrill(topProductsList, uid)}
+                        </div>
+                        <div id="drill-basket-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderBasketDrill(basketData, uid)}
                         </div>
                         <div id="drill-rhythm-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderRhythmDrill(rhythmSales, rhythmVisitors, uid, dailyRows)}
@@ -2431,6 +2460,89 @@
             document.getElementById(`drill-${tab}-${uid}`).style.display = '';
             panel.querySelectorAll('.drill-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
+        }
+
+        function renderTopProductsDrill(topList, uid) {
+            if (topList.length === 0) return '<div class="text-center text-muted py-3">لا توجد منتجات مباعة</div>';
+            
+            let html = `<div class="table-responsive" style="max-height:400px; overflow-y:auto;">
+                <table class="table table-sm drill-table mb-0">
+                    <thead><tr>
+                        <th style="width:40px">#</th><th>المنتج</th><th class="text-end">المبيعات</th><th class="text-center">الكمية</th>
+                    </tr></thead><tbody>`;
+
+            topList.slice(0, 50).forEach((item, i) => {
+                html += `<tr>
+                    <td class="text-muted fw-bold">${i + 1}</td>
+                    <td class="fw-bold">${item.name}</td>
+                    <td class="text-end fw-bold text-success">${Math.round(item.sales).toLocaleString()}</td>
+                    <td class="text-center fw-bold text-primary">${Math.abs(item.qty).toLocaleString()}</td>
+                </tr>`;
+            });
+            
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function renderBasketDrill(basket, uid) {
+            const totalBills = basket['1'].bills + basket['2'].bills + basket['3+'].bills;
+            const totalItems = basket['1'].items + basket['2'].items + basket['3+'].items;
+            if (totalBills === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات للسلة</div>';
+            
+            const upt = (totalItems / totalBills).toFixed(2);
+            
+            const p1 = ((basket['1'].bills / totalBills) * 100).toFixed(1);
+            const p2 = ((basket['2'].bills / totalBills) * 100).toFixed(1);
+            const p3 = ((basket['3+'].bills / totalBills) * 100).toFixed(1);
+
+            let html = \`
+            <div class="row w-100 g-3 m-0 p-2">
+                <div class="col-md-6 mb-3">
+                    <div class="rhythm-insight h-100 p-4" style="background:#f4fbff; border:1px solid #b3e5fc; border-radius:12px; display:flex; flex-direction:column; justify-content:center;">
+                        <div class="ri-label text-center fs-5 text-dark mb-2">متوسط القطع في الفاتورة (UPT)</div>
+                        <div class="ri-value text-center text-primary fw-bold" style="font-size:3rem;">\${upt}</div>
+                        <div class="text-center text-muted mt-2">يعكس قوة العرض والمبيعات الإضافية من الموظفين</div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="table-responsive bg-white rounded-3 border" style="padding:10px;">
+                        <table class="table table-sm drill-table mb-0">
+                            <thead><tr>
+                                <th>حجم السلة</th><th class="text-center">الفواتير</th><th class="text-center">النسبة</th><th class="text-center">القطع المباعة</th>
+                            </tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold text-danger">🛒 قطعة واحدة</td>
+                                    <td class="text-center fw-bold">\${basket['1'].bills.toLocaleString()}</td>
+                                    <td class="text-center fw-bold text-danger">\${p1}%</td>
+                                    <td class="text-center text-muted">\${basket['1'].items.toLocaleString()}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-warning">🛒 قطعتان</td>
+                                    <td class="text-center fw-bold">\${basket['2'].bills.toLocaleString()}</td>
+                                    <td class="text-center fw-bold text-warning">\${p2}%</td>
+                                    <td class="text-center text-muted">\${basket['2'].items.toLocaleString()}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-success">🛒 3 قطع فأكثر</td>
+                                    <td class="text-center fw-bold">\${basket['3+'].bills.toLocaleString()}</td>
+                                    <td class="text-center fw-bold text-success">\${p3}%</td>
+                                    <td class="text-center text-muted">\${basket['3+'].items.toLocaleString()}</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="fw-bold" style="background:#f8f9fa;">
+                                <tr>
+                                    <td>الإجمالي</td>
+                                    <td class="text-center">\${totalBills.toLocaleString()}</td>
+                                    <td class="text-center">100%</td>
+                                    <td class="text-center">\${totalItems.toLocaleString()}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>\`;
+            return html;
         }
 
         function renderDailyDrill(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, storeId, storeName) {
@@ -2717,8 +2829,8 @@
             // Toggle buttons + grid
             html += `<div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="rhythm-toggle-group">
-                    <button class="rhythm-toggle-btn active" onclick="switchRhythmMode('${uid}', 'sales', this)">💰 المبيعات</button>
-                    <button class="rhythm-toggle-btn" onclick="switchRhythmMode('${uid}', 'visitors', this)">👥 الزوار</button>
+                    <button class="rhythm-toggle-btn active" onclick="switchRhythmMode('${uid}', 'sales', this)">المبيعات</button>
+                    <button class="rhythm-toggle-btn" onclick="switchRhythmMode('${uid}', 'visitors', this)">الزوار</button>
                 </div>
                 <div class="rhythm-legend">
                     <span>أقل</span>
