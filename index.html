@@ -260,6 +260,100 @@
             color: #cc6000;
             text-decoration: underline;
         }
+        /* === Store Rhythm Heatmap === */
+        .rhythm-grid {
+            display: grid;
+            grid-template-columns: 70px repeat(24, 1fr);
+            gap: 2px;
+            font-size: 0.7rem;
+            direction: ltr;
+        }
+        .rhythm-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.65rem;
+            color: #333;
+            min-height: 32px;
+            position: relative;
+            cursor: default;
+            transition: transform 0.15s;
+        }
+        .rhythm-cell:hover { transform: scale(1.15); z-index: 2; }
+        .rhythm-header {
+            font-weight: 700;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+        }
+        .rhythm-day-label {
+            font-weight: 700;
+            color: #444;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-left: 6px;
+            font-size: 0.75rem;
+        }
+        .rhythm-legend {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            color: #666;
+            direction: rtl;
+        }
+        .rhythm-legend-bar {
+            display: flex;
+            height: 14px;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 180px;
+        }
+        .rhythm-legend-bar span { flex: 1; }
+        .rhythm-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .rhythm-insight {
+            background: linear-gradient(135deg, #fff8f0, #fff);
+            border: 1px solid #ffe0b2;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        .rhythm-insight .ri-label { font-size: 0.75rem; color: #888; margin-bottom: 4px; }
+        .rhythm-insight .ri-value { font-size: 1.1rem; font-weight: 800; color: #333; }
+        .rhythm-insight .ri-sub { font-size: 0.7rem; color: #fe7900; margin-top: 2px; }
+        .rhythm-toggle-group {
+            display: inline-flex;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            margin-bottom: 12px;
+        }
+        .rhythm-toggle-btn {
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: none;
+            background: #f5f5f5;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .rhythm-toggle-btn.active {
+            background: #fe7900;
+            color: white;
+        }
         .share-bar {
             height: 8px;
             border-radius: 4px;
@@ -2225,9 +2319,37 @@
                 const catList = Object.entries(catAgg).map(([name, data]) => ({ name, ...data })).filter(c => c.sales !== 0).sort((a, b) => b.sales - a.sales);
                 const totalCatSales = catList.reduce((s, c) => s + c.sales, 0);
 
+                // === 4. Store Rhythm Data (hourly heatmap) ===
+                const rhythmSales = {}; // { dayOfWeek: { hour: { sales, trans, count } } }
+                const rhythmVisitors = {}; // { dayOfWeek: { hour: visitors } }
+                for (let d = 0; d < 7; d++) {
+                    rhythmSales[d] = {};
+                    rhythmVisitors[d] = {};
+                    for (let h = 0; h < 24; h++) {
+                        rhythmSales[d][h] = { sales: 0, trans: 0, count: 0 };
+                        rhythmVisitors[d][h] = 0;
+                    }
+                }
+                if (rawData.sales_hourly) {
+                    rawData.sales_hourly.forEach(([d, s, h, amt, bills]) => {
+                        if (s != storeId || d < startStr || d > endStr) return;
+                        const dow = new Date(d).getDay();
+                        rhythmSales[dow][h].sales += amt || 0;
+                        rhythmSales[dow][h].trans += bills || 0;
+                        rhythmSales[dow][h].count++;
+                    });
+                }
+                if (rawData.visitors_hourly) {
+                    rawData.visitors_hourly.forEach(([d, s, h, v]) => {
+                        if (s != storeId || d < startStr || d > endStr) return;
+                        const dow = new Date(d).getDay();
+                        rhythmVisitors[dow][h] += v || 0;
+                    });
+                }
+
                 // === Cache data for Excel export ===
                 const uid = storeId.replace(/[^a-zA-Z0-9]/g, '');
-                _drillDataCache[uid] = { storeName, startStr, endStr, dailyRows, empList, catList, grandSales, grandSalesLY, grandTrans, grandVisitors, grandTarget };
+                _drillDataCache[uid] = { storeName, startStr, endStr, dailyRows, empList, catList, grandSales, grandSalesLY, grandTrans, grandVisitors, grandTarget, rhythmSales, rhythmVisitors };
 
                 // === RENDER ===
                 detailRow.innerHTML = `<td colspan="15"><div class="drill-panel">
@@ -2273,6 +2395,7 @@
                         <button class="drill-tab active" onclick="switchDrillTab('${uid}', 'daily', this)">📅 المبيعات اليومية <span class="tab-count">${dailyRows.length}</span></button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'emp', this)">👤 الموظفين <span class="tab-count">${empList.length}</span></button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'cat', this)">📦 الفئات <span class="tab-count">${catList.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'rhythm', this)">⏰ إيقاع الفرع</button>
                     </div>
 
                     <!-- Tab Panes -->
@@ -2285,6 +2408,9 @@
                         </div>
                         <div id="drill-cat-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderCatDrill(catList, totalCatSales, uid)}
+                        </div>
+                        <div id="drill-rhythm-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderRhythmDrill(rhythmSales, rhythmVisitors, uid, dailyRows)}
                         </div>
                     </div>
                 </div></td>`;
@@ -2457,6 +2583,169 @@
         function toggleCatItems(rowId) {
             const row = document.getElementById(rowId);
             if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+        }
+
+        function renderRhythmDrill(salesData, visitorsData, uid, dailyRows) {
+            const dayLabels = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            // Day order: Sat(6), Sun(0), Mon(1), Tue(2), Wed(3), Thu(4), Fri(5) — Saudi work week
+            const dayOrder = [6, 0, 1, 2, 3, 4, 5];
+
+            // Find max values for color scaling
+            let maxSales = 0, maxVisitors = 0;
+            for (let d = 0; d < 7; d++) {
+                for (let h = 0; h < 24; h++) {
+                    if (salesData[d][h].sales > maxSales) maxSales = salesData[d][h].sales;
+                    if (visitorsData[d][h] > maxVisitors) maxVisitors = visitorsData[d][h];
+                }
+            }
+
+            // Find golden hour (best) and dead hour (worst with some activity)
+            let bestHour = { day: 0, hour: 0, sales: 0 };
+            let worstHour = { day: 0, hour: 0, sales: Infinity, visitors: 0 };
+            let peakDay = { day: 0, total: 0 };
+            let dayTotals = {};
+
+            for (let d = 0; d < 7; d++) {
+                let dayTotal = 0;
+                for (let h = 0; h < 24; h++) {
+                    const s = salesData[d][h].sales;
+                    dayTotal += s;
+                    if (s > bestHour.sales) bestHour = { day: d, hour: h, sales: s };
+                    if (s > 0 && s < worstHour.sales) worstHour = { day: d, hour: h, sales: s, visitors: visitorsData[d][h] };
+                }
+                dayTotals[d] = dayTotal;
+                if (dayTotal > peakDay.total) peakDay = { day: d, total: dayTotal };
+            }
+            if (worstHour.sales === Infinity) worstHour = { day: 0, hour: 0, sales: 0, visitors: 0 };
+
+            // Best conversion hour
+            let bestConvHour = { day: 0, hour: 0, conv: 0 };
+            for (let d = 0; d < 7; d++) {
+                for (let h = 0; h < 24; h++) {
+                    const vis = visitorsData[d][h];
+                    const trans = salesData[d][h].trans;
+                    if (vis >= 5) {
+                        const conv = (trans / vis) * 100;
+                        if (conv > bestConvHour.conv) bestConvHour = { day: d, hour: h, conv };
+                    }
+                }
+            }
+
+            const fmtHour = (h) => {
+                const ampm = h >= 12 ? 'م' : 'ص';
+                const dh = h % 12 || 12;
+                return `${dh} ${ampm}`;
+            };
+
+            const getColor = (val, max, mode) => {
+                if (val === 0 || max === 0) return '#f5f5f5';
+                const intensity = val / max;
+                if (mode === 'sales') {
+                    if (intensity > 0.75) return '#e65100';
+                    if (intensity > 0.5) return '#fb8c00';
+                    if (intensity > 0.25) return '#ffb74d';
+                    return '#ffe0b2';
+                } else {
+                    if (intensity > 0.75) return '#1565c0';
+                    if (intensity > 0.5) return '#42a5f5';
+                    if (intensity > 0.25) return '#90caf9';
+                    return '#bbdefb';
+                }
+            };
+
+            const getTextColor = (val, max) => {
+                if (val === 0 || max === 0) return '#ccc';
+                return (val / max) > 0.5 ? '#fff' : '#333';
+            };
+
+            const buildGrid = (mode) => {
+                const max = mode === 'sales' ? maxSales : maxVisitors;
+                let grid = '<div class="rhythm-grid">';
+                // Header row: empty corner + 24 hours
+                grid += '<div class="rhythm-header"></div>';
+                for (let h = 0; h < 24; h++) {
+                    grid += `<div class="rhythm-header">${h}</div>`;
+                }
+                // Data rows
+                dayOrder.forEach(d => {
+                    grid += `<div class="rhythm-day-label">${dayLabels[d]}</div>`;
+                    for (let h = 0; h < 24; h++) {
+                        const val = mode === 'sales' ? salesData[d][h].sales : visitorsData[d][h];
+                        const bg = getColor(val, max, mode);
+                        const tc = getTextColor(val, max);
+                        const display = val > 0 ? (mode === 'sales' ? Math.round(val).toLocaleString() : val.toLocaleString()) : '';
+                        const title = mode === 'sales'
+                            ? `${dayLabels[d]} ${fmtHour(h)}: ${Math.round(val).toLocaleString()} ريال (${salesData[d][h].trans} فاتورة)`
+                            : `${dayLabels[d]} ${fmtHour(h)}: ${val} زائر`;
+                        grid += `<div class="rhythm-cell" style="background:${bg};color:${tc}" title="${title}">${display}</div>`;
+                    }
+                });
+                grid += '</div>';
+                return grid;
+            };
+
+            let html = '';
+
+            // Insights row
+            html += `<div class="rhythm-summary">
+                <div class="rhythm-insight">
+                    <div class="ri-label">الساعة الذهبية 🔥</div>
+                    <div class="ri-value">${dayLabels[bestHour.day]} ${fmtHour(bestHour.hour)}</div>
+                    <div class="ri-sub">${Math.round(bestHour.sales).toLocaleString()} ريال</div>
+                </div>
+                <div class="rhythm-insight">
+                    <div class="ri-label">الساعة الميتة 💀</div>
+                    <div class="ri-value">${dayLabels[worstHour.day]} ${fmtHour(worstHour.hour)}</div>
+                    <div class="ri-sub">${Math.round(worstHour.sales).toLocaleString()} ريال</div>
+                </div>
+                <div class="rhythm-insight">
+                    <div class="ri-label">أقوى يوم 💪</div>
+                    <div class="ri-value">${dayLabels[peakDay.day]}</div>
+                    <div class="ri-sub">${Math.round(peakDay.total).toLocaleString()} ريال</div>
+                </div>
+                <div class="rhythm-insight">
+                    <div class="ri-label">أفضل تحويل 🎯</div>
+                    <div class="ri-value">${dayLabels[bestConvHour.day]} ${fmtHour(bestConvHour.hour)}</div>
+                    <div class="ri-sub">${bestConvHour.conv.toFixed(1)}%</div>
+                </div>
+            </div>`;
+
+            // Toggle buttons + grid
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="rhythm-toggle-group">
+                    <button class="rhythm-toggle-btn active" onclick="switchRhythmMode('${uid}', 'sales', this)">💰 المبيعات</button>
+                    <button class="rhythm-toggle-btn" onclick="switchRhythmMode('${uid}', 'visitors', this)">👥 الزوار</button>
+                </div>
+                <div class="rhythm-legend">
+                    <span>أقل</span>
+                    <div class="rhythm-legend-bar" id="rhythm-legend-bar-${uid}">
+                        <span style="background:#ffe0b2"></span>
+                        <span style="background:#ffb74d"></span>
+                        <span style="background:#fb8c00"></span>
+                        <span style="background:#e65100"></span>
+                    </div>
+                    <span>أكثر</span>
+                </div>
+            </div>`;
+
+            html += `<div id="rhythm-sales-${uid}">${buildGrid('sales')}</div>`;
+            html += `<div id="rhythm-visitors-${uid}" style="display:none">${buildGrid('visitors')}</div>`;
+
+            return html;
+        }
+
+        function switchRhythmMode(uid, mode, btn) {
+            document.getElementById(`rhythm-sales-${uid}`).style.display = mode === 'sales' ? '' : 'none';
+            document.getElementById(`rhythm-visitors-${uid}`).style.display = mode === 'visitors' ? '' : 'none';
+            btn.closest('.rhythm-toggle-group').querySelectorAll('.rhythm-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Update legend colors
+            const legend = document.getElementById(`rhythm-legend-bar-${uid}`);
+            if (mode === 'sales') {
+                legend.innerHTML = '<span style="background:#ffe0b2"></span><span style="background:#ffb74d"></span><span style="background:#fb8c00"></span><span style="background:#e65100"></span>';
+            } else {
+                legend.innerHTML = '<span style="background:#bbdefb"></span><span style="background:#90caf9"></span><span style="background:#42a5f5"></span><span style="background:#1565c0"></span>';
+            }
         }
 
         function exportDrillExcel(uid, type) {
