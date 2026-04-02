@@ -2310,7 +2310,10 @@
                         catAgg[catName].sales += r.a || 0;
                         catAgg[catName].qty += Math.abs(r.q || 0);
 
-                        if (!catAgg[catName].items[r.i]) catAgg[catName].items[r.i] = { name: itemName, sales: 0, qty: 0 };
+                        if (!catAgg[catName].items[r.i]) {
+                            const prod = _ceoProductsCache[r.i];
+                            catAgg[catName].items[r.i] = { name: itemName, sales: 0, qty: 0, item_id: r.i, category: catName, alias: prod ? (prod.alias || '') : '', price: prod ? (prod.price || 0) : 0 };
+                        }
                         catAgg[catName].items[r.i].sales += r.a || 0;
                         catAgg[catName].items[r.i].qty += Math.abs(r.q || 0);
                     });
@@ -2423,6 +2426,8 @@
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'top', this)">⭐ أفضل المنتجات</button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'basket', this)">🛒 تحليل السلة</button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'rhythm', this)">تحليل الساعات</button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'topsell', this)" style="color:#d35400;font-weight:bold;">📊 الأكثر مبيعاً</button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'topcat', this)" style="color:#8e44ad;font-weight:bold;">📋 تقرير الفئات</button>
                     </div>
 
                     <!-- Tab Panes -->
@@ -2444,6 +2449,12 @@
                         </div>
                         <div id="drill-rhythm-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderRhythmDrill(rhythmSales, rhythmVisitors, uid, dailyRows)}
+                        </div>
+                        <div id="drill-topsell-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderTopSellDrill(topProductsList, catList, uid)}
+                        </div>
+                        <div id="drill-topcat-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderTopCatDrill(topProductsList, catList, uid)}
                         </div>
                     </div>
                 </div></td>`;
@@ -2482,6 +2493,199 @@
             
             html += `</tbody></table></div>`;
             return html;
+        }
+
+        // ========== TOP SELLING REPORT (4 sections) ==========
+        function renderTopSellDrill(topList, catList, uid) {
+            if (topList.length === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات</div>';
+
+            const prodByAmt = [...topList].sort((a, b) => b.sales - a.sales);
+            const prodByQty = [...topList].sort((a, b) => b.qty - a.qty);
+            const catByAmt = [...catList].sort((a, b) => b.sales - a.sales);
+            const catByQty = [...catList].sort((a, b) => b.qty - a.qty);
+
+            const renderProdTable = (list, id) => {
+                let h = `<div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                    <table class="table table-sm drill-table mb-0" id="${id}">
+                        <thead><tr><th style="width:35px">#</th><th>Alias</th><th>المنتج</th><th>الفئة</th><th class="text-end">السعر</th><th class="text-end">المبيعات</th><th class="text-center">الكمية</th></tr></thead><tbody>`;
+                list.forEach((item, i) => {
+                    h += `<tr><td class="text-muted">${i+1}</td><td>${item.alias || ''}</td><td class="fw-bold">${item.name}</td><td>${item.category || ''}</td><td class="text-end">${item.price ? item.price.toLocaleString() : '0'}</td><td class="text-end fw-bold text-success">${Math.round(item.sales).toLocaleString()}</td><td class="text-center fw-bold text-primary">${Math.abs(item.qty).toLocaleString()}</td></tr>`;
+                });
+                h += '</tbody></table></div>';
+                return h;
+            };
+
+            const renderCatTable = (list, id) => {
+                const total = list.reduce((s, c) => s + c.sales, 0);
+                let h = `<div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-sm drill-table mb-0" id="${id}">
+                        <thead><tr><th style="width:35px">#</th><th>الفئة</th><th class="text-end">المبيعات</th><th class="text-center">الكمية</th><th class="text-center">النسبة</th></tr></thead><tbody>`;
+                list.forEach((c, i) => {
+                    const pct = total > 0 ? (c.sales / total * 100).toFixed(1) : '0.0';
+                    h += `<tr><td class="text-muted">${i+1}</td><td class="fw-bold">${c.name}</td><td class="text-end fw-bold text-success">${Math.round(c.sales).toLocaleString()}</td><td class="text-center fw-bold text-primary">${c.qty.toLocaleString()}</td><td class="text-center">${pct}%</td></tr>`;
+                });
+                h += '</tbody></table></div>';
+                return h;
+            };
+
+            return `
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm fw-bold text-white" style="background:#d35400;" onclick="event.stopPropagation(); exportTopSellDrill('${uid}')">📥 تصدير Excel</button>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center" style="color:#d35400;">المنتجات حسب القيمة</h6>
+                        ${renderProdTable(prodByAmt, 'topsell-pa-'+uid)}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center" style="color:#d35400;">المنتجات حسب الكمية</h6>
+                        ${renderProdTable(prodByQty, 'topsell-pq-'+uid)}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center" style="color:#d35400;">الفئات حسب القيمة</h6>
+                        ${renderCatTable(catByAmt, 'topsell-ca-'+uid)}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center" style="color:#d35400;">الفئات حسب الكمية</h6>
+                        ${renderCatTable(catByQty, 'topsell-cq-'+uid)}
+                    </div>
+                </div>`;
+        }
+
+        function exportTopSellDrill(uid) {
+            const data = _drillDataCache[uid];
+            if (!data) { alert('لا توجد بيانات'); return; }
+            const wb = XLSX.utils.book_new();
+            const allItems = data.topProductsList;
+
+            // Sheet 1: Products by Amount
+            const byAmt = [...allItems].sort((a, b) => b.sales - a.sales).map((r, i) => ({
+                '#': i+1, 'Alias': r.alias || '', 'اسم المنتج': r.name, 'الفئة': r.category || '', 'سعر المبيع': r.price || 0, 'القيمة': Math.round(r.sales), 'الكمية المباعة': Math.abs(r.qty)
+            }));
+            const ws1 = XLSX.utils.json_to_sheet(byAmt);
+            ws1['!cols'] = [{wch:5},{wch:15},{wch:45},{wch:20},{wch:15},{wch:15},{wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws1, 'المنتجات - قيمة');
+
+            // Sheet 2: Products by Quantity
+            const byQty = [...allItems].sort((a, b) => b.qty - a.qty).map((r, i) => ({
+                '#': i+1, 'Alias': r.alias || '', 'اسم المنتج': r.name, 'الفئة': r.category || '', 'سعر المبيع': r.price || 0, 'الكمية المباعة': Math.abs(r.qty), 'القيمة': Math.round(r.sales)
+            }));
+            const ws2 = XLSX.utils.json_to_sheet(byQty);
+            ws2['!cols'] = [{wch:5},{wch:15},{wch:45},{wch:20},{wch:15},{wch:15},{wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws2, 'المنتجات - كمية');
+
+            // Sheet 3: Categories by Amount
+            const catByAmt = [...data.catList].sort((a, b) => b.sales - a.sales).map((c, i) => ({
+                '#': i+1, 'الفئة': c.name, 'القيمة': Math.round(c.sales), 'الكمية المباعة': c.qty
+            }));
+            const ws3 = XLSX.utils.json_to_sheet(catByAmt);
+            ws3['!cols'] = [{wch:5},{wch:30},{wch:15},{wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws3, 'الفئات - قيمة');
+
+            // Sheet 4: Categories by Quantity
+            const catByQty = [...data.catList].sort((a, b) => b.qty - a.qty).map((c, i) => ({
+                '#': i+1, 'الفئة': c.name, 'الكمية المباعة': c.qty, 'القيمة': Math.round(c.sales)
+            }));
+            const ws4 = XLSX.utils.json_to_sheet(catByQty);
+            ws4['!cols'] = [{wch:5},{wch:30},{wch:15},{wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws4, 'الفئات - كمية');
+
+            XLSX.writeFile(wb, `${data.storeName}_الأكثر_مبيعاً_${data.startStr}.xlsx`);
+        }
+
+        // ========== TOP CATEGORY REPORT (2 sections) ==========
+        function renderTopCatDrill(topList, catList, uid) {
+            if (topList.length === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات</div>';
+
+            // Group by category - each category shows its top product as representative
+            const catGrouped = {};
+            topList.forEach(item => {
+                const cat = item.category || 'غير مصنف';
+                if (!catGrouped[cat]) catGrouped[cat] = { qty: 0, amount: 0, topProduct: item, _maxAmt: -1 };
+                catGrouped[cat].qty += Math.abs(item.qty);
+                catGrouped[cat].amount += item.sales;
+                if (item.sales > catGrouped[cat]._maxAmt) {
+                    catGrouped[cat]._maxAmt = item.sales;
+                    catGrouped[cat].topProduct = item;
+                }
+            });
+
+            const grouped = Object.entries(catGrouped).map(([cat, d]) => ({
+                category: cat, qty: d.qty, amount: d.amount, topProduct: d.topProduct,
+                avgPrice: d.qty > 0 ? (d.amount / d.qty) : 0
+            }));
+
+            const byQty = [...grouped].sort((a, b) => b.qty - a.qty);
+            const byAmt = [...grouped].sort((a, b) => b.amount - a.amount);
+
+            const renderTable = (list, id) => {
+                let h = `<div class="table-responsive" style="max-height:400px; overflow-y:auto;">
+                    <table class="table table-sm drill-table mb-0" id="${id}">
+                        <thead><tr><th style="width:35px">#</th><th>ITEMCODE</th><th>Item name</th><th>Item Alias</th><th class="text-end">MRP</th><th class="text-end">Selling P</th><th class="text-center">SALES QTY</th><th class="text-end">SALES AMOUNT</th></tr></thead><tbody>`;
+                list.forEach((g, i) => {
+                    const p = g.topProduct;
+                    h += `<tr><td class="text-muted">${i+1}</td><td>${p.item_id || ''}</td><td class="fw-bold">${p.name}</td><td>${p.alias || ''}</td><td class="text-end">${p.price ? p.price.toLocaleString() : '0'}</td><td class="text-end">${g.avgPrice.toFixed(2)}</td><td class="text-center fw-bold text-primary">${g.qty.toLocaleString()}</td><td class="text-end fw-bold text-success">${Math.round(g.amount).toLocaleString()}</td></tr>`;
+                });
+                h += '</tbody></table></div>';
+                return h;
+            };
+
+            return `
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm fw-bold text-white" style="background:#8e44ad;" onclick="event.stopPropagation(); exportTopCatDrill('${uid}')">📥 تصدير Excel</button>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center" style="color:#8e44ad;">الأكثر مبيعاً حسب الكمية</h6>
+                        ${renderTable(byQty, 'topcat-q-'+uid)}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center" style="color:#8e44ad;">الأكثر مبيعاً حسب القيمة</h6>
+                        ${renderTable(byAmt, 'topcat-a-'+uid)}
+                    </div>
+                </div>`;
+        }
+
+        function exportTopCatDrill(uid) {
+            const data = _drillDataCache[uid];
+            if (!data) { alert('لا توجد بيانات'); return; }
+            const wb = XLSX.utils.book_new();
+
+            const catGrouped = {};
+            data.topProductsList.forEach(item => {
+                const cat = item.category || 'غير مصنف';
+                if (!catGrouped[cat]) catGrouped[cat] = { qty: 0, amount: 0, topProduct: item, _maxAmt: -1 };
+                catGrouped[cat].qty += Math.abs(item.qty);
+                catGrouped[cat].amount += item.sales;
+                if (item.sales > catGrouped[cat]._maxAmt) {
+                    catGrouped[cat]._maxAmt = item.sales;
+                    catGrouped[cat].topProduct = item;
+                }
+            });
+
+            const grouped = Object.entries(catGrouped).map(([cat, d]) => ({
+                category: cat, qty: d.qty, amount: d.amount, topProduct: d.topProduct,
+                avgPrice: d.qty > 0 ? (d.amount / d.qty) : 0
+            }));
+
+            const mapRow = (g, i) => {
+                const p = g.topProduct;
+                return {
+                    '#': i+1, 'ITEMCODE': p.item_id || '', 'Item name': p.name, 'Item_Alias': p.alias || '',
+                    'MRP': p.price || 0, 'Selling P': parseFloat(g.avgPrice.toFixed(2)),
+                    'SALES QTY': g.qty, 'SALES AMOUNT': Math.round(g.amount)
+                };
+            };
+
+            const ws1 = XLSX.utils.json_to_sheet([...grouped].sort((a, b) => b.qty - a.qty).map(mapRow));
+            ws1['!cols'] = [{wch:5},{wch:15},{wch:45},{wch:15},{wch:10},{wch:12},{wch:12},{wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws1, 'الاكثر مبيعا حسب الكمية');
+
+            const ws2 = XLSX.utils.json_to_sheet([...grouped].sort((a, b) => b.amount - a.amount).map(mapRow));
+            ws2['!cols'] = [{wch:5},{wch:15},{wch:45},{wch:15},{wch:10},{wch:12},{wch:12},{wch:15}];
+            XLSX.utils.book_append_sheet(wb, ws2, 'الاكثر مبيعا حسب القيمة');
+
+            XLSX.writeFile(wb, `${data.storeName}_تقرير_الفئات_${data.startStr}.xlsx`);
         }
 
         function renderBasketDrill(basket, uid) {
