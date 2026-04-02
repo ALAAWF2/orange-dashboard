@@ -2609,30 +2609,68 @@
             }
         }
 
+        function isMobileView() {
+            return window.innerWidth <= 767;
+        }
+
         function toggleStoreDrillDown(storeId, storeName) {
             const el = document.getElementById(`store-toggle-${storeId}`);
             const existingRow = document.getElementById(`drill-${storeId}`);
-            if (existingRow) {
-                existingRow.remove();
+            const existingMobileDrill = document.getElementById(`mob-drill-${storeId}`);
+
+            if (existingRow || existingMobileDrill) {
+                if (existingRow) existingRow.remove();
+                if (existingMobileDrill) existingMobileDrill.remove();
                 if (el) el.classList.remove('expanded');
                 return;
             }
 
             // Close any other open drill-downs
             document.querySelectorAll('.store-detail-row').forEach(r => r.remove());
+            document.querySelectorAll('.mob-drill-panel').forEach(r => r.remove());
             document.querySelectorAll('.store-name-toggle.expanded').forEach(e => e.classList.remove('expanded'));
 
             if (el) el.classList.add('expanded');
 
-            // Insert loading row
-            const storeRow = document.getElementById(`store-row-${storeId}`);
-            const detailRow = document.createElement('tr');
-            detailRow.id = `drill-${storeId}`;
-            detailRow.className = 'store-detail-row';
-            detailRow.innerHTML = `<td colspan="15"><div class="drill-loading">⏳ جاري تحميل البيانات...</div></td>`;
-            storeRow.after(detailRow);
-
-            renderStoreDrillDown(storeId, storeName, detailRow);
+            if (isMobileView()) {
+                // Mobile: insert drill-down div after the store card
+                const cards = document.querySelectorAll('.store-card');
+                let targetCard = null;
+                cards.forEach(card => {
+                    if (card.getAttribute('onclick') && card.getAttribute('onclick').includes(`'${storeId}'`)) {
+                        targetCard = card;
+                    }
+                });
+                // Use a hidden table to host the tr-based drill-down
+                const wrapper = document.createElement('div');
+                wrapper.id = `mob-drill-${storeId}`;
+                wrapper.className = 'mob-drill-panel';
+                wrapper.style.cssText = 'border-radius:10px; margin-bottom:10px; overflow:hidden;';
+                const hiddenTable = document.createElement('table');
+                hiddenTable.style.cssText = 'width:100%; border-collapse:collapse;';
+                const detailRow = document.createElement('tr');
+                detailRow.id = `drill-${storeId}`;
+                detailRow.className = 'store-detail-row';
+                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading">⏳ جاري تحميل البيانات...</div></td>`;
+                hiddenTable.appendChild(detailRow);
+                wrapper.appendChild(hiddenTable);
+                if (targetCard) {
+                    targetCard.after(wrapper);
+                } else {
+                    document.getElementById('mobileCardsContainer').appendChild(wrapper);
+                }
+                wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                renderStoreDrillDown(storeId, storeName, detailRow);
+            } else {
+                // Desktop: insert table row
+                const storeRow = document.getElementById(`store-row-${storeId}`);
+                const detailRow = document.createElement('tr');
+                detailRow.id = `drill-${storeId}`;
+                detailRow.className = 'store-detail-row';
+                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading">⏳ جاري تحميل البيانات...</div></td>`;
+                storeRow.after(detailRow);
+                renderStoreDrillDown(storeId, storeName, detailRow);
+            }
         }
 
         async function renderStoreDrillDown(storeId, storeName, detailRow) {
