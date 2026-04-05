@@ -431,14 +431,30 @@ def get_daily_stats():
                 else:
                     sales_map[d] = gofrugal_sales_map.get(d, 0) + dyn_sales_map.get(d, 0)
             
-            # Get visitors per day
+            # Get hourly visitors per day (Modern data - Base)
+            vis_hourly_q = text("""
+                SELECT visit_date::date as date, SUM(visitor_count) as visitor_count
+                FROM gofrugal_visitors_hourly
+                WHERE outlet_name = :outlet
+                  AND visit_date >= :start_date
+                  AND visit_date < :end_date
+                GROUP BY date
+            """)
+            vis_hourly_data = conn.execute(vis_hourly_q, {
+                "outlet": outlet_name,
+                "start_date": start_date,
+                "end_date": end_date
+            }).fetchall()
+            
+            vis_map = {str(row[0]): row[1] for row in vis_hourly_data}
+            
+            # Get visitors per day (Manual overrides)
             vis_q = text("""
                 SELECT visit_date::date as date, visitor_count
                 FROM gofrugal_visitors
                 WHERE outlet_name = :outlet
                   AND visit_date >= :start_date
                   AND visit_date < :end_date
-                ORDER BY date
             """)
             vis_data = conn.execute(vis_q, {
                 "outlet": outlet_name,
@@ -446,7 +462,9 @@ def get_daily_stats():
                 "end_date": end_date
             }).fetchall()
             
-            vis_map = {str(row[0]): row[1] for row in vis_data}
+            # Apply manual overrides
+            for row in vis_data:
+                vis_map[str(row[0])] = row[1]
             
             # Combine all dates
             from calendar import monthrange
