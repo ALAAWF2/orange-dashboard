@@ -168,9 +168,11 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
             let lyDate = new Date(loopDate);
             lyDate.setFullYear(loopDate.getFullYear() - 1);
 
-            // Custom Shift for Ramadan 2026 (Feb and March)
+            // Custom Shift for Ramadan 2026 (Feb and March), and April (+5 days)
             if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
                 lyDate.setDate(lyDate.getDate() + 11);
+            } else if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 3) {
+                lyDate.setDate(lyDate.getDate() + 5);
             }
 
             const lyDateStr = lyDate.toLocaleDateString('en-CA');

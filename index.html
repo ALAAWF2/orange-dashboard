@@ -1679,11 +1679,14 @@
                 prevEnd = new Date(currentEnd);
                 prevEnd.setFullYear(prevEnd.getFullYear() - 1);
 
-                // Custom Logic for Ramadan 2026 (Apply 11-day shift to Feb and March)
+                // Custom Logic for Ramadan 2026 (Feb and March), and April (+5 days)
                 if (currentStart.getFullYear() === 2026 && (currentStart.getMonth() === 1 || currentStart.getMonth() === 2)) {
                     // Shift Previous Year Dates by +11 days
                     prevStart.setDate(prevStart.getDate() + 11);
                     prevEnd.setDate(prevEnd.getDate() + 11);
+                } else if (currentStart.getFullYear() === 2026 && currentStart.getMonth() === 3) {
+                    prevStart.setDate(prevStart.getDate() + 5);
+                    prevEnd.setDate(prevEnd.getDate() + 5);
                 }
 
             } else if (mode === 'ramadan') {
@@ -1767,6 +1770,12 @@
                     // Post-Ramadan March 2026: Compare with equivalent period shifted +11 days in 2025
                     prevStart = new Date(2025, 2, 20);
                     prevStart.setDate(prevStart.getDate() + 11); // = March 31, 2025
+                    let durationTime = currentEnd.getTime() - currentStart.getTime();
+                    prevEnd = new Date(prevStart.getTime() + durationTime);
+                    prevEnd.setHours(23, 59, 59, 999);
+                } else if (selYear === 2026 && parseInt(selMonth) === 4) {
+                    prevStart = new Date(2025, 3, 1);
+                    prevStart.setDate(prevStart.getDate() + 5);
                     let durationTime = currentEnd.getTime() - currentStart.getTime();
                     prevEnd = new Date(prevStart.getTime() + durationTime);
                     prevEnd.setHours(23, 59, 59, 999);
@@ -2289,9 +2298,11 @@
             let lastYear = new Date(yesterday);
             lastYear.setFullYear(yesterday.getFullYear() - 1);
             
-            // Custom Shift for Ramadan 2026 (Feb and March)
+            // Custom Shift for Ramadan 2026 (Feb and March), and April (+5 days)
             if (yesterday.getFullYear() === 2026 && (yesterday.getMonth() === 1 || yesterday.getMonth() === 2)) {
                 lastYear.setDate(lastYear.getDate() + 11);
+            } else if (yesterday.getFullYear() === 2026 && yesterday.getMonth() === 3) {
+                lastYear.setDate(lastYear.getDate() + 5);
             }
 
             // Format YYYY-MM-DD
@@ -2463,9 +2474,11 @@
                 let lyDate = new Date(loopDate);
                 lyDate.setFullYear(loopDate.getFullYear() - 1);
 
-                // Custom Shift for Ramadan 2026 (Feb and March)
+                // Custom Shift for Ramadan 2026 (Feb and March), and April (+5 days)
                 if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
                     lyDate.setDate(lyDate.getDate() + 11);
+                } else if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 3) {
+                    lyDate.setDate(lyDate.getDate() + 5);
                 }
 
                 const lyDateStr = lyDate.toLocaleDateString('en-CA');
@@ -2702,6 +2715,8 @@
                     lyDate.setFullYear(loopDate.getFullYear() - 1);
                     if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
                         lyDate.setDate(lyDate.getDate() + 11);
+                    } else if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 3) {
+                        lyDate.setDate(lyDate.getDate() + 5);
                     }
                     const lyData = getDayData(storeId, lyDate.toLocaleDateString('en-CA'));
                     const salesLY = lyData.sales || 0;
