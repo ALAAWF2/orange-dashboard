@@ -417,31 +417,17 @@
         .day-fri { background: #fff8e1 !important; }
         .day-sat { background: #f3e5f5 !important; }
 
-        /* Area Manager Group Rows */
+        /* Area Manager Summary Row */
         .manager-group-row {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
             color: #fff !important;
-            cursor: pointer;
-            transition: all 0.2s;
             border-bottom: 2px solid #fe7900;
-        }
-        .manager-group-row:hover {
-            background: linear-gradient(135deg, #16213e 0%, #0f3460 100%) !important;
         }
         .manager-group-row td {
             color: #fff !important;
             font-weight: 700;
             padding: 10px 8px !important;
             font-size: 0.88rem;
-        }
-        .manager-group-row .mgr-arrow {
-            display: inline-block;
-            transition: transform 0.3s;
-            margin-left: 6px;
-            font-size: 0.7em;
-        }
-        .manager-group-row.expanded .mgr-arrow {
-            transform: rotate(90deg);
         }
         .manager-group-row .mgr-icon {
             background: #fe7900;
@@ -463,12 +449,6 @@
             border-radius: 10px;
             margin-right: 6px;
             font-weight: 600;
-        }
-        .manager-store-row {
-            background: rgba(254, 121, 0, 0.03);
-        }
-        .manager-store-row > td:first-child {
-            padding-right: 30px !important;
         }
 
         /* Tooltip Customization */
@@ -2146,182 +2126,66 @@
             const tbody = document.getElementById('detailsTableBody');
             tbody.innerHTML = '';
 
-            // --- Group branches by Area Manager ---
-            const managerGroups = {};
-            const managerOrder = [];
-            branchList.forEach(b => {
-                const meta = rawData.store_meta ? rawData.store_meta[b.sid] : null;
-                const mgr = (meta && meta.manager && meta.manager !== 'Unknown') ? meta.manager : null;
-                if (mgr && mgr !== 'online') {
-                    if (!managerGroups[mgr]) {
-                        managerGroups[mgr] = [];
-                        managerOrder.push(mgr);
-                    }
-                    managerGroups[mgr].push(b);
-                }
-            });
+            // --- Manager Summary Row (only when a specific manager is filtered and has >1 stores) ---
+            if (selManager !== 'all' && branchList.length > 1) {
+                let mVal=0, mPrevVal=0, mTarget=0, mTrans=0, mVisitors=0, mPrevVisitors=0, mDailyReq=0;
+                branchList.forEach(b => { mVal+=b.val; mPrevVal+=b.prevVal; mTarget+=b.target; mTrans+=b.trans; mVisitors+=b.visitors; mPrevVisitors+=b.prevVisitors; mDailyReq+=(b.dailyReq||0); });
+                const mAch = mTarget > 0 ? (mVal / mTarget) * 100 : 0;
+                const mGrowth = mPrevVal > 0 ? ((mVal - mPrevVal) / mPrevVal) * 100 : (mVal > 0 ? 100 : 0);
+                const mAbsGrowth = mVal - mPrevVal;
+                const mAvgInv = mTrans > 0 ? mVal / mTrans : 0;
+                const mCustVal = mVisitors > 0 ? mVal / mVisitors : 0;
+                const mConv = mVisitors > 0 ? (mTrans / mVisitors) * 100 : 0;
 
-            // Only show manager grouping if admin and no specific manager filter is selected
-            const showManagerGroups = (selManager === 'all') && Object.keys(managerGroups).length > 1;
-
-            if (showManagerGroups) {
-                // Sort managers by total sales desc
-                managerOrder.sort((a, b) => {
-                    const aSum = managerGroups[a].reduce((s, x) => s + x.val, 0);
-                    const bSum = managerGroups[b].reduce((s, x) => s + x.val, 0);
-                    return bSum - aSum;
-                });
-
-                // Collect store IDs that belong to a manager group
-                const managedStoreIds = new Set();
-                managerOrder.forEach(mgr => managerGroups[mgr].forEach(b => managedStoreIds.add(b.sid)));
-
-                // Render manager groups
-                let globalRank = 1;
-                managerOrder.forEach(mgr => {
-                    const stores = managerGroups[mgr];
-                    // Sort stores within manager by current sort
-                    stores.sort((a, b) => {
-                        let valA = a[currentSort.col]; let valB = b[currentSort.col];
-                        if (typeof valA === 'string') valA = valA.toLowerCase();
-                        if (typeof valB === 'string') valB = valB.toLowerCase();
-                        if (valA < valB) return currentSort.asc ? -1 : 1;
-                        if (valA > valB) return currentSort.asc ? 1 : -1;
-                        return 0;
-                    });
-
-                    // Calculate manager totals
-                    let mVal=0, mPrevVal=0, mTarget=0, mTrans=0, mVisitors=0, mPrevVisitors=0, mDailyReq=0;
-                    stores.forEach(b => { mVal+=b.val; mPrevVal+=b.prevVal; mTarget+=b.target; mTrans+=b.trans; mVisitors+=b.visitors; mPrevVisitors+=b.prevVisitors; mDailyReq+=(b.dailyReq||0); });
-                    const mAch = mTarget > 0 ? (mVal / mTarget) * 100 : 0;
-                    const mGrowth = mPrevVal > 0 ? ((mVal - mPrevVal) / mPrevVal) * 100 : (mVal > 0 ? 100 : 0);
-                    const mAbsGrowth = mVal - mPrevVal;
-                    const mAvgInv = mTrans > 0 ? mVal / mTrans : 0;
-                    const mCustVal = mVisitors > 0 ? mVal / mVisitors : 0;
-                    const mConv = mVisitors > 0 ? (mTrans / mVisitors) * 100 : 0;
-
-                    const mgrId = mgr.replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '_');
-
-                    // Manager summary row
-                    const mgrRow = document.createElement('tr');
-                    mgrRow.className = 'manager-group-row';
-                    mgrRow.id = `mgr-row-${mgrId}`;
-                    mgrRow.setAttribute('onclick', `toggleManagerGroup('${mgrId}')`);
-                    mgrRow.innerHTML = `
-                        <td class="text-center"><span class="mgr-icon">👔</span></td>
-                        <td>
-                            ${mgr} <span class="mgr-stores-count">${stores.length} معارض</span>
-                            <span class="mgr-arrow">▶</span>
-                        </td>
-                        <td class="text-center">${mVal.toLocaleString()}</td>
-                        <td class="text-center" style="opacity:0.7">${mPrevVal.toLocaleString()}</td>
-                        <td class="text-center">${mTarget.toLocaleString()}</td>
-                        <td class="text-center" style="color:${mAch >= 100 ? '#4ade80' : '#fbbf24'}">${mAch.toFixed(1)}%</td>
-                        <td class="text-center" dir="ltr" style="color:${mGrowth >= 0 ? '#4ade80' : '#f87171'}">${mGrowth.toFixed(1)}%</td>
-                        <td class="text-center" dir="ltr" style="color:${mAbsGrowth >= 0 ? '#4ade80' : '#f87171'}">${mAbsGrowth.toLocaleString()}</td>
-                        <td class="text-center" style="color:#f87171">${mDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td class="text-center">${mTrans.toLocaleString()}</td>
-                        <td class="text-center">${mAvgInv.toFixed(0)}</td>
-                        <td class="text-center">${mVisitors.toLocaleString()}</td>
-                        <td class="text-center" style="opacity:0.7">${mPrevVisitors.toLocaleString()}</td>
-                        <td class="text-center">${mCustVal.toFixed(0)}</td>
-                        <td class="text-center">${mConv.toFixed(1)}%</td>
-                    `;
-                    tbody.appendChild(mgrRow);
-
-                    // Store rows (hidden by default)
-                    stores.forEach((b, i) => {
-                        let tr = document.createElement('tr');
-                        tr.style.cursor = 'pointer';
-                        tr.id = `store-row-${b.sid}`;
-                        tr.className = `manager-store-row mgr-stores-${mgrId}`;
-                        tr.style.display = 'none';
-                        const safeName = b.name.replace(/'/g, "\\'");
-                        tr.setAttribute('onclick', `toggleStoreDrillDown('${b.sid}', '${safeName}')`);
-                        tr.innerHTML = `
-                            <td class="text-center"><span class="rank-badge">${globalRank}</span></td>
-                            <td class="fw-bold fs-6 text-primary store-name-toggle" id="store-toggle-${b.sid}" style="padding-right:30px !important;">↳ ${b.name} <span class="toggle-arrow">▶</span></td>
-                            <td class="text-center">${b.val.toLocaleString()}</td>
-                            <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
-                            <td class="text-center">${b.target.toLocaleString()}</td>
-                            <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
-                            <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
-                            <td class="text-center ${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.absGrowth.toLocaleString()}</td>
-                            <td class="text-center fw-bold text-danger">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                            <td class="text-center">${b.trans.toLocaleString()}</td>
-                            <td class="text-center">${b.avgInv.toFixed(0)}</td>
-                            <td class="text-center fw-bold">
-                                <a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
-                            </td>
-                            <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
-                            <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
-                            <td class="text-center">${b.conv.toFixed(1)}%</td>
-                        `;
-                        tbody.appendChild(tr);
-                        globalRank++;
-                    });
-                });
-
-                // Render any un-managed stores (like online) at the end
-                branchList.filter(b => !managedStoreIds.has(b.sid)).forEach(b => {
-                    let tr = document.createElement('tr');
-                    tr.style.cursor = 'pointer';
-                    tr.id = `store-row-${b.sid}`;
-                    const safeName = b.name.replace(/'/g, "\\'");
-                    tr.setAttribute('onclick', `toggleStoreDrillDown('${b.sid}', '${safeName}')`);
-                    tr.innerHTML = `
-                        <td class="text-center"><span class="rank-badge">${globalRank}</span></td>
-                        <td class="fw-bold fs-6 text-primary store-name-toggle" id="store-toggle-${b.sid}">${b.name} <span class="toggle-arrow">▶</span></td>
-                        <td class="text-center">${b.val.toLocaleString()}</td>
-                        <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
-                        <td class="text-center">${b.target.toLocaleString()}</td>
-                        <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
-                        <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
-                        <td class="text-center ${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.absGrowth.toLocaleString()}</td>
-                        <td class="text-center fw-bold text-danger">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td class="text-center">${b.trans.toLocaleString()}</td>
-                        <td class="text-center">${b.avgInv.toFixed(0)}</td>
-                        <td class="text-center fw-bold">
-                            <a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
-                        </td>
-                        <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
-                        <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
-                        <td class="text-center">${b.conv.toFixed(1)}%</td>
-                    `;
-                    tbody.appendChild(tr);
-                    globalRank++;
-                });
-
-            } else {
-                // No grouping - render flat list as before
-                branchList.forEach((b, i) => {
-                    let tr = document.createElement('tr');
-                    tr.style.cursor = 'pointer';
-                    tr.id = `store-row-${b.sid}`;
-                    const safeName = b.name.replace(/'/g, "\\'");
-                    tr.setAttribute('onclick', `toggleStoreDrillDown('${b.sid}', '${safeName}')`);
-                    tr.innerHTML = `
-                        <td class="text-center"><span class="rank-badge">${i + 1}</span></td>
-                        <td class="fw-bold fs-6 text-primary store-name-toggle" id="store-toggle-${b.sid}">${b.name} <span class="toggle-arrow">▶</span></td>
-                        <td class="text-center">${b.val.toLocaleString()}</td>
-                        <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
-                        <td class="text-center">${b.target.toLocaleString()}</td>
-                        <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
-                        <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
-                        <td class="text-center ${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.absGrowth.toLocaleString()}</td>
-                        <td class="text-center fw-bold text-danger">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                        <td class="text-center">${b.trans.toLocaleString()}</td>
-                        <td class="text-center">${b.avgInv.toFixed(0)}</td>
-                        <td class="text-center fw-bold">
-                            <a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
-                        </td>
-                        <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
-                        <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
-                        <td class="text-center">${b.conv.toFixed(1)}%</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                const mgrRow = document.createElement('tr');
+                mgrRow.className = 'manager-group-row';
+                mgrRow.innerHTML = `
+                    <td class="text-center"><span class="mgr-icon"><i class="bi bi-person-badge"></i></span></td>
+                    <td>\u0645\u062c\u0645\u0648\u0639 \u0645\u0639\u0627\u0631\u0636 ${selManager} <span class="mgr-stores-count">${branchList.length} \u0645\u0639\u0631\u0636</span></td>
+                    <td class="text-center">${mVal.toLocaleString()}</td>
+                    <td class="text-center" style="opacity:0.7">${mPrevVal.toLocaleString()}</td>
+                    <td class="text-center">${mTarget.toLocaleString()}</td>
+                    <td class="text-center" style="color:${mAch >= 100 ? '#4ade80' : '#fbbf24'}">${mAch.toFixed(1)}%</td>
+                    <td class="text-center" dir="ltr" style="color:${mGrowth >= 0 ? '#4ade80' : '#f87171'}">${mGrowth.toFixed(1)}%</td>
+                    <td class="text-center" dir="ltr" style="color:${mAbsGrowth >= 0 ? '#4ade80' : '#f87171'}">${mAbsGrowth.toLocaleString()}</td>
+                    <td class="text-center" style="color:#f87171">${mDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="text-center">${mTrans.toLocaleString()}</td>
+                    <td class="text-center">${mAvgInv.toFixed(0)}</td>
+                    <td class="text-center">${mVisitors.toLocaleString()}</td>
+                    <td class="text-center" style="opacity:0.7">${mPrevVisitors.toLocaleString()}</td>
+                    <td class="text-center">${mCustVal.toFixed(0)}</td>
+                    <td class="text-center">${mConv.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(mgrRow);
             }
+
+            branchList.forEach((b, i) => {
+                let tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.id = `store-row-${b.sid}`;
+                const safeName = b.name.replace(/'/g, "\\'");
+                tr.setAttribute('onclick', `toggleStoreDrillDown('${b.sid}', '${safeName}')`);
+                tr.innerHTML = `
+                    <td class="text-center"><span class="rank-badge">${i + 1}</span></td>
+                    <td class="fw-bold fs-6 text-primary store-name-toggle" id="store-toggle-${b.sid}">${b.name} <span class="toggle-arrow">▶</span></td>
+                    <td class="text-center">${b.val.toLocaleString()}</td>
+                    <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
+                    <td class="text-center">${b.target.toLocaleString()}</td>
+                    <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
+                    <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
+                    <td class="text-center ${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.absGrowth.toLocaleString()}</td>
+                    <td class="text-center fw-bold text-danger">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="text-center">${b.trans.toLocaleString()}</td>
+                    <td class="text-center">${b.avgInv.toFixed(0)}</td>
+                    <td class="text-center fw-bold">
+                        <a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                    </td>
+                    <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
+                    <td class="text-center">${b.conv.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
 
             // --- 5.5 Render Totals Footer ---
             const tfoot = document.getElementById('detailsTableFoot');
@@ -4118,31 +3982,6 @@
             });
 
             doc.save(`Detailed_Report_${sDate}_${eDate}.pdf`);
-        }
-
-        // --- Manager Group expand/collapse ---
-        function toggleManagerGroup(mgrId) {
-            const mgrRow = document.getElementById(`mgr-row-${mgrId}`);
-            const storeRows = document.querySelectorAll(`.mgr-stores-${mgrId}`);
-            const isExpanded = mgrRow.classList.contains('expanded');
-
-            if (isExpanded) {
-                // Collapse: hide stores and their drill-downs
-                mgrRow.classList.remove('expanded');
-                storeRows.forEach(r => {
-                    r.style.display = 'none';
-                    // Also hide any open drill-down for this store
-                    const sid = r.id.replace('store-row-', '');
-                    const drillRow = document.getElementById(`drill-${sid}`);
-                    if (drillRow) drillRow.remove();
-                    const toggleEl = document.getElementById(`store-toggle-${sid}`);
-                    if (toggleEl) toggleEl.classList.remove('expanded');
-                });
-            } else {
-                // Expand: show stores
-                mgrRow.classList.add('expanded');
-                storeRows.forEach(r => r.style.display = '');
-            }
         }
 
         init();
