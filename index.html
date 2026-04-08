@@ -115,6 +115,10 @@
         .table-custom tbody tr:hover {
             background-color: #fff3e0;
         }
+        .table-custom tbody tr.manager-group-row:hover {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            filter: brightness(1.15);
+        }
 
         .rank-badge {
             background: #fe7900;
@@ -2126,8 +2130,12 @@
             const tbody = document.getElementById('detailsTableBody');
             tbody.innerHTML = '';
 
-            // --- Manager Summary Row (only when a specific manager is filtered and has >1 stores) ---
-            if (selManager !== 'all' && branchList.length > 1) {
+            // --- Manager Summary Row ---
+            // Show for: specific manager filter, OR Sales Manager admin (all stores)
+            const isSalesManager = (currentUser && currentUser.name === 'Sales Manager');
+            const showMgrSummary = (selManager !== 'all' || isSalesManager) && branchList.length > 1;
+            const mgrLabel = (selManager !== 'all') ? selManager : 'Sales Manager';
+            if (showMgrSummary) {
                 let mVal=0, mPrevVal=0, mTarget=0, mTrans=0, mVisitors=0, mPrevVisitors=0, mDailyReq=0;
                 branchList.forEach(b => { mVal+=b.val; mPrevVal+=b.prevVal; mTarget+=b.target; mTrans+=b.trans; mVisitors+=b.visitors; mPrevVisitors+=b.prevVisitors; mDailyReq+=(b.dailyReq||0); });
                 const mAch = mTarget > 0 ? (mVal / mTarget) * 100 : 0;
@@ -2142,10 +2150,10 @@
                 mgrRow.style.cursor = 'pointer';
                 mgrRow.id = 'mgr-summary-row';
                 const mgrStoreIds = branchList.map(b => b.sid);
-                mgrRow.setAttribute('onclick', `toggleManagerDrillDown('${selManager.replace(/'/g, "\\'")}', ${JSON.stringify(mgrStoreIds)})`);
+                mgrRow.setAttribute('onclick', `toggleManagerDrillDown('${mgrLabel.replace(/'/g, "\\'")}', ${JSON.stringify(mgrStoreIds)})`);
                 mgrRow.innerHTML = `
                     <td class="text-center"><span class="mgr-icon"><i class="bi bi-person-badge"></i></span></td>
-                    <td>\u0645\u062c\u0645\u0648\u0639 \u0645\u0639\u0627\u0631\u0636 ${selManager} <span class="mgr-stores-count">${branchList.length} \u0645\u0639\u0631\u0636</span> <span class="toggle-arrow" id="mgr-summary-arrow">\u25b6</span></td>
+                    <td>\u0645\u062c\u0645\u0648\u0639 \u0645\u0639\u0627\u0631\u0636 ${mgrLabel} <span class="mgr-stores-count">${branchList.length} \u0645\u0639\u0631\u0636</span> <span class="toggle-arrow" id="mgr-summary-arrow">\u25b6</span></td>
                     <td class="text-center">${mVal.toLocaleString()}</td>
                     <td class="text-center" style="opacity:0.7">${mPrevVal.toLocaleString()}</td>
                     <td class="text-center">${mTarget.toLocaleString()}</td>
