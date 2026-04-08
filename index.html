@@ -2139,9 +2139,13 @@
 
                 const mgrRow = document.createElement('tr');
                 mgrRow.className = 'manager-group-row';
+                mgrRow.style.cursor = 'pointer';
+                mgrRow.id = 'mgr-summary-row';
+                const mgrStoreIds = branchList.map(b => b.sid);
+                mgrRow.setAttribute('onclick', `toggleManagerDrillDown('${selManager.replace(/'/g, "\\'")}', ${JSON.stringify(mgrStoreIds)})`);
                 mgrRow.innerHTML = `
                     <td class="text-center"><span class="mgr-icon"><i class="bi bi-person-badge"></i></span></td>
-                    <td>\u0645\u062c\u0645\u0648\u0639 \u0645\u0639\u0627\u0631\u0636 ${selManager} <span class="mgr-stores-count">${branchList.length} \u0645\u0639\u0631\u0636</span></td>
+                    <td>\u0645\u062c\u0645\u0648\u0639 \u0645\u0639\u0627\u0631\u0636 ${selManager} <span class="mgr-stores-count">${branchList.length} \u0645\u0639\u0631\u0636</span> <span class="toggle-arrow" id="mgr-summary-arrow">\u25b6</span></td>
                     <td class="text-center">${mVal.toLocaleString()}</td>
                     <td class="text-center" style="opacity:0.7">${mPrevVal.toLocaleString()}</td>
                     <td class="text-center">${mTarget.toLocaleString()}</td>
@@ -3011,8 +3015,270 @@
 
             } catch (err) {
                 console.error('Drill-down error:', err);
-                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading text-danger">❌ خطأ في تحميل البيانات: ${err.message}</div></td>`;
+                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading text-danger">\u274c \u062e\u0637\u0623 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a: ${err.message}</div></td>`;
             }
+        }
+
+        // ========== MANAGER AGGREGATED DRILL-DOWN ==========
+        function toggleManagerDrillDown(managerName, storeIds) {
+            const existingRow = document.getElementById('mgr-drill-row');
+            const arrow = document.getElementById('mgr-summary-arrow');
+
+            if (existingRow) {
+                existingRow.remove();
+                if (arrow) arrow.textContent = '\u25b6';
+                return;
+            }
+
+            // Close any other open drill-downs
+            document.querySelectorAll('.store-detail-row').forEach(r => r.remove());
+            document.querySelectorAll('.store-name-toggle.expanded').forEach(e => e.classList.remove('expanded'));
+
+            if (arrow) arrow.textContent = '\u25bc';
+
+            const mgrRow = document.getElementById('mgr-summary-row');
+            const detailRow = document.createElement('tr');
+            detailRow.id = 'mgr-drill-row';
+            detailRow.className = 'store-detail-row';
+            detailRow.innerHTML = `<td colspan="15"><div class="drill-loading">\u23f3 \u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u062c\u0645\u0639\u0629...</div></td>`;
+            mgrRow.after(detailRow);
+            renderManagerDrillDown(managerName, storeIds, detailRow);
+        }
+
+        async function renderManagerDrillDown(managerName, storeIds, detailRow) {
+            try {
+                await loadDrillData();
+
+                const startDate = window.dashboardState.start;
+                const endDate = window.dashboardState.end;
+                const startStr = startDate.toLocaleDateString('en-CA');
+                const endStr = endDate.toLocaleDateString('en-CA');
+
+                await loadCeoSalesForRange(startDate, endDate);
+
+                // === 1. Daily Sales (aggregated across all stores) ===
+                const dayNames = ["\u0627\u0644\u0623\u062d\u062f", "\u0627\u0644\u0627\u062b\u0646\u064a\u0646", "\u0627\u0644\u062b\u0644\u0627\u062b\u0627\u0621", "\u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621", "\u0627\u0644\u062e\u0645\u064a\u0633", "\u0627\u0644\u062c\u0645\u0639\u0629", "\u0627\u0644\u0633\u0628\u062a"];
+                let dailyRows = [];
+                let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0;
+
+                let loopDate = new Date(startDate);
+                while (loopDate <= endDate) {
+                    const dateStr = loopDate.toLocaleDateString('en-CA');
+                    let daySales = 0, dayVisitors = 0, dayTrans = 0, dayTarget = 0;
+                    let daySalesLY = 0, dayVisitorsLY = 0;
+
+                    storeIds.forEach(sid => {
+                        const d = getDayData(sid, dateStr);
+                        daySales += d.sales || 0;
+                        dayVisitors += d.visitors || 0;
+                        dayTrans += d.trans || 0;
+                        dayTarget += d.target || 0;
+
+                        // Last Year
+                        let lyDate = new Date(loopDate);
+                        lyDate.setFullYear(loopDate.getFullYear() - 1);
+                        if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
+                            lyDate.setDate(lyDate.getDate() + 11);
+                        } else if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 3) {
+                            lyDate.setDate(lyDate.getDate() + 5);
+                        }
+                        const lyData = getDayData(sid, lyDate.toLocaleDateString('en-CA'));
+                        daySalesLY += lyData.sales || 0;
+                        dayVisitorsLY += lyData.visitors || 0;
+                    });
+
+                    const growth = daySalesLY > 0 ? ((daySales - daySalesLY) / daySalesLY * 100) : (daySales > 0 ? 100 : 0);
+                    const avgInv = dayTrans > 0 ? Math.round(daySales / dayTrans) : 0;
+                    const custVal = dayVisitors > 0 ? Math.round(daySales / dayVisitors) : 0;
+                    const conv = dayVisitors > 0 ? ((dayTrans / dayVisitors) * 100) : 0;
+                    const dayOfWeek = loopDate.getDay();
+
+                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, sales: daySales, salesLY: daySalesLY, growth, trans: dayTrans, avgInv, visitors: dayVisitors, visitorsLY: dayVisitorsLY, conv, custVal });
+                    grandSales += daySales; grandSalesLY += daySalesLY; grandTrans += dayTrans; grandVisitors += dayVisitors; grandVisitorsLY += dayVisitorsLY; grandTarget += dayTarget;
+                    loopDate.setDate(loopDate.getDate() + 1);
+                }
+
+                // KPIs
+                const achPct = grandTarget > 0 ? (grandSales / grandTarget * 100) : 0;
+                const grandGrowth = grandSalesLY > 0 ? ((grandSales - grandSalesLY) / grandSalesLY * 100) : 0;
+                const grandAvgInv = grandTrans > 0 ? Math.round(grandSales / grandTrans) : 0;
+                const grandConv = grandVisitors > 0 ? (grandTrans / grandVisitors * 100) : 0;
+
+                const nowR = new Date();
+                let ldm = new Date(nowR.getFullYear(), nowR.getMonth() + 1, 0).getDate();
+                let td = nowR.getDate();
+                if (nowR.getFullYear() === 2026 && nowR.getMonth() === 2) {
+                    if (td <= 19) { ldm = 19; } else { ldm = 12; td = td - 19; }
+                }
+                let remDays = Math.max(ldm - td + 1, 1);
+                const dailyReq = grandTarget > grandSales ? Math.round((grandTarget - grandSales) / remDays) : 0;
+
+                // === 2. Employee Data (combined from all stores) ===
+                const empAgg = {};
+                storeIds.forEach(sid => {
+                    const empHistory = _empCache.history[sid] || [];
+                    const empNames = _empCache.employee_names || {};
+                    empHistory.forEach(rec => {
+                        const [date, rawName, sales, trans, items] = rec;
+                        if (date < startStr || date > endStr) return;
+                        if (!rawName || rawName === 'None' || rawName === '') return;
+                        let empId = rawName, empName = rawName;
+                        if (rawName.includes('-')) {
+                            empId = rawName.split('-')[0].trim();
+                            empName = rawName.split('-').slice(1).join('-').trim();
+                        }
+                        if (empNames[empId]) empName = empNames[empId];
+                        if (empName === '\u0645\u0631\u062a\u062c\u0639' || empName === 'R') return;
+                        if (!empAgg[empId]) empAgg[empId] = { name: empName, sales: 0, trans: 0, items: 0 };
+                        empAgg[empId].sales += sales || 0;
+                        empAgg[empId].trans += trans || 0;
+                        empAgg[empId].items += items || 0;
+                    });
+                });
+                const empList = Object.values(empAgg).filter(e => e.sales !== 0).sort((a, b) => b.sales - a.sales);
+                const totalEmpSales = empList.reduce((s, e) => s + e.sales, 0);
+
+                // === 3. Category Data (combined from all stores) ===
+                const catAgg = {};
+                Object.values(_ceoSalesCache).forEach(monthData => {
+                    if (!monthData || !monthData.records) return;
+                    monthData.records.forEach(r => {
+                        if (!storeIds.includes(r.s)) return;
+                        if (r.d < startStr || r.d > endStr) return;
+                        const product = _ceoProductsCache[r.i];
+                        const catName = product ? product.category : '\u0623\u062e\u0631\u0649';
+                        const itemName = product ? product.name : r.i;
+                        if (!catAgg[catName]) catAgg[catName] = { sales: 0, qty: 0, items: {} };
+                        catAgg[catName].sales += r.a || 0;
+                        catAgg[catName].qty += Math.abs(r.q || 0);
+                        if (!catAgg[catName].items[r.i]) {
+                            const prod = _ceoProductsCache[r.i];
+                            catAgg[catName].items[r.i] = { name: itemName, sales: 0, qty: 0, item_id: r.i, category: catName, alias: prod ? (prod.alias || '') : '', price: prod ? (prod.price || 0) : 0 };
+                        }
+                        catAgg[catName].items[r.i].sales += r.a || 0;
+                        catAgg[catName].items[r.i].qty += Math.abs(r.q || 0);
+                    });
+                });
+                const catList = Object.entries(catAgg).map(([name, data]) => ({ name, ...data })).filter(c => c.sales !== 0).sort((a, b) => b.sales - a.sales);
+                const totalCatSales = catList.reduce((s, c) => s + c.sales, 0);
+
+                // === 4. Top Products ===
+                const topProductsList = [];
+                Object.values(catAgg).forEach(cat => {
+                    Object.values(cat.items).forEach(item => { topProductsList.push(item); });
+                });
+                topProductsList.sort((a, b) => b.qty - a.qty);
+
+                const uid = 'mgr_summary';
+
+                // === RENDER ===
+                const safeName = managerName.replace(/'/g, "\\'");
+                detailRow.innerHTML = `<td colspan="15"><div class="drill-panel">
+                    <!-- Header -->
+                    <div class="drill-header">
+                        <div>
+                            <h6>\ud83d\udcca \u0645\u0644\u062e\u0635 ${managerName}</h6>
+                            <span class="drill-period">${startStr} \u2192 ${endStr} \u2022 ${storeIds.length} \u0645\u0639\u0627\u0631\u0636</span>
+                        </div>
+                        <button class="drill-close-btn" onclick="toggleManagerDrillDown('${safeName}', [])">\u2715 \u0625\u063a\u0644\u0627\u0642</button>
+                    </div>
+
+                    <!-- KPIs -->
+                    <div class="drill-kpis">
+                        <div class="drill-kpi">
+                            <div class="drill-kpi-label">\u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a</div>
+                            <div class="drill-kpi-value text-success">${grandSales.toLocaleString()}</div>
+                        </div>
+                        <div class="drill-kpi">
+                            <div class="drill-kpi-label">\u0627\u0644\u0647\u062f\u0641</div>
+                            <div class="drill-kpi-value">${grandTarget.toLocaleString()}</div>
+                        </div>
+                        <div class="drill-kpi">
+                            <div class="drill-kpi-label">\u0627\u0644\u062a\u062d\u0642\u064a\u0642</div>
+                            <div class="drill-kpi-value ${achPct >= 100 ? 'text-success' : achPct >= 80 ? 'text-warning' : 'text-danger'}">${achPct.toFixed(1)}%</div>
+                        </div>
+                        <div class="drill-kpi">
+                            <div class="drill-kpi-label">\u0627\u0644\u0646\u0645\u0648</div>
+                            <div class="drill-kpi-value ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</div>
+                        </div>
+                        <div class="drill-kpi">
+                            <div class="drill-kpi-label">\u0627\u0644\u064a\u0648\u0645\u064a\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629</div>
+                            <div class="drill-kpi-value text-danger">${dailyReq.toLocaleString()}</div>
+                        </div>
+                        <div class="drill-kpi">
+                            <div class="drill-kpi-label">\u0627\u0644\u062a\u062d\u0648\u064a\u0644</div>
+                            <div class="drill-kpi-value">${grandConv.toFixed(1)}%</div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="drill-tabs">
+                        <button class="drill-tab active" onclick="switchDrillTab('${uid}', 'daily', this)">\u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a \u0627\u0644\u064a\u0648\u0645\u064a\u0629 <span class="tab-count">${dailyRows.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'emp', this)">\u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646 <span class="tab-count">${empList.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'cat', this)">\u0627\u0644\u0641\u0626\u0627\u062a <span class="tab-count">${catList.length}</span></button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'top', this)">\u2b50 \u0623\u0641\u0636\u0644 \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a</button>
+                    </div>
+
+                    <!-- Tab Panes -->
+                    <div class="drill-body">
+                        <div id="drill-daily-${uid}" class="drill-tab-pane">
+                            ${renderManagerDailyTable(dailyRows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv)}
+                        </div>
+                        <div id="drill-emp-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderEmpDrill(empList, totalEmpSales, uid)}
+                        </div>
+                        <div id="drill-cat-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderCatDrill(catList, totalCatSales, uid)}
+                        </div>
+                        <div id="drill-top-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderTopProductsDrill(topProductsList, uid)}
+                        </div>
+                    </div>
+                </div></td>`;
+
+            } catch (err) {
+                console.error('Manager drill-down error:', err);
+                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading text-danger">\u274c \u062e\u0637\u0623: ${err.message}</div></td>`;
+            }
+        }
+
+        function renderManagerDailyTable(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv) {
+            const grandCustVal = grandVisitors > 0 ? Math.round(grandSales / grandVisitors) : 0;
+            let html = `<div class="table-responsive" style="max-height:500px; overflow-y:auto;">
+                <table class="table table-sm drill-table mb-0">
+                    <thead><tr>
+                        <th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u064a\u0648\u0645</th><th>\u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a</th><th>\u0645\u0628\u064a\u0639\u0627\u062a \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u0633\u0627\u0628\u0642</th><th>\u0627\u0644\u0646\u0645\u0648</th>
+                        <th>\u0627\u0644\u0641\u0648\u0627\u062a\u064a\u0631</th><th>\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0641\u0627\u062a\u0648\u0631\u0629</th><th>\u0627\u0644\u0632\u0648\u0627\u0631</th><th>\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u0633\u0627\u0628\u0642</th><th>\u0642\u064a\u0645\u0629 \u0627\u0644\u0639\u0645\u064a\u0644</th><th>\u0627\u0644\u062a\u062d\u0648\u064a\u0644</th>
+                    </tr></thead><tbody>`;
+            rows.forEach(r => {
+                const dayClass = r.dayOfWeek === 5 ? 'day-fri' : r.dayOfWeek === 6 ? 'day-sat' : '';
+                html += `<tr class="${dayClass}">
+                    <td class="text-center">${r.date}</td>
+                    <td class="text-center">${r.dayName}</td>
+                    <td class="text-center fw-bold">${r.sales.toLocaleString()}</td>
+                    <td class="text-center text-muted">${r.salesLY.toLocaleString()}</td>
+                    <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
+                    <td class="text-center">${r.trans.toLocaleString()}</td>
+                    <td class="text-center">${r.avgInv.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${r.visitors.toLocaleString()}</td>
+                    <td class="text-center text-muted">${r.visitorsLY.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
+                    <td class="text-center">${r.conv.toFixed(1)}%</td>
+                </tr>`;
+            });
+            html += `</tbody><tfoot><tr>
+                <td class="text-center" colspan="2">\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a</td>
+                <td class="text-center">${grandSales.toLocaleString()}</td>
+                <td class="text-center">${grandSalesLY.toLocaleString()}</td>
+                <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
+                <td class="text-center">${grandTrans.toLocaleString()}</td>
+                <td class="text-center">${grandAvgInv.toLocaleString()}</td>
+                <td class="text-center">${grandVisitors.toLocaleString()}</td>
+                <td class="text-center">${grandVisitorsLY.toLocaleString()}</td>
+                <td class="text-center fw-bold">${grandCustVal.toLocaleString()}</td>
+                <td class="text-center">${grandConv.toFixed(1)}%</td>
+            </tr></tfoot></table></div>`;
+            return html;
         }
 
         function switchDrillTab(uid, tab, btn) {
