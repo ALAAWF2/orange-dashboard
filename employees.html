@@ -1369,12 +1369,22 @@
                         if (!empAgg[key]) {
                             // Determine Target Date based on Filter
                             let tDateStr = `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-01`; // Default MTD
-                            // 2026 March: Split target periods (1-19 = '2026-03-01', 20-31 = '2026-03-20')
-                            if (todayYear === 2026 && todayMonth === 2 && todayDay > 19 && periodFilter !== 'prev_month') {
-                                tDateStr = '2026-03-20';
-                            }
                             if (periodFilter === 'prev_month') {
                                 tDateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
+                            } else if (periodFilter === 'custom') {
+                                const customFromVal = document.getElementById('dateFrom').value;
+                                if (customFromVal) {
+                                    if (customFromVal >= '2026-03-20' && customFromVal <= '2026-03-31') {
+                                        tDateStr = '2026-03-20';
+                                    } else {
+                                        tDateStr = `${customFromVal.split('-')[0]}-${customFromVal.split('-')[1]}-01`;
+                                    }
+                                }
+                            } else {
+                                // Default current month, handle March split
+                                if (todayYear === 2026 && todayMonth === 2 && todayDay > 19) {
+                                    tDateStr = '2026-03-20';
+                                }
                             }
 
                             // Lookup Target
@@ -1488,7 +1498,7 @@
                     e.achievement = 0;
                     if (e.target > 0) {
                         // Calculate achievement if target exists and filter is relevant
-                        if (['mtd', 'mtd_yest', 'prev_month'].includes(periodFilter) && e.target > 0) {
+                        if (['mtd', 'mtd_yest', 'prev_month', 'custom'].includes(periodFilter) && e.target > 0) {
                             e.achievement = (e.sales / e.target) * 100;
                         }
                     }
@@ -1509,19 +1519,28 @@
                     e.shareGrowth = e.branchShare - prevShare;
 
                     // Calculate Expected Commission
-                    let targetDatePrefix = '';
-                    const todayForComm = new Date();
+                    let targetDateStr = `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-01`;
                     if (periodFilter === 'prev_month') {
-                        const prevMonthDate = new Date(todayForComm.getFullYear(), todayForComm.getMonth() - 1, 1);
-                        targetDatePrefix = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-                    } else {
-                        targetDatePrefix = `${todayForComm.getFullYear()}-${String(todayForComm.getMonth() + 1).padStart(2, '0')}`;
+                        targetDateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
+                    } else if (periodFilter === 'custom') {
+                        const customFromVal = document.getElementById('dateFrom').value;
+                        if (customFromVal) {
+                            if (customFromVal >= '2026-03-20' && customFromVal <= '2026-03-31') targetDateStr = '2026-03-20';
+                            else targetDateStr = `${customFromVal.split('-')[0]}-${customFromVal.split('-')[1]}-01`;
+                        }
+                    } else if (todayYear === 2026 && todayMonth === 2 && todayDay > 19) {
+                        targetDateStr = '2026-03-20';
                     }
 
                     let branchTargetComm = 0;
                     if (window.storeTargets) {
-                        const sto = window.storeTargets.find(t => t[1] === e.storeCode && t[0].startsWith(targetDatePrefix));
-                        if (sto) branchTargetComm = sto[2];
+                        const sto = window.storeTargets.find(t => t[1] === e.storeCode && t[0] === targetDateStr);
+                        if (sto) {
+                            branchTargetComm = sto[2];
+                        } else if (targetDateStr === '2026-03-20') {
+                            const stoAlt = window.storeTargets.find(t => t[1] === e.storeCode && t[0] === '2026-03-01');
+                            if (stoAlt) branchTargetComm = stoAlt[2];
+                        }
                     }
 
                     let branchAchComm = 0;
@@ -1731,7 +1750,7 @@
                     const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
 
                     // Target Display
-                    const showTarget = (periodFilter === 'mtd' || periodFilter === 'prev_month') && emp.target > 0;
+                    const showTarget = (['mtd', 'prev_month', 'custom'].includes(periodFilter)) && emp.target > 0;
                     const targetText = showTarget ? emp.target.toLocaleString() : '-';
 
                     // Daily Required
