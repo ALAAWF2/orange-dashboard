@@ -486,7 +486,7 @@ def get_daily_stats():
                     "date": d,
                     "transactions": tr_count,
                     "visitors": vis_map.get(d, 0),
-                    "sales": float(sales_map.get(d, 0) or 0)
+                    "sales": round(float(sales_map.get(d, 0) or 0), 2)
                 })
             
             return jsonify(result)
