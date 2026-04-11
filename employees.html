@@ -561,7 +561,13 @@
                         data-bs-toggle="dropdown" aria-expanded="false">
                         📊 تصدير Excel
                     </button>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu px-2">
+                        <li>
+                            <div class="form-check form-switch mt-1 ms-1 mb-2 border-bottom pb-2">
+                                <input class="form-check-input" type="checkbox" id="exportCommExcel" checked>
+                                <label class="form-check-label small fw-bold" for="exportCommExcel">تضمين العمولة</label>
+                            </div>
+                        </li>
                         <li><a class="dropdown-item" href="#" onclick="exportExcel('current')">البيانات الحالية
                                 (مجمع)</a></li>
                         <li><a class="dropdown-item" href="#" onclick="exportExcel('daily')">تقرير يومي مفصل</a></li>
@@ -785,6 +791,8 @@
                                                 onclick="sortTable('target')">الهدف</th>
                                             <th class="text-center sortable" data-sort="achievement"
                                                 onclick="sortTable('achievement')">التحقيق %</th>
+                                            <th class="text-center sortable px-2 bg-warning-subtle text-dark border-start border-end border-warning" data-sort="expected_comm"
+                                                onclick="sortTable('expected_comm')" title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
                                             <th class="text-center sortable" data-sort="dailyReq"
                                                 onclick="sortTable('dailyReq')">اليومية المتبقية</th>
                                             <th class="d-none d-md-table-cell sortable" data-sort="transactions"
@@ -972,6 +980,10 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="form-check form-switch mb-3 p-2 bg-warning-subtle rounded border border-warning" id="pdfCommToggleContainer" style="display:none; text-align: left;" dir="ltr">
+                            <input class="form-check-input me-2 ms-0" type="checkbox" id="exportCommPdf" checked style="cursor: pointer;">
+                            <label class="form-check-label small fw-bold" for="exportCommPdf" style="cursor: pointer;" dir="rtl">تضمين العمولة المتوقعة فى التقرير</label>
+                        </div>
                         <!-- Legend -->
                         <div class="d-flex flex-wrap justify-content-center mb-3 p-2 bg-light rounded">
                             <div class="legend-item">
@@ -1495,6 +1507,38 @@
                     // Share Growth (Delta)
                     // If prevShare is 0, growth is implied as positive gain of entire current share
                     e.shareGrowth = e.branchShare - prevShare;
+
+                    // Calculate Expected Commission
+                    let targetDatePrefix = '';
+                    const todayForComm = new Date();
+                    if (periodFilter === 'prev_month') {
+                        const prevMonthDate = new Date(todayForComm.getFullYear(), todayForComm.getMonth() - 1, 1);
+                        targetDatePrefix = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+                    } else {
+                        targetDatePrefix = `${todayForComm.getFullYear()}-${String(todayForComm.getMonth() + 1).padStart(2, '0')}`;
+                    }
+
+                    let branchTargetComm = 0;
+                    if (window.storeTargets) {
+                        const sto = window.storeTargets.find(t => t[1] === e.storeCode && t[0].startsWith(targetDatePrefix));
+                        if (sto) branchTargetComm = sto[2];
+                    }
+
+                    let branchAchComm = 0;
+                    if (branchTargetComm > 0) {
+                        branchAchComm = (branchTotalCurr / branchTargetComm) * 100;
+                    }
+
+                    let branchCommPercent = 0;
+                    if (branchAchComm >= 100) branchCommPercent = 0.02;
+                    else if (branchAchComm >= 90) branchCommPercent = 0.01;
+                    else if (branchAchComm >= 80) branchCommPercent = 0.005;
+
+                    e.expected_comm = 0;
+                    if (e.target > 0 && branchCommPercent > 0 && e.sales > 0) {
+                        const empAchPercent = e.sales / e.target;
+                        e.expected_comm = (empAchPercent * branchCommPercent) * e.sales;
+                    }
                 });
 
                 // Calculate dailyReq for sorting
@@ -1727,6 +1771,7 @@
 
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
+        <td class="text-center fw-bold text-dark bg-warning-subtle border-start border-end border-warning">${emp.expected_comm > 0 ? Math.round(emp.expected_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
         <td class="text-center fw-bold text-danger">${dailyReqText}</td>
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
         <td class="d-none d-md-table-cell">${emp.avg_ticket.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
@@ -1747,23 +1792,34 @@
                 }
 
                 if (type === 'current') {
+                    const includeComm = document.getElementById('exportCommExcel').checked;
                     // 1. Export Current View (Aggregated)
-                    const data = currentEmpList.map((e, i) => ({
-                        "الترتيب": i + 1,
-                        "الموظف": e.name,
-                        "الفرع": e.storeName,
-                        "المبيعات": e.sales,
-                        "الفواتير": e.transactions,
-                        "معدل الفاتورة": e.avg_ticket,
-                        "متوسط القطع": e.items_per_inv,
-                        "الهدف": e.target || 0,
-                        "التحقيق %": (e.achievement || 0).toFixed(1) + '%',
-                        "حصة الفرع %": (e.branchShare || 0).toFixed(1) + '%'
-                    }));
+                    const data = currentEmpList.map((e, i) => {
+                        let r = {
+                            "الترتيب": i + 1,
+                            "الموظف": e.name,
+                            "الفرع": e.storeName,
+                            "المبيعات": e.sales,
+                            "الفواتير": e.transactions,
+                            "معدل الفاتورة": e.avg_ticket,
+                            "متوسط القطع": e.items_per_inv,
+                            "الهدف": e.target || 0,
+                            "التحقيق %": (e.achievement || 0).toFixed(1) + '%'
+                        };
+                        if (includeComm) {
+                            r["العمولة المتوقعة"] = Math.round(e.expected_comm || 0);
+                        }
+                        r["حصة الفرع %"] = (e.branchShare || 0).toFixed(1) + '%';
+                        return r;
+                    });
 
                     const ws = XLSX.utils.json_to_sheet(data);
                     // Adjust column widths
-                    ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+                    if (includeComm) {
+                        ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
+                    } else {
+                        ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+                    }
 
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, "Employees Summary");
@@ -1819,6 +1875,8 @@
 
                 // Analyze employees and detect suspected resigned
                 employeeSelectionData = analyzeEmployeesForResignation();
+
+                document.getElementById('pdfCommToggleContainer').style.display = mode === 'pdf' ? 'block' : 'none';
 
                 // Apply Saved Preferences (for PDF only)
                 if (mode === 'pdf') {
@@ -2032,8 +2090,10 @@
                     const selectedIds = selectedEmps.map(e => e.id);
                     localStorage.setItem('pdf_selected_employees', JSON.stringify(selectedIds));
 
+                    const includeComm = document.getElementById('exportCommPdf').checked;
+
                     // Generate PDF
-                    generateEmployeePDF(selectedIds);
+                    generateEmployeePDF(selectedIds, includeComm);
 
                     // Close Modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('empSelectModal'));

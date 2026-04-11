@@ -1,6 +1,6 @@
 /* PDF Export Logic for Employees - Final Array Fix - Ver 1.2 */
 
-async function generateEmployeePDF(targetEmps = null) {
+async function generateEmployeePDF(targetEmps = null, includeCommission = true) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -234,11 +234,25 @@ async function generateEmployeePDF(targetEmps = null) {
             }
         }
 
+        let branchCommPercent = 0;
+        if (window.storeTargets) {
+            const targetDate = isPrevMode ? prevMonthStartStr : monthStartStr;
+            const storeTargetRec = window.storeTargets.find(t => t[0] === targetDate && t[1].toString() === storeId.toString());
+            if (storeTargetRec) {
+                const sTarget = storeTargetRec[2];
+                let branchSales = isPrevMode ? storeTotals.prev : storeTotals.mtd;
+                const branchAch = sTarget > 0 ? (branchSales / sTarget) * 100 : 0;
+                if (branchAch >= 100) branchCommPercent = 0.02;
+                else if (branchAch >= 90) branchCommPercent = 0.01;
+                else if (branchAch >= 80) branchCommPercent = 0.005;
+            }
+        }
+
         doc.text(headerTitle, 14, 15);
 
         const tableRows = [];
         let col1TotalSales = 0, col1TotalTrans = 0; // Was Yest, now dynamic
-        let col2TotalSales = 0, col2TotalTrans = 0, col2TotalTarget = 0; // Was MTD, now dynamic (Prev or MTD)
+        let col2TotalSales = 0, col2TotalTrans = 0, col2TotalTarget = 0, col2TotalExpectedComm = 0; // Was MTD, now dynamic (Prev or MTD)
 
         // Sort based on Mode
         empKeys.sort((a, b) => {
@@ -343,8 +357,16 @@ async function generateEmployeePDF(targetEmps = null) {
             col2TotalTrans += dataCol2.trans;
             col2TotalTarget += target;
 
+            // Expected Commission
+            let expectedComm = 0;
+            if (target > 0 && branchCommPercent > 0 && dataCol2.sales > 0) {
+                const empAchPercent = dataCol2.sales / target;
+                expectedComm = (empAchPercent * branchCommPercent) * dataCol2.sales;
+            }
+            if (expectedComm > 0) col2TotalExpectedComm += expectedComm;
+
             // Row Building
-            tableRows.push([
+            let rowBuilder = [
                 emp.name,
                 isPrevMode ? '-' : Math.round(dataCol1.sales).toLocaleString(),
                 isPrevMode ? '-' : col1Contrib.toFixed(0) + '%',
@@ -355,10 +377,13 @@ async function generateEmployeePDF(targetEmps = null) {
                 dataCol2.trans,
                 col2AvgInv,
                 Math.round(target).toLocaleString(),
-                ach.toFixed(1) + '%',
-                Math.round(remaining).toLocaleString(),
-                isPrevMode ? '-' : Math.round(dailyReq).toLocaleString()
-            ]);
+                ach.toFixed(1) + '%'
+            ];
+            if (includeCommission) {
+                rowBuilder.push(expectedComm > 0 ? Math.round(expectedComm).toLocaleString() : '-');
+            }
+            rowBuilder.push(Math.round(remaining).toLocaleString(), isPrevMode ? '-' : Math.round(dailyReq).toLocaleString());
+            tableRows.push(rowBuilder);
         });
 
         // Totals Row
@@ -387,7 +412,7 @@ async function generateEmployeePDF(targetEmps = null) {
             col2Daily = col2Rem / daysLeftEnd;
         }
 
-        tableRows.push([
+        let totalsRowBuilder = [
             "الإجمالي",
             isPrevMode ? '-' : Math.round(col1TotalSales).toLocaleString(),
             isPrevMode ? '-' : "100%",
@@ -399,10 +424,13 @@ async function generateEmployeePDF(targetEmps = null) {
             col2TotalTrans,
             col2TotalTrans > 0 ? Math.round(col2TotalSales / col2TotalTrans) : 0,
             Math.round(col2TotalTarget).toLocaleString(),
-            col2TotalAch,
-            Math.round(col2Rem).toLocaleString(),
-            isPrevMode ? '-' : Math.round(col2Daily).toLocaleString()
-        ]);
+            col2TotalAch
+        ];
+        if (includeCommission) {
+            totalsRowBuilder.push(col2TotalExpectedComm > 0 ? Math.round(col2TotalExpectedComm).toLocaleString() : '-');
+        }
+        totalsRowBuilder.push(Math.round(col2Rem).toLocaleString(), isPrevMode ? '-' : Math.round(col2Daily).toLocaleString());
+        tableRows.push(totalsRowBuilder);
 
         // Dynamic Headers
         let col1Header = `الأمس (Yesterday) - ${yestStrFinal}`;
@@ -419,12 +447,12 @@ async function generateEmployeePDF(targetEmps = null) {
                 [
                     { content: 'بيانات الموظف (Employee)', colSpan: 1, styles: { fillColor: [255, 255, 255], textColor: 0, halign: 'center' } },
                     { content: col1Header, colSpan: 4, styles: { fillColor: [220, 220, 220], textColor: 0, halign: 'center' } },
-                    { content: col2Header, colSpan: 9, styles: { fillColor: [200, 200, 200], textColor: 0, halign: 'center' } }
+                    { content: col2Header, colSpan: includeCommission ? 10 : 9, styles: { fillColor: [200, 200, 200], textColor: 0, halign: 'center' } }
                 ],
                 [
                     'الموظف',
                     'المبيعات', 'مساهمة %', 'العدد', 'م. فاتورة',
-                    'المبيعات', 'مساهمة %', 'العدد', 'م. فاتورة', 'الهدف', 'تحقيق %', 'المتبقي', 'يومية متبقية'
+                    'المبيعات', 'مساهمة %', 'العدد', 'م. فاتورة', 'الهدف', 'تحقيق %', ...(includeCommission ? ['عمولة'] : []), 'المتبقي', 'يومية متبقية'
                 ]
             ],
             body: tableRows,

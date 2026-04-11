@@ -233,10 +233,15 @@
         .drill-tab-pane {
             animation: fadeSlideUp 0.3s ease forwards;
         }
+        .table-responsive {
+            -webkit-overflow-scrolling: touch !important;
+            overflow-x: auto !important;
+        }
         .drill-table {
             font-size: 0.84rem;
             border-collapse: separate;
             border-spacing: 0;
+            min-width: 600px;
         }
         .drill-table thead th {
             background: #2d3436;
@@ -3077,7 +3082,7 @@
                             ${renderBasketDrill(basketData, uid)}
                         </div>
                         <div id="drill-rhythm-${uid}" class="drill-tab-pane" style="display:none;">
-                            ${renderRhythmDrill(rhythmSales, rhythmVisitors, uid, dailyRows)}
+                            ${renderRhythmDrill(rhythmSales, rhythmVisitors, rhythmDetSales, rhythmDetVisitors, rhythmDateKeys, uid, dailyRows)}
                         </div>
                         <div id="drill-topsell-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderTopSellDrill(topProductsList, catList, uid)}
@@ -3869,8 +3874,19 @@
                 return (val / max) > 0.5 ? '#fff' : '#333';
             };
 
-            const buildGrid = (mode) => {
-                const max = mode === 'sales' ? maxSales : maxVisitors;
+            // --- DETAILED CALCULATIONS ---
+            let maxDetSales = 0, maxDetVisitors = 0;
+            dateKeys.forEach(dk => {
+                const sData = detSales[dk.dateStr];
+                const vData = detVisitors[dk.dateStr];
+                for (let h = 0; h < 24; h++) {
+                    if (sData[h].sales > maxDetSales) maxDetSales = sData[h].sales;
+                    if (vData[h] > maxDetVisitors) maxDetVisitors = vData[h];
+                }
+            });
+
+            const buildGrid = (mode, isDet) => {
+                const max = mode === 'sales' ? (isDet ? maxDetSales : maxSales) : (isDet ? maxDetVisitors : maxVisitors);
                 let grid = '<div class="rhythm-grid">';
                 // Header row: empty corner + 24 hours
                 grid += '<div class="rhythm-header"></div>';
@@ -3878,19 +3894,38 @@
                     grid += `<div class="rhythm-header">${h}</div>`;
                 }
                 // Data rows
-                dayOrder.forEach(d => {
-                    grid += `<div class="rhythm-day-label">${dayLabels[d]}</div>`;
-                    for (let h = 0; h < 24; h++) {
-                        const val = mode === 'sales' ? salesData[d][h].sales : visitorsData[d][h];
-                        const bg = getColor(val, max, mode);
-                        const tc = getTextColor(val, max);
-                        const display = val > 0 ? (mode === 'sales' ? Math.round(val).toLocaleString() : val.toLocaleString()) : '';
-                        const title = mode === 'sales'
-                            ? `${dayLabels[d]} ${fmtHour(h)}: ${Math.round(val).toLocaleString()} ريال (${salesData[d][h].trans} فاتورة)`
-                            : `${dayLabels[d]} ${fmtHour(h)}: ${val} زائر`;
-                        grid += `<div class="rhythm-cell" style="background:${bg};color:${tc}" title="${title}">${display}</div>`;
-                    }
-                });
+                if (isDet) {
+                    dateKeys.forEach(dk => {
+                        const ds = dk.dateStr;
+                        const dow = dk.dow;
+                        grid += `<div class="rhythm-day-label" style="line-height:1.1">${dayLabels[dow]}<br><small class="text-muted" style="font-size:0.6rem">${ds.substring(5)}</small></div>`;
+                        for (let h = 0; h < 24; h++) {
+                            const val = mode === 'sales' ? detSales[ds][h].sales : detVisitors[ds][h];
+                            const trans = mode === 'sales' ? detSales[ds][h].trans : 0;
+                            const bg = getColor(val, max, mode);
+                            const tc = getTextColor(val, max);
+                            const display = val > 0 ? (mode === 'sales' ? Math.round(val).toLocaleString() : val.toLocaleString()) : '';
+                            const title = mode === 'sales'
+                                ? `${dayLabels[dow]} ${ds} - ${fmtHour(h)}: ${Math.round(val).toLocaleString()} ريال (${trans} فاتورة)`
+                                : `${dayLabels[dow]} ${ds} - ${fmtHour(h)}: ${val} زائر`;
+                            grid += `<div class="rhythm-cell" style="background:${bg};color:${tc}" title="${title}">${display}</div>`;
+                        }
+                    });
+                } else {
+                    dayOrder.forEach(d => {
+                        grid += `<div class="rhythm-day-label">${dayLabels[d]}</div>`;
+                        for (let h = 0; h < 24; h++) {
+                            const val = mode === 'sales' ? salesData[d][h].sales : visitorsData[d][h];
+                            const bg = getColor(val, max, mode);
+                            const tc = getTextColor(val, max);
+                            const display = val > 0 ? (mode === 'sales' ? Math.round(val).toLocaleString() : val.toLocaleString()) : '';
+                            const title = mode === 'sales'
+                                ? `${dayLabels[d]} ${fmtHour(h)}: ${Math.round(val).toLocaleString()} ريال (${salesData[d][h].trans} فاتورة)`
+                                : `${dayLabels[d]} ${fmtHour(h)}: ${val} زائر`;
+                            grid += `<div class="rhythm-cell" style="background:${bg};color:${tc}" title="${title}">${display}</div>`;
+                        }
+                    });
+                }
                 grid += '</div>';
                 return grid;
             };
@@ -3922,10 +3957,11 @@
             </div>`;
 
             // Toggle buttons + grid
-            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+            html += `<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
                 <div class="rhythm-toggle-group">
                     <button class="rhythm-toggle-btn active" onclick="switchRhythmMode('${uid}', 'sales', this)">المبيعات</button>
                     <button class="rhythm-toggle-btn" onclick="switchRhythmMode('${uid}', 'visitors', this)">الزوار</button>
+                    <button class="rhythm-toggle-btn" onclick="event.stopPropagation(); toggleRhythmDetail('${uid}', this)" style="margin-right:10px; border-color:#8e44ad; color:#8e44ad;">📅 تفصيل الأيام</button>
                 </div>
                 <div class="rhythm-legend">
                     <span>أقل</span>
@@ -3939,24 +3975,61 @@
                 </div>
             </div>`;
 
-            html += `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div id="rhythm-sales-${uid}">${buildGrid('sales')}</div></div>`;
-            html += `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div id="rhythm-visitors-${uid}" style="display:none">${buildGrid('visitors')}</div></div>`;
+            html += `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch; max-height:450px; overflow-y:auto;" class="border rounded bg-white p-1">
+                <div id="rhythm-agg-sales-${uid}" class="rhythm-agg-view">${buildGrid('sales', false)}</div>
+                <div id="rhythm-agg-visitors-${uid}" class="rhythm-agg-view" style="display:none">${buildGrid('visitors', false)}</div>
+                <div id="rhythm-det-sales-${uid}" class="rhythm-det-view" style="display:none">${buildGrid('sales', true)}</div>
+                <div id="rhythm-det-visitors-${uid}" class="rhythm-det-view" style="display:none">${buildGrid('visitors', true)}</div>
+            </div>`;
 
             return html;
         }
 
         function switchRhythmMode(uid, mode, btn) {
-            document.getElementById(`rhythm-sales-${uid}`).style.display = mode === 'sales' ? '' : 'none';
-            document.getElementById(`rhythm-visitors-${uid}`).style.display = mode === 'visitors' ? '' : 'none';
-            btn.closest('.rhythm-toggle-group').querySelectorAll('.rhythm-toggle-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            // Update legend colors
-            const legend = document.getElementById(`rhythm-legend-bar-${uid}`);
-            if (mode === 'sales') {
-                legend.innerHTML = '<span style="background:#ffe0b2"></span><span style="background:#ffb74d"></span><span style="background:#fb8c00"></span><span style="background:#e65100"></span>';
-            } else {
-                legend.innerHTML = '<span style="background:#bbdefb"></span><span style="background:#90caf9"></span><span style="background:#42a5f5"></span><span style="background:#1565c0"></span>';
+            const toggleBtn = document.querySelector(`button[onclick="event.stopPropagation(); toggleRhythmDetail('${uid}', this)"]`) || document.querySelector(`button[onclick*="toggleRhythmDetail('${uid}'"]`);
+            const isDet = toggleBtn ? toggleBtn.classList.contains('detailed-active') : false;
+
+            document.getElementById(`rhythm-agg-sales-${uid}`).style.display = (!isDet && mode === 'sales') ? '' : 'none';
+            document.getElementById(`rhythm-agg-visitors-${uid}`).style.display = (!isDet && mode === 'visitors') ? '' : 'none';
+            document.getElementById(`rhythm-det-sales-${uid}`).style.display = (isDet && mode === 'sales') ? '' : 'none';
+            document.getElementById(`rhythm-det-visitors-${uid}`).style.display = (isDet && mode === 'visitors') ? '' : 'none';
+
+            if (btn) {
+                btn.closest('.rhythm-toggle-group').querySelectorAll('.rhythm-toggle-btn').forEach(b => {
+                    if (!b.getAttribute('onclick').includes('toggleRhythmDetail')) {
+                        b.classList.remove('active');
+                    }
+                });
+                btn.classList.add('active');
             }
+            
+            const legend = document.getElementById(`rhythm-legend-bar-${uid}`);
+            if (legend) {
+                if (mode === 'sales') {
+                    legend.innerHTML = '<span style="background:#ffe0b2"></span><span style="background:#ffb74d"></span><span style="background:#fb8c00"></span><span style="background:#e65100"></span>';
+                } else {
+                    legend.innerHTML = '<span style="background:#bbdefb"></span><span style="background:#90caf9"></span><span style="background:#42a5f5"></span><span style="background:#1565c0"></span>';
+                }
+            }
+        }
+
+        function toggleRhythmDetail(uid, btn) {
+            const isDet = btn.classList.contains('detailed-active');
+            if (isDet) {
+                btn.classList.remove('detailed-active');
+                btn.classList.remove('active');
+                btn.style.background = '';
+                btn.style.color = '#8e44ad';
+            } else {
+                btn.classList.add('detailed-active');
+                btn.classList.add('active');
+                btn.style.background = '#8e44ad';
+                btn.style.color = 'white';
+            }
+            const aggSales = document.getElementById(`rhythm-agg-sales-${uid}`);
+            const detSales = document.getElementById(`rhythm-det-sales-${uid}`);
+            const mode = (aggSales.style.display !== 'none' || detSales.style.display !== 'none') ? 'sales' : 'visitors';
+            switchRhythmMode(uid, mode, null);
         }
 
         function exportDrillExcel(uid, type) {
