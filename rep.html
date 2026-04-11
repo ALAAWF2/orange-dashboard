@@ -713,9 +713,10 @@
             </div>
             <div class="filter-group">
                 <label>📂 الفئة</label>
-                <select id="categoryFilter">
-                    <option value="all">الكل</option>
+                <select id="categoryFilter" multiple style="height: 90px; overflow-y: auto;">
+                    <option value="all" selected>الكل</option>
                 </select>
+                <small style="font-size: 0.65rem; color: #888;">استخدم Ctrl للتحديد المتباعد</small>
             </div>
             <div class="filter-group">
                 <label>📦 حالة المخزون</label>
@@ -731,6 +732,7 @@
                 <select id="viewMode">
                     <option value="by_item">مجمع حسب المنتج</option>
                     <option value="by_store">مفصل حسب المعرض</option>
+                    <option value="by_month">مفصل حسب الشهر</option>
                 </select>
             </div>
         </div>
@@ -1172,7 +1174,8 @@
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
             const storeFilter = document.getElementById('storeFilter').value;
-            const categoryFilter = document.getElementById('categoryFilter').value;
+            const categoryFilterOptions = Array.from(document.getElementById('categoryFilter').selectedOptions).map(opt => opt.value);
+            const isAllCategories = categoryFilterOptions.includes('all') || categoryFilterOptions.length === 0;
             const stockFilter = document.getElementById('stockFilter').value;
             const viewMode = document.getElementById('viewMode').value;
             const conditions = getConditions();
@@ -1227,6 +1230,17 @@
                             itemAgg[key].qty += r.q;
                             itemAgg[key].amount += r.a;
                         }
+                    } else if (viewMode === 'by_month') {
+                        // Aggregate by month + item_id
+                        for (const r of allRecords) {
+                            const month = r.d.substring(0, 7);
+                            const key = month + '_' + r.i;
+                            if (!itemAgg[key]) {
+                                itemAgg[key] = { qty: 0, amount: 0, month: month, item_id: r.i };
+                            }
+                            itemAgg[key].qty += r.q;
+                            itemAgg[key].amount += r.a;
+                        }
                     } else {
                         // Aggregate by item_id only (default)
                         for (const r of allRecords) {
@@ -1255,7 +1269,7 @@
                         const prod = PRODUCTS[pid];
                         if (!prod) continue;
 
-                        if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                        if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         // Stock for this specific store
@@ -1282,6 +1296,45 @@
                             store_name: META.stores[storeId] || storeId
                         });
                     }
+                } else if (viewMode === 'by_month' && searchType === 'sales_stock') {
+                    for (const key of Object.keys(itemAgg)) {
+                        const agg = itemAgg[key];
+                        const pid = agg.item_id;
+                        const month = agg.month;
+
+                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
+
+                        const prod = PRODUCTS[pid];
+                        if (!prod) continue;
+
+                        if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
+                        if (!matchConditions(prod, conditions)) continue;
+
+                        let totalStock = 0;
+                        if (prod.stock) {
+                            if (storeFilter !== 'all') {
+                                totalStock = prod.stock[storeFilter] || 0;
+                            } else {
+                                totalStock = prod.stock.total || 0;
+                            }
+                        }
+
+                        if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                        if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                        if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                        results.push({
+                            item_id: pid,
+                            alias: prod.alias || '',
+                            name: prod.name || '',
+                            category: prod.category || '',
+                            price: prod.price || 0,
+                            qty: agg.qty,
+                            amount: Math.round(agg.amount * 100) / 100,
+                            stock_total: totalStock,
+                            month: month
+                        });
+                    }
                 } else {
                     // Default aggregated mode
                     const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
@@ -1292,7 +1345,7 @@
                         const prod = PRODUCTS[pid];
                         if (!prod) continue;
 
-                        if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                        if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         let totalStock = 0;
@@ -1351,6 +1404,7 @@
             const asc = CURRENT_SORT.asc;
             const viewMode = document.getElementById('viewMode').value;
             const isByStore = viewMode === 'by_store';
+            const isByMonth = viewMode === 'by_month';
 
             CURRENT_RESULTS.sort((a, b) => {
                 let va, vb;
@@ -1359,6 +1413,19 @@
                     switch (col) {
                         case 0: return 0;
                         case 1: va = a.store_name || ''; vb = b.store_name || ''; break;
+                        case 2: va = a.alias; vb = b.alias; break;
+                        case 3: va = a.name; vb = b.name; break;
+                        case 4: va = a.category; vb = b.category; break;
+                        case 5: va = a.price; vb = b.price; break;
+                        case 6: va = a.qty; vb = b.qty; break;
+                        case 7: va = a.amount; vb = b.amount; break;
+                        case 8: va = a.stock_total; vb = b.stock_total; break;
+                        default: return 0;
+                    }
+                } else if (isByMonth) {
+                    switch (col) {
+                        case 0: return 0;
+                        case 1: va = a.month || ''; vb = b.month || ''; break;
                         case 2: va = a.alias; vb = b.alias; break;
                         case 3: va = a.name; vb = b.name; break;
                         case 4: va = a.category; vb = b.category; break;
@@ -1417,6 +1484,7 @@
             const viewMode = document.getElementById('viewMode').value;
             const isByStore = viewMode === 'by_store';
 
+            const isByMonth = viewMode === 'by_month';
             // Update table headers based on view mode
             const thead = document.getElementById('mainTableHead');
             if (isByStore) {
@@ -1430,6 +1498,18 @@
                     <th onclick="sortTable(6)">الكمية المباعة<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(7)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(8)">ستوك المعرض<span class="sort-icon">▼</span></th>
+                `;
+            } else if (isByMonth) {
+                thead.innerHTML = `
+                    <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(1)">الشهر<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(2)">Alias<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(3)">اسم المنتج<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(4)">الفئة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(5)">سعر البيع<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(8)">الستوك الحالي<span class="sort-icon">▼</span></th>
                 `;
             } else {
                 thead.innerHTML = `
@@ -1551,7 +1631,7 @@
             let html = '';
             const maxRender = 5000;
             const renderCount = Math.min(results.length, maxRender);
-            const colSpan = isByStore ? 9 : 8;
+            const colSpan = (isByStore || isByMonth) ? 9 : 8;
 
             for (let i = 0; i < renderCount; i++) {
                 const r = results[i];
@@ -1562,6 +1642,20 @@
                     html += `<tr>
                     <td>${i + 1}</td>
                     <td style="font-weight:600;white-space:nowrap">${r.store_name || ''}</td>
+                    <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                    <td>${r.name}</td>
+                    <td>${r.category}</td>
+                    <td>${r.price.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
+                    <td class="stock-cell">
+                        <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
+                    </td>
+                </tr>`;
+                } else if (isByMonth) {
+                    html += `<tr>
+                    <td>${i + 1}</td>
+                    <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.month || ''}</td>
                     <td style="font-family:monospace;font-weight:700">${r.alias}</td>
                     <td>${r.name}</td>
                     <td>${r.category}</td>
@@ -1632,10 +1726,12 @@
 
                     const viewMode = document.getElementById('viewMode').value;
                     const isByStore = viewMode === 'by_store';
+                    const isByMonth = viewMode === 'by_month';
 
                     const rows = CURRENT_RESULTS.map((r, i) => {
                         const row = { '#': i + 1 };
                         if (isByStore) row['المعرض'] = r.store_name || '';
+                        if (isByMonth) row['الشهر'] = r.month || '';
                         row['Alias'] = r.alias;
                         row['اسم المنتج'] = r.name;
                         row['الفئة'] = r.category;
@@ -1664,6 +1760,7 @@
                     // Column widths
                     ws['!cols'] = [
                         { wch: 5 },   // #
+                        ...(isByStore || isByMonth ? [{ wch: 15 }] : []), // Store or Month
                         { wch: 12 },  // Alias
                         { wch: 45 },  // Name
                         { wch: 18 },  // Category
@@ -1951,7 +2048,8 @@
             const dateTo = document.getElementById('dateTo').value;
             const daysCount = calcDays(dateFrom, dateTo);
             const storeFilter = document.getElementById('storeFilter').value;
-            const categoryFilter = document.getElementById('categoryFilter').value;
+            const categoryFilterOptions = Array.from(document.getElementById('categoryFilter').selectedOptions).map(opt => opt.value);
+            const isAllCategories = categoryFilterOptions.includes('all') || categoryFilterOptions.length === 0;
             const conditions = getConditions();
             // 3. QUILTS BY PRICE BRACKET (Detailed by Types)
             // Focus on products where name contains 'لحاف'
@@ -1973,7 +2071,7 @@
                 if (!prod.name) continue;
 
                 // Category Filter (Apply if selected, otherwise ignore)
-                if (categoryFilter !== 'all' && prod.category !== categoryFilter) continue;
+                if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                 // Conditions Filter
                 if (!matchConditions(prod, conditions)) continue;
 
@@ -2105,7 +2203,8 @@
 
                     // Monthly Quilts Sheets (King, Queen, Full, Twin)
                     const conditions = getConditions();
-                    const categoryFilter = document.getElementById('categoryFilter').value;
+                    const categoryFilterOptions = Array.from(document.getElementById('categoryFilter').selectedOptions).map(opt => opt.value);
+            const isAllCategories = categoryFilterOptions.includes('all') || categoryFilterOptions.length === 0;
                     const mnthKingBrackets = [
                         '001-199', '200-299', '300-399', '400-499', '500-599',
                         '600-699', '700-799', '800-899', '900-999', '1000+'
@@ -2126,7 +2225,7 @@
 
                         for (const pid in PRODUCTS) {
                             const p = PRODUCTS[pid];
-                            if (categoryFilter !== 'all' && p.category !== categoryFilter) continue;
+                            if (!isAllCategories && !categoryFilterOptions.includes(p.category || '')) continue;
                             if (!matchConditions(p, conditions)) continue;
 
                             if (qType.catMatch.includes(p.category)) {
@@ -2273,6 +2372,9 @@
                     const storeFilter = document.getElementById('storeFilter').value;
                     const storeName = storeFilter === 'all' ? 'الكل' : (META.stores[storeFilter] || storeFilter);
                     const searchType = document.getElementById('searchType').value;
+                    const viewMode = document.getElementById('viewMode').value;
+                    const isByStore = viewMode === 'by_store';
+                    const isByMonth = viewMode === 'by_month';
 
                     doc.setFontSize(14);
                     doc.text(`تقرير المبيعات والمخزون - ORANGE REP`, 14, 15);
@@ -2281,33 +2383,42 @@
                     const periodStr = searchType === 'stock_only' ? 'المخزون فقط' : `الفترة: ${dateFrom} إلى ${dateTo}`;
                     doc.text(`المعرض: ${storeName} | ${periodStr}`, 14, 22);
 
-                    const tableData = CURRENT_RESULTS.map((r, i) => [
-                        i + 1,
-                        r.alias,
-                        r.name,
-                        r.category,
-                        r.price.toLocaleString('en-US'),
-                        r.qty.toLocaleString('en-US'),
-                        r.amount.toLocaleString('en-US'),
-                        r.stock_total.toLocaleString('en-US')
-                    ]);
+                    const tableData = CURRENT_RESULTS.map((r, i) => {
+                        const base = [
+                            i + 1,
+                            r.alias,
+                            r.name,
+                            r.category,
+                            r.price.toLocaleString('en-US'),
+                            r.qty.toLocaleString('en-US'),
+                            r.amount.toLocaleString('en-US'),
+                            r.stock_total.toLocaleString('en-US')
+                        ];
+                        if (isByStore) base.splice(1, 0, r.store_name || '');
+                        else if (isByMonth) base.splice(1, 0, r.month || '');
+                        return base;
+                    });
 
                     // Add Summary row at the end
                     const sumQty = CURRENT_RESULTS.reduce((s, r) => s + r.qty, 0);
                     const sumAmt = CURRENT_RESULTS.reduce((s, r) => s + r.amount, 0);
                     const sumStk = CURRENT_RESULTS.reduce((s, r) => s + r.stock_total, 0);
-                    tableData.push([
+                    const sumRow = [
                         '', 'الإجمالي', '-', '-', '-',
                         sumQty.toLocaleString('en-US'),
                         sumAmt.toLocaleString('en-US'),
                         sumStk.toLocaleString('en-US')
-                    ]);
+                    ];
+                    if (isByStore || isByMonth) sumRow.splice(1, 0, '-');
+                    tableData.push(sumRow);
+                    
+                    let headerRow = ['#', 'Alias', 'اسم المنتج', 'الفئة', 'سعر البيع', 'الكمية', 'المبيعات', 'الستوك'];
+                    if (isByStore) headerRow.splice(1, 0, 'المعرض');
+                    else if (isByMonth) headerRow.splice(1, 0, 'الشهر');
 
                     doc.autoTable({
                         startY: 28,
-                        head: [[
-                            '#', 'Alias', 'اسم المنتج', 'الفئة', 'سعر البيع', 'الكمية', 'المبيعات', 'الستوك'
-                        ]],
+                        head: [headerRow],
                         body: tableData,
                         theme: 'grid',
                         styles: { font: 'Amiri', halign: 'right', fontSize: 8 },
