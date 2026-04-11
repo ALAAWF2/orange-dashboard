@@ -2924,6 +2924,23 @@
                 // === 4. Store Rhythm Data (hourly heatmap) ===
                 const rhythmSales = {}; // { dayOfWeek: { hour: { sales, trans, count } } }
                 const rhythmVisitors = {}; // { dayOfWeek: { hour: visitors } }
+                
+                const rhythmDetSales = {};
+                const rhythmDetVisitors = {};
+                const rhythmDateKeys = [];
+                let loopDt = new Date(startDate);
+                while (loopDt <= endDate) {
+                    const ds = loopDt.toLocaleDateString('en-CA');
+                    rhythmDateKeys.push({ dateStr: ds, dow: loopDt.getDay() });
+                    rhythmDetSales[ds] = {};
+                    rhythmDetVisitors[ds] = {};
+                    for (let h = 0; h < 24; h++) {
+                        rhythmDetSales[ds][h] = { sales: 0, trans: 0, count: 0 };
+                        rhythmDetVisitors[ds][h] = 0;
+                    }
+                    loopDt.setDate(loopDt.getDate() + 1);
+                }
+
                 for (let d = 0; d < 7; d++) {
                     rhythmSales[d] = {};
                     rhythmVisitors[d] = {};
@@ -2932,15 +2949,23 @@
                         rhythmVisitors[d][h] = 0;
                     }
                 }
+                
                 if (rawData.sales_hourly) {
                     rawData.sales_hourly.forEach(([d, s, h, amt, bills]) => {
                         if (s != storeId || d < startStr || d > endStr) return;
                         const dow = new Date(d).getDay();
                         let safeH = h >= 24 ? h % 24 : h;
                         safeH = Math.max(0, Math.min(23, safeH));
+                        
                         rhythmSales[dow][safeH].sales += amt || 0;
                         rhythmSales[dow][safeH].trans += bills || 0;
                         rhythmSales[dow][safeH].count++;
+
+                        if (rhythmDetSales[d]) {
+                            rhythmDetSales[d][safeH].sales += amt || 0;
+                            rhythmDetSales[d][safeH].trans += bills || 0;
+                            rhythmDetSales[d][safeH].count++;
+                        }
                     });
                 }
                 if (rawData.visitors_hourly) {
@@ -2949,7 +2974,12 @@
                         const dow = new Date(d).getDay();
                         let safeH = h >= 24 ? h % 24 : h;
                         safeH = Math.max(0, Math.min(23, safeH));
+                        
                         rhythmVisitors[dow][safeH] += v || 0;
+
+                        if (rhythmDetVisitors[d]) {
+                            rhythmDetVisitors[d][safeH] += v || 0;
+                        }
                     });
                 }
 
