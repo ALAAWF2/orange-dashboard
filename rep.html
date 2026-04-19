@@ -226,6 +226,81 @@
             background: #ffeef0;
         }
 
+        /* Custom Checkbox Dropdown */
+        .custom-dropdown {
+            position: relative;
+            width: 100%;
+            height: 42px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .dropdown-header {
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #444;
+            height: 100%;
+        }
+
+        .dropdown-header .arrow {
+            font-size: 0.8rem;
+            color: #888;
+            transition: transform 0.2s;
+        }
+
+        .custom-dropdown.open .arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-list {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 8px 0;
+        }
+
+        .custom-dropdown.open .dropdown-list {
+            display: block;
+        }
+
+        .dropdown-list label {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #333;
+            transition: background 0.1s;
+            margin: 0;
+        }
+
+        .dropdown-list label:hover {
+            background: #f8f9fa;
+        }
+
+        .dropdown-list input[type="checkbox"] {
+            margin-left: 10px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--orange);
+            cursor: pointer;
+        }
+
         /* ACTION BUTTONS */
         .action-bar {
             display: flex;
@@ -707,17 +782,33 @@
             </div>
             <div class="filter-group">
                 <label>🏪 المعرض</label>
-                <select id="storeFilter" multiple style="height: 90px; overflow-y: auto;">
+                <div class="custom-dropdown" id="storeDropdown" onclick="this.classList.toggle('open')">
+                    <div class="dropdown-header">
+                        <span id="storeDropdownText">الكل</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="dropdown-list" id="storeDropdownList" onclick="event.stopPropagation()">
+                        <label><input type="checkbox" value="all" checked> الكل</label>
+                    </div>
+                </div>
+                <select id="storeFilter" multiple style="display:none;">
                     <option value="all" selected>الكل</option>
                 </select>
-                <small style="font-size: 0.65rem; color: #888;">استخدم Ctrl للتحديد المتباعد</small>
             </div>
             <div class="filter-group">
                 <label>📂 الفئة</label>
-                <select id="categoryFilter" multiple style="height: 90px; overflow-y: auto;">
+                <div class="custom-dropdown" id="catDropdown" onclick="this.classList.toggle('open')">
+                    <div class="dropdown-header">
+                        <span id="catDropdownText">الكل</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="dropdown-list" id="catDropdownList" onclick="event.stopPropagation()">
+                        <label><input type="checkbox" value="all" checked> الكل</label>
+                    </div>
+                </div>
+                <select id="categoryFilter" multiple style="display:none;">
                     <option value="all" selected>الكل</option>
                 </select>
-                <small style="font-size: 0.65rem; color: #888;">استخدم Ctrl للتحديد المتباعد</small>
             </div>
             <div class="filter-group">
                 <label>📦 حالة المخزون</label>
@@ -1010,19 +1101,75 @@
             hideLoading();
         }
 
+        function setupCustomDropdown(listId, selectId, textId) {
+            const list = document.getElementById(listId);
+            const select = document.getElementById(selectId);
+            const textSpan = document.getElementById(textId);
+            
+            list.addEventListener('change', (e) => {
+                if (e.target.type !== 'checkbox') return;
+                const checkboxes = Array.from(list.querySelectorAll('input[type="checkbox"]'));
+                const allCb = checkboxes.find(c => c.value === 'all');
+                
+                if (e.target.value === 'all' && e.target.checked) {
+                    checkboxes.forEach(c => { if (c !== e.target) c.checked = false; });
+                } else if (e.target.value !== 'all' && e.target.checked) {
+                    if (allCb) allCb.checked = false;
+                }
+
+                const checkedBoxes = checkboxes.filter(c => c.checked);
+                if (checkedBoxes.length === 0 && allCb) {
+                    allCb.checked = true;
+                    checkedBoxes.push(allCb);
+                }
+
+                const selectedValues = checkedBoxes.map(c => c.value);
+
+                Array.from(select.options).forEach(opt => {
+                    opt.selected = selectedValues.includes(opt.value);
+                });
+
+                if (allCb && allCb.checked) {
+                    textSpan.textContent = 'الكل';
+                } else if (selectedValues.length === 1) {
+                    textSpan.textContent = select.querySelector(`option[value="${selectedValues[0]}"]`) ? select.querySelector(`option[value="${selectedValues[0]}"]`).textContent : selectedValues[0];
+                } else {
+                    textSpan.textContent = selectedValues.length + ' محدد';
+                }
+            });
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-dropdown')) {
+                document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.remove('open'));
+            }
+        });
+
         function populateFilters() {
             // Stores
             const storeSelect = document.getElementById('storeFilter');
+            const storeList = document.getElementById('storeDropdownList');
             const stores = Object.entries(META.stores).sort((a, b) => a[1].localeCompare(b[1]));
             stores.forEach(([id, name]) => {
                 storeSelect.add(new Option(name, id));
+                const lbl = document.createElement('label');
+                lbl.innerHTML = `<input type="checkbox" value="${id}"> ${name}`;
+                storeList.appendChild(lbl);
             });
 
             // Categories
             const catSelect = document.getElementById('categoryFilter');
+            const catList = document.getElementById('catDropdownList');
             META.categories.sort().forEach(cat => {
                 catSelect.add(new Option(cat, cat));
+                const lbl = document.createElement('label');
+                lbl.innerHTML = `<input type="checkbox" value="${cat}"> ${cat}`;
+                catList.appendChild(lbl);
             });
+
+            setupCustomDropdown('storeDropdownList', 'storeFilter', 'storeDropdownText');
+            setupCustomDropdown('catDropdownList', 'categoryFilter', 'catDropdownText');
         }
 
         function setDefaultDates() {
@@ -2498,6 +2645,18 @@
 
             document.getElementById('storeFilter').value = 'all';
             document.getElementById('categoryFilter').value = 'all';
+
+            ['storeDropdownList', 'catDropdownList'].forEach(listId => {
+                const list = document.getElementById(listId);
+                if (list) {
+                    list.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = (c.value === 'all'));
+                    const allCb = list.querySelector('input[value="all"]');
+                    if (allCb) {
+                        allCb.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            });
+
             setDefaultDates();
 
             // Reset conditions
