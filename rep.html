@@ -707,9 +707,10 @@
             </div>
             <div class="filter-group">
                 <label>🏪 المعرض</label>
-                <select id="storeFilter">
-                    <option value="all">الكل</option>
+                <select id="storeFilter" multiple style="height: 90px; overflow-y: auto;">
+                    <option value="all" selected>الكل</option>
                 </select>
+                <small style="font-size: 0.65rem; color: #888;">استخدم Ctrl للتحديد المتباعد</small>
             </div>
             <div class="filter-group">
                 <label>📂 الفئة</label>
@@ -1173,7 +1174,8 @@
             const searchType = document.getElementById('searchType').value;
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
-            const storeFilter = document.getElementById('storeFilter').value;
+            const storeFilterOptions = Array.from(document.getElementById('storeFilter').selectedOptions).map(opt => opt.value);
+            const isAllStores = storeFilterOptions.includes('all') || storeFilterOptions.length === 0;
             const categoryFilterOptions = Array.from(document.getElementById('categoryFilter').selectedOptions).map(opt => opt.value);
             const isAllCategories = categoryFilterOptions.includes('all') || categoryFilterOptions.length === 0;
             const stockFilter = document.getElementById('stockFilter').value;
@@ -1213,8 +1215,8 @@
                     allRecords = allRecords.filter(r => r.d >= dateFrom && r.d <= dateTo);
 
                     // 3. Filter by store
-                    if (storeFilter !== 'all') {
-                        allRecords = allRecords.filter(r => r.s === storeFilter);
+                    if (!isAllStores) {
+                        allRecords = allRecords.filter(r => storeFilterOptions.includes(r.s));
                     }
 
                     window.CURRENT_ALL_RECORDS = allRecords;
@@ -1312,8 +1314,12 @@
 
                         let totalStock = 0;
                         if (prod.stock) {
-                            if (storeFilter !== 'all') {
-                                totalStock = prod.stock[storeFilter] || 0;
+                            if (!isAllStores) {
+                                storeFilterOptions.forEach(sId => {
+                                    if (sId !== 'all') {
+                                        totalStock += prod.stock[sId] || 0;
+                                    }
+                                });
                             } else {
                                 totalStock = prod.stock.total || 0;
                             }
@@ -1336,7 +1342,7 @@
                         });
                     }
                 } else {
-                    // Default aggregated mode
+                    // Default aggregated mode (and fallback for stock_only with by_store)
                     const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
 
                     for (const pid of pidsToProcess) {
@@ -1348,37 +1354,75 @@
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
-                        let totalStock = 0;
-                        let stockByStore = {};
-                        if (prod.stock) {
-                            if (storeFilter !== 'all') {
-                                totalStock = prod.stock[storeFilter] || 0;
-                                stockByStore = { [storeFilter]: totalStock };
+                        if (viewMode === 'by_store' && searchType === 'stock_only') {
+                            let storesToProcess = [];
+                            if (!isAllStores) {
+                                storesToProcess = storeFilterOptions.filter(s => s !== 'all');
                             } else {
-                                totalStock = prod.stock.total || 0;
-                                stockByStore = { ...prod.stock };
-                                delete stockByStore.total;
+                                if (prod.stock) {
+                                    storesToProcess = Object.keys(prod.stock).filter(k => k !== 'total');
+                                }
                             }
+
+                            for (const storeId of storesToProcess) {
+                                let totalStock = prod.stock ? (prod.stock[storeId] || 0) : 0;
+                                
+                                if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                                if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                                if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                                results.push({
+                                    item_id: pid,
+                                    alias: prod.alias || '',
+                                    name: prod.name || '',
+                                    category: prod.category || '',
+                                    price: prod.price || 0,
+                                    qty: 0,
+                                    amount: 0,
+                                    stock_total: totalStock,
+                                    stock_by_store: { [storeId]: totalStock },
+                                    store_id: storeId,
+                                    store_name: META.stores[storeId] || storeId
+                                });
+                            }
+                        } else {
+                            let totalStock = 0;
+                            let stockByStore = {};
+                            if (prod.stock) {
+                                if (!isAllStores) {
+                                    storeFilterOptions.forEach(sId => {
+                                        if (sId !== 'all') {
+                                            const s = prod.stock[sId] || 0;
+                                            totalStock += s;
+                                            stockByStore[sId] = s;
+                                        }
+                                    });
+                                } else {
+                                    totalStock = prod.stock.total || 0;
+                                    stockByStore = { ...prod.stock };
+                                    delete stockByStore.total;
+                                }
+                            }
+
+                            if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                            if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                            if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                            const qty = searchType === 'sales_stock' ? itemAgg[pid].qty : 0;
+                            const amount = searchType === 'sales_stock' ? itemAgg[pid].amount : 0;
+
+                            results.push({
+                                item_id: pid,
+                                alias: prod.alias || '',
+                                name: prod.name || '',
+                                category: prod.category || '',
+                                price: prod.price || 0,
+                                qty: qty,
+                                amount: Math.round(amount * 100) / 100,
+                                stock_total: totalStock,
+                                stock_by_store: stockByStore
+                            });
                         }
-
-                        if (stockFilter === 'in_stock' && totalStock <= 0) continue;
-                        if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
-                        if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
-
-                        const qty = searchType === 'sales_stock' ? itemAgg[pid].qty : 0;
-                        const amount = searchType === 'sales_stock' ? itemAgg[pid].amount : 0;
-
-                        results.push({
-                            item_id: pid,
-                            alias: prod.alias || '',
-                            name: prod.name || '',
-                            category: prod.category || '',
-                            price: prod.price || 0,
-                            qty: qty,
-                            amount: Math.round(amount * 100) / 100,
-                            stock_total: totalStock,
-                            stock_by_store: stockByStore
-                        });
                     }
                 }
 
