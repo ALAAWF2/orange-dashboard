@@ -812,8 +812,17 @@
             </div>
             <div class="filter-group">
                 <label>🎉 العروض</label>
-                <select id="offerFilter">
-                    <option value="all">الكل</option>
+                <div class="custom-dropdown" id="offerDropdown" onclick="this.classList.toggle('open')">
+                    <div class="dropdown-header">
+                        <span id="offerDropdownText">الكل</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="dropdown-list" id="offerDropdownList" onclick="event.stopPropagation()">
+                        <label><input type="checkbox" value="all" checked> الكل</label>
+                    </div>
+                </div>
+                <select id="offerFilter" multiple style="display:none;">
+                    <option value="all" selected>الكل</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -1184,13 +1193,18 @@
 
             // Offers
             const offerSelect = document.getElementById('offerFilter');
+            const offerList = document.getElementById('offerDropdownList');
             OFFERS.sort((a, b) => b.id.localeCompare(a.id)).forEach(offer => {
                 const optName = `[${offer.id}] ${offer.name || ''}`;
                 offerSelect.add(new Option(optName, offer.id));
+                const lbl = document.createElement('label');
+                lbl.innerHTML = `<input type="checkbox" value="${offer.id}"> ${optName}`;
+                offerList.appendChild(lbl);
             });
 
             setupCustomDropdown('storeDropdownList', 'storeFilter', 'storeDropdownText');
             setupCustomDropdown('catDropdownList', 'categoryFilter', 'catDropdownText');
+            setupCustomDropdown('offerDropdownList', 'offerFilter', 'offerDropdownText');
         }
 
         function setDefaultDates() {
@@ -1346,25 +1360,27 @@
             const isAllStores = storeFilterOptions.includes('all') || storeFilterOptions.length === 0;
             const categoryFilterOptions = Array.from(document.getElementById('categoryFilter').selectedOptions).map(opt => opt.value);
             const isAllCategories = categoryFilterOptions.includes('all') || categoryFilterOptions.length === 0;
-            const offerFilter = document.getElementById('offerFilter').value;
+            const offerFilterOptions = Array.from(document.getElementById('offerFilter').selectedOptions).map(opt => opt.value);
+            const isAllOffers = offerFilterOptions.includes('all') || offerFilterOptions.length === 0;
             const stockFilter = document.getElementById('stockFilter').value;
             const viewMode = document.getElementById('viewMode').value;
             const conditions = getConditions();
             
             // Get selected offer object if any
-            let selectedOfferObj = null;
             let selectedOfferItemsSet = new Set();
-            if (offerFilter !== 'all') {
-                selectedOfferObj = OFFERS.find(o => o.id === offerFilter);
-                if (selectedOfferObj && selectedOfferObj.items) {
-                    selectedOfferObj.items.forEach(item => {
-                        if (typeof item === 'object' && item.i) {
-                            selectedOfferItemsSet.add(item.i);
-                        } else if (typeof item === 'string') {
-                            selectedOfferItemsSet.add(item);
-                        }
-                    });
-                }
+            if (!isAllOffers) {
+                const selectedOffers = OFFERS.filter(o => offerFilterOptions.includes(o.id));
+                selectedOffers.forEach(o => {
+                    if (o.items) {
+                        o.items.forEach(item => {
+                            if (typeof item === 'object' && item.i) {
+                                selectedOfferItemsSet.add(item.i);
+                            } else if (typeof item === 'string') {
+                                selectedOfferItemsSet.add(item);
+                            }
+                        });
+                    }
+                });
             }
 
             if (searchType === 'sales_stock' && (!dateFrom || !dateTo)) {
