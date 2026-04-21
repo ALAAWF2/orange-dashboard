@@ -811,6 +811,12 @@
                 </select>
             </div>
             <div class="filter-group">
+                <label>🎉 العروض</label>
+                <select id="offerFilter">
+                    <option value="all">الكل</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <label>📦 حالة المخزون</label>
                 <select id="stockFilter">
                     <option value="all">الكل</option>
@@ -1068,6 +1074,7 @@
         let META = null;
         let PRODUCTS = null;
         let CATEGORY_MAP = {}; // Code -> Category Name from new cate ceo.xlsx
+        let OFFERS = [];
         let SALES_CACHE = {};  // month -> records[]
         let CURRENT_RESULTS = []; // for sorting & export
         let CURRENT_SORT = { col: 6, asc: false }; // default sort by amount desc
@@ -1078,10 +1085,11 @@
         async function init() {
             showLoading('جاري تحميل البيانات الأساسية...');
             try {
-                const [metaRes, prodRes, catMapRes] = await Promise.all([
+                const [metaRes, prodRes, catMapRes, offersRes] = await Promise.all([
                     fetch('ceo_data/meta.json'),
                     fetch('ceo_data/products.json'),
-                    fetch('categories_map.json').catch(() => null) // Optional, won't crash if missing
+                    fetch('categories_map.json').catch(() => null), // Optional, won't crash if missing
+                    fetch('offers_data.json').catch(() => null)
                 ]);
                 META = await metaRes.json();
                 PRODUCTS = (await prodRes.json()).products;
@@ -1090,6 +1098,12 @@
                     CATEGORY_MAP = await catMapRes.json();
                 } else {
                     console.warn("categories_map.json not found or could not be loaded.");
+                }
+
+                if (offersRes && offersRes.ok) {
+                    OFFERS = await offersRes.json();
+                } else {
+                    console.warn("offers_data.json not found or could not be loaded.");
                 }
 
                 populateFilters();
@@ -1166,6 +1180,13 @@
                 const lbl = document.createElement('label');
                 lbl.innerHTML = `<input type="checkbox" value="${cat}"> ${cat}`;
                 catList.appendChild(lbl);
+            });
+
+            // Offers
+            const offerSelect = document.getElementById('offerFilter');
+            OFFERS.sort((a, b) => b.id.localeCompare(a.id)).forEach(offer => {
+                const optName = `[${offer.id}] ${offer.name || ''}`;
+                offerSelect.add(new Option(optName, offer.id));
             });
 
             setupCustomDropdown('storeDropdownList', 'storeFilter', 'storeDropdownText');
@@ -1325,9 +1346,16 @@
             const isAllStores = storeFilterOptions.includes('all') || storeFilterOptions.length === 0;
             const categoryFilterOptions = Array.from(document.getElementById('categoryFilter').selectedOptions).map(opt => opt.value);
             const isAllCategories = categoryFilterOptions.includes('all') || categoryFilterOptions.length === 0;
+            const offerFilter = document.getElementById('offerFilter').value;
             const stockFilter = document.getElementById('stockFilter').value;
             const viewMode = document.getElementById('viewMode').value;
             const conditions = getConditions();
+            
+            // Get selected offer object if any
+            let selectedOfferObj = null;
+            if (offerFilter !== 'all') {
+                selectedOfferObj = OFFERS.find(o => o.id === offerFilter);
+            }
 
             if (searchType === 'sales_stock' && (!dateFrom || !dateTo)) {
                 alert('الرجاء تحديد التاريخ');
@@ -1419,6 +1447,7 @@
                         if (!prod) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
+                        if (selectedOfferObj && !selectedOfferObj.items.includes(pid)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         // Stock for this specific store
@@ -1457,6 +1486,7 @@
                         if (!prod) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
+                        if (selectedOfferObj && !selectedOfferObj.items.includes(pid)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         let totalStock = 0;
@@ -1499,6 +1529,7 @@
                         if (!prod) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
+                        if (selectedOfferObj && !selectedOfferObj.items.includes(pid)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         if (viewMode === 'by_store' && searchType === 'stock_only') {
