@@ -886,6 +886,7 @@
             <button class="btn-excel" id="btnTopCategoryExcel" onclick="exportTopCategoryExcel()"
                 style="display:none; background:#8e44ad;">📥 تقرير الاكثر مبيعا-فئات</button>
             <button class="btn-pdf" id="btnPdf" onclick="exportPDF()" disabled>📄 تصدير PDF</button>
+            <button class="btn-excel" id="btnFullStockExcel" onclick="exportFullStockExcel()" style="background:#2980b9;">📦 استخراج الستوك بالكامل</button>
             <button class="btn-reset" onclick="resetFilters()">🔄 إعادة تعيين</button>
         </div>
     </div>
@@ -2281,6 +2282,73 @@
                 } catch (err) {
                     console.error('Export Top Category error:', err);
                     alert('خطأ في تصدير التقرير: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
+        // =====================
+        // FULL STOCK EXCEL EXPORT
+        // =====================
+        function exportFullStockExcel() {
+            if (!PRODUCTS || !META || !META.stores) {
+                alert('البيانات غير مكتملة، يرجى المحاولة مرة أخرى.');
+                return;
+            }
+
+            showLoading('جاري تصدير الستوك بالكامل...');
+
+            setTimeout(() => {
+                try {
+                    const storesEntries = Object.entries(META.stores);
+                    const rows = [];
+
+                    for (const pid in PRODUCTS) {
+                        const prod = PRODUCTS[pid];
+                        const stock = prod.stock || {};
+                        
+                        const mappedCat = CATEGORY_MAP[prod.alias] || CATEGORY_MAP[pid] || prod.category || 'غير مصنف';
+
+                        const rowData = {
+                            'كود المادة (Item Code)': prod.item_id || pid,
+                            'الاسم (Alias)': prod.alias || '',
+                            'اسم المنتج': prod.name || '',
+                            'الفئة': mappedCat
+                        };
+
+                        // Add stock per store
+                        storesEntries.forEach(([storeId, storeName]) => {
+                            rowData[storeName] = stock[storeId] || 0;
+                        });
+
+                        rowData['إجمالي الستوك'] = stock.total || 0;
+                        
+                        rows.push(rowData);
+                    }
+
+                    // Sort by category then by name
+                    rows.sort((a, b) => {
+                        if (a['الفئة'] !== b['الفئة']) return a['الفئة'].localeCompare(b['الفئة']);
+                        return a['اسم المنتج'].localeCompare(b['اسم المنتج']);
+                    });
+
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.json_to_sheet(rows);
+
+                    // Auto format columns widths
+                    const cols = [{ wch: 18 }, { wch: 15 }, { wch: 45 }, { wch: 20 }];
+                    storesEntries.forEach(() => cols.push({ wch: 12 }));
+                    cols.push({ wch: 15 }); // Total
+                    ws['!cols'] = cols;
+
+                    XLSX.utils.book_append_sheet(wb, ws, 'الستوك الكامل');
+
+                    const today = new Date().toISOString().split('T')[0];
+                    XLSX.writeFile(wb, `Full_Stock_Report_${today}.xlsx`);
+
+                } catch (err) {
+                    console.error('Export Full Stock error:', err);
+                    alert('خطأ في استخراج الستوك: ' + err.message);
                 }
                 hideLoading();
             }, 100);
