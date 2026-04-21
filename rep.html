@@ -1353,8 +1353,18 @@
             
             // Get selected offer object if any
             let selectedOfferObj = null;
+            let selectedOfferItemsSet = new Set();
             if (offerFilter !== 'all') {
                 selectedOfferObj = OFFERS.find(o => o.id === offerFilter);
+                if (selectedOfferObj && selectedOfferObj.items) {
+                    selectedOfferObj.items.forEach(item => {
+                        if (typeof item === 'object' && item.i) {
+                            selectedOfferItemsSet.add(item.i);
+                        } else if (typeof item === 'string') {
+                            selectedOfferItemsSet.add(item);
+                        }
+                    });
+                }
             }
 
             if (searchType === 'sales_stock' && (!dateFrom || !dateTo)) {
@@ -1447,7 +1457,7 @@
                         if (!prod) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
-                        if (selectedOfferObj && !selectedOfferObj.items.includes(pid)) continue;
+                        if (selectedOfferObj && !selectedOfferItemsSet.has(pid)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         // Stock for this specific store
@@ -1486,7 +1496,7 @@
                         if (!prod) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
-                        if (selectedOfferObj && !selectedOfferObj.items.includes(pid)) continue;
+                        if (selectedOfferObj && !selectedOfferItemsSet.has(pid)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         let totalStock = 0;
@@ -1529,7 +1539,7 @@
                         if (!prod) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
-                        if (selectedOfferObj && !selectedOfferObj.items.includes(pid)) continue;
+                        if (selectedOfferObj && !selectedOfferItemsSet.has(pid)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         if (viewMode === 'by_store' && searchType === 'stock_only') {
