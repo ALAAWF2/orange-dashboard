@@ -262,9 +262,11 @@
             display: none;
             position: absolute;
             top: calc(100% + 4px);
-            left: 0;
             right: 0;
-            max-height: 250px;
+            min-width: 100%;
+            width: max-content;
+            max-width: 400px;
+            max-height: 350px;
             overflow-y: auto;
             background: #fff;
             border: 1px solid #ddd;
@@ -287,6 +289,8 @@
             color: #333;
             transition: background 0.1s;
             margin: 0;
+            white-space: normal;
+            line-height: 1.4;
         }
 
         .dropdown-list label:hover {
@@ -1194,7 +1198,14 @@
             // Offers
             const offerSelect = document.getElementById('offerFilter');
             const offerList = document.getElementById('offerDropdownList');
-            OFFERS.sort((a, b) => b.id.localeCompare(a.id)).forEach(offer => {
+            OFFERS.sort((a, b) => {
+                const dateA = a.start || "";
+                const dateB = b.start || "";
+                if (dateA !== dateB) {
+                    return dateB.localeCompare(dateA); // Newest first
+                }
+                return b.id.localeCompare(a.id); // Fallback
+            }).forEach(offer => {
                 const optName = `[${offer.id}] ${offer.name || ''}`;
                 offerSelect.add(new Option(optName, offer.id));
                 const lbl = document.createElement('label');
