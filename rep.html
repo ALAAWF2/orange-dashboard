@@ -844,6 +844,7 @@
                     <option value="by_item">مجمع حسب المنتج</option>
                     <option value="by_store">مفصل حسب المعرض</option>
                     <option value="by_month">مفصل حسب الشهر</option>
+                    <option value="by_week">مفصل حسب الاسبوع</option>
                 </select>
             </div>
         </div>
@@ -1336,6 +1337,14 @@
         // =====================
         // DATA LOADING
         // =====================
+        function getWeekNumber(dateString) {
+            const date = new Date(dateString);
+            const startOfYear = new Date(date.getFullYear(), 0, 1);
+            const pastDaysOfYear = (date - startOfYear) / 86400000;
+            const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+            return `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+        }
+
         function getRequiredMonths(from, to) {
             const months = [];
             const startMonth = from.substring(0, 7); // YYYY-MM
@@ -1456,6 +1465,17 @@
                             itemAgg[key].qty += r.q;
                             itemAgg[key].amount += r.a;
                         }
+                    } else if (viewMode === 'by_week') {
+                        // Aggregate by week + item_id
+                        for (const r of allRecords) {
+                            const week = getWeekNumber(r.d);
+                            const key = week + '_' + r.i;
+                            if (!itemAgg[key]) {
+                                itemAgg[key] = { qty: 0, amount: 0, week: week, item_id: r.i };
+                            }
+                            itemAgg[key].qty += r.q;
+                            itemAgg[key].amount += r.a;
+                        }
                     } else {
                         // Aggregate by item_id only (default)
                         for (const r of allRecords) {
@@ -1512,11 +1532,11 @@
                             store_name: META.stores[storeId] || storeId
                         });
                     }
-                } else if (viewMode === 'by_month' && searchType === 'sales_stock') {
+                } else if (viewMode === 'by_month' || viewMode === 'by_week') {
                     for (const key of Object.keys(itemAgg)) {
                         const agg = itemAgg[key];
                         const pid = agg.item_id;
-                        const month = agg.month;
+                        const period = agg.month || agg.week;
 
                         if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
@@ -1553,7 +1573,9 @@
                             qty: agg.qty,
                             amount: Math.round(agg.amount * 100) / 100,
                             stock_total: totalStock,
-                            month: month
+                            month: agg.month,
+                            week: agg.week,
+                            period: period
                         });
                     }
                 } else {
@@ -1665,6 +1687,7 @@
             const viewMode = document.getElementById('viewMode').value;
             const isByStore = viewMode === 'by_store';
             const isByMonth = viewMode === 'by_month';
+            const isByWeek = viewMode === 'by_week';
 
             CURRENT_RESULTS.sort((a, b) => {
                 let va, vb;
@@ -1682,10 +1705,10 @@
                         case 8: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
-                } else if (isByMonth) {
+                } else if (isByMonth || isByWeek) {
                     switch (col) {
                         case 0: return 0;
-                        case 1: va = a.month || ''; vb = b.month || ''; break;
+                        case 1: va = a.period || ''; vb = b.period || ''; break;
                         case 2: va = a.alias; vb = b.alias; break;
                         case 3: va = a.name; vb = b.name; break;
                         case 4: va = a.category; vb = b.category; break;
@@ -1743,8 +1766,9 @@
             const results = CURRENT_RESULTS;
             const viewMode = document.getElementById('viewMode').value;
             const isByStore = viewMode === 'by_store';
-
             const isByMonth = viewMode === 'by_month';
+            const isByWeek = viewMode === 'by_week';
+
             // Update table headers based on view mode
             const thead = document.getElementById('mainTableHead');
             if (isByStore) {
@@ -1759,10 +1783,11 @@
                     <th onclick="sortTable(7)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(8)">ستوك المعرض<span class="sort-icon">▼</span></th>
                 `;
-            } else if (isByMonth) {
+            } else if (isByMonth || isByWeek) {
+                const label = isByMonth ? 'الشهر' : 'الاسبوع';
                 thead.innerHTML = `
                     <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(1)">الشهر<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(1)">${label}<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(2)">Alias<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(3)">اسم المنتج<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(4)">الفئة<span class="sort-icon">▼</span></th>
@@ -1891,7 +1916,7 @@
             let html = '';
             const maxRender = 5000;
             const renderCount = Math.min(results.length, maxRender);
-            const colSpan = (isByStore || isByMonth) ? 9 : 8;
+            const colSpan = (isByStore || isByMonth || isByWeek) ? 9 : 8;
 
             for (let i = 0; i < renderCount; i++) {
                 const r = results[i];
@@ -1912,10 +1937,10 @@
                         <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
                     </td>
                 </tr>`;
-                } else if (isByMonth) {
+                } else if (isByMonth || isByWeek) {
                     html += `<tr>
                     <td>${i + 1}</td>
-                    <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.month || ''}</td>
+                    <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.period || ''}</td>
                     <td style="font-family:monospace;font-weight:700">${r.alias}</td>
                     <td>${r.name}</td>
                     <td>${r.category}</td>
@@ -1987,11 +2012,13 @@
                     const viewMode = document.getElementById('viewMode').value;
                     const isByStore = viewMode === 'by_store';
                     const isByMonth = viewMode === 'by_month';
+                    const isByWeek = viewMode === 'by_week';
 
                     const rows = CURRENT_RESULTS.map((r, i) => {
                         const row = { '#': i + 1 };
                         if (isByStore) row['المعرض'] = r.store_name || '';
                         if (isByMonth) row['الشهر'] = r.month || '';
+                        if (isByWeek) row['الاسبوع'] = r.week || '';
                         row['Alias'] = r.alias;
                         row['اسم المنتج'] = r.name;
                         row['الفئة'] = r.category;
@@ -2020,7 +2047,7 @@
                     // Column widths
                     ws['!cols'] = [
                         { wch: 5 },   // #
-                        ...(isByStore || isByMonth ? [{ wch: 15 }] : []), // Store or Month
+                        ...(isByStore || isByMonth || isByWeek ? [{ wch: 15 }] : []), // Store, Month, or Week
                         { wch: 12 },  // Alias
                         { wch: 45 },  // Name
                         { wch: 18 },  // Category
