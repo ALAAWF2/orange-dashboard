@@ -845,6 +845,7 @@
                     <option value="by_store">مفصل حسب المعرض</option>
                     <option value="by_month">مفصل حسب الشهر</option>
                     <option value="by_week">مفصل حسب الاسبوع</option>
+                    <option value="by_offer">مفصل حسب العرض (ROI)</option>
                 </select>
             </div>
         </div>
@@ -1090,6 +1091,7 @@
         let PRODUCTS = null;
         let CATEGORY_MAP = {}; // Code -> Category Name from new cate ceo.xlsx
         let OFFERS = [];
+        let MANAGEMENT_DATA = null;
         let SALES_CACHE = {};  // month -> records[]
         let CURRENT_RESULTS = []; // for sorting & export
         let CURRENT_SORT = { col: 6, asc: false }; // default sort by amount desc
@@ -1100,11 +1102,12 @@
         async function init() {
             showLoading('جاري تحميل البيانات الأساسية...');
             try {
-                const [metaRes, prodRes, catMapRes, offersRes] = await Promise.all([
+                const [metaRes, prodRes, catMapRes, offersRes, mgmtRes] = await Promise.all([
                     fetch('ceo_data/meta.json'),
                     fetch('ceo_data/products.json'),
                     fetch('categories_map.json').catch(() => null), // Optional, won't crash if missing
-                    fetch('offers_data.json').catch(() => null)
+                    fetch('offers_data.json').catch(() => null),
+                    fetch('management_data.json').catch(() => null)
                 ]);
                 META = await metaRes.json();
                 PRODUCTS = (await prodRes.json()).products;
@@ -1119,6 +1122,12 @@
                     OFFERS = await offersRes.json();
                 } else {
                     console.warn("offers_data.json not found or could not be loaded.");
+                }
+
+                if (mgmtRes && mgmtRes.ok) {
+                    MANAGEMENT_DATA = await mgmtRes.json();
+                } else {
+                    console.warn("management_data.json not found or could not be loaded.");
                 }
 
                 populateFilters();
@@ -1476,6 +1485,67 @@
                             itemAgg[key].qty += r.q;
                             itemAgg[key].amount += r.a;
                         }
+                    } else if (viewMode === 'by_offer') {
+                        // Aggregate by offer
+                        for (const offer of OFFERS) {
+                            if (!isAllOffers && !offerFilterOptions.includes(offer.id)) continue;
+                            
+                            const oStart = offer.start || '2000-01-01';
+                            const oEnd = offer.end || '2099-12-31';
+                            
+                            const effStart = dateFrom > oStart ? dateFrom : oStart;
+                            const effEnd = dateTo < oEnd ? dateTo : oEnd;
+                            
+                            if (effStart > effEnd) continue; // No overlap
+
+                            const offerItems = new Set();
+                            if (offer.items) {
+                                offer.items.forEach(item => {
+                                    offerItems.add(typeof item === 'object' ? item.i : item);
+                                });
+                            }
+
+                            itemAgg[offer.id] = { 
+                                qty: 0, amount: 0, discount: 0, 
+                                visitors: 0, 
+                                offer: offer, 
+                                effStart: effStart, 
+                                effEnd: effEnd,
+                                offerItems: offerItems
+                            };
+                        }
+
+                        for (const r of allRecords) {
+                            for (const oid of Object.keys(itemAgg)) {
+                                const agg = itemAgg[oid];
+                                if (r.d >= agg.effStart && r.d <= agg.effEnd && agg.offerItems.has(r.i)) {
+                                    agg.qty += r.q;
+                                    agg.amount += r.a;
+                                    const prod = PRODUCTS[r.i];
+                                    if (prod && prod.price) {
+                                        agg.discount += (prod.price * r.q) - r.a;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (MANAGEMENT_DATA && MANAGEMENT_DATA.visitors) {
+                            for (const v of MANAGEMENT_DATA.visitors) {
+                                const vDate = v[0];
+                                const vStore = v[1];
+                                const vCount = v[2];
+
+                                if (!isAllStores && !storeFilterOptions.includes(vStore)) continue;
+
+                                for (const oid of Object.keys(itemAgg)) {
+                                    const agg = itemAgg[oid];
+                                    if (vDate >= agg.effStart && vDate <= agg.effEnd) {
+                                        agg.visitors += vCount;
+                                    }
+                                }
+                            }
+                        }
+
                     } else {
                         // Aggregate by item_id only (default)
                         for (const r of allRecords) {
@@ -1576,6 +1646,25 @@
                             month: agg.month,
                             week: agg.week,
                             period: period
+                        });
+                    }
+                } else if (viewMode === 'by_offer') {
+                    for (const oid of Object.keys(itemAgg)) {
+                        const agg = itemAgg[oid];
+                        if (agg.qty === 0 && agg.amount === 0) continue; // Skip empty offers
+                        
+                        const financialROI = agg.amount - agg.discount;
+                        const percentROI = agg.discount > 0 ? ((financialROI / agg.discount) * 100) : 0;
+
+                        results.push({
+                            offer_id: oid,
+                            offer_name: agg.offer.name || '',
+                            visitors: agg.visitors,
+                            discount: Math.round(agg.discount * 100) / 100,
+                            qty: agg.qty,
+                            amount: Math.round(agg.amount * 100) / 100,
+                            roi_value: Math.round(financialROI * 100) / 100,
+                            roi_percent: Math.round(percentROI * 10) / 10
                         });
                     }
                 } else {
@@ -1718,6 +1807,18 @@
                         case 8: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
+                } else if (viewMode === 'by_offer') {
+                    switch (col) {
+                        case 0: return 0;
+                        case 1: va = a.offer_name; vb = b.offer_name; break;
+                        case 2: va = a.visitors; vb = b.visitors; break;
+                        case 3: va = a.discount; vb = b.discount; break;
+                        case 4: va = a.qty; vb = b.qty; break;
+                        case 5: va = a.amount; vb = b.amount; break;
+                        case 6: va = a.roi_value; vb = b.roi_value; break;
+                        case 7: va = a.roi_percent; vb = b.roi_percent; break;
+                        default: return 0;
+                    }
                 } else {
                     switch (col) {
                         case 0: return 0;
@@ -1768,10 +1869,22 @@
             const isByStore = viewMode === 'by_store';
             const isByMonth = viewMode === 'by_month';
             const isByWeek = viewMode === 'by_week';
+            const isByOffer = viewMode === 'by_offer';
 
             // Update table headers based on view mode
             const thead = document.getElementById('mainTableHead');
-            if (isByStore) {
+            if (isByOffer) {
+                thead.innerHTML = `
+                    <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(1)">العرض<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(2)">الزوار<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(3)">إجمالي الخصم<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(4)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(5)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">العائد المالي (صافي)<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">العائد %<span class="sort-icon">▼</span></th>
+                `;
+            } else if (isByStore) {
                 thead.innerHTML = `
                     <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(1)">المعرض<span class="sort-icon">▼</span></th>
@@ -1951,6 +2064,18 @@
                         <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
                     </td>
                 </tr>`;
+                } else if (isByOffer) {
+                    const roiColor = r.roi_value >= 0 ? '#27ae60' : '#e74c3c';
+                    html += `<tr>
+                    <td>${i + 1}</td>
+                    <td style="font-weight:600;">${r.offer_name}</td>
+                    <td>${(r.visitors || 0).toLocaleString('en-US')}</td>
+                    <td style="color:#e74c3c;font-weight:700">${r.discount.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:${roiColor}" dir="ltr">${r.roi_value.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:${roiColor}" dir="ltr">${r.roi_percent.toLocaleString('en-US')}%</td>
+                </tr>`;
                 } else {
                     // Aggregated row with tooltip
                     let tooltipHtml = '';
@@ -2013,49 +2138,86 @@
                     const isByStore = viewMode === 'by_store';
                     const isByMonth = viewMode === 'by_month';
                     const isByWeek = viewMode === 'by_week';
+                    const isByOffer = viewMode === 'by_offer';
 
                     const rows = CURRENT_RESULTS.map((r, i) => {
                         const row = { '#': i + 1 };
-                        if (isByStore) row['المعرض'] = r.store_name || '';
-                        if (isByMonth) row['الشهر'] = r.month || '';
-                        if (isByWeek) row['الاسبوع'] = r.week || '';
-                        row['Alias'] = r.alias;
-                        row['اسم المنتج'] = r.name;
-                        row['الفئة'] = r.category;
-                        row['سعر البيع'] = r.price;
-                        row['الكمية المباعة'] = r.qty;
-                        row['إجمالي المبيعات'] = r.amount;
-                        row[isByStore ? 'ستوك المعرض' : 'الستوك الحالي'] = r.stock_total;
+                        if (isByOffer) {
+                            row['العرض'] = r.offer_name || '';
+                            row['الزوار'] = r.visitors || 0;
+                            row['إجمالي الخصم'] = r.discount || 0;
+                            row['الكمية المباعة'] = r.qty || 0;
+                            row['إجمالي المبيعات'] = r.amount || 0;
+                            row['العائد المالي (صافي)'] = r.roi_value || 0;
+                            row['العائد %'] = r.roi_percent || 0;
+                        } else {
+                            if (isByStore) row['المعرض'] = r.store_name || '';
+                            if (isByMonth) row['الشهر'] = r.month || '';
+                            if (isByWeek) row['الاسبوع'] = r.week || '';
+                            row['Alias'] = r.alias;
+                            row['اسم المنتج'] = r.name;
+                            row['الفئة'] = r.category;
+                            row['سعر البيع'] = r.price;
+                            row['الكمية المباعة'] = r.qty;
+                            row['إجمالي المبيعات'] = r.amount;
+                            row[isByStore ? 'ستوك المعرض' : 'الستوك الحالي'] = r.stock_total;
+                        }
                         return row;
                     });
 
                     // Summary row
                     rows.push({});
-                    rows.push({
-                        '#': '',
-                        'Alias': 'الملخص',
-                        'اسم المنتج': `الفترة: ${dateFrom} إلى ${dateTo}`,
-                        'الفئة': `المعرض: ${storeName}`,
-                        'سعر البيع': '',
-                        'الكمية المباعة': CURRENT_RESULTS.reduce((s, r) => s + r.qty, 0),
-                        'إجمالي المبيعات': CURRENT_RESULTS.reduce((s, r) => s + r.amount, 0),
-                        'الستوك الحالي': CURRENT_RESULTS.reduce((s, r) => s + r.stock_total, 0)
-                    });
+                    if (isByOffer) {
+                        rows.push({
+                            '#': '',
+                            'العرض': 'الملخص',
+                            'الزوار': `الفترة: ${dateFrom} إلى ${dateTo}`,
+                            'إجمالي الخصم': CURRENT_RESULTS.reduce((s, r) => s + (r.discount || 0), 0),
+                            'الكمية المباعة': CURRENT_RESULTS.reduce((s, r) => s + (r.qty || 0), 0),
+                            'إجمالي المبيعات': CURRENT_RESULTS.reduce((s, r) => s + (r.amount || 0), 0),
+                            'العائد المالي (صافي)': CURRENT_RESULTS.reduce((s, r) => s + (r.roi_value || 0), 0),
+                            'العائد %': ''
+                        });
+                    } else {
+                        rows.push({
+                            '#': '',
+                            'Alias': 'الملخص',
+                            'اسم المنتج': `الفترة: ${dateFrom} إلى ${dateTo}`,
+                            'الفئة': `المعرض: ${storeName}`,
+                            'سعر البيع': '',
+                            'الكمية المباعة': CURRENT_RESULTS.reduce((s, r) => s + r.qty, 0),
+                            'إجمالي المبيعات': CURRENT_RESULTS.reduce((s, r) => s + r.amount, 0),
+                            'الستوك الحالي': CURRENT_RESULTS.reduce((s, r) => s + r.stock_total, 0)
+                        });
+                    }
 
                     const ws = XLSX.utils.json_to_sheet(rows);
 
                     // Column widths
-                    ws['!cols'] = [
-                        { wch: 5 },   // #
-                        ...(isByStore || isByMonth || isByWeek ? [{ wch: 15 }] : []), // Store, Month, or Week
-                        { wch: 12 },  // Alias
-                        { wch: 45 },  // Name
-                        { wch: 18 },  // Category
-                        { wch: 12 },  // Price
-                        { wch: 14 },  // Qty
-                        { wch: 16 },  // Amount
-                        { wch: 14 }   // Stock
-                    ];
+                    if (isByOffer) {
+                        ws['!cols'] = [
+                            { wch: 5 },   // #
+                            { wch: 30 },  // Offer
+                            { wch: 10 },  // Visitors
+                            { wch: 15 },  // Discount
+                            { wch: 15 },  // Qty
+                            { wch: 15 },  // Amount
+                            { wch: 20 },  // Net ROI
+                            { wch: 15 }   // ROI %
+                        ];
+                    } else {
+                        ws['!cols'] = [
+                            { wch: 5 },   // #
+                            ...(isByStore || isByMonth || isByWeek ? [{ wch: 15 }] : []), // Store, Month, or Week
+                            { wch: 12 },  // Alias
+                            { wch: 45 },  // Name
+                            { wch: 18 },  // Category
+                            { wch: 12 },  // Price
+                            { wch: 14 },  // Qty
+                            { wch: 16 },  // Amount
+                            { wch: 14 }   // Stock
+                        ];
+                    }
 
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, 'تقرير المنتجات');
