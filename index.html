@@ -1195,6 +1195,8 @@
                                             (Inv Rate) ↕</th>
                                         <th onclick="setDailySort('custVal')" style="cursor: pointer;">قيمة العميل ↕
                                         </th>
+                                        <th class="text-muted" onclick="setDailySort('prevCustVal')" style="font-size: 0.9em; cursor: pointer;">قيمة ع. (LY) ↕
+                                        </th>
                                         <th onclick="setDailySort('visitY')" style="cursor: pointer;">زوار ↕</th>
                                         <th class="text-muted" onclick="setDailySort('visitLY')"
                                             style="font-size: 0.9em; cursor: pointer;">زوار (LY)</th>
@@ -1283,6 +1285,7 @@
                                         زوار العام السابق (Vis LY) ↕</th>
                                     <th class="text-center" onclick="setSort('custVal')" style="cursor: pointer;">قيمة
                                         العميل (Val) ↕</th>
+                                    <th class="text-center text-muted" onclick="setSort('prevCustVal')" style="cursor: pointer;">قيمة العميل (Val LY) ↕</th>
                                     <th class="text-center" onclick="setSort('conv')" style="cursor: pointer;">التحويل
                                         (Vis Rate) ↕</th>
                                 </tr>
@@ -1893,12 +1896,6 @@
                     let durationTime = currentEnd.getTime() - currentStart.getTime();
                     prevEnd = new Date(prevStart.getTime() + durationTime);
                     prevEnd.setHours(23, 59, 59, 999);
-                } else if (selYear === 2026 && parseInt(selMonth) === 4) {
-                    prevStart = new Date(2025, 3, 1);
-                    prevStart.setDate(prevStart.getDate() + 5);
-                    let durationTime = currentEnd.getTime() - currentStart.getTime();
-                    prevEnd = new Date(prevStart.getTime() + durationTime);
-                    prevEnd.setHours(23, 59, 59, 999);
                 } else if (selMonth === 'all') {
                     prevStart = new Date(currentStart);
                     prevStart.setFullYear(prevStart.getFullYear() - 1);
@@ -2173,6 +2170,7 @@
                 let avgInv = trans > 0 ? val / trans : 0;
                 let conv = visitors > 0 ? (trans / visitors) * 100 : 0;
                 let custVal = visitors > 0 ? val / visitors : 0;
+                let prevCustVal = prevVisitors > 0 ? prevVal / prevVisitors : 0;
 
                 // Daily Required Calculation
                 let dailyReq = 0;
@@ -2187,7 +2185,7 @@
                 let absGrowth = val - prevVal;
 
                 branchList.push({
-                    sid, name, val, prevVal, growth, absGrowth, target, trans, visitors, prevVisitors, ach, avgInv, conv, custVal, dailyReq
+                    sid, name, val, prevVal, growth, absGrowth, target, trans, visitors, prevVisitors, ach, avgInv, conv, custVal, prevCustVal, dailyReq
                 });
             });
 
@@ -2225,6 +2223,7 @@
                 const mAbsGrowth = mVal - mPrevVal;
                 const mAvgInv = mTrans > 0 ? mVal / mTrans : 0;
                 const mCustVal = mVisitors > 0 ? mVal / mVisitors : 0;
+                const mCustValLY = mPrevVisitors > 0 ? mPrevVal / mPrevVisitors : 0;
                 const mConv = mVisitors > 0 ? (mTrans / mVisitors) * 100 : 0;
 
                 const mgrRow = document.createElement('tr');
@@ -2248,6 +2247,7 @@
                     <td class="text-center">${mVisitors.toLocaleString()}</td>
                     <td class="text-center" style="opacity:0.7">${mPrevVisitors.toLocaleString()}</td>
                     <td class="text-center">${mCustVal.toFixed(0)}</td>
+                    <td class="text-center" style="opacity:0.7">${mCustValLY.toFixed(0)}</td>
                     <td class="text-center">${mConv.toFixed(1)}%</td>
                 `;
                 tbody.appendChild(mgrRow);
@@ -2276,6 +2276,7 @@
                     </td>
                     <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
                     <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
+                    <td class="text-center text-muted">${b.prevCustVal.toFixed(0)}</td>
                     <td class="text-center">${b.conv.toFixed(1)}%</td>
                 `;
                 tbody.appendChild(tr);
@@ -2307,6 +2308,7 @@
                 let tAbsGrowth = tVal - tPrevVal;
                 let tAvgInv = tTrans > 0 ? tVal / tTrans : 0;
                 let tCustVal = tVisitors > 0 ? tVal / tVisitors : 0;
+                let tCustValLY = tPrevVisitors > 0 ? tPrevVal / tPrevVisitors : 0;
                 let tConv = tVisitors > 0 ? (tTrans / tVisitors) * 100 : 0;
 
                 let tr = document.createElement('tr');
@@ -2324,6 +2326,7 @@
                     <td class="text-center">${tVisitors.toLocaleString()}</td>
                     <td class="text-center text-light opacity-75">${tPrevVisitors.toLocaleString()}</td>
                     <td class="text-center">${tCustVal.toFixed(0)}</td>
+                    <td class="text-center text-light opacity-75">${tCustValLY.toFixed(0)}</td>
                     <td class="text-center">${tConv.toFixed(1)}%</td>
                 `;
                 tfoot.appendChild(tr);
@@ -2459,11 +2462,9 @@
             let lastYear = new Date(yesterday);
             lastYear.setFullYear(yesterday.getFullYear() - 1);
             
-            // Custom Shift for Ramadan 2026 (Feb and March), and April (+5 days)
+            // Custom Shift for Ramadan 2026 (Feb and March)
             if (yesterday.getFullYear() === 2026 && (yesterday.getMonth() === 1 || yesterday.getMonth() === 2)) {
                 lastYear.setDate(lastYear.getDate() + 11);
-            } else if (yesterday.getFullYear() === 2026 && yesterday.getMonth() === 3) {
-                lastYear.setDate(lastYear.getDate() + 5);
             }
 
             // Format YYYY-MM-DD
@@ -2532,10 +2533,11 @@
 
                 let avgInv = d.transY > 0 ? d.salesY / d.transY : 0;
                 let custVal = d.visitY > 0 ? d.salesY / d.visitY : 0;
+                let prevCustVal = d.visitLY > 0 ? d.salesLY / d.visitLY : 0;
                 let conv = d.visitY > 0 ? (d.transY / d.visitY) * 100 : 0;
                 let dailyReq = globalDailyReq[sid] || 0;
 
-                dailyList.push({ sid, name, ...d, growth, avgInv, custVal, conv, dailyReq });
+                dailyList.push({ sid, name, ...d, growth, avgInv, custVal, prevCustVal, conv, dailyReq });
             });
 
             // Sort Daily List
@@ -2571,6 +2573,7 @@
                     <td>${r.transY.toLocaleString()}</td>
                     <td>${r.avgInv.toFixed(0)}</td>
                     <td class="fw-bold">${r.custVal.toFixed(0)}</td>
+                    <td class="text-secondary">${r.prevCustVal.toFixed(0)}</td>
                     <td class="fw-bold">
                         <a href="#" onclick="showHourlyVisitors('${r.sid}', '${encodeURIComponent(r.name)}', new Date('${dateYest}'), new Date('${dateYest}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitY.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
                     </td>
@@ -2635,11 +2638,9 @@
                 let lyDate = new Date(loopDate);
                 lyDate.setFullYear(loopDate.getFullYear() - 1);
 
-                // Custom Shift for Ramadan 2026 (Feb and March), and April (+5 days)
+                // Custom Shift for Ramadan 2026 (Feb and March)
                 if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
                     lyDate.setDate(lyDate.getDate() + 11);
-                } else if (loopDate.getFullYear() === 2026 && loopDate.getMonth() === 3) {
-                    lyDate.setDate(lyDate.getDate() + 5);
                 }
 
                 const lyDateStr = lyDate.toLocaleDateString('en-CA');
