@@ -18,6 +18,9 @@ function showExcelModal() {
     document.getElementById('excelStartDate').value = startDateVal;
     document.getElementById('excelEndDate').value = endDateVal;
 
+    // Set Default Previous Year Dates
+    updateExcelPrevDates();
+
     // 2. Check Permissions for Employee Request
     const user = JSON.parse(localStorage.getItem('currentUser'));
     const reportTypeGroup = document.getElementById('excelReportTypeGroup');
@@ -32,6 +35,25 @@ function showExcelModal() {
     }
 
     excelModal.show();
+}
+
+function getPrevDateForExport(dStr) {
+    if (!dStr) return '';
+    let pDate = new Date(dStr);
+    pDate.setFullYear(pDate.getFullYear() - 1);
+    if (dStr.startsWith('2026-02') || dStr.startsWith('2026-03')) {
+        pDate.setDate(pDate.getDate() + 11);
+    } else if (dStr.startsWith('2026-04')) {
+        pDate.setDate(pDate.getDate() + 5);
+    }
+    return pDate.toLocaleDateString('en-CA');
+}
+
+function updateExcelPrevDates() {
+    const startVal = document.getElementById('excelStartDate').value;
+    const endVal = document.getElementById('excelEndDate').value;
+    if (startVal) document.getElementById('excelPrevStartDate').value = getPrevDateForExport(startVal);
+    if (endVal) document.getElementById('excelPrevEndDate').value = getPrevDateForExport(endVal);
 }
 
 async function generateExcelReport() {
@@ -182,6 +204,10 @@ async function exportStoreSales(startDate, endDate) {
         return;
     }
 
+    const prevStartStr = document.getElementById('excelPrevStartDate').value;
+    const isCustomPrevDate = prevStartStr !== getPrevDateForExport(startDate);
+    const offsetDays = isCustomPrevDate ? Math.round((new Date(startDate) - new Date(prevStartStr)) / (1000 * 60 * 60 * 24)) : 0;
+
     // Sort: Date asc, then Store Name asc
     rows.sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -196,11 +222,15 @@ async function exportStoreSales(startDate, endDate) {
         const ach = r.target > 0 ? ((r.sales / r.target) * 100).toFixed(1) + '%' : '0%';
 
         let pDate = new Date(r.date);
-        pDate.setFullYear(pDate.getFullYear() - 1);
-        if (r.date.startsWith('2026-02') || r.date.startsWith('2026-03')) {
-            pDate.setDate(pDate.getDate() + 11);
-        } else if (r.date.startsWith('2026-04')) {
-            pDate.setDate(pDate.getDate() + 5);
+        if (isCustomPrevDate) {
+            pDate.setDate(pDate.getDate() - offsetDays);
+        } else {
+            pDate.setFullYear(pDate.getFullYear() - 1);
+            if (r.date.startsWith('2026-02') || r.date.startsWith('2026-03')) {
+                pDate.setDate(pDate.getDate() + 11);
+            } else if (r.date.startsWith('2026-04')) {
+                pDate.setDate(pDate.getDate() + 5);
+            }
         }
 
         let pyStr = pDate.toLocaleDateString('en-CA');
@@ -296,6 +326,10 @@ async function exportEmployeeSales(startDate, endDate) {
         });
     }
 
+    const prevStartStr = document.getElementById('excelPrevStartDate').value;
+    const isCustomPrevDate = prevStartStr !== getPrevDateForExport(startDate);
+    const offsetDays = isCustomPrevDate ? Math.round((new Date(startDate) - new Date(prevStartStr)) / (1000 * 60 * 60 * 24)) : 0;
+
     // Iterate Filtered Stores
     targetStoreIds.forEach(sid => {
         const records = empData.history[sid] || [];
@@ -361,11 +395,15 @@ async function exportEmployeeSales(startDate, endDate) {
 
                 // Calculate Previous Year Date
                 let pDate = new Date(date);
-                pDate.setFullYear(pDate.getFullYear() - 1);
-                if (date.startsWith('2026-02') || date.startsWith('2026-03')) {
-                    pDate.setDate(pDate.getDate() + 11);
-                } else if (date.startsWith('2026-04')) {
-                    pDate.setDate(pDate.getDate() + 5);
+                if (isCustomPrevDate) {
+                    pDate.setDate(pDate.getDate() - offsetDays);
+                } else {
+                    pDate.setFullYear(pDate.getFullYear() - 1);
+                    if (date.startsWith('2026-02') || date.startsWith('2026-03')) {
+                        pDate.setDate(pDate.getDate() + 11);
+                    } else if (date.startsWith('2026-04')) {
+                        pDate.setDate(pDate.getDate() + 5);
+                    }
                 }
 
                 let pyStr = pDate.toLocaleDateString('en-CA');
