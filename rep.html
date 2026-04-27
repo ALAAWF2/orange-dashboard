@@ -845,6 +845,7 @@
                     <option value="by_store">مفصل حسب المعرض</option>
                     <option value="by_month">مفصل حسب الشهر</option>
                     <option value="by_week">مفصل حسب الاسبوع</option>
+                    <option value="by_day">مفصل حسب اليوم</option>
                 </select>
             </div>
         </div>
@@ -882,6 +883,7 @@
                 التحليل 🧠
             </button>
             <button class="btn-excel" id="btnExcel" onclick="exportExcel()" disabled>📊 تصدير Excel</button>
+            <button class="btn-excel" id="btnExcelDaily" onclick="exportExcelDaily()" disabled style="background:#27ae60;">📊 تصدير يومي</button>
             <button class="btn-excel" id="btnTopExcel" onclick="exportTopExcel()"
                 style="display:none; background:#d35400;">📥 تصدير الأكثر مبيعاً</button>
             <button class="btn-excel" id="btnTopCategoryExcel" onclick="exportTopCategoryExcel()"
@@ -1389,20 +1391,29 @@
             
             // Get selected offer object if any
             let selectedOfferItemsSet = new Set();
-            if (!isAllOffers) {
-                const selectedOffers = OFFERS.filter(o => offerFilterOptions.includes(o.id));
-                selectedOffers.forEach(o => {
-                    if (o.items) {
-                        o.items.forEach(item => {
-                            if (typeof item === 'object' && item.i) {
-                                selectedOfferItemsSet.add(item.i);
-                            } else if (typeof item === 'string') {
-                                selectedOfferItemsSet.add(item);
+            let itemOffersMap = {};
+            
+            const offersToMap = isAllOffers ? OFFERS : OFFERS.filter(o => offerFilterOptions.includes(o.id));
+            offersToMap.forEach(o => {
+                const offerName = o.name || o.id;
+                if (o.items) {
+                    o.items.forEach(item => {
+                        let itemId = null;
+                        if (typeof item === 'object' && item.i) {
+                            itemId = item.i;
+                        } else if (typeof item === 'string') {
+                            itemId = item;
+                        }
+                        if (itemId) {
+                            if (!isAllOffers) selectedOfferItemsSet.add(itemId);
+                            if (!itemOffersMap[itemId]) itemOffersMap[itemId] = [];
+                            if (!itemOffersMap[itemId].includes(offerName)) {
+                                itemOffersMap[itemId].push(offerName);
                             }
-                        });
-                    }
-                });
-            }
+                        }
+                    });
+                }
+            });
 
             if (searchType === 'sales_stock' && (!dateFrom || !dateTo)) {
                 alert('الرجاء تحديد التاريخ');
@@ -1476,6 +1487,17 @@
                             itemAgg[key].qty += r.q;
                             itemAgg[key].amount += r.a;
                         }
+                    } else if (viewMode === 'by_day') {
+                        // Aggregate by day + item_id
+                        for (const r of allRecords) {
+                            const day = r.d;
+                            const key = day + '_' + r.i;
+                            if (!itemAgg[key]) {
+                                itemAgg[key] = { qty: 0, amount: 0, day: day, item_id: r.i };
+                            }
+                            itemAgg[key].qty += r.q;
+                            itemAgg[key].amount += r.a;
+                        }
                     } else {
                         // Aggregate by item_id only (default)
                         for (const r of allRecords) {
@@ -1529,14 +1551,15 @@
                             stock_total: totalStock,
                             stock_by_store: { [storeId]: totalStock },
                             store_id: storeId,
-                            store_name: META.stores[storeId] || storeId
+                            store_name: META.stores[storeId] || storeId,
+                            offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
                         });
                     }
-                } else if (viewMode === 'by_month' || viewMode === 'by_week') {
+                } else if (viewMode === 'by_month' || viewMode === 'by_week' || viewMode === 'by_day') {
                     for (const key of Object.keys(itemAgg)) {
                         const agg = itemAgg[key];
                         const pid = agg.item_id;
-                        const period = agg.month || agg.week;
+                        const period = agg.month || agg.week || agg.day;
 
                         if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
@@ -1575,7 +1598,9 @@
                             stock_total: totalStock,
                             month: agg.month,
                             week: agg.week,
-                            period: period
+                            day: agg.day,
+                            period: period,
+                            offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
                         });
                     }
                 } else {
@@ -1620,7 +1645,8 @@
                                     stock_total: totalStock,
                                     stock_by_store: { [storeId]: totalStock },
                                     store_id: storeId,
-                                    store_name: META.stores[storeId] || storeId
+                                    store_name: META.stores[storeId] || storeId,
+                                    offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
                                 });
                             }
                         } else {
@@ -1658,7 +1684,8 @@
                                 qty: qty,
                                 amount: Math.round(amount * 100) / 100,
                                 stock_total: totalStock,
-                                stock_by_store: stockByStore
+                                stock_by_store: stockByStore,
+                                offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
                             });
                         }
                     }
@@ -1688,6 +1715,7 @@
             const isByStore = viewMode === 'by_store';
             const isByMonth = viewMode === 'by_month';
             const isByWeek = viewMode === 'by_week';
+            const isByDay = viewMode === 'by_day';
 
             CURRENT_RESULTS.sort((a, b) => {
                 let va, vb;
@@ -1705,7 +1733,7 @@
                         case 8: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
-                } else if (isByMonth || isByWeek) {
+                } else if (isByMonth || isByWeek || isByDay) {
                     switch (col) {
                         case 0: return 0;
                         case 1: va = a.period || ''; vb = b.period || ''; break;
@@ -1768,6 +1796,7 @@
             const isByStore = viewMode === 'by_store';
             const isByMonth = viewMode === 'by_month';
             const isByWeek = viewMode === 'by_week';
+            const isByDay = viewMode === 'by_day';
 
             // Update table headers based on view mode
             const thead = document.getElementById('mainTableHead');
@@ -1783,8 +1812,8 @@
                     <th onclick="sortTable(7)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(8)">ستوك المعرض<span class="sort-icon">▼</span></th>
                 `;
-            } else if (isByMonth || isByWeek) {
-                const label = isByMonth ? 'الشهر' : 'الاسبوع';
+            } else if (isByMonth || isByWeek || isByDay) {
+                const label = isByMonth ? 'الشهر' : (isByWeek ? 'الاسبوع' : 'اليوم');
                 thead.innerHTML = `
                     <th onclick="sortTable(0)">#<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(1)">${label}<span class="sort-icon">▼</span></th>
@@ -1815,6 +1844,7 @@
                 document.getElementById('emptyState').style.display = 'block';
                 document.getElementById('emptyState').querySelector('p').textContent = 'لا توجد نتائج للفلاتر المحددة';
                 document.getElementById('btnExcel').disabled = true;
+                document.getElementById('btnExcelDaily').disabled = true;
                 return;
             }
 
@@ -1827,8 +1857,10 @@
             const searchType = document.getElementById('searchType').value;
             if (searchType === 'sales_stock') {
                 document.getElementById('btnAnalysis').disabled = false;
+                document.getElementById('btnExcelDaily').disabled = false;
             } else {
                 document.getElementById('btnAnalysis').disabled = true;
+                document.getElementById('btnExcelDaily').disabled = true;
             }
             if (searchType === 'sales_stock' && results.length > 0) {
                 document.getElementById('topProductsContainer').style.display = 'flex';
@@ -1916,7 +1948,7 @@
             let html = '';
             const maxRender = 5000;
             const renderCount = Math.min(results.length, maxRender);
-            const colSpan = (isByStore || isByMonth || isByWeek) ? 9 : 8;
+            const colSpan = (isByStore || isByMonth || isByWeek || isByDay) ? 9 : 8;
 
             for (let i = 0; i < renderCount; i++) {
                 const r = results[i];
@@ -1937,7 +1969,7 @@
                         <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
                     </td>
                 </tr>`;
-                } else if (isByMonth || isByWeek) {
+                } else if (isByMonth || isByWeek || isByDay) {
                     html += `<tr>
                     <td>${i + 1}</td>
                     <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.period || ''}</td>
@@ -2013,12 +2045,19 @@
                     const isByStore = viewMode === 'by_store';
                     const isByMonth = viewMode === 'by_month';
                     const isByWeek = viewMode === 'by_week';
+                    const isByDay = viewMode === 'by_day';
+                    
+                    const hasOffers = CURRENT_RESULTS.some(r => r.offer_names);
 
                     const rows = CURRENT_RESULTS.map((r, i) => {
                         const row = { '#': i + 1 };
                         if (isByStore) row['المعرض'] = r.store_name || '';
                         if (isByMonth) row['الشهر'] = r.month || '';
                         if (isByWeek) row['الاسبوع'] = r.week || '';
+                        if (isByDay) row['اليوم'] = r.day || '';
+                        
+                        if (hasOffers) row['العروض'] = r.offer_names || '';
+
                         row['Alias'] = r.alias;
                         row['اسم المنتج'] = r.name;
                         row['الفئة'] = r.category;
@@ -2045,9 +2084,12 @@
                     const ws = XLSX.utils.json_to_sheet(rows);
 
                     // Column widths
-                    ws['!cols'] = [
+                    const cols = [
                         { wch: 5 },   // #
-                        ...(isByStore || isByMonth || isByWeek ? [{ wch: 15 }] : []), // Store, Month, or Week
+                    ];
+                    if (isByStore || isByMonth || isByWeek || isByDay) cols.push({ wch: 15 });
+                    if (hasOffers) cols.push({ wch: 25 }); // Offers
+                    cols.push(
                         { wch: 12 },  // Alias
                         { wch: 45 },  // Name
                         { wch: 18 },  // Category
@@ -2055,12 +2097,120 @@
                         { wch: 14 },  // Qty
                         { wch: 16 },  // Amount
                         { wch: 14 }   // Stock
-                    ];
+                    );
+                    ws['!cols'] = cols;
 
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, 'تقرير المنتجات');
 
                     const fileName = `REP_${dateFrom}_${dateTo}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+
+                } catch (err) {
+                    console.error('Export error:', err);
+                    alert('خطأ في التصدير: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
+        // =====================
+        // DAILY EXCEL EXPORT
+        // =====================
+        function exportExcelDaily() {
+            if (!CURRENT_RESULTS.length || !window.CURRENT_ALL_RECORDS) return;
+
+            showLoading('جاري إنشاء ملف Excel اليومي...');
+
+            setTimeout(() => {
+                try {
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+                    const storeFilter = document.getElementById('storeFilter').value;
+                    const storeName = storeFilter === 'all' ? 'الكل' : META.stores[storeFilter] || storeFilter;
+
+                    const validItemsMap = {};
+                    let hasOffers = false;
+                    for (const r of CURRENT_RESULTS) {
+                        validItemsMap[r.item_id] = {
+                            offer_names: r.offer_names || '',
+                            category: r.category,
+                            name: r.name,
+                            alias: r.alias,
+                            price: r.price,
+                            stock_total: r.stock_total
+                        };
+                        if (r.offer_names) hasOffers = true;
+                    }
+
+                    let itemAgg = {};
+                    for (const r of window.CURRENT_ALL_RECORDS) {
+                        if (!validItemsMap[r.i]) continue;
+                        
+                        const key = r.d + '_' + r.i;
+                        if (!itemAgg[key]) {
+                            itemAgg[key] = { qty: 0, amount: 0, day: r.d, item_id: r.i };
+                        }
+                        itemAgg[key].qty += r.q;
+                        itemAgg[key].amount += r.a;
+                    }
+
+                    let dailyResults = Object.values(itemAgg);
+                    dailyResults.sort((a, b) => {
+                        if (a.day !== b.day) return a.day.localeCompare(b.day);
+                        return a.item_id.localeCompare(b.item_id);
+                    });
+
+                    const rows = dailyResults.map((r, i) => {
+                        const info = validItemsMap[r.item_id];
+                        const row = { '#': i + 1 };
+                        row['اليوم'] = r.day;
+                        if (hasOffers) row['العروض'] = info.offer_names;
+                        
+                        row['Alias'] = info.alias;
+                        row['اسم المنتج'] = info.name;
+                        row['الفئة'] = info.category;
+                        row['سعر البيع'] = info.price;
+                        row['الكمية المباعة'] = r.qty;
+                        row['إجمالي المبيعات'] = Math.round(r.amount * 100) / 100;
+                        row['الستوك الحالي'] = info.stock_total;
+                        return row;
+                    });
+
+                    rows.push({});
+                    rows.push({
+                        '#': '',
+                        'Alias': 'الملخص',
+                        'اسم المنتج': `الفترة: ${dateFrom} إلى ${dateTo}`,
+                        'الفئة': `المعرض: ${storeName}`,
+                        'سعر البيع': '',
+                        'الكمية المباعة': dailyResults.reduce((s, r) => s + r.qty, 0),
+                        'إجمالي المبيعات': Math.round(dailyResults.reduce((s, r) => s + r.amount, 0) * 100) / 100,
+                        'الستوك الحالي': '' 
+                    });
+
+                    const ws = XLSX.utils.json_to_sheet(rows);
+
+                    const cols = [
+                        { wch: 5 },
+                        { wch: 15 },
+                    ];
+                    if (hasOffers) cols.push({ wch: 25 });
+                    cols.push(
+                        { wch: 12 },
+                        { wch: 45 },
+                        { wch: 18 },
+                        { wch: 12 },
+                        { wch: 14 },
+                        { wch: 16 },
+                        { wch: 14 }
+                    );
+                    ws['!cols'] = cols;
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'تقرير المنتجات اليومي');
+
+                    const fileName = `REP_DAILY_${dateFrom}_${dateTo}.xlsx`;
                     XLSX.writeFile(wb, fileName);
 
                 } catch (err) {
