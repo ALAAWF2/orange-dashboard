@@ -19,7 +19,8 @@ function showExcelModal() {
     document.getElementById('excelEndDate').value = endDateVal;
 
     // Set Default Previous Year Dates
-    updateExcelPrevDates();
+    updateExcelPrevStartDate();
+    updateExcelPrevEndDate();
 
     // 2. Check Permissions for Employee Request
     const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -49,10 +50,13 @@ function getPrevDateForExport(dStr) {
     return pDate.toLocaleDateString('en-CA');
 }
 
-function updateExcelPrevDates() {
+function updateExcelPrevStartDate() {
     const startVal = document.getElementById('excelStartDate').value;
-    const endVal = document.getElementById('excelEndDate').value;
     if (startVal) document.getElementById('excelPrevStartDate').value = getPrevDateForExport(startVal);
+}
+
+function updateExcelPrevEndDate() {
+    const endVal = document.getElementById('excelEndDate').value;
     if (endVal) document.getElementById('excelPrevEndDate').value = getPrevDateForExport(endVal);
 }
 
@@ -205,8 +209,17 @@ async function exportStoreSales(startDate, endDate) {
     }
 
     const prevStartStr = document.getElementById('excelPrevStartDate').value;
-    const isCustomPrevDate = prevStartStr !== getPrevDateForExport(startDate);
-    const offsetDays = isCustomPrevDate ? Math.round((new Date(startDate) - new Date(prevStartStr)) / (1000 * 60 * 60 * 24)) : 0;
+    const prevEndStr = document.getElementById('excelPrevEndDate').value;
+    const isCustomPrevDate = (prevStartStr !== getPrevDateForExport(startDate)) || (prevEndStr !== getPrevDateForExport(endDate));
+
+    let offsetDays = 0;
+    if (isCustomPrevDate && startDate && prevStartStr) {
+        const [sy, sm, sd] = startDate.split('-').map(Number);
+        const [psy, psm, psd] = prevStartStr.split('-').map(Number);
+        const sUtc = Date.UTC(sy, sm - 1, sd);
+        const psUtc = Date.UTC(psy, psm - 1, psd);
+        offsetDays = Math.round((sUtc - psUtc) / (1000 * 60 * 60 * 24));
+    }
 
     // Sort: Date asc, then Store Name asc
     rows.sort((a, b) => {
@@ -221,7 +234,9 @@ async function exportStoreSales(startDate, endDate) {
         const meta = (window.rawData.store_meta && window.rawData.store_meta[r.storeId]) || {};
         const ach = r.target > 0 ? ((r.sales / r.target) * 100).toFixed(1) + '%' : '0%';
 
-        let pDate = new Date(r.date);
+        const [ry, rm, rd] = r.date.split('-').map(Number);
+        let pDate = new Date(ry, rm - 1, rd);
+
         if (isCustomPrevDate) {
             pDate.setDate(pDate.getDate() - offsetDays);
         } else {
@@ -233,7 +248,11 @@ async function exportStoreSales(startDate, endDate) {
             }
         }
 
-        let pyStr = pDate.toLocaleDateString('en-CA');
+        let pyy = pDate.getFullYear();
+        let pmm = String(pDate.getMonth() + 1).padStart(2, '0');
+        let pdd = String(pDate.getDate()).padStart(2, '0');
+        let pyStr = `${pyy}-${pmm}-${pdd}`;
+
         let prevSales = salesDict[`${pyStr}_${r.storeId}`] || 0;
         let prevVisitors = visitorsDict[`${pyStr}_${r.storeId}`] || 0;
 
