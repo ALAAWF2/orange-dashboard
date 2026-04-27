@@ -2129,42 +2129,51 @@
                     const storeFilter = document.getElementById('storeFilter').value;
                     const storeName = storeFilter === 'all' ? 'الكل' : META.stores[storeFilter] || storeFilter;
 
+                    const viewMode = document.getElementById('viewMode').value;
+                    const isByStore = viewMode === 'by_store';
+
                     const validItemsMap = {};
                     let hasOffers = false;
                     for (const r of CURRENT_RESULTS) {
-                        validItemsMap[r.item_id] = {
+                        const key = isByStore ? (r.store_id + '_' + r.item_id) : r.item_id;
+                        validItemsMap[key] = {
                             offer_names: r.offer_names || '',
                             category: r.category,
                             name: r.name,
                             alias: r.alias,
                             price: r.price,
-                            stock_total: r.stock_total
+                            stock_total: r.stock_total,
+                            store_name: r.store_name || ''
                         };
                         if (r.offer_names) hasOffers = true;
                     }
 
                     let itemAgg = {};
                     for (const r of window.CURRENT_ALL_RECORDS) {
-                        if (!validItemsMap[r.i]) continue;
+                        const lookupKey = isByStore ? (r.s + '_' + r.i) : r.i;
+                        if (!validItemsMap[lookupKey]) continue;
                         
-                        const key = r.d + '_' + r.i;
-                        if (!itemAgg[key]) {
-                            itemAgg[key] = { qty: 0, amount: 0, day: r.d, item_id: r.i };
+                        const aggKey = isByStore ? (r.d + '_' + r.s + '_' + r.i) : (r.d + '_' + r.i);
+                        if (!itemAgg[aggKey]) {
+                            itemAgg[aggKey] = { qty: 0, amount: 0, day: r.d, item_id: r.i, store_id: r.s };
                         }
-                        itemAgg[key].qty += r.q;
-                        itemAgg[key].amount += r.a;
+                        itemAgg[aggKey].qty += r.q;
+                        itemAgg[aggKey].amount += r.a;
                     }
 
                     let dailyResults = Object.values(itemAgg);
                     dailyResults.sort((a, b) => {
                         if (a.day !== b.day) return a.day.localeCompare(b.day);
+                        if (isByStore && a.store_id !== b.store_id) return a.store_id.localeCompare(b.store_id);
                         return a.item_id.localeCompare(b.item_id);
                     });
 
                     const rows = dailyResults.map((r, i) => {
-                        const info = validItemsMap[r.item_id];
+                        const lookupKey = isByStore ? (r.store_id + '_' + r.item_id) : r.item_id;
+                        const info = validItemsMap[lookupKey];
                         const row = { '#': i + 1 };
                         row['اليوم'] = r.day;
+                        if (isByStore) row['المعرض'] = info.store_name;
                         if (hasOffers) row['العروض'] = info.offer_names;
                         
                         row['Alias'] = info.alias;
@@ -2195,6 +2204,7 @@
                         { wch: 5 },
                         { wch: 15 },
                     ];
+                    if (isByStore) cols.push({ wch: 15 }); // Store name
                     if (hasOffers) cols.push({ wch: 25 });
                     cols.push(
                         { wch: 12 },
