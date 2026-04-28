@@ -280,7 +280,7 @@ function saveTargetReport() {
 
     const wb = generateExcelWorkbook();
     const monthVal = document.getElementById('targetMonth').value;
-    XLSX.writeFile(wb, \`Targets_\${monthVal}.xlsx\`);
+    XLSX.writeFile(wb, `Targets_${monthVal}.xlsx`);
 }
 
 function generateExcelWorkbook() {
@@ -300,10 +300,10 @@ function generateExcelWorkbook() {
         [],
         [
             "Store ID", "Store Name", 
-            \`Sales \${prevMName} \${prevYearLY}\`, \`Sales \${prevMName} \${prevYearTY}\`, \`Sales Growth %\`,
-            \`Sales \${mName} \${targetYear-1}\`, \`Target \${mName} \${targetYear}\`, \`Target Growth %\`,
-            \`Visitors \${prevMName} \${prevYearLY}\`, \`Visitors \${prevMName} \${prevYearTY}\`, \`Visitors \${mName} \${targetYear-1}\`, \`Vis Growth %\`,
-            \`CV \${prevMName} \${prevYearLY}\`, \`CV \${prevMName} \${prevYearTY}\`, \`CV \${mName} \${targetYear-1}\`, \`Expected CV \${mName} \${targetYear}\`
+            `Sales ${prevMName} ${prevYearLY}`, `Sales ${prevMName} ${prevYearTY}`, `Sales Growth %`,
+            `Sales ${mName} ${targetYear-1}`, `Target ${mName} ${targetYear}`, `Target Growth %`,
+            `Visitors ${prevMName} ${prevYearLY}`, `Visitors ${prevMName} ${prevYearTY}`, `Visitors ${mName} ${targetYear-1}`, `Vis Growth %`,
+            `CV ${prevMName} ${prevYearLY}`, `CV ${prevMName} ${prevYearTY}`, `CV ${mName} ${targetYear-1}`, `Expected CV ${mName} ${targetYear}`
         ]
     ];
 
