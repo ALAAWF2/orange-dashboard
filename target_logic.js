@@ -29,6 +29,11 @@ async function fetchData() {
     }
 }
 
+function getMonthName(m) {
+    const names = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    return names[m - 1] || m;
+}
+
 function loadData() {
     if (!rawData) return;
 
@@ -37,108 +42,182 @@ function loadData() {
 
     const [targetYear, targetMonth] = pickerVal.split('-').map(Number); // e.g. 2026, 04
 
-    // Determine Last Year Period
-    const lyYear = targetYear - 1;
-    const lyMonth = targetMonth; // 1-indexed
+    const prevMonthTY = targetMonth === 1 ? 12 : targetMonth - 1;
+    const prevYearTY = targetMonth === 1 ? targetYear - 1 : targetYear;
+    const tyM1Prefix = `${prevYearTY}-${String(prevMonthTY).padStart(2, '0')}`;
+    
+    const prevYearLY = targetMonth === 1 ? targetYear - 2 : targetYear - 1;
+    const lyM1Prefix = `${prevYearLY}-${String(prevMonthTY).padStart(2, '0')}`;
+    
+    const lyMPrefix = `${targetYear - 1}-${String(targetMonth).padStart(2, '0')}`;
 
-    // We need start and end dates for Last Year Month
-    // Note: Dates in JSON are Strings "YYYY-MM-DD"
-    // We can filter by checking if substring matches "YYYY-MM"
-    const lyPrefix = `${lyYear}-${String(lyMonth).padStart(2, '0')}`;
+    console.log(`Loading Data for LY_M: ${lyMPrefix}, TY_M1: ${tyM1Prefix}, LY_M1: ${lyM1Prefix}`);
 
-    console.log(`Loading Data for Last Year: ${lyPrefix}`);
-
-    // Aggregate LY Data
-    let stats = {}; // StoreId -> { sales, target, visitors }
-
-    // Init Stores
-    const storeIds = Object.keys(rawData.stores).filter(id => id !== '0' && id !== '9999');
-    storeIds.forEach(id => {
-        stats[id] = { sales: 0, target: 0, visitors: 0 };
-    });
-
-    // Helper: Is in LY Month?
-    const isLY = (dStr) => dStr.startsWith(lyPrefix);
-
-    // Sales
-    rawData.sales.forEach(([d, s, v]) => {
-        if (isLY(d) && stats[s]) stats[s].sales += v;
-    });
-
-    // Targets (Note: 'targets' array in rawData)
-    // Structure: [date, storeId, value]
-    if (rawData.targets) {
-        rawData.targets.forEach(([d, s, v]) => {
-            if (isLY(d) && stats[s]) stats[s].target += v;
-        });
+    // Update Header
+    const thead = document.getElementById('targetTableHeader');
+    if (thead) {
+        const mName = getMonthName(targetMonth);
+        const prevMName = getMonthName(prevMonthTY);
+        thead.innerHTML = `
+            <tr>
+                <th rowspan="2" class="align-middle">#</th>
+                <th rowspan="2" class="align-middle" style="min-width: 150px;">المعرض (Store)</th>
+                <th colspan="3" class="bg-secondary text-white">مبيعات ${prevMName}</th>
+                <th colspan="3" class="bg-primary text-white">تارجت ${mName}</th>
+                <th colspan="4" class="bg-secondary text-white">الزوار</th>
+                <th colspan="4" class="bg-info text-dark">قيمة العميل</th>
+            </tr>
+            <tr class="text-nowrap">
+                <th class="table-light text-dark">${prevYearLY}</th>
+                <th class="table-light text-dark">${prevYearTY}</th>
+                <th class="table-light text-dark">نمو %</th>
+                
+                <th class="table-light text-dark">مبيعات ${targetYear-1}</th>
+                <th class="bg-orange text-white">الهدف ${targetYear}</th>
+                <th class="table-light text-dark">نمو %</th>
+                
+                <th class="table-light text-dark">${prevMName} ${prevYearLY}</th>
+                <th class="table-light text-dark">${prevMName} ${prevYearTY}</th>
+                <th class="table-light text-dark">${mName} ${targetYear-1}</th>
+                <th class="table-light text-dark">نمو (${prevMName}) %</th>
+                
+                <th class="table-light text-dark">${prevMName} ${prevYearLY}</th>
+                <th class="table-light text-dark">${prevMName} ${prevYearTY}</th>
+                <th class="table-light text-dark">${mName} ${targetYear-1}</th>
+                <th class="bg-orange text-white">توقع ${targetYear}</th>
+            </tr>
+        `;
     }
 
-    // Visitors
-    rawData.visitors.forEach(([d, s, v]) => {
-        if (isLY(d) && stats[s]) stats[s].visitors += v;
+    let stats = {};
+    const storeIds = Object.keys(rawData.stores).filter(id => id !== '0' && id !== '9999');
+    storeIds.forEach(id => {
+        stats[id] = { 
+            sales_lyM1: 0, sales_tyM1: 0, sales_lyM: 0,
+            vis_lyM1: 0, vis_tyM1: 0, vis_lyM: 0
+        };
     });
 
-    // Build Table Rows
+    const is_lyM = (d) => d.startsWith(lyMPrefix);
+    const is_tyM1 = (d) => d.startsWith(tyM1Prefix);
+    const is_lyM1 = (d) => d.startsWith(lyM1Prefix);
+
+    rawData.sales.forEach(([d, s, v]) => {
+        if (!stats[s]) return;
+        if (is_lyM(d)) stats[s].sales_lyM += v;
+        else if (is_tyM1(d)) stats[s].sales_tyM1 += v;
+        else if (is_lyM1(d)) stats[s].sales_lyM1 += v;
+    });
+
+    rawData.visitors.forEach(([d, s, v]) => {
+        if (!stats[s]) return;
+        if (is_lyM(d)) stats[s].vis_lyM += v;
+        else if (is_tyM1(d)) stats[s].vis_tyM1 += v;
+        else if (is_lyM1(d)) stats[s].vis_lyM1 += v;
+    });
+
     const tbody = document.getElementById('targetTableBody');
     tbody.innerHTML = '';
 
-    // Sort by Store Name
     storeIds.sort((a, b) => (rawData.stores[a] || '').localeCompare(rawData.stores[b] || ''));
 
-    let totalSalesLY = 0;
-    let totalTargetLY = 0;
-    let totalVisitorsLY = 0;
+    let totals = {
+        sales_lyM1: 0, sales_tyM1: 0, sales_lyM: 0,
+        vis_lyM1: 0, vis_tyM1: 0, vis_lyM: 0
+    };
 
     storeIds.forEach((sid, i) => {
         const d = stats[sid];
         const name = rawData.stores[sid] || sid;
 
-        let custVal = d.visitors > 0 ? d.sales / d.visitors : 0;
+        totals.sales_lyM1 += d.sales_lyM1;
+        totals.sales_tyM1 += d.sales_tyM1;
+        totals.sales_lyM += d.sales_lyM;
+        totals.vis_lyM1 += d.vis_lyM1;
+        totals.vis_tyM1 += d.vis_tyM1;
+        totals.vis_lyM += d.vis_lyM;
 
-        totalSalesLY += d.sales;
-        totalTargetLY += d.target;
-        totalVisitorsLY += d.visitors;
+        let salesM1Growth = d.sales_lyM1 > 0 ? ((d.sales_tyM1 - d.sales_lyM1) / d.sales_lyM1) * 100 : (d.sales_tyM1 > 0 ? 100 : 0);
+        let visM1Growth = d.vis_lyM1 > 0 ? ((d.vis_tyM1 - d.vis_lyM1) / d.vis_lyM1) * 100 : (d.vis_tyM1 > 0 ? 100 : 0);
+        
+        let cv_lyM1 = d.vis_lyM1 > 0 ? d.sales_lyM1 / d.vis_lyM1 : 0;
+        let cv_tyM1 = d.vis_tyM1 > 0 ? d.sales_tyM1 / d.vis_tyM1 : 0;
+        let cv_lyM = d.vis_lyM > 0 ? d.sales_lyM / d.vis_lyM : 0;
 
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${i + 1}</td>
-            <td class="fw-bold text-start">${name}</td>
-            <td>${d.sales.toLocaleString()}</td>
-            <td class="text-muted small">${d.target.toLocaleString()}</td>
-            <td>${d.visitors.toLocaleString()}</td>
-            <td class="fw-bold">${custVal.toFixed(0)}</td>
+            <td class="fw-bold text-start text-nowrap">${name}</td>
+            
+            <td>${d.sales_lyM1.toLocaleString()}</td>
+            <td>${d.sales_tyM1.toLocaleString()}</td>
+            <td class="ltr ${salesM1Growth >= 0 ? 'text-success' : 'text-danger'}">${salesM1Growth.toFixed(1)}%</td>
+            
+            <td>${d.sales_lyM.toLocaleString()}</td>
             <td class="bg-orange-light">
                 <input type="number" class="input-target form-control form-control-sm mx-auto" 
                        data-sid="${sid}" 
-                       data-ly="${d.sales}" 
+                       data-ly="${d.sales_lyM}" 
+                       data-vis-ly="${d.vis_lyM}"
                        placeholder="0"
-                       oninput="calcGrowth(this)">
+                       oninput="calcTargetGrowth(this)">
             </td>
-            <td class="growth-cell fw-bold ltr">0%</td>
+            <td class="target-growth-cell fw-bold ltr">0%</td>
+            
+            <td>${d.vis_lyM1.toLocaleString()}</td>
+            <td>${d.vis_tyM1.toLocaleString()}</td>
+            <td>${d.vis_lyM.toLocaleString()}</td>
+            <td class="ltr ${visM1Growth >= 0 ? 'text-success' : 'text-danger'}">${visM1Growth.toFixed(1)}%</td>
+            
+            <td>${cv_lyM1.toFixed(0)}</td>
+            <td>${cv_tyM1.toFixed(0)}</td>
+            <td>${cv_lyM.toFixed(0)}</td>
+            <td class="expected-cv-cell fw-bold bg-orange-light">0</td>
         `;
         tbody.appendChild(tr);
     });
 
-    // Footer
+    let totalSalesM1Growth = totals.sales_lyM1 > 0 ? ((totals.sales_tyM1 - totals.sales_lyM1) / totals.sales_lyM1) * 100 : (totals.sales_tyM1 > 0 ? 100 : 0);
+    let totalVisM1Growth = totals.vis_lyM1 > 0 ? ((totals.vis_tyM1 - totals.vis_lyM1) / totals.vis_lyM1) * 100 : (totals.vis_tyM1 > 0 ? 100 : 0);
+
+    let total_cv_lyM1 = totals.vis_lyM1 > 0 ? totals.sales_lyM1 / totals.vis_lyM1 : 0;
+    let total_cv_tyM1 = totals.vis_tyM1 > 0 ? totals.sales_tyM1 / totals.vis_tyM1 : 0;
+    let total_cv_lyM = totals.vis_lyM > 0 ? totals.sales_lyM / totals.vis_lyM : 0;
+
     const tfoot = document.getElementById('tableFooter');
+    tfoot.dataset.salesLyM = totals.sales_lyM;
+    tfoot.dataset.visLyM = totals.vis_lyM;
+    
     tfoot.innerHTML = `
         <td colspan="2">المجموع (Total)</td>
-        <td>${totalSalesLY.toLocaleString()}</td>
-        <td>${totalTargetLY.toLocaleString()}</td>
-        <td>${totalVisitorsLY.toLocaleString()}</td>
-        <td>-</td>
-        <td id="totalNewTarget">0</td>
-        <td>-</td>
+        <td>${totals.sales_lyM1.toLocaleString()}</td>
+        <td>${totals.sales_tyM1.toLocaleString()}</td>
+        <td class="ltr ${totalSalesM1Growth >= 0 ? 'text-success' : 'text-danger'}">${totalSalesM1Growth.toFixed(1)}%</td>
+        
+        <td>${totals.sales_lyM.toLocaleString()}</td>
+        <td id="totalNewTarget" class="bg-orange-light text-dark">0</td>
+        <td id="totalTargetGrowth" class="ltr">0%</td>
+        
+        <td>${totals.vis_lyM1.toLocaleString()}</td>
+        <td>${totals.vis_tyM1.toLocaleString()}</td>
+        <td>${totals.vis_lyM.toLocaleString()}</td>
+        <td class="ltr ${totalVisM1Growth >= 0 ? 'text-success' : 'text-danger'}">${totalVisM1Growth.toFixed(1)}%</td>
+        
+        <td>${total_cv_lyM1.toFixed(0)}</td>
+        <td>${total_cv_tyM1.toFixed(0)}</td>
+        <td>${total_cv_lyM.toFixed(0)}</td>
+        <td id="totalExpectedCV" class="bg-orange-light text-dark">0</td>
     `;
 }
 
-function calcGrowth(input) {
+function calcTargetGrowth(input) {
     const newVal = parseFloat(input.value) || 0;
     const lyVal = parseFloat(input.dataset.ly) || 0;
+    const visLyVal = parseFloat(input.dataset.visLy) || 0;
 
-    // Find Growth Cell (next sibling)
-    const tdGrowth = input.closest('td').nextElementSibling;
-
+    const tr = input.closest('tr');
+    const tdGrowth = input.parentElement.nextElementSibling;
+    
     let growth = 0;
     if (lyVal > 0) {
         growth = ((newVal - lyVal) / lyVal) * 100;
@@ -147,9 +226,12 @@ function calcGrowth(input) {
     }
 
     tdGrowth.textContent = growth.toFixed(1) + '%';
-    tdGrowth.className = 'growth-cell fw-bold ltr ' + (growth >= 0 ? 'text-success' : 'text-danger');
+    tdGrowth.className = 'target-growth-cell fw-bold ltr ' + (growth >= 0 ? 'text-success' : 'text-danger');
 
-    // Recalc Total Target
+    const tdExpectedCV = tr.querySelector('.expected-cv-cell');
+    let expCV = visLyVal > 0 ? newVal / visLyVal : 0;
+    tdExpectedCV.textContent = expCV.toFixed(0);
+
     updateTotalTarget();
 }
 
@@ -159,12 +241,34 @@ function updateTotalTarget() {
         total += parseFloat(inp.value) || 0;
     });
     document.getElementById('totalNewTarget').textContent = total.toLocaleString();
+
+    const tfoot = document.getElementById('tableFooter');
+    const totalSalesLyM = parseFloat(tfoot.dataset.salesLyM) || 0;
+    const totalVisLyM = parseFloat(tfoot.dataset.visLyM) || 0;
+
+    let totalGrowth = 0;
+    if (totalSalesLyM > 0) {
+        totalGrowth = ((total - totalSalesLyM) / totalSalesLyM) * 100;
+    } else if (total > 0) {
+        totalGrowth = 100;
+    }
+
+    const tdGrowth = document.getElementById('totalTargetGrowth');
+    if(tdGrowth) {
+        tdGrowth.textContent = totalGrowth.toFixed(1) + '%';
+        tdGrowth.className = 'ltr ' + (totalGrowth >= 0 ? 'text-success' : 'text-danger');
+    }
+
+    const tdExpectedCV = document.getElementById('totalExpectedCV');
+    if(tdExpectedCV) {
+        let totalExpCV = totalVisLyM > 0 ? total / totalVisLyM : 0;
+        tdExpectedCV.textContent = totalExpCV.toFixed(0);
+    }
 }
 
 // --- Export Logic ---
 
 function saveTargetReport() {
-    // Validate: At least one target set?
     let hasVal = false;
     document.querySelectorAll('.input-target').forEach(inp => {
         if (inp.value && inp.value > 0) hasVal = true;
@@ -176,35 +280,61 @@ function saveTargetReport() {
 
     const wb = generateExcelWorkbook();
     const monthVal = document.getElementById('targetMonth').value;
-    XLSX.writeFile(wb, `Targets_${monthVal}.xlsx`);
+    XLSX.writeFile(wb, \`Targets_\${monthVal}.xlsx\`);
 }
 
 function generateExcelWorkbook() {
     const monthVal = document.getElementById('targetMonth').value; // YYYY-MM
+    const [targetYear, targetMonth] = monthVal.split('-').map(Number);
+    
+    const prevMonthTY = targetMonth === 1 ? 12 : targetMonth - 1;
+    const prevYearTY = targetMonth === 1 ? targetYear - 1 : targetYear;
+    const prevYearLY = targetMonth === 1 ? targetYear - 2 : targetYear - 1;
 
-    // Header
+    const mName = getMonthName(targetMonth);
+    const prevMName = getMonthName(prevMonthTY);
+
     let data = [
         ["Target Setting Report"],
         ["Month:", monthVal],
         [],
-        ["Store ID", "Store Name", "LY Sales", "LY Target", "LY Visitors", "LY Cust Val", "NEW TARGET", "Growth %"]
+        [
+            "Store ID", "Store Name", 
+            \`Sales \${prevMName} \${prevYearLY}\`, \`Sales \${prevMName} \${prevYearTY}\`, \`Sales Growth %\`,
+            \`Sales \${mName} \${targetYear-1}\`, \`Target \${mName} \${targetYear}\`, \`Target Growth %\`,
+            \`Visitors \${prevMName} \${prevYearLY}\`, \`Visitors \${prevMName} \${prevYearTY}\`, \`Visitors \${mName} \${targetYear-1}\`, \`Vis Growth %\`,
+            \`CV \${prevMName} \${prevYearLY}\`, \`CV \${prevMName} \${prevYearTY}\`, \`CV \${mName} \${targetYear-1}\`, \`Expected CV \${mName} \${targetYear}\`
+        ]
     ];
 
     document.querySelectorAll('#targetTableBody tr').forEach(tr => {
         const cols = tr.children;
         const sid = tr.querySelector('.input-target').dataset.sid;
         const name = cols[1].textContent;
-        const lySales = cols[2].textContent;
-        const lyTarget = cols[3].textContent;
-        const lyVis = cols[4].textContent;
-        const lyCust = cols[5].textContent;
-        const newTarget = tr.querySelector('.input-target').value || 0;
-        const growth = cols[7].textContent;
+        const sales_lyM1 = cols[2].textContent.replace(/,/g, '');
+        const sales_tyM1 = cols[3].textContent.replace(/,/g, '');
+        const sales_growth = cols[4].textContent;
+        const sales_lyM = cols[5].textContent.replace(/,/g, '');
+        const target = tr.querySelector('.input-target').value || 0;
+        const target_growth = cols[7].textContent;
+        const vis_lyM1 = cols[8].textContent.replace(/,/g, '');
+        const vis_tyM1 = cols[9].textContent.replace(/,/g, '');
+        const vis_lyM = cols[10].textContent.replace(/,/g, '');
+        const vis_growth = cols[11].textContent;
+        const cv_lyM1 = cols[12].textContent;
+        const cv_tyM1 = cols[13].textContent;
+        const cv_lyM = cols[14].textContent;
+        const exp_cv = cols[15].textContent;
 
-        data.push([sid, name, lySales, lyTarget, lyVis, lyCust, newTarget, growth]);
+        data.push([
+            sid, name, 
+            parseFloat(sales_lyM1)||0, parseFloat(sales_tyM1)||0, sales_growth,
+            parseFloat(sales_lyM)||0, parseFloat(target)||0, target_growth,
+            parseFloat(vis_lyM1)||0, parseFloat(vis_tyM1)||0, parseFloat(vis_lyM)||0, vis_growth,
+            parseFloat(cv_lyM1)||0, parseFloat(cv_tyM1)||0, parseFloat(cv_lyM)||0, parseFloat(exp_cv)||0
+        ]);
     });
 
-    // Create WB
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Targets");
