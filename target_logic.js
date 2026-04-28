@@ -41,28 +41,32 @@ function calculateCurrentEmployees() {
     storeEmployees = {};
     if (!employeesData || !employeesData.history) return;
     
-    for (const empId in employeesData.history) {
-        const records = employeesData.history[empId];
+    let currentStore = {};
+    
+    for (const storeId in employeesData.history) {
+        const records = employeesData.history[storeId];
         if (!records || records.length === 0) continue;
         
-        let latestDate = "";
-        let latestStore = "";
         for (const rec of records) {
             const date = rec[0];
-            const store = String(rec[1]);
-            if (date > latestDate) {
-                latestDate = date;
-                latestStore = store;
+            const empIdFull = String(rec[1] || "");
+            const empId = empIdFull.split('-')[0].trim();
+            
+            if (!empId) continue;
+            
+            if (!currentStore[empId] || date > currentStore[empId].date) {
+                currentStore[empId] = { store: storeId, date: date };
             }
         }
-        
-        if (latestStore) {
-            if (!storeEmployees[latestStore]) {
-                storeEmployees[latestStore] = [];
-            }
-            const empName = employeesData.employee_names ? (employeesData.employee_names[empId] || empId) : empId;
-            storeEmployees[latestStore].push({ id: empId, name: empName });
+    }
+    
+    for (const empId in currentStore) {
+        const sid = currentStore[empId].store;
+        if (!storeEmployees[sid]) {
+            storeEmployees[sid] = [];
         }
+        const empName = employeesData.employee_names ? (employeesData.employee_names[empId] || empId) : empId;
+        storeEmployees[sid].push({ id: empId, name: empName });
     }
 }
 
