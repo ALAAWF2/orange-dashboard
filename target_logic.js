@@ -4,6 +4,8 @@
  */
 
 let rawData = null;
+let employeesData = null;
+let storeEmployees = {};
 
 // Initialize
 window.addEventListener('DOMContentLoaded', async () => {
@@ -21,11 +23,46 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function fetchData() {
     try {
         const res = await fetch('management_data.json?t=' + Date.now());
-        if (!res.ok) throw new Error("Failed to load data");
+        if (!res.ok) throw new Error("Failed to load management data");
         rawData = await res.json();
+
+        const empRes = await fetch('employees_data.json?t=' + Date.now());
+        if (empRes.ok) {
+            employeesData = await empRes.json();
+            calculateCurrentEmployees();
+        }
     } catch (e) {
         console.error(e);
         alert("خطأ في تحميل البيانات: " + e.message);
+    }
+}
+
+function calculateCurrentEmployees() {
+    storeEmployees = {};
+    if (!employeesData || !employeesData.history) return;
+    
+    for (const empId in employeesData.history) {
+        const records = employeesData.history[empId];
+        if (!records || records.length === 0) continue;
+        
+        let latestDate = "";
+        let latestStore = "";
+        for (const rec of records) {
+            const date = rec[0];
+            const store = String(rec[1]);
+            if (date > latestDate) {
+                latestDate = date;
+                latestStore = store;
+            }
+        }
+        
+        if (latestStore) {
+            if (!storeEmployees[latestStore]) {
+                storeEmployees[latestStore] = [];
+            }
+            const empName = employeesData.employee_names ? (employeesData.employee_names[empId] || empId) : empId;
+            storeEmployees[latestStore].push({ id: empId, name: empName });
+        }
     }
 }
 
@@ -147,7 +184,9 @@ function loadData() {
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${i + 1}</td>
-            <td class="fw-bold text-start text-nowrap">${name}</td>
+            <td class="fw-bold text-start text-nowrap" style="cursor:pointer;" onclick="toggleEmployees('${sid}')" title="اضغط لعرض الموظفين">
+                <i class="fas fa-chevron-down me-1 toggle-icon-${sid} text-muted"></i> ${name}
+            </td>
             
             <td>${d.sales_lyM1.toLocaleString()}</td>
             <td>${d.sales_tyM1.toLocaleString()}</td>
@@ -175,6 +214,40 @@ function loadData() {
             <td class="expected-cv-cell fw-bold bg-orange-light">0</td>
         `;
         tbody.appendChild(tr);
+
+        // Employee Rows
+        const emps = storeEmployees[sid] || [];
+        if (emps.length > 0) {
+            const pickerVal = document.getElementById('targetMonth').value;
+            const [targetYear, targetMonth] = pickerVal.split('-').map(Number);
+            const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+
+            emps.forEach(emp => {
+                let empTr = document.createElement('tr');
+                empTr.className = `employee-row emp-of-${sid}`;
+                empTr.style.display = 'none';
+                empTr.style.backgroundColor = '#fafafa';
+                empTr.innerHTML = `
+                    <td></td>
+                    <td class="text-start ps-4 text-muted"><i class="fas fa-user me-1"></i> ${emp.name}</td>
+                    <td colspan="4"></td>
+                    <td class="bg-light">
+                        <div class="d-flex flex-column gap-1 align-items-center">
+                            <div class="input-group input-group-sm" style="width: 140px;" title="أيام الدوام">
+                                <span class="input-group-text">أيام</span>
+                                <input type="number" class="form-control emp-days-${sid}" value="${daysInMonth}" oninput="recalcFromDays('${sid}')">
+                            </div>
+                            <div class="input-group input-group-sm" style="width: 140px;" title="الهدف للموظف">
+                                <span class="input-group-text">هدف</span>
+                                <input type="number" class="form-control emp-target-${sid}" value="0" data-empid="${emp.id}" data-empname="${emp.name}" oninput="recalcFromEmpTarget('${sid}')">
+                            </div>
+                        </div>
+                    </td>
+                    <td colspan="9"></td>
+                `;
+                tbody.appendChild(empTr);
+            });
+        }
     });
 
     let totalSalesM1Growth = totals.sales_lyM1 > 0 ? ((totals.sales_tyM1 - totals.sales_lyM1) / totals.sales_lyM1) * 100 : (totals.sales_tyM1 > 0 ? 100 : 0);
@@ -210,7 +283,7 @@ function loadData() {
     `;
 }
 
-function calcTargetGrowth(input) {
+function calcTargetGrowth(input, distribute = true) {
     const newVal = parseFloat(input.value) || 0;
     const lyVal = parseFloat(input.dataset.ly) || 0;
     const visLyVal = parseFloat(input.dataset.visLy) || 0;
@@ -232,7 +305,68 @@ function calcTargetGrowth(input) {
     let expCV = visLyVal > 0 ? newVal / visLyVal : 0;
     tdExpectedCV.textContent = expCV.toFixed(0);
 
+    if (distribute) {
+        const sid = input.dataset.sid;
+        distributeToEmployees(sid, newVal);
+    }
+
     updateTotalTarget();
+}
+
+function toggleEmployees(sid) {
+    const rows = document.querySelectorAll(`.emp-of-${sid}`);
+    const icon = document.querySelector(`.toggle-icon-${sid}`);
+    let isHidden = true;
+    rows.forEach(r => {
+        if (r.style.display === 'none') {
+            r.style.display = 'table-row';
+            isHidden = false;
+        } else {
+            r.style.display = 'none';
+            isHidden = true;
+        }
+    });
+    if (icon) {
+        icon.className = isHidden ? `fas fa-chevron-down me-1 toggle-icon-${sid} text-muted` : `fas fa-chevron-up me-1 toggle-icon-${sid} text-muted`;
+    }
+}
+
+function distributeToEmployees(sid, storeTarget) {
+    const daysInputs = document.querySelectorAll(`.emp-days-${sid}`);
+    const targetInputs = document.querySelectorAll(`.emp-target-${sid}`);
+    if (daysInputs.length === 0) return;
+
+    let totalDays = 0;
+    daysInputs.forEach(inp => totalDays += (parseFloat(inp.value) || 0));
+
+    targetInputs.forEach((inp, idx) => {
+        const days = parseFloat(daysInputs[idx].value) || 0;
+        if (totalDays > 0) {
+            inp.value = Math.round(storeTarget * (days / totalDays));
+        } else {
+            inp.value = 0;
+        }
+    });
+}
+
+function recalcFromDays(sid) {
+    const storeInput = document.querySelector(`.input-target[data-sid="${sid}"]`);
+    if (storeInput) {
+        const storeTarget = parseFloat(storeInput.value) || 0;
+        distributeToEmployees(sid, storeTarget);
+    }
+}
+
+function recalcFromEmpTarget(sid) {
+    const targetInputs = document.querySelectorAll(`.emp-target-${sid}`);
+    let sum = 0;
+    targetInputs.forEach(inp => sum += (parseFloat(inp.value) || 0));
+    
+    const storeInput = document.querySelector(`.input-target[data-sid="${sid}"]`);
+    if (storeInput) {
+        storeInput.value = sum;
+        calcTargetGrowth(storeInput, false);
+    }
 }
 
 function updateTotalTarget() {
@@ -338,6 +472,42 @@ function generateExcelWorkbook() {
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Targets");
+
+    // Employee Targets Sheet
+    let empData = [
+        ["Employee Targets Report"],
+        ["Month:", monthVal],
+        [],
+        ["Store ID", "Store Name", "Employee ID", "Employee Name", "Working Days", "Target"]
+    ];
+
+    document.querySelectorAll('#targetTableBody tr.employee-row').forEach(tr => {
+        const classList = Array.from(tr.classList);
+        const sidClass = classList.find(c => c.startsWith('emp-of-'));
+        if (sidClass) {
+            const sid = sidClass.replace('emp-of-', '');
+            const storeName = rawData.stores[sid] || sid;
+            
+            const daysInp = tr.querySelector(`.emp-days-${sid}`);
+            const targetInp = tr.querySelector(`.emp-target-${sid}`);
+            
+            if (daysInp && targetInp) {
+                const days = parseFloat(daysInp.value) || 0;
+                const target = parseFloat(targetInp.value) || 0;
+                const empId = targetInp.dataset.empid;
+                const empName = targetInp.dataset.empname;
+                
+                if (target > 0) {
+                    empData.push([sid, storeName, empId, empName, days, target]);
+                }
+            }
+        }
+    });
+
+    if (empData.length > 4) {
+        const wsEmp = XLSX.utils.aoa_to_sheet(empData);
+        XLSX.utils.book_append_sheet(wb, wsEmp, "Employee Targets");
+    }
 
     return wb;
 }
