@@ -50,12 +50,22 @@ function calculateCurrentEmployees() {
         for (const rec of records) {
             const date = rec[0];
             const empIdFull = String(rec[1] || "");
-            const empId = empIdFull.split('-')[0].trim();
             
-            if (!empId) continue;
+            let empId = empIdFull;
+            let empName = empIdFull;
+
+            if (empIdFull.includes('-')) {
+                const parts = empIdFull.split('-');
+                empId = parts[0].trim();
+                empName = parts[1].trim();
+            } else {
+                empId = empIdFull.trim();
+            }
+            
+            if (!empId || empName === 'مرتجع') continue;
             
             if (!currentStore[empId] || date > currentStore[empId].date) {
-                currentStore[empId] = { store: storeId, date: date };
+                currentStore[empId] = { store: storeId, date: date, name: empName };
             }
         }
     }
@@ -65,8 +75,15 @@ function calculateCurrentEmployees() {
         if (!storeEmployees[sid]) {
             storeEmployees[sid] = [];
         }
-        const empName = employeesData.employee_names ? (employeesData.employee_names[empId] || empId) : empId;
-        storeEmployees[sid].push({ id: empId, name: empName });
+        
+        let finalName = currentStore[empId].name;
+        if (employeesData.employee_names && employeesData.employee_names[empId]) {
+            finalName = employeesData.employee_names[empId];
+        } else if (!finalName) {
+            finalName = empId;
+        }
+        
+        storeEmployees[sid].push({ id: empId, name: finalName });
     }
 }
 
