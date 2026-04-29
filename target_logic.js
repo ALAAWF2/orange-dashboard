@@ -50,6 +50,15 @@ function calculateCurrentEmployees() {
     const th_m = String(thresholdDate.getMonth() + 1).padStart(2, '0');
     const th_d = String(thresholdDate.getDate()).padStart(2, '0');
     const thresholdDateStr = `${th_y}-${th_m}-${th_d}`;
+
+    const pickerVal = document.getElementById('targetMonth').value;
+    let tyM1Prefix = "";
+    if (pickerVal) {
+        const [targetYear, targetMonth] = pickerVal.split('-').map(Number);
+        const prevMonthTY = targetMonth === 1 ? 12 : targetMonth - 1;
+        const prevYearTY = targetMonth === 1 ? targetYear - 1 : targetYear;
+        tyM1Prefix = `${prevYearTY}-${String(prevMonthTY).padStart(2, '0')}`;
+    }
     
     for (const storeId in employeesData.history) {
         const records = employeesData.history[storeId];
@@ -58,6 +67,7 @@ function calculateCurrentEmployees() {
         for (const rec of records) {
             const date = rec[0];
             const empIdFull = String(rec[1] || "");
+            const sales = parseFloat(rec[2] || 0);
             
             let empId = empIdFull;
             let empName = empIdFull;
@@ -76,12 +86,28 @@ function calculateCurrentEmployees() {
             const isNumericName = /^\d+$/.test(empName);
             
             if (!currentStore[empId]) {
-                currentStore[empId] = { store: storeId, date: date, name: empName };
-            } else if (date > currentStore[empId].date) {
-                currentStore[empId].date = date;
-                if (!isNumericName) {
-                    currentStore[empId].name = empName;
+                currentStore[empId] = { 
+                    store: storeId, 
+                    date: date, 
+                    name: empName,
+                    firstDate: date,
+                    salesLastMonth: 0
+                };
+            } else {
+                if (date < currentStore[empId].firstDate) {
+                    currentStore[empId].firstDate = date;
                 }
+                if (date > currentStore[empId].date) {
+                    currentStore[empId].date = date;
+                    currentStore[empId].store = storeId;
+                    if (!isNumericName) {
+                        currentStore[empId].name = empName;
+                    }
+                }
+            }
+
+            if (tyM1Prefix && date.startsWith(tyM1Prefix)) {
+                currentStore[empId].salesLastMonth += sales;
             }
         }
     }
@@ -106,7 +132,12 @@ function calculateCurrentEmployees() {
             storeEmployees[sid] = [];
         }
         
-        storeEmployees[sid].push({ id: empId, name: finalName });
+        storeEmployees[sid].push({ 
+            id: empId, 
+            name: finalName,
+            firstDate: currentStore[empId].firstDate,
+            salesLastMonth: currentStore[empId].salesLastMonth
+        });
     }
 }
 
@@ -271,10 +302,14 @@ function loadData() {
                 empTr.className = `employee-row emp-of-${sid}`;
                 empTr.style.display = 'none';
                 empTr.style.backgroundColor = '#fafafa';
+                let empContrib = emp.salesLastMonth > 0 && d.sales_tyM1 > 0 ? ((emp.salesLastMonth / d.sales_tyM1) * 100).toFixed(1) : 0;
                 empTr.innerHTML = `
                     <td></td>
                     <td class="text-start ps-4 text-muted"><i class="fas fa-user me-1"></i> ${emp.name}</td>
-                    <td colspan="4"></td>
+                    <td class="text-muted" style="font-size:0.75rem;" title="تاريخ الانضمام">${emp.firstDate}</td>
+                    <td class="text-success fw-bold">${emp.salesLastMonth.toLocaleString()}</td>
+                    <td class="text-info fw-bold ltr">${empContrib}%</td>
+                    <td></td>
                     <td class="bg-light">
                         <div class="d-flex flex-column gap-1 align-items-center">
                             <div class="input-group input-group-sm" style="width: 140px;" title="أيام الدوام">
