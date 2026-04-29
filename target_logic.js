@@ -305,7 +305,14 @@ function loadData() {
                 let empContrib = emp.salesLastMonth > 0 && d.sales_tyM1 > 0 ? ((emp.salesLastMonth / d.sales_tyM1) * 100).toFixed(1) : 0;
                 empTr.innerHTML = `
                     <td></td>
-                    <td class="text-start ps-4 text-muted"><i class="fas fa-user me-1"></i> ${emp.name}</td>
+                    <td class="text-start ps-4 text-muted">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><i class="fas fa-user me-1"></i> ${emp.name}</div>
+                            <button class="btn btn-sm btn-outline-danger ms-2 exclude-btn" title="استبعاد من التارجت" onclick="excludeEmployee(this, '${sid}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
                     <td class="text-muted" style="font-size:0.75rem;" title="تاريخ الانضمام">${emp.firstDate}</td>
                     <td class="text-success fw-bold">${emp.salesLastMonth.toLocaleString()}</td>
                     <td class="text-info fw-bold ltr">${empContrib}%</td>
@@ -416,16 +423,49 @@ function distributeToEmployees(sid, storeTarget) {
     if (daysInputs.length === 0) return;
 
     let totalDays = 0;
-    daysInputs.forEach(inp => totalDays += (parseFloat(inp.value) || 0));
+    daysInputs.forEach(inp => {
+        if (!inp.disabled) totalDays += (parseFloat(inp.value) || 0);
+    });
 
     targetInputs.forEach((inp, idx) => {
+        if (inp.disabled) {
+            inp.value = 0;
+            return;
+        }
         const days = parseFloat(daysInputs[idx].value) || 0;
         if (totalDays > 0) {
-            inp.value = Math.round(storeTarget * (days / totalDays));
+            let rawTarget = storeTarget * (days / totalDays);
+            inp.value = Math.ceil(rawTarget / 500) * 500;
         } else {
             inp.value = 0;
         }
     });
+}
+
+function excludeEmployee(btn, sid) {
+    const tr = btn.closest('tr');
+    const targetInp = tr.querySelector(`.emp-target-${sid}`);
+    const daysInp = tr.querySelector(`.emp-days-${sid}`);
+    
+    if (tr.classList.contains('excluded')) {
+        tr.classList.remove('excluded');
+        btn.classList.replace('btn-danger', 'btn-outline-danger');
+        targetInp.disabled = false;
+        daysInp.disabled = false;
+    } else {
+        tr.classList.add('excluded');
+        btn.classList.replace('btn-outline-danger', 'btn-danger');
+        targetInp.value = 0;
+        targetInp.disabled = true;
+        daysInp.value = 0;
+        daysInp.disabled = true;
+    }
+    
+    const storeInput = document.querySelector(`.input-target[data-sid="${sid}"]`);
+    if (storeInput) {
+        distributeToEmployees(sid, parseFloat(storeInput.value) || 0);
+        recalcFromEmpTarget(sid);
+    }
 }
 
 function recalcFromDays(sid) {
@@ -521,6 +561,7 @@ function generateExcelWorkbook() {
     ];
 
     document.querySelectorAll('#targetTableBody tr').forEach(tr => {
+        if (tr.classList.contains('employee-row')) return;
         const cols = tr.children;
         const sid = tr.querySelector('.input-target').dataset.sid;
         const name = cols[1].textContent;
@@ -576,9 +617,7 @@ function generateExcelWorkbook() {
                 const empId = targetInp.dataset.empid;
                 const empName = targetInp.dataset.empname;
                 
-                if (target > 0) {
-                    empData.push([sid, storeName, empId, empName, days, target]);
-                }
+                empData.push([sid, storeName, empId, empName, days, target]);
             }
         }
     });
