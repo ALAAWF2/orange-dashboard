@@ -43,6 +43,14 @@ function calculateCurrentEmployees() {
     
     let currentStore = {};
     
+    // Calculate a threshold date (45 days ago) to filter out very old/inactive employees
+    const now = new Date();
+    const thresholdDate = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+    const th_y = thresholdDate.getFullYear();
+    const th_m = String(thresholdDate.getMonth() + 1).padStart(2, '0');
+    const th_d = String(thresholdDate.getDate()).padStart(2, '0');
+    const thresholdDateStr = `${th_y}-${th_m}-${th_d}`;
+    
     for (const storeId in employeesData.history) {
         const records = employeesData.history[storeId];
         if (!records || records.length === 0) continue;
@@ -64,23 +72,38 @@ function calculateCurrentEmployees() {
             
             if (!empId || empName === 'مرتجع') continue;
             
-            if (!currentStore[empId] || date > currentStore[empId].date) {
+            // Avoid overwriting a valid name with a purely numeric ID (often happens with returns)
+            const isNumericName = /^\d+$/.test(empName);
+            
+            if (!currentStore[empId]) {
                 currentStore[empId] = { store: storeId, date: date, name: empName };
+            } else if (date > currentStore[empId].date) {
+                currentStore[empId].date = date;
+                if (!isNumericName) {
+                    currentStore[empId].name = empName;
+                }
             }
         }
     }
+
     
     for (const empId in currentStore) {
-        const sid = currentStore[empId].store;
-        if (!storeEmployees[sid]) {
-            storeEmployees[sid] = [];
-        }
-        
+        // Skip inactive/old employees
+        if (currentStore[empId].date < thresholdDateStr) continue;
+
         let finalName = currentStore[empId].name;
         if (employeesData.employee_names && employeesData.employee_names[empId]) {
             finalName = employeesData.employee_names[empId];
         } else if (!finalName) {
             finalName = empId;
+        }
+
+        // If the final name is purely numeric, it's likely a ghost/return user, so we skip them
+        if (!finalName || /^\d+$/.test(finalName.trim())) continue;
+
+        const sid = currentStore[empId].store;
+        if (!storeEmployees[sid]) {
+            storeEmployees[sid] = [];
         }
         
         storeEmployees[sid].push({ id: empId, name: finalName });
