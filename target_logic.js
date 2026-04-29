@@ -464,7 +464,6 @@ function excludeEmployee(btn, sid) {
     const storeInput = document.querySelector(`.input-target[data-sid="${sid}"]`);
     if (storeInput) {
         distributeToEmployees(sid, parseFloat(storeInput.value) || 0);
-        recalcFromEmpTarget(sid);
     }
 }
 
