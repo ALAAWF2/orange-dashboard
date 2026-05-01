@@ -583,6 +583,77 @@
             background: rgba(139, 92, 246, 0.15);
             color: #8b5cf6;
         }
+
+        .morning-summary {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            padding: 14px;
+        }
+
+        .morning-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .morning-summary-card {
+            border: 1px solid #f1f1f1;
+            border-radius: 10px;
+            padding: 12px;
+            background: #fffdfb;
+        }
+
+        .morning-summary-label {
+            font-size: 0.78rem;
+            color: #6c757d;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .morning-summary-main {
+            font-weight: 800;
+            color: #212529;
+            line-height: 1.35;
+        }
+
+        .morning-summary-sub {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .morning-followup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .morning-followup-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .morning-followup-name {
+            font-weight: 700;
+            font-size: 0.86rem;
+        }
+
+        .morning-followup-metric {
+            font-weight: 800;
+            color: #dc3545;
+            white-space: nowrap;
+            font-size: 0.82rem;
+        }
+
+        @media (min-width: 576px) {
+            .morning-summary-grid {
+                grid-template-columns: 1.25fr 1fr 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -721,6 +792,24 @@
                             <div class="shift-sales" id="shift2Sales">0</div>
                             <div class="shift-details" id="shift2Details">0 فاتورة | 0 زائر</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="morning-summary mb-3">
+                <h6 class="section-title mb-3">ملخص صباحي</h6>
+                <div class="morning-summary-grid">
+                    <div class="morning-summary-card">
+                        <div class="morning-summary-label">أعلى 3 فروع تحتاج متابعة اليوم</div>
+                        <div id="morningFollowupList"></div>
+                    </div>
+                    <div class="morning-summary-card">
+                        <div class="morning-summary-label">أفضل فرع أمس</div>
+                        <div class="morning-summary-main" id="bestYesterdayBranch">لا توجد بيانات كافية</div>
+                    </div>
+                    <div class="morning-summary-card">
+                        <div class="morning-summary-label">أسوأ معدل استحواذ أمس</div>
+                        <div class="morning-summary-main" id="worstYesterdayConversion">لا توجد بيانات كافية</div>
                     </div>
                 </div>
             </div>
@@ -999,7 +1088,7 @@
         }
 
         // Get per-branch shift detail HTML
-                function getShiftBadgesHtml(storeId, shiftData) {
+        function getShiftBadgesHtml(storeId, shiftData) {
             if (!shiftViewActive) return '';
             const s1 = shiftData[1].byStore[storeId] || 0;
             const s2 = shiftData[2].byStore[storeId] || 0;
@@ -1028,6 +1117,120 @@
                     <span style="text-align:center;">${v2 || '-'}</span>
                 </div>
             </div>`;
+        }
+
+        function renderMorningSummary(allowedBranches, periodSales, periodTrans, branchTargets, daysInMonth, currentDay, toDate) {
+            const followupEl = document.getElementById('morningFollowupList');
+            const bestEl = document.getElementById('bestYesterdayBranch');
+            const worstEl = document.getElementById('worstYesterdayConversion');
+            if (!followupEl || !bestEl || !worstEl) return;
+
+            const followupBranches = allowedBranches.map(storeId => {
+                const monthlyTarget = branchTargets[storeId] || 0;
+                const sales = periodSales[storeId] || 0;
+                const mtdSales = getMonthToDateSales(storeId, toDate);
+                const remainingTarget = Math.max(0, monthlyTarget - mtdSales);
+                const remainingDays = Math.max(1, daysInMonth - currentDay + 1);
+                const dynamicDailyTarget = remainingTarget / remainingDays;
+                const dailyPercent = dynamicDailyTarget > 0 ? (sales / dynamicDailyTarget) * 100 : null;
+
+                return {
+                    storeId,
+                    sales,
+                    trans: periodTrans[storeId] || 0,
+                    dynamicDailyTarget,
+                    dailyPercent
+                };
+            }).filter(item => item.dynamicDailyTarget > 0 && item.dailyPercent !== null && item.dailyPercent < 100);
+
+            followupBranches.sort((a, b) => {
+                const aHasSales = a.sales > 0 ? 0 : 1;
+                const bHasSales = b.sales > 0 ? 0 : 1;
+                if (aHasSales !== bHasSales) return aHasSales - bHasSales;
+                return a.dailyPercent - b.dailyPercent;
+            });
+
+            if (followupBranches.length === 0) {
+                followupEl.innerHTML = '<div class="morning-summary-sub">لا توجد بيانات كافية</div>';
+            } else {
+                followupEl.innerHTML = followupBranches.slice(0, 3).map(item => {
+                    const storeName = rawData.stores[item.storeId] || item.storeId;
+                    return `
+                        <div class="morning-followup-item">
+                            <div>
+                                <div class="morning-followup-name">${storeName}</div>
+                                <div class="morning-summary-sub">${formatNumber(item.sales)} / ${formatNumber(item.dynamicDailyTarget)}</div>
+                            </div>
+                            <div class="morning-followup-metric">${item.dailyPercent.toFixed(0)}%</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const yesterdayStr = getYesterdayStr();
+            const yesterdaySalesByStore = {};
+            const yesterdayTransByStore = {};
+            const yesterdayVisitorsByStore = {};
+
+            if (rawData.sales) {
+                rawData.sales.forEach(row => {
+                    const [date, storeId, value] = row;
+                    if (date === yesterdayStr && allowedBranches.includes(storeId) && value > 0) {
+                        yesterdaySalesByStore[storeId] = (yesterdaySalesByStore[storeId] || 0) + value;
+                    }
+                });
+            }
+
+            if (rawData.transactions) {
+                rawData.transactions.forEach(row => {
+                    const [date, storeId, count] = row;
+                    if (date === yesterdayStr && allowedBranches.includes(storeId)) {
+                        yesterdayTransByStore[storeId] = (yesterdayTransByStore[storeId] || 0) + (count || 0);
+                    }
+                });
+            }
+
+            if (rawData.visitors) {
+                rawData.visitors.forEach(row => {
+                    const [date, storeId, count] = row;
+                    if (date === yesterdayStr && allowedBranches.includes(storeId) && count > 0) {
+                        yesterdayVisitorsByStore[storeId] = (yesterdayVisitorsByStore[storeId] || 0) + count;
+                    }
+                });
+            }
+
+            const bestYesterday = Object.entries(yesterdaySalesByStore).sort((a, b) => b[1] - a[1])[0];
+            if (bestYesterday) {
+                const [storeId, sales] = bestYesterday;
+                bestEl.innerHTML = `
+                    <div>${rawData.stores[storeId] || storeId}</div>
+                    <div class="morning-summary-sub">${formatNumber(sales)} مبيعات أمس</div>
+                `;
+            } else {
+                bestEl.textContent = 'لا توجد بيانات كافية';
+            }
+
+            const conversionRows = Object.entries(yesterdayVisitorsByStore).map(([storeId, visitors]) => {
+                const trans = yesterdayTransByStore[storeId] || 0;
+                return {
+                    storeId,
+                    visitors,
+                    trans,
+                    conversion: visitors > 0 ? (trans / visitors) * 100 : null
+                };
+            }).filter(item => item.conversion !== null);
+
+            conversionRows.sort((a, b) => a.conversion - b.conversion);
+            const worstConversion = conversionRows[0];
+
+            if (worstConversion) {
+                worstEl.innerHTML = `
+                    <div>${rawData.stores[worstConversion.storeId] || worstConversion.storeId}</div>
+                    <div class="morning-summary-sub">${worstConversion.conversion.toFixed(1)}% معدل استحواذ | ${formatNumber(worstConversion.trans)} فاتورة / ${formatNumber(worstConversion.visitors)} زائر</div>
+                `;
+            } else {
+                worstEl.textContent = 'لا توجد بيانات كافية';
+            }
         }
 
         // Get Employee Name (Arabic if available)
@@ -1259,6 +1462,27 @@
                 changeEl.textContent = `${changeLY > 0 ? '+' : ''}${changeLY}% vs LY`;
                 changeEl.className = 'kpi-sub ' + (changeLY >= 0 ? 'growth-pos' : 'growth-neg');
             }
+
+            const summaryBranchTargets = {};
+            const summaryTargetDate = getTargetDateStr(toDate);
+            if (rawData.targets) {
+                rawData.targets.forEach(row => {
+                    const date = row[0];
+                    const sId = row[1];
+                    const amount = row[2] || 0;
+                    if (date === summaryTargetDate) {
+                        summaryBranchTargets[sId] = amount;
+                    }
+                });
+            }
+
+            let summaryDaysInMonth = getDaysInMonth(toDate);
+            let summaryCurrentDay = getDayOfMonth(toDate);
+            if (summaryTargetDate === '2026-03-01' && parseInt(toDate.split('-')[2], 10) > 19) {
+                summaryCurrentDay = 19;
+            }
+
+            renderMorningSummary(allowedBranches, periodSales, periodTrans, summaryBranchTargets, summaryDaysInMonth, summaryCurrentDay, toDate);
 
             // Render branch cards
             const branchListEl = document.getElementById('branchList');
