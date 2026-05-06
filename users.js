@@ -9,7 +9,7 @@ const USERS = {
     "عبيدة السباعي": { pin: "1647", role: "Manager" },
     "محمدكلو": { pin: "4891", role: "Manager" },
     "محمدكلو": { pin: "4891", role: "Manager" },
-    "منطقة الطائف": { pin: "6342", role: "Manager" },
+    "المنطقة الشمالية": { pin: "6342", role: "Manager" },
 
     "علاء": { pin: "0000", role: "Auditor" }
 };
