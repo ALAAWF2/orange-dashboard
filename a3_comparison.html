@@ -656,15 +656,16 @@
             const m2025 = getStoreMonthlyData(2025, currentStoreId, sm, em);
 
             let labels = [], d2026 = [], d2025 = [], dTarget = [];
+            let numMonths = em - sm + 1;
             for (let m = sm; m <= em; m++) {
                 labels.push(monthNames[m - 1]);
                 let s6 = m2026[m] ? m2026[m].sales : 0;
                 let s5 = m2025[m] ? m2025[m].sales : 0;
                 let t = m2026[m] ? m2026[m].target : 0;
                 if (useAvg) {
-                    d2026.push(s6);
-                    d2025.push(s5);
-                    dTarget.push(t);
+                    d2026.push(numMonths > 0 ? Math.round(s6 / numMonths) : s6);
+                    d2025.push(numMonths > 0 ? Math.round(s5 / numMonths) : s5);
+                    dTarget.push(numMonths > 0 ? Math.round(t / numMonths) : t);
                 } else {
                     d2026.push(s6);
                     d2025.push(s5);
@@ -675,14 +676,15 @@
             const ctx = document.getElementById('salesChart').getContext('2d');
             if (salesChart) salesChart.destroy();
 
+            let chartTitle = useAvg ? 'متوسط شهري' : 'أرقام حقيقية';
             salesChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'مبيعات 2026', data: d2026, backgroundColor: '#fe7900', borderRadius: 4, barPercentage: 0.65 },
-                        { label: 'مبيعات 2025', data: d2025, backgroundColor: '#adb5bd', borderRadius: 4, barPercentage: 0.65 },
-                        { label: 'الهدف 2026', data: dTarget, backgroundColor: '#198754', borderRadius: 4, barPercentage: 0.35, type: 'line', borderColor: '#198754', borderWidth: 2, tension: 0.3, fill: false, pointRadius: 4, pointBackgroundColor: '#198754' }
+                        { label: useAvg ? 'متوسط مبيعات 2026' : 'مبيعات 2026', data: d2026, backgroundColor: '#fe7900', borderRadius: 4, barPercentage: 0.65 },
+                        { label: useAvg ? 'متوسط مبيعات 2025' : 'مبيعات 2025', data: d2025, backgroundColor: '#adb5bd', borderRadius: 4, barPercentage: 0.65 },
+                        { label: useAvg ? 'متوسط الهدف 2026' : 'الهدف 2026', data: dTarget, backgroundColor: '#198754', borderRadius: 4, barPercentage: 0.35, type: 'line', borderColor: '#198754', borderWidth: 2, tension: 0.3, fill: false, pointRadius: 4, pointBackgroundColor: '#198754' }
                     ]
                 },
                 options: {
@@ -706,14 +708,21 @@
         function renderVisitorsChart() {
             if (!currentStoreId) return;
             const { sm, em } = getMonthRange();
+            const useAvg = document.getElementById('salesAvgToggle').checked;
             const m2026 = getStoreMonthlyData(2026, currentStoreId, sm, em);
             const m2025 = getStoreMonthlyData(2025, currentStoreId, sm, em);
 
             let labels = [], d2026 = [], d2025 = [];
+            let numMonths = em - sm + 1;
             for (let m = sm; m <= em; m++) {
                 labels.push(monthNames[m - 1]);
-                d2026.push(m2026[m] ? m2026[m].visitors : 0);
-                d2025.push(m2025[m] ? m2025[m].visitors : 0);
+                if (useAvg) {
+                    d2026.push(numMonths > 0 ? Math.round((m2026[m] ? m2026[m].visitors : 0) / numMonths) : (m2026[m] ? m2026[m].visitors : 0));
+                    d2025.push(numMonths > 0 ? Math.round((m2025[m] ? m2025[m].visitors : 0) / numMonths) : (m2025[m] ? m2025[m].visitors : 0));
+                } else {
+                    d2026.push(m2026[m] ? m2026[m].visitors : 0);
+                    d2025.push(m2025[m] ? m2025[m].visitors : 0);
+                }
             }
 
             const ctx = document.getElementById('visitorsChart').getContext('2d');
@@ -724,8 +733,8 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'زوار 2026', data: d2026, backgroundColor: '#fe7900', borderRadius: 4, barPercentage: 0.65 },
-                        { label: 'زوار 2025', data: d2025, backgroundColor: '#6c757d', borderRadius: 4, barPercentage: 0.65 }
+                        { label: useAvg ? 'متوسط زوار 2026' : 'زوار 2026', data: d2026, backgroundColor: '#fe7900', borderRadius: 4, barPercentage: 0.65 },
+                        { label: useAvg ? 'متوسط زوار 2025' : 'زوار 2025', data: d2025, backgroundColor: '#6c757d', borderRadius: 4, barPercentage: 0.65 }
                     ]
                 },
                 options: {
@@ -924,13 +933,22 @@
             btn.disabled = true;
             btn.textContent = '⏳ جاري التصدير...';
 
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                alert('لم يتم تحميل مكتبات PDF. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+                btn.disabled = false;
+                btn.textContent = '📄 تصدير الكل PDF';
+                return;
+            }
+
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
             const sel = document.getElementById('storeSelector');
             const options = Array.from(sel.options).filter(o => o.value && o.value !== '');
             const { sm, em } = getMonthRange();
-            const periodText = `${monthNames[sm-1]} - ${monthNames[em-1]} 2025 vs 2026`;
+            const periodText = `${monthNames[sm-1]}-${monthNames[em-1]}`;
+
+            let savedStoreId = currentStoreId;
 
             for (let i = 0; i < options.length; i++) {
                 const opt = options[i];
@@ -939,12 +957,12 @@
                 document.getElementById('storeDisplayName').textContent = opt.textContent;
                 document.getElementById('printHeader').style.display = 'block';
                 document.getElementById('printStoreName').textContent = opt.textContent;
-                document.getElementById('printPeriod').textContent = periodText;
+                document.getElementById('printPeriod').textContent =
+                    monthNames[sm-1] + ' - ' + monthNames[em-1] + ' | 2025 vs 2026';
 
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 400));
                 renderAll();
-
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 600));
 
                 const element = document.querySelector('.container-fluid');
 
@@ -953,25 +971,40 @@
                         scale: 2,
                         useCORS: true,
                         logging: false,
+                        width: element.scrollWidth,
+                        height: Math.max(element.scrollHeight, 1200),
                         windowWidth: element.scrollWidth,
-                        windowHeight: element.scrollHeight
+                        windowHeight: Math.max(element.scrollHeight, 1200),
+                        allowTaint: true,
+                        backgroundColor: '#f8f9fa'
                     });
 
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = pdf.internal.pageSize.getHeight();
-                    const imgWidth = pdfWidth;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    const pdfW = pdf.internal.pageSize.getWidth();
+                    const pdfH = pdf.internal.pageSize.getHeight();
+                    const imgW = pdfW;
+                    const imgH = (canvas.height * pdfW) / canvas.width;
 
                     if (i > 0) pdf.addPage('landscape', 'a4');
-                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+                    pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pdfH));
                 } catch (err) {
-                    console.error(`Error rendering page for ${opt.textContent}:`, err);
+                    console.error(`Error rendering ${opt.textContent}:`, err);
+
+                    try {
+                        if (i > 0) pdf.addPage('landscape', 'a4');
+                        pdf.setFontSize(16);
+                        pdf.text(opt.textContent + ' - Error', pdfW / 2, pdfH / 2, { align: 'center' });
+                    } catch(e2) {}
                 }
             }
 
+            currentStoreId = savedStoreId || '';
+            document.getElementById('storeDisplayName').textContent =
+                currentStoreId ? (rawData.stores[currentStoreId] || currentStoreId) : 'اختر المعرض';
             document.getElementById('printHeader').style.display = 'none';
-            pdf.save(`A3_Report_All_Stores_${periodText.replace(/\s/g, '_')}.pdf`);
+            renderAll();
+
+            pdf.save('A3_Report_' + periodText + '.pdf');
 
             btn.disabled = false;
             btn.textContent = '📄 تصدير الكل PDF';
