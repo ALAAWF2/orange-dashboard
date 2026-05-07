@@ -4,7 +4,7 @@ const USERS = {
     "اماني عسيري": { pin: "3698", role: "Manager" },
     "جهاد ايوبي": { pin: "2587", role: "Manager" },
     "رضوان عطيوي": { pin: "7643", role: "Manager" },
-    "عبد الجليل الحبال": { pin: "1637", role: "Manager" },
+    "منطقة الرياض": { pin: "8410", role: "Manager" },
     "عبدالله السرداح": { pin: "4618", role: "Manager" },
     "عبيدة السباعي": { pin: "1647", role: "Manager" },
     "محمدكلو": { pin: "4891", role: "Manager" },
