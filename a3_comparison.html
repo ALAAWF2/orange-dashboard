@@ -873,7 +873,11 @@
                 if (!rawName || rawName === 'None' || rawName === '') return;
 
                 let empId = rawName, empName = rawName;
-                if (rawName.includes('-')) {
+                const match = rawName.match(/^(-?\d+)\s*-\s*(.+)/);
+                if (match) {
+                    empId = match[1];
+                    empName = match[2].trim();
+                } else if (rawName.includes('-')) {
                     empId = rawName.split('-')[0].trim();
                     empName = rawName.split('-').slice(1).join('-').trim();
                 }
@@ -891,7 +895,7 @@
                 empAgg[empId].items += items || 0;
             });
 
-            let empList = Object.values(empAgg).filter(e => e.sales !== 0).sort((a, b) => b.sales - a.sales);
+            let empList = Object.values(empAgg).filter(e => e.sales > 0).sort((a, b) => b.sales - a.sales);
             let totalSales = empList.reduce((s, e) => s + e.sales, 0);
             let maxSales = empList.length > 0 ? empList[0].sales : 1;
 
@@ -998,7 +1002,7 @@
             Chart.defaults.animation = false;
 
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
 
             const sel = document.getElementById('storeSelector');
             const { sm, em } = getMonthRange();
@@ -1036,9 +1040,19 @@
                         useCORS: true,
                         logging: true,
                         scrollY: -window.scrollY,
-                        windowWidth: document.documentElement.offsetWidth,
-                        windowHeight: document.documentElement.scrollHeight,
-                        backgroundColor: '#f8f9fa'
+                        windowWidth: 1500,
+                        backgroundColor: '#f8f9fa',
+                        onclone: (docClone) => {
+                            // Hide no-print elements in the cloned document
+                            const noPrints = docClone.querySelectorAll('.no-print');
+                            noPrints.forEach(el => el.style.display = 'none');
+                            // Force fixed width for consistent A3 layout scaling
+                            const mainContent = docClone.getElementById('main-content');
+                            if (mainContent) {
+                                mainContent.style.width = '1500px';
+                                mainContent.style.margin = '0 auto';
+                            }
+                        }
                     });
 
                     // Restore overflow
@@ -1051,7 +1065,7 @@
                     const imgW = pdfW;
                     const imgH = (canvas.height * pdfW) / canvas.width;
 
-                    if (i > 0) pdf.addPage('landscape', 'a4');
+                    if (i > 0) pdf.addPage('landscape', 'a3');
                     pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pdfH));
                 } catch (err) {
                     console.error(`Error rendering ${opt.textContent}:`, err);
@@ -1062,7 +1076,7 @@
                     try {
                         const pdfW = pdf.internal.pageSize.getWidth();
                         const pdfH = pdf.internal.pageSize.getHeight();
-                        if (i > 0) pdf.addPage('landscape', 'a4');
+                        if (i > 0) pdf.addPage('landscape', 'a3');
                         pdf.setFontSize(16);
                         pdf.text(opt.textContent + ' - Error', pdfW / 2, pdfH / 2, { align: 'center' });
                     } catch(e2) {}
