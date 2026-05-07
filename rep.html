@@ -1399,16 +1399,40 @@
                 if (o.items) {
                     o.items.forEach(item => {
                         let itemId = null;
+                        let itemDate = null;
+                        let itemStore = null;
+
                         if (typeof item === 'object' && item.i) {
                             itemId = item.i;
+                            itemDate = item.d;
+                            itemStore = item.s;
                         } else if (typeof item === 'string') {
                             itemId = item;
                         }
+
+                        // Date filter
+                        if (itemDate && dateFrom && dateTo) {
+                            if (itemDate < dateFrom || itemDate > dateTo) {
+                                return;
+                            }
+                        }
+
                         if (itemId) {
                             if (!isAllOffers) selectedOfferItemsSet.add(itemId);
+                            
+                            // Map by itemId (for global views)
                             if (!itemOffersMap[itemId]) itemOffersMap[itemId] = [];
                             if (!itemOffersMap[itemId].includes(offerName)) {
                                 itemOffersMap[itemId].push(offerName);
+                            }
+                            
+                            // Map by storeId_itemId (for by_store view)
+                            if (itemStore) {
+                                const compKey = itemStore + '_' + itemId;
+                                if (!itemOffersMap[compKey]) itemOffersMap[compKey] = [];
+                                if (!itemOffersMap[compKey].includes(offerName)) {
+                                    itemOffersMap[compKey].push(offerName);
+                                }
                             }
                         }
                     });
@@ -1552,7 +1576,7 @@
                             stock_by_store: { [storeId]: totalStock },
                             store_id: storeId,
                             store_name: META.stores[storeId] || storeId,
-                            offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
+                            offer_names: itemOffersMap[storeId + '_' + pid] ? itemOffersMap[storeId + '_' + pid].join(' | ') : (itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : '')
                         });
                     }
                 } else if (viewMode === 'by_month' || viewMode === 'by_week' || viewMode === 'by_day') {
@@ -1646,7 +1670,7 @@
                                     stock_by_store: { [storeId]: totalStock },
                                     store_id: storeId,
                                     store_name: META.stores[storeId] || storeId,
-                                    offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
+                                    offer_names: itemOffersMap[storeId + '_' + pid] ? itemOffersMap[storeId + '_' + pid].join(' | ') : (itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : '')
                                 });
                             }
                         } else {
