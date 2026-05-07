@@ -877,6 +877,10 @@
                     empId = rawName.split('-')[0].trim();
                     empName = rawName.split('-').slice(1).join('-').trim();
                 }
+                
+                // Filter out negative IDs (Returns/Transfers)
+                if (empId.startsWith('-') || parseInt(empId) < 0) return;
+
                 if (empData.employee_names && empData.employee_names[empId])
                     empName = empData.employee_names[empId];
                 if (empName === 'مرتجع' || empName === 'R') return;
@@ -891,6 +895,25 @@
             let totalSales = empList.reduce((s, e) => s + e.sales, 0);
             let maxSales = empList.length > 0 ? empList[0].sales : 1;
 
+            // Update Table Headers
+            const thead = document.querySelector('#employeeTableBody').previousElementSibling;
+            if (thead && !thead.innerHTML.includes('تاريخ الانضمام')) {
+                thead.innerHTML = `
+                    <tr>
+                        <th class="text-center">#</th>
+                        <th>الموظف</th>
+                        <th class="text-center">تاريخ الانضمام</th>
+                        <th class="text-center">سنوات الخدمة</th>
+                        <th class="text-center">المبيعات</th>
+                        <th class="text-center">الفواتير</th>
+                        <th class="text-center">متوسط الفاتورة</th>
+                        <th class="text-center">الأصناف</th>
+                        <th style="min-width:160px;">Branch Share</th>
+                        <th class="text-center">المساهمة %</th>
+                    </tr>
+                `;
+            }
+
             const tbody = document.getElementById('employeeTableBody');
             tbody.innerHTML = '';
 
@@ -904,6 +927,8 @@
                 tr.innerHTML = `
                     <td class="text-center"><span class="rank-badge">${i+1}</span></td>
                     <td class="fw-bold">${e.name}</td>
+                    <td class="text-center text-muted">-</td>
+                    <td class="text-center text-muted">-</td>
                     <td class="text-center fw-bold">${fmtNum(dispSales)}</td>
                     <td class="text-center">${fmtNum(e.trans)}</td>
                     <td class="text-center">${fmtNum(avgInv)}</td>
@@ -924,7 +949,7 @@
             let totalItems = empList.reduce((s, e) => s + e.items, 0);
             let avgTicket = totalTrans > 0 ? Math.round(totalSales / totalTrans) : 0;
             foot.innerHTML = `<tr>
-                <td class="text-center" colspan="2">الإجمالي (${empList.length} موظف)</td>
+                <td class="text-center" colspan="4">الإجمالي (${empList.length} موظف)</td>
                 <td class="text-center">${fmtNum(useAvg ? Math.round(totalSales / numMonths) : totalSales)}</td>
                 <td class="text-center">${fmtNum(totalTrans)}</td>
                 <td class="text-center">${fmtNum(avgTicket)}</td>
@@ -993,22 +1018,34 @@
                     monthNames[sm-1] + ' - ' + monthNames[em-1] + ' | 2025 vs 2026';
 
                 renderAll();
-                // Wait a bit for DOM to update and charts to finish rendering (since animation is false, it's quick)
-                await new Promise(r => setTimeout(r, 300));
+                // Wait a bit for DOM to update and charts to finish rendering
+                await new Promise(r => setTimeout(r, 500));
 
                 const element = document.getElementById('main-content');
                 window.scrollTo(0, 0);
+
+                // IMPORTANT FIX FOR BLANK PDF: Remove overflow hidden which breaks html2canvas
+                const htmlStyle = document.documentElement.style.overflow;
+                const bodyStyle = document.body.style.overflow;
+                document.documentElement.style.overflow = 'visible';
+                document.body.style.overflow = 'visible';
 
                 try {
                     const canvas = await html2canvas(element, {
                         scale: 2,
                         useCORS: true,
-                        logging: false,
-                        scrollY: 0,
+                        logging: true,
+                        scrollY: -window.scrollY,
+                        windowWidth: document.documentElement.offsetWidth,
+                        windowHeight: document.documentElement.scrollHeight,
                         backgroundColor: '#f8f9fa'
                     });
 
-                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    // Restore overflow
+                    document.documentElement.style.overflow = htmlStyle;
+                    document.body.style.overflow = bodyStyle;
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
                     const pdfW = pdf.internal.pageSize.getWidth();
                     const pdfH = pdf.internal.pageSize.getHeight();
                     const imgW = pdfW;
@@ -1018,6 +1055,10 @@
                     pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pdfH));
                 } catch (err) {
                     console.error(`Error rendering ${opt.textContent}:`, err);
+                    // Restore overflow on error
+                    document.documentElement.style.overflow = htmlStyle;
+                    document.body.style.overflow = bodyStyle;
+                    
                     try {
                         const pdfW = pdf.internal.pageSize.getWidth();
                         const pdfH = pdf.internal.pageSize.getHeight();
