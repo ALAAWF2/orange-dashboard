@@ -888,8 +888,21 @@
                 if (empData.employee_names && empData.employee_names[empId])
                     empName = empData.employee_names[empId];
                 if (empName === 'مرتجع' || empName === 'R') return;
+                
+                let jdate = '-';
+                let yearsService = '-';
+                if (empData.employee_join_dates && empData.employee_join_dates[empId]) {
+                    jdate = empData.employee_join_dates[empId];
+                    if (jdate) {
+                        let jd = new Date(jdate);
+                        let today = new Date();
+                        let diffTime = Math.abs(today - jd);
+                        let diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+                        yearsService = diffYears.toFixed(1);
+                    }
+                }
 
-                if (!empAgg[empId]) empAgg[empId] = { empId, name: empName, sales: 0, trans: 0, items: 0 };
+                if (!empAgg[empId]) empAgg[empId] = { empId, name: empName, joinDate: jdate, yearsService: yearsService, sales: 0, trans: 0, items: 0 };
                 empAgg[empId].sales += sales || 0;
                 empAgg[empId].trans += trans || 0;
                 empAgg[empId].items += items || 0;
@@ -931,8 +944,8 @@
                 tr.innerHTML = `
                     <td class="text-center"><span class="rank-badge">${i+1}</span></td>
                     <td class="fw-bold">${e.name}</td>
-                    <td class="text-center text-muted">-</td>
-                    <td class="text-center text-muted">-</td>
+                    <td class="text-center text-muted" dir="ltr">${e.joinDate}</td>
+                    <td class="text-center text-muted">${e.yearsService}</td>
                     <td class="text-center fw-bold">${fmtNum(dispSales)}</td>
                     <td class="text-center">${fmtNum(e.trans)}</td>
                     <td class="text-center">${fmtNum(avgInv)}</td>
