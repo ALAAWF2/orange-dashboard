@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange | A3 تقرير المقارنة</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            --bs-secondary: #6c757d;
+            --bg-light: #f8f9fa;
+            --card-radius: 12px;
+            --font-main: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-light);
+            color: #212529;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: white !important;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #000 !important;
+        }
+
+        .brand-orange { color: #fe7900; }
+
+        .kpi-card {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s;
+            padding: 18px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .kpi-card:hover { transform: translateY(-3px); }
+
+        .kpi-title {
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .kpi-sub {
+            font-size: 0.78rem;
+            margin-top: 4px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 16px;
+            border-right: 4px solid #fe7900;
+            padding-right: 10px;
+            font-size: 1.1rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 16px;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            margin-bottom: 16px;
+            min-height: 320px;
+        }
+
+        /* Table Styles */
+        .table-a3 thead th {
+            background-color: #fe7900;
+            color: white;
+            font-weight: 500;
+            border: none;
+            font-size: 0.82rem;
+            padding: 10px 8px;
+            white-space: nowrap;
+        }
+
+        .table-a3 tbody td {
+            font-size: 0.84rem;
+            padding: 8px;
+            vertical-align: middle;
+        }
+
+        .table-a3 tbody tr:hover { background-color: #fff3e0; }
+
+        .text-success-custom { color: #198754; }
+        .text-danger-custom { color: #dc3545; }
+
+        /* Toggle Switch */
+        .toggle-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 6px 14px;
+            border-radius: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input { display: none; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background-color: #ccc;
+            border-radius: 26px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #fe7900;
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* Page Header */
+        .page-header {
+            background: linear-gradient(135deg, #fe7900, #ff9a3c);
+            color: white;
+            padding: 20px 24px;
+            border-radius: var(--card-radius);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page-header h2 { margin: 0; font-size: 1.35rem; font-weight: 800; }
+        .page-header .period-badge {
+            background: rgba(255,255,255,0.25);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        /* Rank Badge */
+        .rank-badge {
+            background: #fe7900;
+            color: white;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        html, body { overflow-x: hidden; max-width: 100vw; }
+
+        .table-responsive { overflow-x: auto; }
+
+        /* Mobile Responsive */
+        @media (max-width: 767.98px) {
+            .kpi-value { font-size: 1.15rem; }
+            .kpi-title { font-size: 0.72rem; }
+            .kpi-card { padding: 10px; }
+            .chart-container { min-height: 220px; padding: 10px; }
+            .table-a3 { font-size: 0.72rem; }
+            .page-header { padding: 14px 16px; }
+            .page-header h2 { font-size: 1.1rem; }
+            .row.g-3 > .col { flex: 0 0 50% !important; max-width: 50% !important; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar mb-4 sticky-top">
+        <div class="container-fluid position-relative">
+            <span class="navbar-brand"><span class="brand-orange">ORANGE</span> DASHBOARD</span>
+            <div class="d-flex gap-2">
+                <a href="index.html" class="btn btn-outline-primary btn-sm fw-bold">🏠 الرئيسية</a>
+                <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser || currentUser.name !== 'Sales Manager') {
+            window.location.href = 'login.html';
+        }
+        function logout() { localStorage.removeItem('currentUser'); window.location.href = 'login.html'; }
+    </script>
+
+    <div class="container-fluid px-4">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h2>📊 تقرير A3 - مقارنة الأداء الشهري</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <div class="period-badge" id="periodBadge">يناير - أبريل 2025 vs 2026</div>
+                <select id="startMonth" class="form-select form-select-sm" style="width:auto;min-width:110px;" onchange="updateReport()">
+                    <option value="1" selected>من يناير</option>
+                    <option value="2">من فبراير</option>
+                    <option value="3">من مارس</option>
+                    <option value="4">من أبريل</option>
+                </select>
+                <select id="endMonth" class="form-select form-select-sm" style="width:auto;min-width:110px;" onchange="updateReport()">
+                    <option value="1">إلى يناير</option>
+                    <option value="2">إلى فبراير</option>
+                    <option value="3">إلى مارس</option>
+                    <option value="4" selected>إلى أبريل</option>
+                    <option value="5">إلى مايو</option>
+                    <option value="6">إلى يونيو</option>
+                    <option value="7">إلى يوليو</option>
+                    <option value="8">إلى أغسطس</option>
+                    <option value="9">إلى سبتمبر</option>
+                    <option value="10">إلى أكتوبر</option>
+                    <option value="11">إلى نوفمبر</option>
+                    <option value="12">إلى ديسمبر</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ==================== PART 1: STORES COMPARISON ==================== -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h5 class="section-title mb-0">🏪 مقارنة المعارض (2025 vs 2026)</h5>
+            <div class="toggle-wrapper">
+                <span id="storeToggleLabel">أرقام حقيقية</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="storeAvgToggle" onchange="renderStoreTable()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="color:#888;font-size:0.72rem;">متوسط شهري</span>
+            </div>
+        </div>
+
+        <!-- Store KPI Summary Cards -->
+        <div class="row g-3 mb-3">
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-warning">
+                    <div class="kpi-title">إجمالي المبيعات 2026</div>
+                    <div class="kpi-value" id="storeTotSales2026">0</div>
+                    <div class="kpi-sub text-muted">vs 2025: <span id="storeSalesGrowth" class="fw-bold">0%</span></div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-dark">
+                    <div class="kpi-title">إجمالي المبيعات 2025</div>
+                    <div class="kpi-value text-secondary" id="storeTotSales2025" style="font-size:1.4rem;">0</div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-info">
+                    <div class="kpi-title">إجمالي الزوار 2026</div>
+                    <div class="kpi-value" id="storeTotVisitors2026">0</div>
+                    <div class="kpi-sub text-muted">متوسط/شهر: <span id="storeAvgVisitors" class="fw-bold">0</span></div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-success">
+                    <div class="kpi-title">الهدف 2026</div>
+                    <div class="kpi-value" id="storeTarget2026">0</div>
+                    <div class="kpi-sub text-muted">التحقيق: <span id="storeAchievement" class="fw-bold">0%</span></div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-primary">
+                    <div class="kpi-title">قيمة العميل 2026</div>
+                    <div class="kpi-value" id="storeCustValue">0</div>
+                    <div class="kpi-sub text-muted">المتوسط الشهري للمبيعات: <span id="storeAvgSales" class="fw-bold">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Sales Bar Chart -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="chart-container">
+                    <canvas id="storeComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Detail Table -->
+        <div class="card border-0 shadow-sm p-3 mb-4">
+            <div class="table-responsive">
+                <table class="table table-a3 table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>الفرع</th>
+                            <th class="text-center">مبيعات 2026</th>
+                            <th class="text-center text-muted">مبيعات 2025</th>
+                            <th class="text-center">النمو %</th>
+                            <th class="text-center">الزوار 2026</th>
+                            <th class="text-center">متوسط الزوار</th>
+                            <th class="text-center">الهدف 2026</th>
+                            <th class="text-center">التحقيق %</th>
+                            <th class="text-center">قيمة العميل</th>
+                            <th class="text-center">متوسط المبيعات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="storeTableBody"></tbody>
+                    <tfoot id="storeTableFoot" class="table-dark fw-bold"></tfoot>
+                </table>
+            </div>
+        </div>
+
+
+        <!-- ==================== PART 2: EMPLOYEE PERFORMANCE ==================== -->
+        <hr style="border-top:3px solid #fe7900;margin:30px 0;">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h5 class="section-title mb-0">👤 أداء الموظفين</h5>
+            <div class="toggle-wrapper">
+                <span id="empToggleLabel">أرقام حقيقية</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="empAvgToggle" onchange="renderEmployeeTable()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="color:#888;font-size:0.72rem;">متوسط شهري</span>
+            </div>
+        </div>
+
+        <!-- Employee KPI Cards -->
+        <div class="row g-3 mb-3">
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-warning">
+                    <div class="kpi-title">إجمالي مبيعات الموظفين</div>
+                    <div class="kpi-value" id="empTotalSales">0</div>
+                    <div class="kpi-sub text-muted">عدد الموظفين: <span id="empCount" class="fw-bold">0</span></div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-info">
+                    <div class="kpi-title">متوسط مبيعات الموظف</div>
+                    <div class="kpi-value" id="empAvgSales">0</div>
+                    <div class="kpi-sub text-muted">لكل موظف في الفترة</div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-primary">
+                    <div class="kpi-title">أعلى موظف مبيعات</div>
+                    <div class="kpi-value" id="empTopSales" style="font-size:1.3rem;" id="empTopName">0</div>
+                    <div class="kpi-sub" id="empTopNameSub">-</div>
+                </div>
+            </div>
+            <div class="col-md col-6">
+                <div class="kpi-card border-bottom border-4 border-success">
+                    <div class="kpi-title">إجمالي الفواتير</div>
+                    <div class="kpi-value" id="empTotalTrans">0</div>
+                    <div class="kpi-sub text-muted">متوسط فاتورة: <span id="empAvgTicket" class="fw-bold">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Table -->
+        <div class="card border-0 shadow-sm p-3 mb-4">
+            <div class="table-responsive">
+                <table class="table table-a3 table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>الموظف</th>
+                            <th class="text-center">المعرض</th>
+                            <th class="text-center">المبيعات</th>
+                            <th class="text-center">الفواتير</th>
+                            <th class="text-center">متوسط الفاتورة</th>
+                            <th class="text-center">عدد الأصناف</th>
+                            <th class="text-center">مساهمة %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeTableBody"></tbody>
+                    <tfoot id="employeeTableFoot" class="table-dark fw-bold"></tfoot>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let rawData = null;
+        let empData = null;
+        let storeChart = null;
+
+        const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+        function fmtNum(el, val) { el.textContent = Number(val).toLocaleString(); }
+
+        async function init() {
+            try {
+                const [mRes, eRes] = await Promise.all([
+                    fetch('management_data.json?t=' + Date.now()),
+                    fetch('employees_data.json?t=' + Date.now())
+                ]);
+                rawData = await mRes.json();
+                empData = await eRes.json();
+                updateReport();
+            } catch (e) {
+                console.error('Error loading data:', e);
+            }
+        }
+
+        function getMonthRange() {
+            let sm = parseInt(document.getElementById('startMonth').value);
+            let em = parseInt(document.getElementById('endMonth').value);
+            if (sm > em) { let t = sm; sm = em; em = t; document.getElementById('startMonth').value = sm; document.getElementById('endMonth').value = em; }
+            return { sm, em };
+        }
+
+        function updateReport() {
+            const { sm, em } = getMonthRange();
+
+            // Update badge
+            document.getElementById('periodBadge').textContent =
+                `${monthNames[sm-1]} - ${monthNames[em-1]} 2025 vs 2026`;
+
+            renderStoreKPIs(sm, em);
+            renderStoreTable();
+            renderStoreChart(sm, em);
+            renderEmployeeTable(sm, em);
+        }
+
+        // ========== STORES LOGIC ==========
+
+        function aggregateStoreData(year, sm, em) {
+            let sales = 0, visitors = 0, target = 0, trans = 0;
+            let branchSales = {}, branchVisitors = {}, branchTarget = {}, branchTrans = {};
+            let numMonths = em - sm + 1;
+
+            const sDate = new Date(year, sm - 1, 1);
+            const eDate = new Date(year, em, 0);
+            if (year === 2026) {
+                let now = new Date();
+                if (eDate > now) eDate.setTime(now.getTime());
+            }
+            const sTime = sDate.getTime();
+            const eTime = eDate.getTime();
+
+            rawData.sales.forEach(([d, s, v]) => {
+                let dt = new Date(d).getTime();
+                if (dt >= sTime && dt <= eTime) {
+                    sales += v;
+                    branchSales[s] = (branchSales[s] || 0) + v;
+                }
+            });
+            rawData.targets.forEach(([d, s, v]) => {
+                let dt = new Date(d).getTime();
+                if (dt >= sTime && dt <= eTime) {
+                    target += v;
+                    branchTarget[s] = (branchTarget[s] || 0) + v;
+                }
+            });
+            rawData.visitors.forEach(([d, s, v]) => {
+                let dt = new Date(d).getTime();
+                if (dt >= sTime && dt <= eTime) {
+                    visitors += v;
+                    branchVisitors[s] = (branchVisitors[s] || 0) + v;
+                }
+            });
+            rawData.transactions.forEach(([d, s, v]) => {
+                let dt = new Date(d).getTime();
+                if (dt >= sTime && dt <= eTime) {
+                    trans += v;
+                    branchTrans[s] = (branchTrans[s] || 0) + v;
+                }
+            });
+
+            return { sales, visitors, target, trans, branchSales, branchVisitors, branchTarget, branchTrans, numMonths };
+        }
+
+        function renderStoreKPIs(sm, em) {
+            const c2026 = aggregateStoreData(2026, sm, em);
+            const c2025 = aggregateStoreData(2025, sm, em);
+
+            fmtNum(document.getElementById('storeTotSales2026'), c2026.sales);
+            fmtNum(document.getElementById('storeTotSales2025'), c2025.sales);
+
+            let growth = c2025.sales > 0 ? ((c2026.sales - c2025.sales) / c2025.sales * 100) : 0;
+            let gEl = document.getElementById('storeSalesGrowth');
+            gEl.textContent = (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%';
+            gEl.className = growth >= 0 ? 'text-success-custom fw-bold' : 'text-danger-custom fw-bold';
+
+            fmtNum(document.getElementById('storeTotVisitors2026'), c2026.visitors);
+            let avgVis = c2026.numMonths > 0 ? Math.round(c2026.visitors / c2026.numMonths) : 0;
+            fmtNum(document.getElementById('storeAvgVisitors'), avgVis);
+
+            fmtNum(document.getElementById('storeTarget2026'), c2026.target);
+            let ach = c2026.target > 0 ? (c2026.sales / c2026.target * 100) : 0;
+            let aEl = document.getElementById('storeAchievement');
+            aEl.textContent = ach.toFixed(1) + '%';
+            aEl.className = ach >= 100 ? 'text-success-custom fw-bold' : 'text-warning fw-bold';
+
+            let custVal = c2026.visitors > 0 ? Math.round(c2026.sales / c2026.visitors) : 0;
+            fmtNum(document.getElementById('storeCustValue'), custVal);
+
+            let avgSales = c2026.numMonths > 0 ? Math.round(c2026.sales / c2026.numMonths) : 0;
+            fmtNum(document.getElementById('storeAvgSales'), avgSales);
+        }
+
+        function renderStoreTable() {
+            const useAvg = document.getElementById('storeAvgToggle').checked;
+            document.getElementById('storeToggleLabel').textContent = useAvg ? 'متوسط شهري' : 'أرقام حقيقية';
+            if (useAvg) {
+                document.getElementById('storeToggleLabel').nextElementSibling.nextElementSibling.style.display = 'none';
+            }
+
+            const { sm, em } = getMonthRange();
+            const c2026 = aggregateStoreData(2026, sm, em);
+            const c2025 = aggregateStoreData(2025, sm, em);
+
+            let allStores = new Set([
+                ...Object.keys(c2026.branchSales),
+                ...Object.keys(c2025.branchSales),
+                ...Object.keys(c2026.branchTarget)
+            ]);
+
+            let rows = [];
+            allStores.forEach(sid => {
+                if (sid === '9999' || sid === '0') return;
+                let name = rawData.stores[sid] || sid;
+
+                let s26 = c2026.branchSales[sid] || 0;
+                let s25 = c2025.branchSales[sid] || 0;
+                let v26 = c2026.branchVisitors[sid] || 0;
+                let t26 = c2026.branchTarget[sid] || 0;
+                let tr26 = c2026.branchTrans[sid] || 0;
+
+                let growth = s25 > 0 ? ((s26 - s25) / s25 * 100) : (s26 > 0 ? 100 : 0);
+                let ach = t26 > 0 ? (s26 / t26 * 100) : 0;
+                let custVal = v26 > 0 ? Math.round(s26 / v26) : 0;
+                let avgV = c2026.numMonths > 0 ? Math.round(v26 / c2026.numMonths) : 0;
+                let avgS = c2026.numMonths > 0 ? Math.round(s26 / c2026.numMonths) : 0;
+
+                let displaySales = useAvg ? avgS : s26;
+                let displaySales25 = useAvg && c2025.numMonths > 0 ? Math.round(s25 / c2025.numMonths) : s25;
+
+                rows.push({ sid, name, sales26: displaySales, sales25: displaySales25, raw26: s26, raw25: s25,
+                    growth, visitors: v26, avgVisitors: avgV, target: t26, achievement: ach, custVal, avgSales: avgS });
+            });
+
+            rows.sort((a, b) => b.raw26 - a.raw26);
+
+            const tbody = document.getElementById('storeTableBody');
+            tbody.innerHTML = '';
+            rows.forEach((r, i) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center"><span class="rank-badge">${i+1}</span></td>
+                    <td class="fw-bold">${r.name}</td>
+                    <td class="text-center fw-bold">${r.sales26.toLocaleString()}</td>
+                    <td class="text-center text-muted">${r.sales25.toLocaleString()}</td>
+                    <td class="text-center ${r.growth>=0?'text-success-custom':'text-danger-custom'} fw-bold">${r.growth>=0?'+':''}${r.growth.toFixed(1)}%</td>
+                    <td class="text-center">${r.visitors.toLocaleString()}</td>
+                    <td class="text-center text-primary">${r.avgVisitors.toLocaleString()}</td>
+                    <td class="text-center">${r.target.toLocaleString()}</td>
+                    <td class="text-center ${r.achievement>=100?'text-success':'text-warning'} fw-bold">${r.achievement.toFixed(1)}%</td>
+                    <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${r.avgSales.toLocaleString()}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            // Footer
+            const tfoot = document.getElementById('storeTableFoot');
+            let tS26=0, tS25=0, tV=0, tT=0, tCV=0, tAV=0, tAS=0;
+            rows.forEach(r => { tS26+=r.raw26; tS25+=r.raw25; tV+=r.visitors; tT+=r.target; tAV+=r.avgVisitors; tAS+=r.avgSales; });
+            tCV = tV > 0 ? Math.round(tS26/tV) : 0;
+            let tG = tS25>0?((tS26-tS25)/tS25*100):0;
+            let tA = tT>0?(tS26/tT*100):0;
+
+            tfoot.innerHTML = `<tr>
+                <td class="text-center" colspan="2">الإجمالي</td>
+                <td class="text-center">${tS26.toLocaleString()}</td>
+                <td class="text-center text-light opacity-75">${tS25.toLocaleString()}</td>
+                <td class="text-center ${tG>=0?'text-success':'text-danger'}">${tG>=0?'+':''}${tG.toFixed(1)}%</td>
+                <td class="text-center">${tV.toLocaleString()}</td>
+                <td class="text-center">${tAV.toLocaleString()}</td>
+                <td class="text-center">${tT.toLocaleString()}</td>
+                <td class="text-center ${tA>=100?'text-success':'text-warning'}">${tA.toFixed(1)}%</td>
+                <td class="text-center">${tCV.toLocaleString()}</td>
+                <td class="text-center">${tAS.toLocaleString()}</td>
+            </tr>`;
+        }
+
+        function renderStoreChart(sm, em) {
+            const c2026 = aggregateStoreData(2026, sm, em);
+            const c2025 = aggregateStoreData(2025, sm, em);
+
+            let labels = [], data2026 = [], data2025 = [];
+            let combined = new Set([...Object.keys(c2026.branchSales), ...Object.keys(c2025.branchSales)]);
+            combined.delete('9999'); combined.delete('0');
+
+            let arr = [...combined].sort((a,b) =>
+                ((c2026.branchSales[a]||0)-(c2026.branchSales[b]||0)) * -1
+            ).slice(0, 15);
+
+            arr.forEach(sid => {
+                labels.push(rawData.stores[sid] || sid);
+                data2026.push(c2026.branchSales[sid] || 0);
+                data2025.push(c2025.branchSales[sid] || 0);
+            });
+
+            const ctx = document.getElementById('storeComparisonChart').getContext('2d');
+
+            if (storeChart) storeChart.destroy();
+
+            storeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'مبيعات 2026',
+                            data: data2026,
+                            backgroundColor: '#fe7900',
+                            borderRadius: 4,
+                            barPercentage: 0.7,
+                        },
+                        {
+                            label: 'مبيعات 2025',
+                            data: data2025,
+                            backgroundColor: '#adb5bd',
+                            borderRadius: 4,
+                            barPercentage: 0.7,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', rtl: true, labels: { font: { family: 'Tajawal' }, usePointStyle: true } },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { font: { size: 10, family: 'Tajawal' }, maxRotation: 45 }, grid: { display: false } },
+                        y: { ticks: { callback: (v) => (v/1000000).toFixed(1)+'M' }, grid: { color: '#f0f0f0' } }
+                    }
+                }
+            });
+        }
+
+
+        // ========== EMPLOYEE LOGIC ==========
+
+        function renderEmployeeTable() {
+            const useAvg = document.getElementById('empAvgToggle').checked;
+            document.getElementById('empToggleLabel').textContent = useAvg ? 'متوسط شهري' : 'أرقام حقيقية';
+
+            const { sm, em } = getMonthRange();
+            const startStr = `2026-${String(sm).padStart(2,'0')}-01`;
+            const endStr = `2026-${String(em).padStart(2,'0')}-31`;
+            const numMonths = em - sm + 1;
+
+            let empAgg = {};
+
+            Object.keys(empData.history || {}).forEach(sid => {
+                if (sid === '9999' || sid === '0') return;
+
+                let history = empData.history[sid] || [];
+                history.forEach(rec => {
+                    const [date, rawName, sales, trans, items] = rec;
+                    if (date < startStr || date > endStr) return;
+                    if (!rawName || rawName === 'None' || rawName === '') return;
+
+                    let empId = rawName, empName = rawName;
+                    if (rawName.includes('-')) {
+                        empId = rawName.split('-')[0].trim();
+                        empName = rawName.split('-').slice(1).join('-').trim();
+                    }
+                    if (empData.employee_names && empData.employee_names[empId])
+                        empName = empData.employee_names[empId];
+                    if (empName === 'مرتجع' || empName === 'R') return;
+
+                    let key = empId + '_' + sid;
+                    if (!empAgg[key]) empAgg[key] = { empId, name: empName, storeId: sid, sales: 0, trans: 0, items: 0 };
+                    empAgg[key].sales += sales || 0;
+                    empAgg[key].trans += trans || 0;
+                    empAgg[key].items += items || 0;
+                });
+            });
+
+            let empList = Object.values(empAgg).filter(e => e.sales !== 0).sort((a, b) => b.sales - a.sales);
+
+            // KPIs
+            let totalSales = empList.reduce((s, e) => s + e.sales, 0);
+            let totalTrans = empList.reduce((s, e) => s + e.trans, 0);
+            let avgEmp = empList.length > 0 ? Math.round(totalSales / empList.length) : 0;
+            let avgTicket = totalTrans > 0 ? Math.round(totalSales / totalTrans) : 0;
+
+            fmtNum(document.getElementById('empTotalSales'), totalSales);
+            fmtNum(document.getElementById('empCount'), empList.length);
+            fmtNum(document.getElementById('empAvgSales'), avgEmp);
+            fmtNum(document.getElementById('empTotalTrans'), totalTrans);
+            document.getElementById('empAvgTicket').textContent = avgTicket.toLocaleString();
+
+            if (empList.length > 0) {
+                let top = empList[0];
+                document.getElementById('empTopSales').textContent = (useAvg ? Math.round(top.sales / numMonths) : top.sales).toLocaleString();
+                document.getElementById('empTopNameSub').textContent = top.name + ' | ' + (rawData.stores[top.storeId] || top.storeId);
+            }
+
+            // Render Table
+            const tbody = document.getElementById('employeeTableBody');
+            tbody.innerHTML = '';
+
+            empList.forEach((e, i) => {
+                let dispSales = useAvg ? Math.round(e.sales / numMonths) : e.sales;
+                let avgInv = e.trans > 0 ? Math.round(e.sales / e.trans) : 0;
+                let contrib = totalSales > 0 ? ((e.sales / totalSales) * 100) : 0;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center"><span class="rank-badge">${i+1}</span></td>
+                    <td class="fw-bold">${e.name}</td>
+                    <td>${rawData.stores[e.storeId] || e.storeId}</td>
+                    <td class="text-center fw-bold">${dispSales.toLocaleString()}</td>
+                    <td class="text-center">${e.trans.toLocaleString()}</td>
+                    <td class="text-center">${avgInv.toLocaleString()}</td>
+                    <td class="text-center">${e.items.toLocaleString()}</td>
+                    <td class="text-center fw-bold" style="color:#fe7900">${contrib.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Footer
+            const foot = document.getElementById('employeeTableFoot');
+            foot.innerHTML = `<tr>
+                <td class="text-center" colspan="3">الإجمالي (${empList.length} موظف)</td>
+                <td class="text-center">${totalSales.toLocaleString()}</td>
+                <td class="text-center">${totalTrans.toLocaleString()}</td>
+                <td class="text-center">${avgTicket.toLocaleString()}</td>
+                <td class="text-center">-</td>
+                <td class="text-center">100%</td>
+            </tr>`;
+        }
+
+        init();
+    </script>
+
+</body>
+</html>
