@@ -364,9 +364,9 @@
         </div>
 
         <!-- ==================== PART 1: KPI CARDS ==================== -->
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 no-print">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h5 class="section-title mb-0">📈 مؤشرات الأداء</h5>
-            <div class="toggle-wrapper">
+            <div class="toggle-wrapper no-print">
                 <span id="salesToggleLabel">أرقام حقيقية</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="salesAvgToggle" onchange="renderKPIs(); renderSalesChart();">
@@ -427,9 +427,9 @@
 
         <!-- ==================== PART 3: EMPLOYEES TABLE ==================== -->
         <hr style="border-top:2px solid #fe7900;margin:20px 0;">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 no-print">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h5 class="section-title mb-0">👤 أداء الموظفين</h5>
-            <div class="toggle-wrapper">
+            <div class="toggle-wrapper no-print">
                 <span id="empToggleLabel">أرقام حقيقية</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="empAvgToggle" onchange="renderEmployeeTable()">
@@ -891,18 +891,21 @@
                 
                 let jdate = '-';
                 let yearsService = '-';
-                if (empData.employee_join_dates && empData.employee_join_dates[empId]) {
-                    jdate = empData.employee_join_dates[empId];
-                    if (jdate) {
-                        let jd = new Date(jdate);
-                        let today = new Date();
-                        let diffTime = Math.abs(today - jd);
-                        let diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
-                        yearsService = diffYears.toFixed(1);
+                
+                if (!empAgg[empId]) {
+                    if (empData.employee_join_dates && empData.employee_join_dates[empId]) {
+                        jdate = empData.employee_join_dates[empId];
+                        if (jdate) {
+                            let jd = new Date(jdate);
+                            let today = new Date();
+                            let diffTime = Math.abs(today - jd);
+                            let diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+                            yearsService = diffYears.toFixed(1);
+                        }
                     }
+                    empAgg[empId] = { empId, name: empName, joinDate: jdate, yearsService: yearsService, sales: 0, trans: 0, items: 0 };
                 }
-
-                if (!empAgg[empId]) empAgg[empId] = { empId, name: empName, joinDate: jdate, yearsService: yearsService, sales: 0, trans: 0, items: 0 };
+                
                 empAgg[empId].sales += sales || 0;
                 empAgg[empId].trans += trans || 0;
                 empAgg[empId].items += items || 0;
@@ -1046,10 +1049,10 @@
                 const bodyStyle = document.body.style.overflow;
                 document.documentElement.style.overflow = 'visible';
                 document.body.style.overflow = 'visible';
-                // Force real DOM to 1500px to ensure Chart.js canvas resizes natively
+                // Force real DOM to 2400px to ensure Chart.js canvas resizes natively and table has enough space
                 const origWidth = element.style.width;
                 const origMargin = element.style.margin;
-                element.style.width = '1500px';
+                element.style.width = '2400px';
                 element.style.margin = '0 auto';
                 
                 // Force Chart.js to recalculate dimensions and redraw
@@ -1066,7 +1069,7 @@
                         useCORS: true,
                         logging: true,
                         scrollY: -window.scrollY,
-                        windowWidth: 1500,
+                        windowWidth: 2400,
                         backgroundColor: '#f8f9fa',
                         onclone: (docClone) => {
                             // Hide no-print elements in the cloned document
