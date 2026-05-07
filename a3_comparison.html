@@ -1046,6 +1046,19 @@
                 const bodyStyle = document.body.style.overflow;
                 document.documentElement.style.overflow = 'visible';
                 document.body.style.overflow = 'visible';
+                // Force real DOM to 1500px to ensure Chart.js canvas resizes natively
+                const origWidth = element.style.width;
+                const origMargin = element.style.margin;
+                element.style.width = '1500px';
+                element.style.margin = '0 auto';
+                
+                // Force Chart.js to recalculate dimensions and redraw
+                for (let id in Chart.instances) {
+                    if (Chart.instances[id]) Chart.instances[id].resize();
+                }
+
+                // Wait a moment for the charts to redraw completely
+                await new Promise(r => setTimeout(r, 600));
 
                 try {
                     const canvas = await html2canvas(element, {
@@ -1059,14 +1072,15 @@
                             // Hide no-print elements in the cloned document
                             const noPrints = docClone.querySelectorAll('.no-print');
                             noPrints.forEach(el => el.style.display = 'none');
-                            // Force fixed width for consistent A3 layout scaling
-                            const mainContent = docClone.getElementById('main-content');
-                            if (mainContent) {
-                                mainContent.style.width = '1500px';
-                                mainContent.style.margin = '0 auto';
-                            }
                         }
                     });
+
+                    // Restore DOM width and resize charts back
+                    element.style.width = origWidth;
+                    element.style.margin = origMargin;
+                    for (let id in Chart.instances) {
+                        if (Chart.instances[id]) Chart.instances[id].resize();
+                    }
 
                     // Restore overflow
                     document.documentElement.style.overflow = htmlStyle;
@@ -1082,7 +1096,13 @@
                     pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pdfH));
                 } catch (err) {
                     console.error(`Error rendering ${opt.textContent}:`, err);
-                    // Restore overflow on error
+                    
+                    // Restore on error
+                    element.style.width = origWidth;
+                    element.style.margin = origMargin;
+                    for (let id in Chart.instances) {
+                        if (Chart.instances[id]) Chart.instances[id].resize();
+                    }
                     document.documentElement.style.overflow = htmlStyle;
                     document.body.style.overflow = bodyStyle;
                     
