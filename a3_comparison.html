@@ -464,6 +464,7 @@
     <script>
         let rawData = null;
         let empData = null;
+        let storeCache = null;
         let salesChart = null;
         let visitorsChart = null;
         let cvChart = null;
@@ -475,6 +476,18 @@
 
         function fmtNum(val) { return Number(val).toLocaleString(); }
 
+        function buildStoreCache() {
+            storeCache = {};
+            const keys = ['sales', 'targets', 'visitors', 'transactions'];
+            keys.forEach(k => {
+                (rawData[k] || []).forEach(row => {
+                    const storeId = row[1];
+                    if (!storeCache[storeId]) storeCache[storeId] = { sales: [], targets: [], visitors: [], transactions: [] };
+                    storeCache[storeId][k].push(row);
+                });
+            });
+        }
+
         async function init() {
             try {
                 const [mRes, eRes] = await Promise.all([
@@ -483,6 +496,7 @@
                 ]);
                 rawData = await mRes.json();
                 empData = await eRes.json();
+                buildStoreCache();
                 populateStores();
                 renderAll();
             } catch (e) {
@@ -541,49 +555,39 @@
                 months[m] = { sales: 0, target: 0, visitors: 0, transactions: 0 };
             }
 
-            const sDate = new Date(year, sm - 1, 1);
-            const eDate = new Date(year, em, 0);
-            if (year === 2026) {
-                let now = new Date();
-                if (eDate > now) eDate.setTime(now.getTime());
-            }
-            const sTime = sDate.getTime();
-            const eTime = eDate.getTime();
+            if (!storeCache || !storeCache[storeId]) return months;
+            const sData = storeCache[storeId];
 
-            (rawData.sales || []).forEach(([d, s, v]) => {
-                if (s !== storeId) return;
-                let dt = new Date(d).getTime();
-                if (dt >= sTime && dt <= eTime) {
-                    let m = new Date(d).getMonth() + 1;
-                    if (m >= sm && m <= em && months[m]) months[m].sales += v;
-                }
+            const yStr = String(year);
+            // Get today's date in YYYY-MM-DD for fast comparison
+            const now = new Date();
+            const nowStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
+
+            sData.sales.forEach(row => {
+                if (!row[0].startsWith(yStr)) return;
+                if (year === 2026 && row[0] > nowStr) return;
+                let m = parseInt(row[0].substring(5, 7), 10);
+                if (m >= sm && m <= em) months[m].sales += row[2];
             });
 
-            (rawData.targets || []).forEach(([d, s, v]) => {
-                if (s !== storeId) return;
-                let dt = new Date(d).getTime();
-                if (dt >= sTime && dt <= eTime) {
-                    let m = new Date(d).getMonth() + 1;
-                    if (m >= sm && m <= em && months[m]) months[m].target += v;
-                }
+            sData.targets.forEach(row => {
+                if (!row[0].startsWith(yStr)) return;
+                let m = parseInt(row[0].substring(5, 7), 10);
+                if (m >= sm && m <= em) months[m].target += row[2];
             });
 
-            (rawData.visitors || []).forEach(([d, s, v]) => {
-                if (s !== storeId) return;
-                let dt = new Date(d).getTime();
-                if (dt >= sTime && dt <= eTime) {
-                    let m = new Date(d).getMonth() + 1;
-                    if (m >= sm && m <= em && months[m]) months[m].visitors += v;
-                }
+            sData.visitors.forEach(row => {
+                if (!row[0].startsWith(yStr)) return;
+                if (year === 2026 && row[0] > nowStr) return;
+                let m = parseInt(row[0].substring(5, 7), 10);
+                if (m >= sm && m <= em) months[m].visitors += row[2];
             });
 
-            (rawData.transactions || []).forEach(([d, s, v]) => {
-                if (s !== storeId) return;
-                let dt = new Date(d).getTime();
-                if (dt >= sTime && dt <= eTime) {
-                    let m = new Date(d).getMonth() + 1;
-                    if (m >= sm && m <= em && months[m]) months[m].transactions += v;
-                }
+            sData.transactions.forEach(row => {
+                if (!row[0].startsWith(yStr)) return;
+                if (year === 2026 && row[0] > nowStr) return;
+                let m = parseInt(row[0].substring(5, 7), 10);
+                if (m >= sm && m <= em) months[m].transactions += row[2];
             });
 
             return months;
