@@ -346,9 +346,14 @@
                     <option value="11">إلى نوفمبر</option>
                     <option value="12">إلى ديسمبر</option>
                 </select>
-                <button class="btn-export-pdf" onclick="exportAllPDF()" id="pdfBtn">
-                    📄 تصدير الكل PDF
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn-export-pdf" onclick="exportCurrentPDF()" id="pdfCurrentBtn" style="background: #fe7900;">
+                        📄 تصدير المعرض
+                    </button>
+                    <button class="btn-export-pdf" onclick="exportAllPDF()" id="pdfBtn">
+                        📄 تصدير الكل
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -932,27 +937,50 @@
 
         // ========== PDF EXPORT ==========
 
+        async function exportCurrentPDF() {
+            if (!currentStoreId) {
+                alert('الرجاء اختيار معرض أولاً.');
+                return;
+            }
+            const btn = document.getElementById('pdfCurrentBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري التصدير...';
+
+            await doPdfExport([document.getElementById('storeSelector').options[document.getElementById('storeSelector').selectedIndex]], btn, '📄 تصدير المعرض');
+        }
+
         async function exportAllPDF() {
             const btn = document.getElementById('pdfBtn');
             btn.disabled = true;
             btn.textContent = '⏳ جاري التصدير...';
 
+            const sel = document.getElementById('storeSelector');
+            const options = Array.from(sel.options).filter(o => o.value && o.value !== '');
+            
+            await doPdfExport(options, btn, '📄 تصدير الكل');
+        }
+
+        async function doPdfExport(options, btn, btnOriginalText) {
             if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
                 alert('لم يتم تحميل مكتبات PDF. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
                 btn.disabled = false;
-                btn.textContent = '📄 تصدير الكل PDF';
+                btn.textContent = btnOriginalText;
                 return;
             }
+
+            // Disable chart animations temporarily
+            const originalAnimation = Chart.defaults.animation;
+            Chart.defaults.animation = false;
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
             const sel = document.getElementById('storeSelector');
-            const options = Array.from(sel.options).filter(o => o.value && o.value !== '');
             const { sm, em } = getMonthRange();
             const periodText = `${monthNames[sm-1]}-${monthNames[em-1]}`;
 
             let savedStoreId = currentStoreId;
+            const originalScrollY = window.scrollY;
 
             for (let i = 0; i < options.length; i++) {
                 const opt = options[i];
@@ -964,22 +992,19 @@
                 document.getElementById('printPeriod').textContent =
                     monthNames[sm-1] + ' - ' + monthNames[em-1] + ' | 2025 vs 2026';
 
-                await new Promise(r => setTimeout(r, 400));
                 renderAll();
-                await new Promise(r => setTimeout(r, 600));
+                // Wait a bit for DOM to update and charts to finish rendering (since animation is false, it's quick)
+                await new Promise(r => setTimeout(r, 300));
 
                 const element = document.querySelector('.container-fluid');
+                window.scrollTo(0, 0);
 
                 try {
                     const canvas = await html2canvas(element, {
                         scale: 2,
                         useCORS: true,
                         logging: false,
-                        width: element.scrollWidth,
-                        height: Math.max(element.scrollHeight, 1200),
-                        windowWidth: element.scrollWidth,
-                        windowHeight: Math.max(element.scrollHeight, 1200),
-                        allowTaint: true,
+                        scrollY: 0,
                         backgroundColor: '#f8f9fa'
                     });
 
@@ -993,8 +1018,9 @@
                     pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pdfH));
                 } catch (err) {
                     console.error(`Error rendering ${opt.textContent}:`, err);
-
                     try {
+                        const pdfW = pdf.internal.pageSize.getWidth();
+                        const pdfH = pdf.internal.pageSize.getHeight();
                         if (i > 0) pdf.addPage('landscape', 'a4');
                         pdf.setFontSize(16);
                         pdf.text(opt.textContent + ' - Error', pdfW / 2, pdfH / 2, { align: 'center' });
@@ -1002,16 +1028,23 @@
                 }
             }
 
+            window.scrollTo(0, originalScrollY);
+
             currentStoreId = savedStoreId || '';
+            sel.value = currentStoreId;
             document.getElementById('storeDisplayName').textContent =
                 currentStoreId ? (rawData.stores[currentStoreId] || currentStoreId) : 'اختر المعرض';
             document.getElementById('printHeader').style.display = 'none';
+            
+            // Restore chart animations
+            Chart.defaults.animation = originalAnimation;
             renderAll();
 
-            pdf.save('A3_Report_' + periodText + '.pdf');
+            const fileName = options.length === 1 ? `A3_Report_${options[0].textContent}_${periodText}.pdf` : `A3_Report_All_${periodText}.pdf`;
+            pdf.save(fileName);
 
             btn.disabled = false;
-            btn.textContent = '📄 تصدير الكل PDF';
+            btn.textContent = btnOriginalText;
         }
 
         init();
