@@ -922,6 +922,7 @@
     <script src="product_pdf_export.js"></script>
     <script>
         let rawData = null;
+        let activeStoreData = null;
         let currentData = null;
         let currentMode = 'mtd';
         let currentMetric = 'val';
@@ -1050,7 +1051,7 @@
                     '30d': '30 يوم'
                 };
 
-                const history = (rawData.product_daily_history && rawData.product_daily_history[found.code]) || [];
+                const history = (activeStoreData.product_daily_history && activeStoreData.product_daily_history[found.code]) || [];
 
                 if (history.length > 0) {
                     let startDate = new Date();
@@ -1279,7 +1280,7 @@
             try {
                 // Fetch both data files
                 const [resAnalysis, resMgmt] = await Promise.all([
-                    fetch('product_analysis_data.json?t=' + Date.now()),
+                    fetch('data/products/product_analysis_data.json?t=' + Date.now()),
                     fetch('management_data.json?t=' + Date.now())
                 ]);
 
@@ -1295,11 +1296,14 @@
                 const periodText = `${meta.period_start} إلى ${meta.period_end}`;
                 document.getElementById('periodDisplay').textContent = periodText;
 
-                // Default to MTD
-                switchPeriod('mtd');
-
                 // Check Role & Init Filters
                 setupFilters(mgmtData);
+
+                // Load initial heavy data for 'all' or activeStore
+                await loadStoreData(activeStore);
+
+                // Default to MTD
+                switchPeriod('mtd');
 
                 // Initial Offers Render -> Moved to Button Click
                 // renderOffersTable();
@@ -1307,6 +1311,18 @@
             } catch (e) {
                 console.error(e);
                 alert("تعذر تحميل البيانات. الرجاء التأكد من تشغيل التحديث.");
+            }
+        }
+
+        async function loadStoreData(sid) {
+            try {
+                const filename = 'data/products/product_analysis_store_' + sid + '.json';
+                const res = await fetch(filename + '?t=' + Date.now());
+                if (!res.ok) throw new Error("Store data not found");
+                activeStoreData = await res.json();
+            } catch (e) {
+                console.error("Failed to load store data:", e);
+                activeStoreData = { periods: {}, product_daily_history: {}, market_basket: [] };
             }
         }
 
@@ -1382,9 +1398,14 @@
             });
         }
 
-        function applyFilters() {
+        async function applyFilters() {
             activeRegion = document.getElementById('regionFilter').value;
             activeStore = document.getElementById('storeFilter').value;
+            
+            document.body.style.cursor = 'wait';
+            await loadStoreData(activeStore);
+            document.body.style.cursor = 'default';
+            
             renderDashboard();
         }
 
@@ -1680,13 +1701,7 @@
             const tbody = document.getElementById('marketBasketBody');
             tbody.innerHTML = '';
 
-            const allBasketData = rawData.market_basket || {};
-            let basketData = allBasketData[activeStore] || [];
-
-            // If activeStore is 'all', use global 'all' key
-            if (activeStore === 'all') {
-                basketData = allBasketData['all'] || [];
-            }
+            const basketData = activeStoreData.market_basket || [];
 
             // If specific store selected but no data found (empty list or undefined)
             if (activeStore !== 'all' && (!basketData || basketData.length === 0)) {
@@ -1808,8 +1823,8 @@
             // 2. Shortened Logic for brevity in replacement (keeping history generation same)
             // Check if backend provided history (Future Proofing)
             let history = [];
-            if (rawData.product_daily_history && rawData.product_daily_history[itemId]) {
-                history = rawData.product_daily_history[itemId];
+            if (activeStoreData.product_daily_history && activeStoreData.product_daily_history[itemId]) {
+                history = activeStoreData.product_daily_history[itemId];
             } else {
                 // Generate Mock Data for now
                 if (!mockHistoryCache[itemId]) {
@@ -1843,7 +1858,7 @@
             const relatedList = document.getElementById('modalRelatedItems');
             relatedList.innerHTML = '';
 
-            const basketData = rawData.market_basket || [];
+            const basketData = activeStoreData.market_basket || [];
             // Find pairs containing this item
             const related = basketData.filter(p => p.item_a_id == itemId || p.item_b_id == itemId);
 
@@ -2191,7 +2206,7 @@
 
             // Get catalog data for current period
             const pData = rawData.periods ? rawData.periods[currentMode] : null;
-            const periodCatalog = pData ? (pData.catalog || {}) : {};
+            const periodCatalog = activeStoreData.periods[currentMode] ? (activeStoreData.periods[currentMode].catalog || {}) : {};
 
             // Get items for this category
             const rawItems = periodCatalog[categoryName] || [];
@@ -2364,8 +2379,8 @@
 
             // 2. Get History
             let history = [];
-            if (rawData.product_daily_history && rawData.product_daily_history[itemId]) {
-                history = rawData.product_daily_history[itemId];
+            if (activeStoreData.product_daily_history && activeStoreData.product_daily_history[itemId]) {
+                history = activeStoreData.product_daily_history[itemId];
             } else {
                 // No mock data - show empty
             }
@@ -2423,9 +2438,7 @@
             const relatedList = document.getElementById('modalRelatedItems');
             relatedList.innerHTML = '';
 
-            const allBasketData = rawData.market_basket || {};
-            // Use activeStore basket if available, else global
-            let basketData = allBasketData[activeStore] || allBasketData['all'] || [];
+            let basketData = activeStoreData.market_basket || [];
 
             // If activeStore is 'all' but we want specific store data? No, if activeStore is global, we show global.
             // But if activeStore is specific, 'basketData' will be that store's data (if > 5 sales).
@@ -2659,7 +2672,7 @@
             container.innerHTML = '';
 
             const pData = rawData.periods ? rawData.periods[currentMode] : null;
-            const catalog = pData ? (pData.catalog || {}) : {};
+            const catalog = activeStoreData.periods[currentMode] ? (activeStoreData.periods[currentMode].catalog || {}) : {};
 
             const categories = Object.keys(catalog).sort();
 
@@ -2798,7 +2811,7 @@
 
         // --- Excel Export Function (uses existing product_daily_history + lookup maps) ---
         function exportItemSalesExcel() {
-            if (!rawData || !rawData.product_daily_history) {
+            if (!activeStoreData || !activeStoreData.product_daily_history) {
                 alert('لا توجد بيانات لتصديرها. الرجاء إعادة توليد البيانات.');
                 return;
             }
@@ -2823,7 +2836,7 @@
             // Build rows from product_daily_history
             // Structure: { item_id: [{date, qty, amount, store}] }
             let rows = [];
-            const history = rawData.product_daily_history;
+            const history = activeStoreData.product_daily_history;
 
             for (const itemId in history) {
                 const entries = history[itemId];
