@@ -1,6 +1,6 @@
 /* PDF Export Logic for Employees - Final Array Fix - Ver 1.2 */
 
-async function generateEmployeePDF(targetEmps = null, includeCommission = true) {
+async function generateEmployeePDF(targetEmps = null, includeCommission = true, overrideStores = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -36,13 +36,17 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true) 
     let targetStores = [];
     const storeIds = Object.keys(historyData);
 
-    if (currentUser.role === 'Admin') {
-        targetStores = storeIds;
+    if (overrideStores) {
+        targetStores = overrideStores;
     } else {
-        targetStores = storeIds.filter(sid => {
-            const meta = storeMeta[sid];
-            return meta && meta.manager === currentUser.name;
-        });
+        if (currentUser.role === 'Admin') {
+            targetStores = storeIds;
+        } else {
+            targetStores = storeIds.filter(sid => {
+                const meta = storeMeta[sid];
+                return meta && meta.manager === currentUser.name;
+            });
+        }
     }
 
     targetStores.sort();
@@ -510,5 +514,9 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true) 
         yPos += 7;
     });
 
-    doc.save(`Employees_Report_${new Date().toLocaleDateString('en-CA')}.pdf`);
+    if (window.returnBase64Pdf === true) {
+        return doc.output('datauristring');
+    } else {
+        doc.save(`Employees_Report_${new Date().toLocaleDateString('en-CA')}.pdf`);
+    }
 }
