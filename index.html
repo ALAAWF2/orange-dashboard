@@ -3965,6 +3965,24 @@
                             grid += `<div class="rhythm-cell" style="background:${bg};color:${tc}" title="${title}">${display}</div>`;
                         }
                     });
+
+                    grid += `<div class="rhythm-day-label" style="font-weight:800; border-top:2px solid #fe7900; background:#f8f9fa; color:#212529;">المجموع</div>`;
+                    for (let h = 0; h < 24; h++) {
+                        let sumHour = 0;
+                        let sumTrans = 0;
+                        dateKeys.forEach(dk => {
+                            const val = mode === 'sales' ? detSales[dk.dateStr][h].sales : detVisitors[dk.dateStr][h];
+                            const trans = mode === 'sales' ? detSales[dk.dateStr][h].trans : 0;
+                            sumHour += val;
+                            sumTrans += trans;
+                        });
+                        const display = sumHour > 0 ? (mode === 'sales' ? Math.round(sumHour).toLocaleString() : sumHour.toLocaleString()) : '';
+                        const title = mode === 'sales'
+                            ? `مجموع الساعة ${fmtHour(h)}: ${Math.round(sumHour).toLocaleString()} ريال (${sumTrans} فاتورة)`
+                            : `مجموع الساعة ${fmtHour(h)}: ${sumHour.toLocaleString()} زائر`;
+                        const totalColor = mode === 'sales' ? '#fe7900' : '#1565c0';
+                        grid += `<div class="rhythm-cell" style="font-weight:800; border-top:2px solid #fe7900; background:#f8f9fa; color:${totalColor}" title="${title}">${display}</div>`;
+                    }
                 } else {
                     dayOrder.forEach(d => {
                         grid += `<div class="rhythm-day-label">${dayLabels[d]}</div>`;
@@ -3979,6 +3997,24 @@
                             grid += `<div class="rhythm-cell" style="background:${bg};color:${tc}" title="${title}">${display}</div>`;
                         }
                     });
+
+                    grid += `<div class="rhythm-day-label" style="font-weight:800; border-top:2px solid #fe7900; background:#f8f9fa; color:#212529;">المجموع</div>`;
+                    for (let h = 0; h < 24; h++) {
+                        let sumHour = 0;
+                        let sumTrans = 0;
+                        dayOrder.forEach(d => {
+                            const val = mode === 'sales' ? salesData[d][h].sales : visitorsData[d][h];
+                            const trans = mode === 'sales' ? salesData[d][h].trans : 0;
+                            sumHour += val;
+                            sumTrans += trans;
+                        });
+                        const display = sumHour > 0 ? (mode === 'sales' ? Math.round(sumHour).toLocaleString() : sumHour.toLocaleString()) : '';
+                        const title = mode === 'sales'
+                            ? `مجموع الساعة ${fmtHour(h)}: ${Math.round(sumHour).toLocaleString()} ريال (${sumTrans} فاتورة)`
+                            : `مجموع الساعة ${fmtHour(h)}: ${sumHour.toLocaleString()} زائر`;
+                        const totalColor = mode === 'sales' ? '#fe7900' : '#1565c0';
+                        grid += `<div class="rhythm-cell" style="font-weight:800; border-top:2px solid #fe7900; background:#f8f9fa; color:${totalColor}" title="${title}">${display}</div>`;
+                    }
                 }
                 grid += '</div>';
                 return grid;
