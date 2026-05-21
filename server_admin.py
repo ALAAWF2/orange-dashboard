@@ -636,45 +636,46 @@ def save_hourly_visitors():
                 
             outlet_name = res[0]
             
-            with conn.begin():
-                # 1. Delete existing hourly records for this day/outlet
+            # 1. Delete existing hourly records for this day/outlet
+            conn.execute(text("""
+                DELETE FROM gofrugal_visitors_hourly 
+                WHERE outlet_name = :outlet AND visit_date = :d
+            """), {"outlet": outlet_name, "d": date})
+            
+            # 2. Insert new hourly records
+            ins_q = text("""
+                INSERT INTO gofrugal_visitors_hourly (outlet_name, visit_date, visit_hour, visitor_count)
+                VALUES (:outlet, :d, :h, :v)
+            """)
+            
+            total_visitors = 0
+            for h_str, v_val in hourly_visitors.items():
+                h = int(h_str)
+                v = int(v_val)
+                total_visitors += v
+                if v > 0:
+                    conn.execute(ins_q, {"outlet": outlet_name, "d": date, "h": h, "v": v})
+            
+            # 3. Update or Insert into daily gofrugal_visitors table to stay in sync
+            check_q = text("""
+                SELECT 1 FROM gofrugal_visitors 
+                WHERE outlet_name = :outlet AND visit_date = :d
+            """)
+            exists = conn.execute(check_q, {"outlet": outlet_name, "d": date}).fetchone()
+            
+            if exists:
                 conn.execute(text("""
-                    DELETE FROM gofrugal_visitors_hourly 
+                    UPDATE gofrugal_visitors 
+                    SET visitor_count = :v
                     WHERE outlet_name = :outlet AND visit_date = :d
-                """), {"outlet": outlet_name, "d": date})
+                """), {"v": total_visitors, "outlet": outlet_name, "d": date})
+            else:
+                conn.execute(text("""
+                    INSERT INTO gofrugal_visitors (outlet_name, visit_date, visitor_count)
+                    VALUES (:outlet, :d, :v)
+                """), {"outlet": outlet_name, "d": date, "v": total_visitors})
                 
-                # 2. Insert new hourly records
-                ins_q = text("""
-                    INSERT INTO gofrugal_visitors_hourly (outlet_name, visit_date, visit_hour, visitor_count)
-                    VALUES (:outlet, :d, :h, :v)
-                """)
-                
-                total_visitors = 0
-                for h_str, v_val in hourly_visitors.items():
-                    h = int(h_str)
-                    v = int(v_val)
-                    total_visitors += v
-                    if v > 0:
-                        conn.execute(ins_q, {"outlet": outlet_name, "d": date, "h": h, "v": v})
-                
-                # 3. Update or Insert into daily gofrugal_visitors table to stay in sync
-                check_q = text("""
-                    SELECT 1 FROM gofrugal_visitors 
-                    WHERE outlet_name = :outlet AND visit_date = :d
-                """)
-                exists = conn.execute(check_q, {"outlet": outlet_name, "d": date}).fetchone()
-                
-                if exists:
-                    conn.execute(text("""
-                        UPDATE gofrugal_visitors 
-                        SET visitor_count = :v
-                        WHERE outlet_name = :outlet AND visit_date = :d
-                    """), {"v": total_visitors, "outlet": outlet_name, "d": date})
-                else:
-                    conn.execute(text("""
-                        INSERT INTO gofrugal_visitors (outlet_name, visit_date, visitor_count)
-                        VALUES (:outlet, :d, :v)
-                    """), {"outlet": outlet_name, "d": date, "v": total_visitors})
+            conn.commit()
                     
         return jsonify({"status": "success", "total_visitors": total_visitors})
         
