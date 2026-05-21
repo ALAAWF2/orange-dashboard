@@ -274,6 +274,7 @@
                         <th style="padding:10px;">الفواتير</th>
                         <th style="padding:10px;">الزوار الحالية</th>
                         <th style="padding:10px;">تحويل %</th>
+                        <th style="padding:10px;">تفاصيل الساعات</th>
                         <th style="padding:10px;">الزوار الجديدة</th>
                         <th style="padding:10px;">تحويل جديد %</th>
                     </tr>
@@ -290,15 +291,49 @@
         </div>
     </div>
 
+    <!-- Hourly Edit Modal -->
+    <div id="hourlyModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:3000; justify-content:center; align-items:center;">
+        <div
+            style="background:var(--card-bg); padding:25px; border-radius:12px; width:90%; max-width:550px; max-height:85vh; overflow-y:auto; border:1px solid var(--border-color); box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #444; padding-bottom:10px;">
+                <h3 id="hourlyModalTitle" style="color:var(--accent); margin:0; font-size:1.3em;">تعديل الزوار بالساعات</h3>
+                <button onclick="closeHourlyModal()"
+                    style="background:none; border:none; color:#888; font-size:1.8em; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            
+            <p id="hourlyModalSubtitle" style="color:var(--text-secondary); font-size:0.95em; margin-bottom:20px; text-align:right; font-weight:600;"></p>
+
+            <!-- Hourly Grid -->
+            <div id="hourlyGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom:20px; direction:ltr;">
+                <!-- Hour items will be generated dynamically -->
+            </div>
+
+            <div style="background:#222; padding:12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; direction:rtl;">
+                <span style="font-weight:600;">المجموع الكلي للساعات:</span>
+                <span id="hourlyTotalSum" style="color:var(--accent); font-weight:700; font-size:1.2em;">0</span>
+            </div>
+
+            <div style="text-align:left; display:flex; gap:10px; justify-content:flex-end; direction:rtl;">
+                <button class="refresh-btn" style="background:#444;" onclick="closeHourlyModal()">إلغاء</button>
+                <button class="refresh-btn" onclick="applyHourlyChanges()">تطبيق ومزامنة</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Logic Script -->
     <script src="admin_logic.js"></script>
     <script>
         // --- Visitor Editing Logic (Embedded for simplicity) ---
         let currentStoreId = null;
         let visitorDataCache = []; // To store original fetched data
+        let hourlyDataCache = {}; // Cache of { date: { hour: count } }
+        let currentHourlyDate = null;
+        let currentHourlyRowIndex = null;
 
         async function openVisitorModal(sid, sname) {
             currentStoreId = sid;
+            hourlyDataCache = {}; // Reset hourly cache on modal open
             const m = document.getElementById('targetMonth').value; // YYYY-MM
 
             // Check if Warehouse/Platform to enable Sales Editing
@@ -322,7 +357,6 @@
 
                 if (!res.ok) throw new Error("Failed to fetch data");
                 const data = await res.json();
-
 
                 // Sort by Date
                 data.sort((a, b) => a.date.localeCompare(b.date));
@@ -352,20 +386,8 @@
                 const dayName = d.toLocaleDateString('ar-EG', { weekday: 'short' });
 
                 // Inputs for Sales/Trans (Only if editable)
-                let salesInput = `${row.sales !== undefined ? row.sales : 0}`; // Assuming API returns sales now
+                let salesInput = `${row.sales !== undefined ? row.sales : 0}`;
                 let transInput = `${row.transactions}`;
-
-                // Note: API 'daily_stats' currently returns {date, transactions, visitors}. 
-                // We need to UPDATE it to return Sales too for manual stores.
-                // Assuming we updated `get_daily_stats` in server? No, we didn't update GET yet.
-                // We need to fetch sales/trans if we want to edit them. 
-                // For now, let's assume `row.transactions` is correct. Sales might be missing.
-                // Let's rely on what we have. If Sales not in API, we default 0.
-
-                // Wait! The user wants to EDIT Sales. We need to display current Sales.
-                // The `get_daily_stats` endpoint currently ONLY fetches Trans Count from Bills and Visitor Count.
-                // It does NOT fetch Sales Amount. We need to fix that in `server_admin.py` first for full support.
-                // But let's finish UI structure first.
 
                 if (isEditable) {
                     salesInput = `<input type="number" class="emp-input" style="width:80px;" 
@@ -373,7 +395,8 @@
                                    id="sales-input-${idx}" data-date="${row.date}">`;
                     transInput = `<input type="number" class="emp-input" style="width:60px;" 
                                    value="${row.transactions}" 
-                                   id="trans-input-${idx}" data-date="${row.date}">`;
+                                   id="trans-input-${idx}" data-date="${row.date}"
+                                   oninput="calcNewConv(document.getElementById('vis-input-${idx}'), ${idx}, 'newConv-${idx}')">`;
                 }
 
                 tr.innerHTML = `
@@ -382,6 +405,11 @@
                     <td style="padding:8px; text-align:center;">${transInput}</td>
                     <td style="padding:8px; text-align:center; color:#aaa;">${row.visitors}</td>
                     <td style="padding:8px; text-align:center; color:${getColor(conv)}">${conv}%</td>
+                    <td style="padding:8px; text-align:center;">
+                        <button class="btn-save" onclick="openHourlyModal('${row.date}', ${idx})" style="background:#ff7900; color:white; border:none; padding:4px 8px; border-radius:4px; font-family:'Cairo'; font-size:0.85em;">
+                            🕒 تعديل الساعات
+                        </button>
+                    </td>
                     <td style="padding:8px; text-align:center;">
                         <input type="number" class="emp-input" style="width:80px;" 
                                value="${row.visitors}" 
@@ -405,8 +433,6 @@
             if (transInp) {
                 trans = parseInt(transInp.value) || 0;
             } else {
-                // Determine from initial data? Or DOM?
-                // Easier to look at DOM row or cache.
                 // Fallback to cache
                 trans = visitorDataCache[idx].transactions;
             }
@@ -428,21 +454,125 @@
             return '#dc3545';
         }
 
-        function calcNewConv(input, trans, outId) {
-            const newVis = parseInt(input.value) || 0;
-            const out = document.getElementById(outId);
-            if (newVis > 0) {
-                const nw = (trans / newVis * 100).toFixed(1);
-                out.textContent = nw + '%';
-                out.style.color = getColor(nw);
-            } else {
-                out.textContent = '0.0%';
-                out.style.color = '#dc3545';
+        function closeVisitorModal() {
+            document.getElementById('visitorModal').style.display = 'none';
+        }
+
+        // --- Hourly Edit Logic ---
+        async function openHourlyModal(date, idx) {
+            currentHourlyDate = date;
+            currentHourlyRowIndex = idx;
+            
+            document.getElementById('hourlyModalSubtitle').textContent = `التاريخ: ${date}`;
+            const grid = document.getElementById('hourlyGrid');
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding:20px; color:#888;">جاري تحميل بيانات الساعات...</div>';
+            document.getElementById('hourlyTotalSum').textContent = '0';
+            
+            document.getElementById('hourlyModal').style.display = 'flex';
+            
+            try {
+                // If not in cache, fetch from API
+                if (!hourlyDataCache[date]) {
+                    const token = authHeader || sessionStorage.getItem('auth');
+                    const res = await fetch(`${API_BASE}/api/hourly_stats?store_id=${currentStoreId}&date=${date}`, {
+                        headers: {
+                            'Authorization': token,
+                            'ngrok-skip-browser-warning': 'true'
+                        }
+                    });
+                    
+                    if (!res.ok) throw new Error("Failed to fetch hourly stats");
+                    const data = await res.json();
+                    
+                    // Convert array of [{hour, visitors}] to map of {hour: visitors}
+                    const map = {};
+                    data.forEach(row => {
+                        map[row.hour] = row.visitors;
+                    });
+                    hourlyDataCache[date] = map;
+                }
+                
+                renderHourlyGrid(hourlyDataCache[date]);
+                
+            } catch (e) {
+                alert("خطأ في جلب بيانات الساعات: " + e.message);
+                closeHourlyModal();
             }
         }
 
-        function closeVisitorModal() {
-            document.getElementById('visitorModal').style.display = 'none';
+        function formatHourName(h) {
+            if (h === 0) return "12:00 ص (منتصف الليل)";
+            if (h === 12) return "12:00 م (ظهراً)";
+            let suffix = h >= 12 ? "م" : "ص";
+            let displayHour = h % 12 === 0 ? 12 : h % 12;
+            return `${displayHour}:00 ${suffix}`;
+        }
+
+        function renderHourlyGrid(hourMap) {
+            const grid = document.getElementById('hourlyGrid');
+            grid.innerHTML = '';
+            
+            // Loop through 24 hours
+            for (let h = 0; h < 24; h++) {
+                const val = hourMap[h] !== undefined ? hourMap[h] : 0;
+                
+                const div = document.createElement('div');
+                div.style.background = '#333';
+                div.style.padding = '8px';
+                div.style.borderRadius = '6px';
+                div.style.border = '1px solid #444';
+                div.style.display = 'flex';
+                div.style.flexDirection = 'column';
+                div.style.alignItems = 'center';
+                
+                div.innerHTML = `
+                    <label style="font-size:0.75em; color:var(--text-secondary); margin-bottom:4px; font-weight:600; text-align:center;">${formatHourName(h)}</label>
+                    <input type="number" class="emp-input hourly-input" style="width:75px; font-size:0.9em;" 
+                           value="${val}" min="0" data-hour="${h}" oninput="updateHourlyModalSum()">
+                `;
+                grid.appendChild(div);
+            }
+            
+            updateHourlyModalSum();
+        }
+
+        function updateHourlyModalSum() {
+            const inputs = document.querySelectorAll('.hourly-input');
+            let sum = 0;
+            inputs.forEach(inp => {
+                sum += parseInt(inp.value) || 0;
+            });
+            document.getElementById('hourlyTotalSum').textContent = sum;
+        }
+
+        function closeHourlyModal() {
+            document.getElementById('hourlyModal').style.display = 'none';
+        }
+
+        function applyHourlyChanges() {
+            const inputs = document.querySelectorAll('.hourly-input');
+            const map = {};
+            let sum = 0;
+            
+            inputs.forEach(inp => {
+                const h = parseInt(inp.getAttribute('data-hour'));
+                const val = parseInt(inp.value) || 0;
+                map[h] = val;
+                sum += val;
+            });
+            
+            // Save back to cache
+            hourlyDataCache[currentHourlyDate] = map;
+            
+            // Update the main daily input field
+            const dailyInput = document.getElementById(`vis-input-${currentHourlyRowIndex}`);
+            if (dailyInput) {
+                dailyInput.value = sum;
+                // Trigger preview conversion rate update
+                calcNewConv(dailyInput, currentHourlyRowIndex, `newConv-${currentHourlyRowIndex}`);
+            }
+            
+            closeHourlyModal();
         }
 
         async function saveVisitorChanges() {
@@ -452,10 +582,6 @@
             inputs.forEach(inp => {
                 const date = inp.getAttribute('data-date');
                 const val = parseInt(inp.value);
-                // Check if changed? Actually, might be safer to send all or just check against cache.
-                // Let's send all non-zero/valid ones to be safe, or check cache.
-                // Simple: Send all rows.
-                // Save Visitors
                 updates.push({
                     date: date,
                     store_id: currentStoreId,
@@ -481,8 +607,20 @@
                 });
             });
 
+            // Collect hourly updates from cache
+            const hourlyUpdates = [];
+            for (const [date, hourMap] of Object.entries(hourlyDataCache)) {
+                hourlyUpdates.push({
+                    store_id: currentStoreId,
+                    date: date,
+                    hourly_visitors: hourMap
+                });
+            }
+
             try {
                 const token = authHeader || sessionStorage.getItem('auth');
+                
+                // 1. Save daily visitor updates
                 const res = await fetch(`${API_BASE}/api/daily_visitors`, {
                     method: 'POST',
                     headers: {
@@ -495,7 +633,7 @@
 
                 if (!res.ok) throw new Error("Failed to save visitors");
 
-                // If we have sales updates, send them sequentially
+                // 2. Save sales updates sequentially
                 if (salesUpdates.length > 0) {
                     for (const update of salesUpdates) {
                         await fetch(`${API_BASE}/api/update_sales`, {
@@ -510,9 +648,24 @@
                     }
                 }
 
+                // 3. Save hourly updates sequentially
+                if (hourlyUpdates.length > 0) {
+                    for (const update of hourlyUpdates) {
+                        const hRes = await fetch(`${API_BASE}/api/save_hourly_visitors`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': token,
+                                'Content-Type': 'application/json',
+                                'ngrok-skip-browser-warning': 'true'
+                            },
+                            body: JSON.stringify(update)
+                        });
+                        if (!hRes.ok) throw new Error("Failed to save hourly visitors for " + update.date);
+                    }
+                }
+
                 alert("تم حفظ التعديلات بنجاح!");
                 closeVisitorModal();
-                // Optionally refresh main data if needed, but main data is targets.
             } catch (e) {
                 alert("Error saving: " + e.message);
             }

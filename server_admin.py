@@ -559,6 +559,130 @@ def save_daily_visitors():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+# --- Hourly Stats for Visitor Editing ---
+@app.route('/api/hourly_stats', methods=['GET', 'OPTIONS'])
+@requires_auth
+def get_hourly_stats():
+    """
+    Get hourly statistics for a store on a given date.
+    Returns: list of 24 hours and their visitor counts.
+    """
+    try:
+        store_id = request.args.get('store_id')
+        date = request.args.get('date')  # Format: YYYY-MM-DD
+        
+        if not store_id or not date:
+            return jsonify({"error": "store_id and date required"}), 400
+        
+        with engine.connect() as conn:
+            # Get outlet name from store ID
+            name_q = text("SELECT outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number = :sid")
+            res = conn.execute(name_q, {"sid": store_id}).fetchone()
+            
+            if not res:
+                return jsonify({"error": "Store not found"}), 404
+            
+            outlet_name = res[0]
+            
+            # Fetch hourly visitors
+            hourly_q = text("""
+                SELECT visit_hour, visitor_count
+                FROM gofrugal_visitors_hourly
+                WHERE outlet_name = :outlet AND visit_date = :d
+                ORDER BY visit_hour
+            """)
+            hourly_data = conn.execute(hourly_q, {"outlet": outlet_name, "d": date}).fetchall()
+            
+            # Build 24-hour map
+            hour_map = {row[0]: row[1] for row in hourly_data}
+            
+            result = []
+            for h in range(24):
+                result.append({
+                    "hour": h,
+                    "visitors": hour_map.get(h, 0)
+                })
+                
+            return jsonify(result)
+            
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/save_hourly_visitors', methods=['POST', 'OPTIONS'])
+@requires_auth
+def save_hourly_visitors():
+    """
+    Update hourly visitor counts for a store on a given date.
+    Calculates total daily sum and syncs it to gofrugal_visitors.
+    """
+    try:
+        data = request.json
+        store_id = data.get('store_id')
+        date = data.get('date')
+        hourly_visitors = data.get('hourly_visitors') # dict: {"0": 10, "1": 0, ...}
+        
+        if not store_id or not date or hourly_visitors is None:
+            return jsonify({"error": "store_id, date, and hourly_visitors required"}), 400
+            
+        with engine.connect() as conn:
+            # Get outlet name
+            name_q = text("SELECT outlet_name FROM gofrugal_outlets_mapping WHERE dynamic_number = :sid")
+            res = conn.execute(name_q, {"sid": store_id}).fetchone()
+            
+            if not res:
+                return jsonify({"error": "Store not found"}), 404
+                
+            outlet_name = res[0]
+            
+            with conn.begin():
+                # 1. Delete existing hourly records for this day/outlet
+                conn.execute(text("""
+                    DELETE FROM gofrugal_visitors_hourly 
+                    WHERE outlet_name = :outlet AND visit_date = :d
+                """), {"outlet": outlet_name, "d": date})
+                
+                # 2. Insert new hourly records
+                ins_q = text("""
+                    INSERT INTO gofrugal_visitors_hourly (outlet_name, visit_date, visit_hour, visitor_count)
+                    VALUES (:outlet, :d, :h, :v)
+                """)
+                
+                total_visitors = 0
+                for h_str, v_val in hourly_visitors.items():
+                    h = int(h_str)
+                    v = int(v_val)
+                    total_visitors += v
+                    if v > 0:
+                        conn.execute(ins_q, {"outlet": outlet_name, "d": date, "h": h, "v": v})
+                
+                # 3. Update or Insert into daily gofrugal_visitors table to stay in sync
+                check_q = text("""
+                    SELECT 1 FROM gofrugal_visitors 
+                    WHERE outlet_name = :outlet AND visit_date = :d
+                """)
+                exists = conn.execute(check_q, {"outlet": outlet_name, "d": date}).fetchone()
+                
+                if exists:
+                    conn.execute(text("""
+                        UPDATE gofrugal_visitors 
+                        SET visitor_count = :v
+                        WHERE outlet_name = :outlet AND visit_date = :d
+                    """), {"v": total_visitors, "outlet": outlet_name, "d": date})
+                else:
+                    conn.execute(text("""
+                        INSERT INTO gofrugal_visitors (outlet_name, visit_date, visitor_count)
+                        VALUES (:outlet, :d, :v)
+                    """), {"outlet": outlet_name, "d": date, "v": total_visitors})
+                    
+        return jsonify({"status": "success", "total_visitors": total_visitors})
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/update_sales', methods=['POST', 'OPTIONS'])
 @requires_auth
 def update_sales():
