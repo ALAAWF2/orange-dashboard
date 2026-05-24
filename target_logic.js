@@ -546,16 +546,24 @@ function generateExcelWorkbook() {
     const mName = getMonthName(targetMonth);
     const prevMName = getMonthName(prevMonthTY);
 
+    // Two-row Arabic headers matching the webpage layout
     let data = [
-        ["Target Setting Report"],
-        ["Month:", monthVal],
+        ["تقرير تحديد الأهداف والـ Target (Target Setting Report)"],
+        ["الشهر (Month):", monthVal],
         [],
         [
-            "Store ID", "Store Name", 
-            `Sales ${prevMName} ${prevYearLY}`, `Sales ${prevMName} ${prevYearTY}`, `Sales Growth %`,
-            `Sales ${mName} ${targetYear-1}`, `Target ${mName} ${targetYear}`, `Target Growth %`,
-            `Visitors ${prevMName} ${prevYearLY}`, `Visitors ${prevMName} ${prevYearTY}`, `Visitors ${mName} ${targetYear-1}`, `Vis Growth %`,
-            `CV ${prevMName} ${prevYearLY}`, `CV ${prevMName} ${prevYearTY}`, `CV ${mName} ${targetYear-1}`, `Expected CV ${mName} ${targetYear}`
+            "كود المعرض", "اسم المعرض", 
+            `مبيعات ${prevMName}`, "", "", 
+            `تارجت ${mName}`, "", "", 
+            "الزوار", "", "", "", 
+            "قيمة العميل", "", "", ""
+        ],
+        [
+            "", "", 
+            prevYearLY, prevYearTY, "نمو %", 
+            `مبيعات ${targetYear-1}`, `الهدف ${targetYear}`, "نمو %", 
+            `${prevMName} ${prevYearLY}`, `${prevMName} ${prevYearTY}`, `${mName} ${targetYear-1}`, `نمو (${prevMName}) %`, 
+            `${prevMName} ${prevYearLY}`, `${prevMName} ${prevYearTY}`, `${mName} ${targetYear-1}`, `توقع ${targetYear}`
         ]
     ];
 
@@ -563,7 +571,7 @@ function generateExcelWorkbook() {
         if (tr.classList.contains('employee-row')) return;
         const cols = tr.children;
         const sid = tr.querySelector('.input-target').dataset.sid;
-        const name = cols[1].textContent;
+        const name = (rawData.stores[sid] || sid).trim(); // Cleaned name from rawData
         const sales_lyM1 = cols[2].textContent.replace(/,/g, '');
         const sales_tyM1 = cols[3].textContent.replace(/,/g, '');
         const sales_growth = cols[4].textContent;
@@ -588,16 +596,81 @@ function generateExcelWorkbook() {
         ]);
     });
 
+    // Add Totals row matching webpage
+    const tfoot = document.getElementById('tableFooter');
+    if (tfoot) {
+        const footCols = tfoot.children;
+        const f_sales_lyM1 = parseFloat(footCols[1].textContent.replace(/,/g, '')) || 0;
+        const f_sales_tyM1 = parseFloat(footCols[2].textContent.replace(/,/g, '')) || 0;
+        const f_sales_growth = footCols[3].textContent;
+        const f_sales_lyM = parseFloat(footCols[4].textContent.replace(/,/g, '')) || 0;
+        const f_target = parseFloat(footCols[5].textContent.replace(/,/g, '')) || 0;
+        const f_target_growth = footCols[6].textContent;
+        const f_vis_lyM1 = parseFloat(footCols[7].textContent.replace(/,/g, '')) || 0;
+        const f_vis_tyM1 = parseFloat(footCols[8].textContent.replace(/,/g, '')) || 0;
+        const f_vis_lyM = parseFloat(footCols[9].textContent.replace(/,/g, '')) || 0;
+        const f_vis_growth = footCols[10].textContent;
+        const f_cv_lyM1 = parseFloat(footCols[11].textContent) || 0;
+        const f_cv_tyM1 = parseFloat(footCols[12].textContent) || 0;
+        const f_cv_lyM = parseFloat(footCols[13].textContent) || 0;
+        const f_exp_cv = parseFloat(footCols[14].textContent) || 0;
+
+        data.push([
+            "المجموع (Total)", "",
+            f_sales_lyM1, f_sales_tyM1, f_sales_growth,
+            f_sales_lyM, f_target, f_target_growth,
+            f_vis_lyM1, f_vis_tyM1, f_vis_lyM, f_vis_growth,
+            f_cv_lyM1, f_cv_tyM1, f_cv_lyM, f_exp_cv
+        ]);
+    }
+
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
+
+    // Configure merges for double-row headers and Totals row
+    const merges = [
+        { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } }, // Store ID
+        { s: { r: 3, c: 1 }, e: { r: 4, c: 1 } }, // Store Name
+        { s: { r: 3, c: 2 }, e: { r: 3, c: 4 } }, // Sales M-1
+        { s: { r: 3, c: 5 }, e: { r: 3, c: 7 } }, // Target M
+        { s: { r: 3, c: 8 }, e: { r: 3, c: 11 } }, // Visitors
+        { s: { r: 3, c: 12 }, e: { r: 3, c: 15 } } // CV
+    ];
+
+    // Merge Totals row "المجموع (Total)" cell across A and B
+    const totalsRowIndex = data.length - 1;
+    merges.push({ s: { r: totalsRowIndex, c: 0 }, e: { r: totalsRowIndex, c: 1 } });
+
+    ws['!merges'] = merges;
+
+    // Apply auto-widths for targets columns
+    ws['!cols'] = [
+        { wch: 12 }, // Store ID
+        { wch: 25 }, // Store Name
+        { wch: 15 }, // Sales LY M-1
+        { wch: 15 }, // Sales TY M-1
+        { wch: 10 }, // Sales Growth %
+        { wch: 15 }, // Sales LY M
+        { wch: 15 }, // Target
+        { wch: 12 }, // Target Growth %
+        { wch: 15 }, // Visitors LY M-1
+        { wch: 15 }, // Visitors TY M-1
+        { wch: 15 }, // Visitors LY M
+        { wch: 15 }, // Visitors Growth %
+        { wch: 12 }, // CV LY M-1
+        { wch: 12 }, // CV TY M-1
+        { wch: 12 }, // CV LY M
+        { wch: 15 }  // Expected CV
+    ];
+
     XLSX.utils.book_append_sheet(wb, ws, "Targets");
 
     // Employee Targets Sheet
     let empData = [
-        ["Employee Targets Report"],
-        ["Month:", monthVal],
+        ["تقرير أهداف الموظفين (Employee Targets Report)"],
+        ["الشهر (Month):", monthVal],
         [],
-        ["Store ID", "Store Name", "Employee ID", "Employee Name", "Working Days", "Target"]
+        ["كود المعرض", "اسم المعرض", "الرقم الوظيفي", "اسم الموظف", "أيام العمل", "الهدف للموظف"]
     ];
 
     document.querySelectorAll('#targetTableBody tr.employee-row').forEach(tr => {
@@ -605,7 +678,7 @@ function generateExcelWorkbook() {
         const sidClass = classList.find(c => c.startsWith('emp-of-'));
         if (sidClass) {
             const sid = sidClass.replace('emp-of-', '');
-            const storeName = rawData.stores[sid] || sid;
+            const storeName = (rawData.stores[sid] || sid).trim();
             
             const daysInp = tr.querySelector(`.emp-days-${sid}`);
             const targetInp = tr.querySelector(`.emp-target-${sid}`);
@@ -614,7 +687,7 @@ function generateExcelWorkbook() {
                 const days = parseFloat(daysInp.value) || 0;
                 const target = parseFloat(targetInp.value) || 0;
                 const empId = targetInp.dataset.empid;
-                const empName = targetInp.dataset.empname;
+                const empName = (targetInp.dataset.empname || "").trim();
                 
                 empData.push([sid, storeName, empId, empName, days, target]);
             }
@@ -623,6 +696,17 @@ function generateExcelWorkbook() {
 
     if (empData.length > 4) {
         const wsEmp = XLSX.utils.aoa_to_sheet(empData);
+        
+        // Apply auto-widths for employee targets columns
+        wsEmp['!cols'] = [
+            { wch: 12 }, // Store ID
+            { wch: 25 }, // Store Name
+            { wch: 15 }, // Employee ID
+            { wch: 25 }, // Employee Name
+            { wch: 12 }, // Working Days
+            { wch: 15 }  // Target
+        ];
+        
         XLSX.utils.book_append_sheet(wb, wsEmp, "Employee Targets");
     }
 
