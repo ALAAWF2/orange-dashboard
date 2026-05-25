@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل مراقبة العمليات - لوحة التحكم</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent: #fe7900;
+            --accent-hover: #ff9100;
+            --border-color: #e9ecef;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --bs-primary: #fe7900;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 25px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 800;
+            color: var(--accent);
+            font-size: 1.8rem;
+        }
+
+        .back-btn {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            text-decoration: none;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: #222;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .filter-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            width: 100%;
+            outline: none;
+            transition: 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.25);
+        }
+
+        .btn-filter-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            background: #f1f3f5;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .filter-pill:hover, .filter-pill.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .log-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .log-table {
+            width: 100%;
+            margin: 0;
+        }
+
+        .log-table th {
+            background-color: #fdfdfd;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 800;
+            padding: 15px 20px;
+            text-align: right;
+            font-size: 0.95rem;
+        }
+
+        .log-row {
+            border-bottom: 1px solid var(--border-color);
+            transition: 0.2s;
+        }
+
+        .log-row:hover {
+            background-color: #fff3e0;
+        }
+
+        .log-row:last-child {
+            border-bottom: none;
+        }
+
+        .log-cell {
+            padding: 15px 20px;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+
+        .badge-type {
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 50px;
+        }
+
+        .badge-employee {
+            background-color: rgba(254, 121, 0, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(254, 121, 0, 0.2);
+        }
+
+        .badge-store {
+            background-color: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+        }
+
+        .operator-name {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .amount-flow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+        }
+
+        .amount-old {
+            color: #dc3545;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .amount-new {
+            color: #28a745;
+        }
+
+        .amount-arrow {
+            color: var(--text-secondary);
+        }
+
+        .badge-month {
+            background: #e9ecef;
+            color: #495057;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .time-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .header {
+                padding: 15px;
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            .back-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .log-table thead {
+                display: none;
+            }
+            .log-row {
+                display: block;
+                padding: 15px;
+                border-bottom: 2px solid var(--border-color);
+            }
+            .log-cell {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+                border: none;
+            }
+            .log-cell::before {
+                content: attr(data-label);
+                font-weight: 800;
+                color: var(--text-secondary);
+            }
+            .amount-flow {
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Header -->
+    <div class="header">
+        <div>
+            <h1>📜 سجل مراقبة تعديل الأهداف</h1>
+            <p style="color:var(--text-secondary); margin: 8px 0 0 0; font-size: 0.95rem;">تتبع كافة عمليات إدخال وتعديل الأهداف على قاعدة البيانات المحلية لضمان الأمان والشفافية</p>
+        </div>
+        <div>
+            <a href="admin_targets.html" class="back-btn"><i class="fas fa-arrow-left"></i> العودة للأهداف</a>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="filter-card">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 ابحث بالاسم، المعرض، أو اسم المدير..." oninput="filterLogs()">
+            </div>
+            <div class="col-md-7 d-flex align-items-center justify-content-md-end">
+                <div class="btn-filter-group">
+                    <button class="filter-pill active" onclick="setFilter('All', this)">الكل</button>
+                    <button class="filter-pill" onclick="setFilter('Employee', this)">أهداف الموظفين 👤</button>
+                    <button class="filter-pill" onclick="setFilter('Store', this)">أهداف المعارض 🏪</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Container -->
+    <div class="log-card">
+        <div class="table-responsive">
+            <table class="table log-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ والوقت</th>
+                        <th>المنفذ</th>
+                        <th>نوع التعديل</th>
+                        <th>المستهدف</th>
+                        <th>الشهر</th>
+                        <th>القيم (من ⬅️ إلى)</th>
+                    </tr>
+                </thead>
+                <tbody id="logsContainer">
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 40px; color:#888;">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            جاري تحميل سجل العمليات...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allLogs = [];
+        let activeFilter = 'All';
+
+        // Setup Server Base URL dynamically
+        let API_BASE = window.location.origin;
+        if (!API_BASE || API_BASE.startsWith('file://') || API_BASE.includes('github.io')) {
+            API_BASE = "http://localhost:5000";
+        }
+
+        // Authentication and Role validation
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        const authHeader = localStorage.getItem('auth');
+
+        if (!currentUser || !authHeader || currentUser.role !== 'Admin') {
+            alert("عذراً، هذه الصفحة مخصصة لمدير المبيعات العام فقط.");
+            window.location.href = 'index.html';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchLogs();
+        });
+
+        async function fetchLogs() {
+            const container = document.getElementById('logsContainer');
+            try {
+                const res = await fetch(`${API_BASE}/api/audit_logs`, {
+                    headers: {
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+
+                if (res.status === 403) {
+                    alert("عذراً، ليس لديك صلاحية عرض هذه الصفحة.");
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                if (!res.ok) {
+                    throw new Error("فشل الاتصال بالسيرفر: " + res.status);
+                }
+
+                allLogs = await res.json();
+                renderLogs(allLogs);
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 40px; color:#dc3545; font-weight:bold;">
+                            <i class="fas fa-exclamation-triangle me-2"></i> فشل تحميل سجل المراقبة: ${e.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            
+            // Format options
+            const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+            
+            const datePart = date.toLocaleDateString('ar-EG', dateOptions);
+            const timePart = date.toLocaleTimeString('ar-EG', timeOptions);
+            
+            return `${datePart} - ${timePart}`;
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('ar-SA', { style: 'decimal', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = '';
+
+            if (logs.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 40px; color:#888;">
+                            لا توجد سجلات مراقبة مسجلة حالياً.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = 'log-row';
+
+                const isEmployee = log.target_type === 'Employee';
+                const typeBadge = isEmployee 
+                    ? `<span class="badge-type badge-employee"><i class="fas fa-user me-1"></i> تارجت موظف</span>`
+                    : `<span class="badge-type badge-store"><i class="fas fa-store me-1"></i> تارجت معرض</span>`;
+
+                row.innerHTML = `
+                    <td class="log-cell time-label" data-label="التاريخ والوقت">${formatDateTime(log.action_time)}</td>
+                    <td class="log-cell operator-name" data-label="المنفذ">${log.operator_name}</td>
+                    <td class="log-cell" data-label="نوع التعديل">${typeBadge}</td>
+                    <td class="log-cell fw-bold" data-label="المستهدف">${log.target_name}</td>
+                    <td class="log-cell" data-label="الشهر"><span class="badge-month">${log.target_month}</span></td>
+                    <td class="log-cell" data-label="القيم">
+                        <div class="amount-flow">
+                            <span class="amount-old">${formatCurrency(log.old_amount)}</span>
+                            <span class="amount-arrow"><i class="fas fa-long-arrow-alt-left"></i></span>
+                            <span class="amount-new">${formatCurrency(log.new_amount)}</span>
+                        </div>
+                    </td>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function setFilter(type, buttonEl) {
+            activeFilter = type;
+            
+            // Toggle active pill styling
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            buttonEl.classList.add('active');
+
+            filterLogs();
+        }
+
+        function filterLogs() {
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            const filtered = allLogs.filter(log => {
+                // 1. Filter by category type
+                if (activeFilter !== 'All' && log.target_type !== activeFilter) {
+                    return false;
+                }
+
+                // 2. Filter by search query
+                if (searchVal) {
+                    const matchName = log.target_name.toLowerCase().includes(searchVal);
+                    const matchOperator = log.operator_name.toLowerCase().includes(searchVal);
+                    const matchMonth = log.target_month.toLowerCase().includes(searchVal);
+                    
+                    return matchName || matchOperator || matchMonth;
+                }
+
+                return true;
+            });
+
+            renderLogs(filtered);
+        }
+    </script>
+</body>
+</html>

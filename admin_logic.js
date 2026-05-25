@@ -14,6 +14,16 @@ if (!API_BASE || API_BASE.startsWith('file://') || API_BASE.includes('github.io'
 
 let authHeader = null;
 
+// Helper to show/hide admin-only buttons like auditLogsBtn
+function checkAdminButtons() {
+    const userObj = JSON.parse(localStorage.getItem('currentUser')) || { role: 'guest', name: '' };
+    const isAdmin = (userObj.role === 'Admin' || userObj.name === 'Sales Manager');
+    const btn = document.getElementById('auditLogsBtn');
+    if (btn) {
+        btn.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
+}
+
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
     // Set Default Month (Next Month)
@@ -33,6 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('appContent').style.filter = 'none';
         document.getElementById('appContent').style.pointerEvents = 'all';
+        checkAdminButtons();
         fetchData(); // Load data immediately
     }
 });
@@ -74,7 +85,11 @@ async function login() {
         });
 
         if (!res.ok) {
-            document.getElementById('loginError').innerText = "خطأ في الاتصال: " + res.status;
+            if (res.status === 401) {
+                document.getElementById('loginError').innerText = "اسم المستخدم أو كلمة المرور غير صحيحة ❌";
+            } else {
+                document.getElementById('loginError').innerText = "خطأ في الاتصال بالسيرفر: " + res.status;
+            }
             document.getElementById('loginError').style.display = 'block';
             return;
         }
@@ -87,6 +102,7 @@ async function login() {
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('appContent').style.filter = 'none';
         document.getElementById('appContent').style.pointerEvents = 'all';
+        checkAdminButtons();
         fetchData();
 
     } catch (e) {
