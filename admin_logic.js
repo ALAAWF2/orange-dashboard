@@ -4,13 +4,13 @@
  */
 
 // Configuration
-// In production, point to your actual server URL if not relative
-// Since we are running on the server, relative path /api works ONLY if served by Flask?
-// But user opens the HTML file directly? No, HTML file opened directly cannot use relative URLs to API easily unless API is on same origin.
-// IF user opens HTML file via 'http://<server-ip>/admin_targets.html' (served by nginx/apache), then relative '/api' works if proxied.
-// Configuration
-// If running from file:// or GitHub Pages, point to Localhost Server
-let API_BASE = "http://localhost:5000";
+// Dynamic Server connection. Automatically detects server IP or falls back to localhost:5000 if opened locally or via GitHub Pages.
+let API_BASE = window.location.origin;
+if (!API_BASE || API_BASE.startsWith('file://') || API_BASE.includes('github.io')) {
+    API_BASE = "http://localhost:5000";
+}
+
+
 
 let authHeader = null;
 
@@ -129,6 +129,10 @@ function renderStores(data) {
     // Raw Employee Targets Map (ID -> {name, amount})
     const empTargetsRaw = data.employee_targets_raw || {};
 
+    // Get current logged in user details and role
+    const userObj = JSON.parse(localStorage.getItem('currentUser')) || { role: 'guest', name: '' };
+    const isAdmin = (userObj.role === 'Admin' || userObj.name === 'Sales Manager');
+
     data.stores.forEach(store => {
         const card = document.createElement('div');
         card.className = 'store-card';
@@ -136,21 +140,36 @@ function renderStores(data) {
 
         const safeName = store.outlet.replace(/\s/g, '-');
 
+        // Formulate control panel based on user permissions
+        let controlsHtml = '';
+        if (isAdmin) {
+            controlsHtml = `
+                <button class="refresh-btn" style="padding:5px 10px; font-size:0.8em; background:#007bff;" 
+                        onclick="openVisitorModal('${store.id}', '${store.outlet}')">تعديل الزوار</button>
+                
+                <div>
+                    <input type="number" 
+                           class="store-target-input" 
+                           value="${store.target}" 
+                           onchange="saveStoreTarget('${store.outlet}', this.value, this)">
+                    <span class="save-indicator">✔</span>
+                </div>
+            `;
+        } else {
+            // Read-only for Managers
+            controlsHtml = `
+                <div style="font-size: 0.95em; font-weight: bold; color: var(--accent); padding: 5px 10px;">
+                    الهدف: ${store.target.toLocaleString()} ريال
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <div class="store-header" onclick="toggleEmpList('${safeName}', '${store.outlet}')">
                 <div class="store-title">${store.outlet}</div>
                 
                 <div onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:10px;">
-                    <button class="refresh-btn" style="padding:5px 10px; font-size:0.8em; background:#007bff;" 
-                            onclick="openVisitorModal('${store.id}', '${store.outlet}')">تعديل الزوار</button>
-                    
-                    <div>
-                        <input type="number" 
-                               class="store-target-input" 
-                               value="${store.target}" 
-                               onchange="saveStoreTarget('${store.outlet}', this.value, this)">
-                        <span class="save-indicator">✔</span>
-                    </div>
+                    ${controlsHtml}
                 </div>
             </div>
             <div id="emp-list-${safeName}" class="emp-list">
