@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعديل تارجت الموظفين - لوحة التحكم</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="users.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent: #fe7900;
+            --accent-hover: #ff9100;
+            --border-color: #e9ecef;
+            --success: #198754;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 800;
+            color: var(--accent);
+            font-size: 1.8rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="month"], select {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            background: #ffffff;
+            color: #212529 !important;
+            font-family: 'Cairo';
+            font-weight: 600;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input[type="month"]:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.25);
+        }
+
+        .refresh-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .grid-container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .store-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        .store-header {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fdfdfd;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .store-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .emp-list {
+            padding: 10px 20px;
+            background: transparent;
+        }
+
+        .emp-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            transition: 0.2s;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .emp-row:hover {
+            background-color: #fff3e0;
+            transform: scale(1.005);
+        }
+
+        .emp-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .emp-name {
+            font-size: 1.05rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .emp-id-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-right: 8px;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .emp-input-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .emp-input {
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            color: #212529;
+            padding: 8px 16px;
+            border-radius: 8px;
+            width: 140px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.05rem;
+            transition: 0.3s;
+        }
+
+        .emp-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.25);
+            outline: none;
+        }
+
+        .save-indicator {
+            font-size: 1.3rem;
+            color: var(--success);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .save-indicator.saved {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Login Modal matching Light Theme */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            width: 360px;
+            border: 1px solid #ced4da;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .login-input {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px;
+            box-sizing: border-box;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            background: #ffffff;
+            color: #212529;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .login-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.25);
+        }
+        
+        .user-badge {
+            background: rgba(254, 121, 0, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(254, 121, 0, 0.2);
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <div style="font-size: 3rem; color: var(--accent); margin-bottom: 15px;"><i class="fas fa-lock-open"></i></div>
+            <h3 style="color:var(--text-primary); margin-bottom: 20px; font-weight: 800;">تسجيل دخول الأمان</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: right; margin-bottom: 20px;">
+                الرجاء إدخال كلمة مرور تعديل التارجت. سيقوم النظام بحفظ الدخول تلقائياً لتجنب إدخاله مرة أخرى.
+            </p>
+            <input type="text" id="serverIp" class="login-input" placeholder="عنوان السيرفر (اختياري)">
+            <input type="text" id="username" class="login-input" placeholder="اسم المستخدم">
+            <input type="password" id="password" class="login-input" placeholder="كلمة المرور">
+            <button class="refresh-btn w-100 mt-2 py-2" onclick="login()">دخول آمن 🔑</button>
+            <p id="loginError" style="color:red; display:none; margin-top:15px; font-weight: bold;"></p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="appContent" style="filter: blur(5px); pointer-events: none;">
+        <div class="header">
+            <div>
+                <div class="d-flex align-items-center gap-3">
+                    <h1>🎯 تعديل تارجت الموظفين</h1>
+                    <span id="userNameDisplay" class="user-badge">المستخدم: ...</span>
+                </div>
+                <p style="color:var(--text-secondary); margin: 8px 0 0 0; font-size: 0.95rem;">أدخل أهداف موظفيك وسيقوم النظام بحفظها تلقائياً بلمح البصر</p>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label class="fw-bold">المعرض:</label>
+                    <select id="storeSelector" onchange="loadEmployees()"></select>
+                </div>
+
+                <div class="control-group">
+                    <label class="fw-bold">الشهر:</label>
+                    <input type="month" id="targetMonth" onchange="loadEmployees()">
+                </div>
+                
+                <button class="refresh-btn" onclick="loadEmployees()"><i class="fas fa-sync-alt me-1"></i> تحديث</button>
+                <a href="employees.html" class="refresh-btn" style="background:#444; text-decoration: none; text-align: center; box-shadow: none;"><i class="fas fa-arrow-left me-1"></i> العودة</a>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="store-card">
+                <div class="store-header">
+                    <div class="store-title" id="selectedStoreTitle">
+                        <i class="fas fa-store me-2"></i>
+                        <span>المعرض المختار</span>
+                    </div>
+                    <div class="text-secondary fw-bold" id="employeeCountLabel">الموظفين: 0</div>
+                </div>
+                <div id="employeesContainer" class="emp-list">
+                    <div style="text-align:center; padding: 30px; color:#888;">الرجاء اختيار فرع للبدء...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Setup Server Base URL dynamically
+        let API_BASE = window.location.origin;
+        if (!API_BASE || API_BASE.startsWith('file://') || API_BASE.includes('github.io')) {
+            API_BASE = "http://localhost:5000";
+        }
+
+        let authHeader = null;
+        let rawData = null;
+        let globalEmpTargets = {};
+        let managedStores = [];
+        let employeeHistory = {};
+        let employeeNamesMap = {};
+
+        // Safe base64 utf-8 encoding function to handle Arabic characters in username
+        function getUtf8Base64(str) {
+            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                return String.fromCharCode('0x' + p1);
+            }));
+        }
+
+        // Verify local session login first
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Verify local session login first
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Check if user is Admin or Manager
+            const isManager = (currentUser.role === 'Manager');
+            const isAdmin = (currentUser.role === 'Admin' || currentUser.name === 'Sales Manager');
+            
+            if (!isAdmin && !isManager) {
+                alert("عذراً، هذه الصفحة مخصصة لمدراء الفروع والمبيعات فقط.");
+                window.location.href = 'index.html';
+                return;
+            }
+
+            let finalAuth = localStorage.getItem('auth') || sessionStorage.getItem('auth');
+            const storedIp = localStorage.getItem('serverIp') || sessionStorage.getItem('serverIp');
+
+            // If no stored auth, auto-login using the current dashboard user!
+            if (!finalAuth && typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+                const userPin = USERS[currentUser.name].pin;
+                const creds = getUtf8Base64(currentUser.name + ":" + userPin);
+                finalAuth = "Basic " + creds;
+                
+                // Save it for consistent requests
+                localStorage.setItem('auth', finalAuth);
+            }
+
+            if (finalAuth) {
+                if (storedIp) API_BASE = storedIp;
+                authHeader = finalAuth;
+                
+                // Hide overlay
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('appContent').style.filter = 'none';
+                document.getElementById('appContent').style.pointerEvents = 'all';
+                
+                init();
+            } else {
+                // Fallback to manual login overlay if somehow auto-login failed
+                document.getElementById('loginOverlay').style.display = 'flex';
+                // Populate username field with the current user for convenience
+                document.getElementById('username').value = currentUser.name;
+            }
+        });
+
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const ipInput = document.getElementById('serverIp').value.trim();
+
+            if (ipInput) {
+                if (ipInput.startsWith('http')) {
+                    API_BASE = ipInput;
+                    if (API_BASE.endsWith('/')) API_BASE = API_BASE.slice(0, -1);
+                } else {
+                    if (ipInput.includes(':')) API_BASE = `http://${ipInput}`;
+                    else API_BASE = `http://${ipInput}:5000`;
+                }
+            }
+
+            const creds = getUtf8Base64(u + ":" + p);
+            const header = "Basic " + creds;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/targets`, {
+                    headers: {
+                        'Authorization': header,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+
+                if (!res.ok) {
+                    document.getElementById('loginError').innerText = "خطأ في تسجيل الدخول: " + res.status;
+                    document.getElementById('loginError').style.display = 'block';
+                    return;
+                }
+
+                authHeader = header;
+                // Persistent save so they never type it again!
+                localStorage.setItem('auth', header);
+                localStorage.setItem('serverIp', API_BASE);
+
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('appContent').style.filter = 'none';
+                document.getElementById('appContent').style.pointerEvents = 'all';
+                
+                init();
+
+            } catch (e) {
+                document.getElementById('loginError').innerText = "خطأ في الاتصال بالسيرفر: " + e.message;
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        async function init() {
+            const container = document.getElementById('employeesContainer');
+            container.innerHTML = '<div style="text-align:center; padding: 30px; color:#888;">جاري تحميل الفروع...</div>';
+
+            // Display current logged in user
+            document.getElementById('userNameDisplay').textContent = `المستخدم: ${currentUser.name}`;
+
+            try {
+                // 1. Fetch management data to resolve stores and their managers
+                const resData = await fetch('management_data.json?t=' + Date.now());
+                rawData = await resData.json();
+
+                // 2. Fetch employees data to resolve history and Arabic names
+                const resEmp = await fetch('employees_data.json?t=' + Date.now());
+                const empData = await resEmp.json();
+                employeeHistory = empData.history || {};
+                employeeNamesMap = empData.employee_names || {};
+
+                const storeIds = Object.keys(rawData.stores);
+                const storeMeta = rawData.store_meta || {};
+                
+                const isAdmin = (currentUser.role === 'Admin' || currentUser.name === 'Sales Manager');
+
+                managedStores = [];
+
+                if (isAdmin) {
+                    // Admin sees all stores
+                    storeIds.forEach(sid => {
+                        managedStores.push({
+                            id: sid,
+                            name: rawData.stores[sid] || sid
+                        });
+                    });
+                } else {
+                    // Manager sees only their stores
+                    storeIds.forEach(sid => {
+                        const meta = storeMeta[sid];
+                        if (meta && meta.manager === currentUser.name) {
+                            managedStores.push({
+                                id: sid,
+                                name: rawData.stores[sid] || sid
+                            });
+                        }
+                    });
+                }
+
+                // Sort alphabetically
+                managedStores.sort((a, b) => a.name.localeCompare(b.name));
+
+                // Populate store selector
+                const selector = document.getElementById('storeSelector');
+                selector.innerHTML = '';
+
+                if (managedStores.length === 0) {
+                    selector.innerHTML = '<option value="" disabled>لا توجد فروع تحت إدارتك</option>';
+                    container.innerHTML = '<div class="alert alert-warning text-center">عذراً، لا توجد فروع مسجلة تحت إدارتك حالياً.</div>';
+                    return;
+                }
+
+                managedStores.forEach(store => {
+                    let opt = document.createElement('option');
+                    opt.value = store.id; // Store code, e.g. "04"
+                    opt.textContent = store.name; // Store name, e.g. "Andalos Mall-04"
+                    selector.appendChild(opt);
+                });
+
+                // Default date to current month
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                document.getElementById('targetMonth').value = `${yyyy}-${mm}`;
+
+                loadEmployees();
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="alert alert-danger text-center">فشل جلب بيانات الفروع: ' + e.message + '</div>';
+            }
+        }
+
+        async function loadEmployees() {
+            const storeCode = document.getElementById('storeSelector').value;
+            const storeName = document.getElementById('storeSelector').options[document.getElementById('storeSelector').selectedIndex].text;
+            const month = document.getElementById('targetMonth').value;
+            const container = document.getElementById('employeesContainer');
+            
+            if (!storeCode || !month) return;
+
+            document.getElementById('selectedStoreTitle').innerHTML = `<i class="fas fa-store me-2"></i> ${storeName}`;
+            container.innerHTML = '<div style="text-align:center; padding: 30px; color:#888;">جاري تحميل الموظفين...</div>';
+
+            try {
+                // 1. Fetch current month targets first to extract employee targets
+                const targetsRes = await fetch(`${API_BASE}/api/targets?month=${month}`, {
+                    headers: {
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                const targetsData = await targetsRes.json();
+                globalEmpTargets = targetsData.employee_targets_raw || {};
+
+                // Selected year and month from 'targetMonth' input (format YYYY-MM)
+                const [selYear, selMonth] = month.split('-').map(Number);
+
+                // 2. Scan ALL stores in history to perform global Primary Store determination!
+                const empAgg = {};
+                const storesInHistory = Object.keys(employeeHistory || {});
+                
+                storesInHistory.forEach(sCode => {
+                    const records = employeeHistory[sCode] || [];
+                    
+                    records.forEach(rec => {
+                        const [date, rawName, sales, trans, items, maxTicket] = rec;
+                        const d = new Date(date);
+                        const dYear = d.getFullYear();
+                        const dMonth = d.getMonth() + 1; // 1-12
+
+                        // Only process records within the selected month/year
+                        if (dYear === selYear && dMonth === selMonth) {
+                            let empName = rawName;
+                            let empId = rawName;
+
+                            if (rawName.includes('-')) {
+                                const parts = rawName.split('-');
+                                empId = parts[0].trim();
+                                empName = parts[1].trim();
+                            } else {
+                                empId = rawName;
+                            }
+
+                            if (empName === 'مرتجع') return;
+                            if (employeeNamesMap[empId]) empName = employeeNamesMap[empId];
+
+                            if (!empAgg[empId]) {
+                                empAgg[empId] = {
+                                    id: empId,
+                                    name: empName,
+                                    sales: 0,
+                                    transactions: 0,
+                                    latestDates: {}, // Track latest positive sales date per store
+                                    storeCode: sCode // Default store code
+                                };
+                            }
+
+                            // Accumulate total monthly sales & transactions
+                            empAgg[empId].sales += sales || 0;
+                            empAgg[empId].transactions += trans || 0;
+
+                            // Track latest positive sales date per store to determine primary store
+                            if ((sales || 0) > 0) {
+                                if (!empAgg[empId].latestDates[sCode] || date > empAgg[empId].latestDates[sCode]) {
+                                    empAgg[empId].latestDates[sCode] = date;
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // Determine Primary Store and filter by selected storeCode
+                let emps = Object.values(empAgg).filter(e => {
+                    // Determine Primary Store using the store with the MOST RECENT positive sales date
+                    let bestStore = e.storeCode;
+                    let latestDate = "";
+
+                    if (Object.keys(e.latestDates).length > 0) {
+                        Object.entries(e.latestDates).forEach(([sCode, dStr]) => {
+                            if (dStr > latestDate) {
+                                latestDate = dStr;
+                                bestStore = sCode;
+                            }
+                        });
+                        e.storeCode = bestStore;
+                    }
+
+                    // 1. Filter by selected store code (must match their Primary Store!)
+                    if (e.storeCode !== storeCode) return false;
+
+                    // 2. Filter out non-active employees (exactly like employees.html!)
+                    if (e.sales === 0 && e.transactions === 0) return false;
+
+                    return true;
+                });
+
+                // Fallback: If no active records in selected month (e.g. future month), use last 60 days of history
+                if (emps.length === 0) {
+                    const fallbackAgg = {};
+                    const limitDate = new Date();
+                    limitDate.setDate(limitDate.getDate() - 60);
+                    const limitDateStr = limitDate.toISOString().split('T')[0];
+
+                    storesInHistory.forEach(sCode => {
+                        const records = employeeHistory[sCode] || [];
+                        records.forEach(rec => {
+                            const [date, rawName, sales, trans, items, maxTicket] = rec;
+                            if (date >= limitDateStr) {
+                                let empName = rawName;
+                                let empId = rawName;
+
+                                if (rawName.includes('-')) {
+                                    const parts = rawName.split('-');
+                                    empId = parts[0].trim();
+                                    empName = parts[1].trim();
+                                } else {
+                                    empId = rawName;
+                                }
+
+                                if (empName === 'مرتجع') return;
+                                if (employeeNamesMap[empId]) empName = employeeNamesMap[empId];
+
+                                if (!fallbackAgg[empId]) {
+                                    fallbackAgg[empId] = {
+                                        id: empId,
+                                        name: empName,
+                                        sales: 0,
+                                        transactions: 0,
+                                        latestDates: {},
+                                        storeCode: sCode
+                                    };
+                                }
+
+                                fallbackAgg[empId].sales += sales || 0;
+                                fallbackAgg[empId].transactions += trans || 0;
+
+                                if ((sales || 0) > 0) {
+                                    if (!fallbackAgg[empId].latestDates[sCode] || date > fallbackAgg[empId].latestDates[sCode]) {
+                                        fallbackAgg[empId].latestDates[sCode] = date;
+                                    }
+                                }
+                            }
+                        });
+                    });
+
+                    emps = Object.values(fallbackAgg).filter(e => {
+                        let bestStore = e.storeCode;
+                        let latestDate = "";
+
+                        if (Object.keys(e.latestDates).length > 0) {
+                            Object.entries(e.latestDates).forEach(([sCode, dStr]) => {
+                                if (dStr > latestDate) {
+                                    latestDate = dStr;
+                                    bestStore = sCode;
+                                }
+                            });
+                            e.storeCode = bestStore;
+                        }
+
+                        if (e.storeCode !== storeCode) return false;
+                        if (e.sales === 0 && e.transactions === 0) return false;
+
+                        return true;
+                    });
+                }
+
+                // Sort alphabetically
+                emps.sort((a, b) => a.name.localeCompare(b.name));
+
+                document.getElementById('employeeCountLabel').textContent = `الموظفين: ${emps.length}`;
+
+                if (emps.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding: 30px; color:#888;">لا يوجد موظفين نشطين خلال هذا الشهر في هذا المعرض.</div>';
+                    return;
+                }
+
+                renderEmployeesList(emps, container);
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="alert alert-danger text-center">فشل تحميل الموظفين: ' + e.message + '</div>';
+            }
+        }
+
+        function renderEmployeesList(emps, container) {
+            container.innerHTML = '';
+
+            emps.forEach((emp, idx) => {
+                const div = document.createElement('div');
+                div.className = 'emp-row';
+
+                // Look up existing target
+                let targetVal = 0;
+                if (globalEmpTargets[emp.id]) {
+                    targetVal = globalEmpTargets[emp.id].amount;
+                } else {
+                    // Try parsing mixed formats
+                    const idParts = String(emp.id).split('-');
+                    for (const part of idParts) {
+                        const numericPart = part.replace(/\D/g, '');
+                        if (numericPart && globalEmpTargets[numericPart]) {
+                            targetVal = globalEmpTargets[numericPart].amount;
+                            break;
+                        }
+                        if (globalEmpTargets[part.trim()]) {
+                            targetVal = globalEmpTargets[part.trim()].amount;
+                            break;
+                        }
+                    }
+                }
+
+                div.innerHTML = `
+                    <div>
+                        <span class="emp-name">${emp.name}</span>
+                        <span class="emp-id-label">${emp.id}</span>
+                    </div>
+                    <div class="emp-input-container">
+                        <input type="number" 
+                                class="emp-input" 
+                                value="${targetVal}" 
+                                id="target-input-${idx}"
+                                onchange="saveEmployeeTarget('${emp.id}', '${emp.name}', this.value, this)">
+                        <span class="save-indicator" id="save-indicator-${idx}"><i class="fas fa-check-circle"></i></span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function saveEmployeeTarget(empId, empName, amount, inputEl) {
+            const month = document.getElementById('targetMonth').value;
+            const indicator = inputEl.nextElementSibling;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/save_employee_target`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        month: month,
+                        emp_id: empId,
+                        emp_name: empName,
+                        amount: parseFloat(amount) || 0
+                    })
+                });
+
+                if (res.ok) {
+                    indicator.classList.add('saved');
+                    // Update local cache
+                    if (!globalEmpTargets[empId]) globalEmpTargets[empId] = {};
+                    globalEmpTargets[empId].amount = amount;
+
+                    setTimeout(() => indicator.classList.remove('saved'), 2000);
+                } else {
+                    alert("فشل حفظ التارجت");
+                }
+            } catch (e) {
+                alert("خطأ أثناء الحفظ: " + e.message);
+            }
+        }
+    </script>
+</body>
+
+</html>
