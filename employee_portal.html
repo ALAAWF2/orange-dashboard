@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="users.js"></script>
-    <script src="data.js"></script>
     
     <style>
         :root {
@@ -467,8 +466,18 @@
             }
         }
 
-        // Initial setup on DOM load
-        window.addEventListener('DOMContentLoaded', async () => {
+        // Dynamic loading of data.js with cache busting
+        window.addEventListener('DOMContentLoaded', () => {
+            const scriptEl = document.createElement('script');
+            scriptEl.src = 'data.js?v=' + Date.now();
+            scriptEl.onload = async () => {
+                await initializePage();
+            };
+            document.head.appendChild(scriptEl);
+        });
+
+        // Initial setup on data.js load
+        async function initializePage() {
             // Verify roles
             const isManager = (currentUser.role === 'Manager');
             const isAdmin = (currentUser.role === 'Admin' || currentUser.name === 'Sales Manager');
@@ -489,7 +498,11 @@
             if (typeof EMPLOYEES !== "undefined") {
                 filteredEmployeesList = isAdmin 
                     ? EMPLOYEES 
-                    : EMPLOYEES.filter(emp => emp.manager === currentUser.name);
+                    : EMPLOYEES.filter(emp => {
+                        const isPrimary = emp.manager === currentUser.name;
+                        const isSubShowroom = emp.showroomDetails && emp.showroomDetails.some(shw => shw.manager === currentUser.name);
+                        return isPrimary || isSubShowroom;
+                    });
 
                 // Sort alphabetically
                 filteredEmployeesList.sort((a, b) => a.name.localeCompare(b.name));
@@ -500,7 +513,7 @@
 
             // Trigger server detection in background
             detectActiveApiBase();
-        });
+        }
 
         // Render employees list in the table with collapsible details row structure
         function renderEmployeesTable() {
