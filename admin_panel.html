@@ -401,6 +401,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="offers-tab" data-bs-toggle="tab" data-bs-target="#offers-content" type="button" role="tab"><i class="fa-solid fa-tags me-2"></i> عروض النظام والخصومات 🏷️</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="uncategorized-tab" data-bs-toggle="tab" data-bs-target="#uncategorized-content" type="button" role="tab"><i class="fa-solid fa-box-open me-2"></i> منتجات غير مصنفة <span class="badge bg-danger rounded-pill ms-1" id="uncategorizedBadgeCount" style="display:none; font-size:0.7rem; padding: 3px 6px;">0</span></button>
+            </li>
         </ul>
 
         <div class="tab-content" id="adminTabContent">
@@ -441,6 +444,66 @@
                                     <td colspan="6" class="text-center py-5 text-muted">
                                         <div class="spinner-border text-orange mb-2" role="status"></div>
                                         <div class="fw-bold">جاري تحميل بيانات العروض الترويجية...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 8: Uncategorized Products Audit -->
+            <div class="tab-pane fade" id="uncategorized-content" role="tabpanel">
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-box-open me-2"></i> المنتجات الجديدة وغير المصنفة | Uncategorized Products</h4>
+                            <p class="text-muted small mb-0">تدقيق المنتجات الجديدة من الكتالوج أو التي تمتلك مخزوناً حالياً ولكنها غير مسجلة بملف تصنيفات الإدارة <code>new cate ceo.xlsx</code>.</p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <input type="text" id="unmappedSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث بكود أو اسم المنتج..." oninput="filterUnmappedProductsTable()" style="width: 240px;">
+                            <select id="unmappedFilterType" class="form-select form-control-dark" onchange="filterUnmappedProductsTable()" style="width: 210px;">
+                                <option value="7">أضيفت آخر 7 أيام</option>
+                                <option value="14" selected>أضيفت آخر 14 يوماً (الافتراضي)</option>
+                                <option value="30">أضيفت آخر 30 يوماً</option>
+                                <option value="all">عرض الكل (كل الأوقات)</option>
+                            </select>
+                            <select id="unmappedSortOrder" class="form-select form-control-dark" onchange="filterUnmappedProductsTable()" style="width: 190px;">
+                                <option value="date_desc" selected>الأحدث نزولاً في دايناميك</option>
+                                <option value="stock_desc">الأعلى كمية في المخزون</option>
+                            </select>
+                            <button class="btn btn-outline-orange-premium btn-sm px-3 fw-bold" onclick="copyUnmappedList()"><i class="fa-solid fa-copy"></i> نسخ الأكواد المفلترة</button>
+                            <button class="btn btn-orange-premium btn-sm px-3 fw-bold" onclick="loadUnmappedProductsData(true)"><i class="fa-solid fa-rotate"></i> تحديث</button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning border-warning border-opacity-25 d-flex align-items-center mb-4" role="alert" style="border-radius:12px; background: rgba(245, 158, 11, 0.05); color: #b45309;">
+                        <i class="fa-solid fa-circle-info fs-5 me-2 text-warning"></i>
+                        <div class="small fw-bold">
+                            المنتجات أدناه غير موجودة حالياً في ملف الفئات <strong>new cate ceo.xlsx</strong> (أو تم تعيينها كـ "غير مصنف"). يمكنك نسخ أكوادها بنقرة واحدة وإضافتها للملف، ثم تشغيل سكربت <code>update_categories.py</code> لتحديث خريطة التقارير فوراً.
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-premium text-center align-middle" id="unmappedProductsTable">
+                            <thead>
+                                <tr>
+                                    <th>كود المنتج (ID)</th>
+                                    <th>الاسم البديل (Alias)</th>
+                                    <th class="text-start ps-4">اسم المنتج بالكامل (Arabic Name)</th>
+                                    <th>سعر البيع</th>
+                                    <th>المخزون الحالي</th>
+                                    <th>تاريخ النزول في دايناميك</th>
+                                    <th>التصنيف المقترح (الشجرة)</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراء السريع</th>
+                                </tr>
+                            </thead>
+                            <tbody id="unmappedProductsBody">
+                                <tr>
+                                    <td colspan="9" class="text-center py-5 text-muted">
+                                        <div class="spinner-border text-orange mb-2" role="status"></div>
+                                        <div class="fw-bold">جاري تحميل كتالوج المنتجات وتواريخ الإضافة الأولى...</div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -990,6 +1053,7 @@
             loadUsersData(); // Load Alaa user management data
             loadShowroomsData(); // Load Alaa store assignments mapping
             loadOffersData(); // Load Dynamics offers data
+            loadUnmappedProductsData(); // Load unmapped products catalog
         });
 
         // Logout
@@ -2506,6 +2570,278 @@
 
         function filterModalItems() {
             renderModalItemsTable();
+        }
+
+        // ==============================================
+        // TAB 8: Unmapped & Uncategorized Products Logic
+        // ==============================================
+        let allProductsCache = null;
+        let categoriesMapCache = null;
+        let firstSeenCache = null;
+        let unmappedProductsCache = [];
+
+        async function loadUnmappedProductsData(forceRefresh = false) {
+            const tbody = document.getElementById('unmappedProductsBody');
+            if (!tbody) return;
+
+            if (unmappedProductsCache.length > 0 && !forceRefresh) {
+                renderUnmappedTable();
+                return;
+            }
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <div class="spinner-border text-orange mb-2" role="status"></div>
+                        <div class="fw-bold">جاري تحميل وفحص الكتالوج والمنتجات غير المصنفة...</div>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const [prodRes, catRes, firstSeenRes] = await Promise.all([
+                    fetch('ceo_data/products.json?t=' + Date.now()),
+                    fetch('categories_map.json?t=' + Date.now()).catch(() => null),
+                    fetch('first_seen.json?t=' + Date.now()).catch(() => null)
+                ]);
+
+                if (!prodRes.ok) throw new Error("تعذر جلب ملف كتالوج المنتجات products.json");
+                const prodData = await prodRes.json();
+                allProductsCache = prodData.products;
+
+                if (catRes && catRes.ok) {
+                    categoriesMapCache = await catRes.json();
+                } else {
+                    categoriesMapCache = {};
+                }
+
+                if (firstSeenRes && firstSeenRes.ok) {
+                    firstSeenCache = await firstSeenRes.json();
+                } else {
+                    firstSeenCache = {};
+                }
+
+                // Process and find unmapped
+                unmappedProductsCache = [];
+                Object.entries(allProductsCache).forEach(([pid, p]) => {
+                    const mappedCat = categoriesMapCache[pid];
+                    // Unmapped if not in mapping, or mapped to 'غير مصنف'
+                    if (!mappedCat || mappedCat === 'غير مصنف') {
+                        const totalStock = p.stock ? (p.stock.total || 0) : 0;
+                        const addedDate = firstSeenCache[pid] || '';
+                        
+                        unmappedProductsCache.push({
+                            id: pid,
+                            name: p.name,
+                            alias: p.alias || '',
+                            price: p.price || 0,
+                            stock: totalStock,
+                            dateAdded: addedDate
+                        });
+                    }
+                });
+
+                // Update tab badge with uncategorized products having stock > 0 and added in the last 14 days
+                const badge = document.getElementById('uncategorizedBadgeCount');
+                if (badge) {
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - 14);
+                    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+                    
+                    const recentUnmappedCount = unmappedProductsCache.filter(p => p.stock > 0 && p.dateAdded && p.dateAdded >= cutoffStr).length;
+                    if (recentUnmappedCount > 0) {
+                        badge.textContent = recentUnmappedCount;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.textContent = '0';
+                        badge.style.display = 'none';
+                    }
+                }
+
+                renderUnmappedTable();
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-danger py-5">
+                            <i class="fa-solid fa-triangle-exclamation fs-3 mb-2"></i>
+                            <div class="fw-bold">تعذر تحميل وفحص البيانات: ${e.message}</div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function getSuggestedCategory(pid) {
+            if (!pid) return null;
+            const cleanPid = String(pid).trim().replace(/^KIT-/, '');
+            
+            // Try prefixes from cleanPid.length - 1 down to 3
+            for (let len = cleanPid.length - 1; len >= 3; len--) {
+                const prefix = cleanPid.substring(0, len);
+                
+                // Find any classified item in categoriesMapCache that starts with this prefix
+                const match = Object.entries(categoriesMapCache).find(([code, cat]) => {
+                    const cleanCode = code.trim().replace(/^KIT-/, '');
+                    return cleanCode.startsWith(prefix) && cat && cat !== 'غير مصنف';
+                });
+                
+                if (match) {
+                    return {
+                        category: match[1],
+                        prefix: prefix
+                    };
+                }
+            }
+            return null;
+        }
+
+        function renderUnmappedTable() {
+            const tbody = document.getElementById('unmappedProductsBody');
+            if (!tbody) return;
+
+            const searchVal = document.getElementById('unmappedSearchInput').value.trim().toLowerCase();
+            const filterDays = document.getElementById('unmappedFilterType').value;
+            const sortOrder = document.getElementById('unmappedSortOrder').value;
+
+            // Calculate cutoff date if not 'all'
+            let cutoffStr = '';
+            if (filterDays !== 'all') {
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - parseInt(filterDays));
+                cutoffStr = cutoffDate.toISOString().split('T')[0];
+            }
+
+            let filtered = unmappedProductsCache.filter(p => {
+                // Search
+                if (searchVal) {
+                    const matchId = String(p.id || '').toLowerCase().includes(searchVal);
+                    const matchName = String(p.name || '').toLowerCase().includes(searchVal);
+                    const matchAlias = String(p.alias || '').toLowerCase().includes(searchVal);
+                    if (!matchId && !matchName && !matchAlias) return false;
+                }
+
+                // Date Filter
+                if (cutoffStr) {
+                    if (!p.dateAdded || p.dateAdded < cutoffStr) return false;
+                }
+
+                return true;
+            });
+
+            // Sorting logic
+            if (sortOrder === 'stock_desc') {
+                filtered.sort((a, b) => b.stock - a.stock);
+            } else {
+                // sortOrder === 'date_desc'
+                filtered.sort((a, b) => {
+                    const dateA = a.dateAdded || '1970-01-01';
+                    const dateB = b.dateAdded || '1970-01-01';
+                    if (dateA !== dateB) {
+                        return dateB.localeCompare(dateA); // Newest date first
+                    }
+                    return a.id.localeCompare(b.id);
+                });
+            }
+
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            لا توجد منتجات غير مصنفة تطابق خيارات التصفية المحددة.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const stockBadge = p.stock > 0
+                    ? `<span class="badge bg-success py-1 px-2 fw-bold" style="font-size:0.8rem;">${p.stock} قطعة</span>`
+                    : `<span class="badge bg-light text-muted border py-1 px-2">0</span>`;
+
+                const statusBadge = p.stock > 0
+                    ? `<span class="badge-premium badge-achievement-warn"><i class="fa-solid fa-warehouse me-1"></i> به مخزون نشط</span>`
+                    : `<span class="badge-premium bg-secondary text-white small"><i class="fa-solid fa-plus me-1"></i> جديد (كتالوج)</span>`;
+
+                // Calculate Suggested Category based on prefix tree
+                const suggested = getSuggestedCategory(p.id);
+                let suggestedHtml = '';
+                if (suggested) {
+                    suggestedHtml = `<td><span class="badge bg-light text-success border px-2 py-1 text-wrap text-start small fw-bold" style="max-width:250px;"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> مقترح: ${suggested.category} <small class="text-muted d-block mt-1 font-monospace">بناءً على الشجرة: ${suggested.prefix}</small></span></td>`;
+                } else {
+                    suggestedHtml = `<td><span class="badge bg-light text-danger border px-2 py-1 small fw-bold"><i class="fa-solid fa-tag me-1"></i> صنف فردي جديد</span></td>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong class="font-monospace text-dark">${p.id}</strong></td>
+                    <td><span class="badge bg-light text-dark border font-monospace py-1 px-2">${p.alias || '-'}</span></td>
+                    <td class="text-start ps-4 fw-bold text-dark">${p.name || 'منتج جديد بدون اسم'}</td>
+                    <td><span class="text-success fw-bold">${p.price.toFixed(1)} SAR</span></td>
+                    <td>${stockBadge}</td>
+                    <td><span class="font-monospace text-muted small">${p.dateAdded ? p.dateAdded : 'غير محدد'}</span></td>
+                    ${suggestedHtml}
+                    <td>${statusBadge}</td>
+                    <td>
+                        <button class="btn btn-outline-dark btn-sm font-monospace" onclick="copyToClipboard('${p.id}')">
+                            <i class="fa-solid fa-copy me-1 text-orange"></i> نسخ الكود
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`📋 تم نسخ الكود: ${text}`);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        function copyUnmappedList() {
+            const searchVal = document.getElementById('unmappedSearchInput').value.trim().toLowerCase();
+            const filterDays = document.getElementById('unmappedFilterType').value;
+
+            let cutoffStr = '';
+            if (filterDays !== 'all') {
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - parseInt(filterDays));
+                cutoffStr = cutoffDate.toISOString().split('T')[0];
+            }
+
+            const filtered = unmappedProductsCache.filter(p => {
+                if (searchVal) {
+                    const matchId = String(p.id || '').toLowerCase().includes(searchVal);
+                    const matchName = String(p.name || '').toLowerCase().includes(searchVal);
+                    const matchAlias = String(p.alias || '').toLowerCase().includes(searchVal);
+                    if (!matchId && !matchName && !matchAlias) return false;
+                }
+                if (cutoffStr) {
+                    if (!p.dateAdded || p.dateAdded < cutoffStr) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                alert("⚠️ لا توجد منتجات لنسخها حالياً.");
+                return;
+            }
+
+            const codes = filtered.map(p => p.id).join('\n');
+            navigator.clipboard.writeText(codes).then(() => {
+                alert(`📋 تم نسخ قائمة الأكواد لـ ${filtered.length} منتج بنجاح!\nيمكنك الآن لصقها مباشرة في ملف Excel.`);
+            }).catch(err => {
+                alert("حدث خطأ أثناء النسخ: " + err);
+            });
+        }
+
+        function filterUnmappedProductsTable() {
+            renderUnmappedTable();
         }
     </script>
 </body>
