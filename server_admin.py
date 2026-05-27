@@ -826,6 +826,96 @@ def update_sales():
         return jsonify({"error": str(e)}), 500
 
 
+# ========================================================
+# USER MANAGEMENT & CREDENTIALS ENDPOINTS (Alaa Exclusive)
+# ========================================================
+import json
+import re
+
+def read_users_js():
+    file_path = os.path.join(os.path.dirname(__file__), 'users.js')
+    if not os.path.exists(file_path):
+        return {}
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Try regex match for const USERS = { ... }
+    match = re.search(r'const\s+USERS\s*=\s*(\{.*?\});', content, re.DOTALL)
+    if not match:
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        
+    if match:
+        obj_str = match.group(1)
+        # Convert JS key-values to JSON compatible by quoting keys
+        obj_str = re.sub(r'(\w+)\s*:', r'"\1":', obj_str)
+        # Remove trailing commas
+        obj_str = re.sub(r',\s*\}', r'}', obj_str)
+        obj_str = re.sub(r',\s*\]', r']', obj_str)
+        try:
+            return json.loads(obj_str)
+        except Exception as e:
+            print(f"Error parsing users.js JSON: {e}")
+            # Fallback manual regex parser
+            users = {}
+            pattern_quotes = r'"([^"]+)":\s*\{\s*"pin":\s*"([^"]+)"\s*,\s*"role":\s*"([^"]+)"\s*\}'
+            matches_quotes = re.findall(pattern_quotes, content)
+            for user, pin, role in matches_quotes:
+                users[user] = {"pin": pin, "role": role}
+                
+            pattern = r'"([^"]+)":\s*\{\s*pin:\s*"([^"]+)"\s*,\s*role:\s*"([^"]+)"\s*\}'
+            matches = re.findall(pattern, content)
+            for user, pin, role in matches:
+                users[user] = {"pin": pin, "role": role}
+            return users
+    return {}
+
+def write_users_js(users):
+    file_path = os.path.join(os.path.dirname(__file__), 'users.js')
+    lines = ["const USERS = {"]
+    for user, info in users.items():
+        pin = info.get("pin", "")
+        role = info.get("role", "Manager")
+        lines.append(f'    "{user}": {{ "pin": "{pin}", "role": "{role}" }},')
+    
+    if len(lines) > 1:
+        # Strip trailing comma from the last element
+        lines[-1] = lines[-1].rstrip(',')
+        
+    lines.append("};")
+    new_content = "\n".join(lines) + "\n"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(new_content)
+
+@app.route('/api/admin/users', methods=['GET', 'OPTIONS'])
+@requires_auth
+def get_users_api():
+    try:
+        users = read_users_js()
+        return jsonify(users)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users', methods=['POST', 'OPTIONS'])
+@requires_auth
+def save_users_api():
+    try:
+        data = request.json
+        if not data or not isinstance(data, dict):
+            return jsonify({"error": "البيانات المرسلة غير صالحة"}), 400
+        
+        # Prevent deleting or disabling Alaa
+        if "علاء" not in data:
+            return jsonify({"error": "لا يمكن حذف المستخدم الرئيسي علاء!"}), 400
+            
+        write_users_js(data)
+        print(f"User Management Updated: {len(data)} accounts written to users.js")
+        return jsonify({"status": "success", "message": "تم تحديث المستخدمين والرموز بنجاح!"})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     # Listen on all interfaces
     print("Starting Admin Server on 0.0.0.0:5000...")

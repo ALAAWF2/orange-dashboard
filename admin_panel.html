@@ -395,10 +395,75 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="pipeline-tab" data-bs-toggle="tab" data-bs-target="#pipeline-content" type="button" role="tab"><i class="fa-solid fa-terminal me-2"></i> حالة السيرفر وملفات المزامنة</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content" type="button" role="tab"><i class="fa-solid fa-users-gear me-2"></i> إدارة المستخدمين والرموز (PINs)</button>
+            </li>
         </ul>
 
         <div class="tab-content" id="adminTabContent">
             
+            <!-- Tab 6: User Credentials Management (Alaa Exclusive) -->
+            <div class="tab-pane fade" id="users-content" role="tabpanel">
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-users-gear me-2"></i> إدارة مستخدمي النظام ورموز الدخول (PINs)</h4>
+                            <p class="text-muted small mb-0">لوحة التحكم الحصرية لتعديل وتحديث رموز الدخول (PINs) فوراً، وإضافة مستخدمين جدد.</p>
+                        </div>
+                        <button class="btn btn-orange-premium btn-sm" onclick="openAddUserModal()">
+                            <i class="fa-solid fa-user-plus"></i> إضافة مستخدم جديد
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-premium text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>اسم المستخدم / المدير</th>
+                                    <th>الرمز السري (PIN)</th>
+                                    <th>الدور (Role)</th>
+                                    <th>الإجراءات والعمليات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersListBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Store Assignments Section (Only for Alaa) -->
+                <div class="glass-card mb-4 mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-map-location-dot me-2"></i> إسناد المعارض لمدراء المناطق</h4>
+                            <p class="text-muted small mb-0">إسناد وتغيير المعارض التابعة لكل مدير منطقة. تحديث هذه الحقول آمن تماماً ولا يؤثر على المستهدفات أو المبيعات التاريخية.</p>
+                        </div>
+                        <button class="btn btn-orange-premium btn-sm" onclick="loadShowroomsData()">
+                            <i class="fa-solid fa-rotate"></i> تحديث القائمة
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-premium text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="text-start ps-4">اسم المعرض (Store Name)</th>
+                                    <th>كود المعرض (ID)</th>
+                                    <th>المدينة (City)</th>
+                                    <th>مدير المنطقة الحالي</th>
+                                    <th>تغيير الإسناد لمدير جديد</th>
+                                    <th>العملية</th>
+                                </tr>
+                            </thead>
+                            <tbody id="storeAssignmentsBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab 1: Showroom Sales & Live Performance -->
             <div class="tab-pane fade show active" id="sales-content" role="tabpanel">
                 <div class="glass-card mb-4">
@@ -685,6 +750,42 @@
         </div>
     </div>
 
+
+    <!-- User Management Add/Edit Modal (Alaa Exclusive) -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); z-index: 1070;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-white border" style="border-radius:12px; border: 2px solid var(--orange) !important;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-orange" id="userModalTitle">إضافة مستخدم جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">اسم المستخدم (الاسم المعروض):</label>
+                        <input type="text" id="modalUsername" class="form-control form-control-dark" placeholder="مثال: أحمد العتيبي">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">رمز الدخول (PIN Code - 4 أرقام):</label>
+                        <input type="text" id="modalUserPin" class="form-control form-control-dark" maxlength="4" placeholder="مثال: 1234">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">صلاحيات النظام (Role):</label>
+                        <select id="modalUserRole" class="form-select form-control-dark">
+                            <option value="Manager">مدير منطقة (Manager)</option>
+                            <option value="Admin">مدير عام للنظام (Admin)</option>
+                            <option value="Auditor">مدقق مبيعات (Auditor)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-orange-premium" onclick="saveUserFromModal()">حفظ البيانات</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -768,6 +869,8 @@
         let hourlyDataCache = {};
         let currentHourlyDate = null;
         let currentHourlyRowIndex = null;
+        
+        let allSystemUsers = {}; // Global cache for Alaa user management
 
         // Helper to format currency
         function formatSAR(val) {
@@ -802,6 +905,8 @@
             runLiveAuditing();
             loadAuditLogs();
             loadPipelineLogs();
+            loadUsersData(); // Load Alaa user management data
+            loadShowroomsData(); // Load Alaa store assignments mapping
         });
 
         // Logout
@@ -1590,6 +1695,270 @@
                 terminal.innerHTML = `<span style="color: #da3637;">Failed to read pipeline logs: ${e.message}</span>`;
             }
         }
+
+
+        // ==========================================
+        // TAB 6: Alaa User Management & PINs
+        // ==========================================
+        let editingOriginalUsername = null; // Track if we are editing or creating
+
+        async function loadUsersData() {
+            const tbody = document.getElementById('usersListBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" class="text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-2"></i> جاري تحميل المستخدمين والرموز...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/users`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (!res.ok) throw new Error("تعذر الاتصال بسيرفر الإدارة");
+                allSystemUsers = await res.json();
+
+                tbody.innerHTML = '';
+
+                Object.keys(allSystemUsers).sort().forEach(username => {
+                    const user = allSystemUsers[username];
+                    const tr = document.createElement('tr');
+                    
+                    const roleBadge = user.role === 'Admin' 
+                        ? `<span class="badge bg-danger py-1 px-2" style="font-size:0.78rem;">مدير نظام (Admin)</span>`
+                        : (user.role === 'Auditor' 
+                            ? `<span class="badge bg-info py-1 px-2 text-dark" style="font-size:0.78rem;">مدقق مبيعات (Auditor)</span>`
+                            : `<span class="badge bg-primary py-1 px-2" style="font-size:0.78rem;">مدير منطقة (Manager)</span>`);
+
+                    const actionButtons = username === 'علاء'
+                        ? `<button class="btn btn-outline-warning btn-sm px-3" style="border-radius:6px;" onclick="openEditUserModal('${username}')"><i class="fa-solid fa-key"></i> تعديل الرمز السري</button>`
+                        : `<button class="btn btn-outline-warning btn-sm me-1 px-3" style="border-radius:6px;" onclick="openEditUserModal('${username}')"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                           <button class="btn btn-outline-danger btn-sm px-3" style="border-radius:6px;" onclick="deleteUser('${username}')"><i class="fa-solid fa-trash-can"></i> حذف</button>`;
+
+                    tr.innerHTML = `
+                        <td class="fw-bold text-start ps-4"><i class="fa-solid fa-circle-user text-orange me-2"></i> ${username}</td>
+                        <td class="fw-bold" style="letter-spacing: 2px;">•••• (${user.pin})</td>
+                        <td>${roleBadge}</td>
+                        <td>${actionButtons}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-danger py-3">فشل استرداد بيانات المستخدمين: ${err.message}</td></tr>`;
+            }
+        }
+
+        function openAddUserModal() {
+            editingOriginalUsername = null;
+            document.getElementById('userModalTitle').textContent = 'إضافة مستخدم جديد للنظام';
+            document.getElementById('modalUsername').value = '';
+            document.getElementById('modalUsername').disabled = false;
+            document.getElementById('modalUserPin').value = '';
+            document.getElementById('modalUserRole').value = 'Manager';
+            
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        function openEditUserModal(username) {
+            editingOriginalUsername = username;
+            const user = allSystemUsers[username];
+            
+            document.getElementById('userModalTitle').textContent = `تعديل حساب المستخدم: ${username}`;
+            document.getElementById('modalUsername').value = username;
+            document.getElementById('modalUsername').disabled = true; // Lock username during edit to prevent conflicts
+            document.getElementById('modalUserPin').value = user.pin;
+            document.getElementById('modalUserRole').value = user.role || 'Manager';
+            
+            // For Alaa himself, lock role changes to Admin only
+            if (username === 'علاء') {
+                document.getElementById('modalUserRole').value = 'Admin';
+                document.getElementById('modalUserRole').disabled = true;
+            } else {
+                document.getElementById('modalUserRole').disabled = false;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        async function deleteUser(username) {
+            if (username === 'علاء') {
+                alert("لا يمكن حذف المستخدم الرئيسي للنظام!");
+                return;
+            }
+
+            if (!confirm(`هل أنت متأكد من رغبتك في حذف المستخدم "${username}" نهائياً من النظام؟`)) {
+                return;
+            }
+
+            // Create temporary copy of users dictionary without this user
+            const updatedUsers = { ...allSystemUsers };
+            delete updatedUsers[username];
+
+            await submitUserChanges(updatedUsers, `تم حذف المستخدم "${username}" بنجاح!`);
+        }
+
+        async function saveUserFromModal() {
+            const username = document.getElementById('modalUsername').value.trim();
+            const pin = document.getElementById('modalUserPin').value.trim();
+            const role = document.getElementById('modalUserRole').value;
+
+            if (!username) {
+                alert("الرجاء إدخال اسم المستخدم!");
+                return;
+            }
+            if (pin.length !== 4 || isNaN(pin)) {
+                alert("الرجاء إدخال رمز دخول PIN مكون من 4 أرقام فقط!");
+                return;
+            }
+
+            const updatedUsers = { ...allSystemUsers };
+
+            // Handle edit vs create
+            if (editingOriginalUsername) {
+                // Editing
+                updatedUsers[editingOriginalUsername] = { pin, role };
+            } else {
+                // Creating new
+                if (updatedUsers[username]) {
+                    alert(`خطأ: المستخدم "${username}" موجود بالفعل في النظام!`);
+                    return;
+                }
+                updatedUsers[username] = { pin, role };
+            }
+
+            // Hide Modal
+            const modalEl = document.getElementById('userModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            await submitUserChanges(updatedUsers, editingOriginalUsername ? `تم تحديث الحساب بنجاح!` : `تم إضافة المستخدم الجديد "${username}" بنجاح!`);
+        }
+
+        async function submitUserChanges(usersDict, successMessage) {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/users`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify(usersDict)
+                });
+
+                if (res.ok) {
+                    alert(`✅ ${successMessage}`);
+                    await loadUsersData(); // Reload Table
+                } else {
+                    const err = await res.json();
+                    alert(`❌ خطأ أثناء حفظ التعديلات: ${err.error}`);
+                }
+            } catch (err) {
+                alert(`❌ خطأ في الاتصال بالسيرفر: ${err.message}`);
+            }
+        }
+
+
+        // ==========================================
+        // TAB 7: Alaa Showroom Assignments
+        // ==========================================
+        let allShowroomsList = [];
+
+        async function loadShowroomsData() {
+            const tbody = document.getElementById('storeAssignmentsBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-2"></i> جاري تحميل إسناد المعارض...</td></tr>';
+
+            try {
+                // Ensure users are loaded first so we have the dropdown options
+                if (Object.keys(allSystemUsers).length === 0) {
+                    const usersRes = await fetch(`${API_BASE}/api/admin/users`, {
+                        headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                    });
+                    if (usersRes.ok) allSystemUsers = await usersRes.json();
+                }
+
+                const res = await fetch(`${API_BASE}/api/admin/showrooms`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (!res.ok) throw new Error("تعذر الاتصال بسيرفر الإدارة");
+                allShowroomsList = await res.json();
+
+                tbody.innerHTML = '';
+
+                // Get list of unique manager names from system users
+                const managerNames = Object.keys(allSystemUsers).filter(u => 
+                    allSystemUsers[u].role === 'Manager' || allSystemUsers[u].role === 'Admin'
+                ).sort();
+
+                allShowroomsList.forEach(store => {
+                    const tr = document.createElement('tr');
+                    
+                    // Construct dropdown select
+                    let selectHtml = `<select id="assign-select-${store.id}" class="form-select form-select-dark select-sm d-inline-block" style="width: auto;">`;
+                    selectHtml += `<option value="Unknown" ${store.manager === 'Unknown' ? 'selected' : ''}>غير معين (Unknown)</option>`;
+                    selectHtml += `<option value="online" ${store.manager === 'online' ? 'selected' : ''}>أونلاين (online)</option>`;
+                    
+                    managerNames.forEach(m => {
+                        selectHtml += `<option value="${m}" ${store.manager === m ? 'selected' : ''}>${m}</option>`;
+                    });
+                    selectHtml += `</select>`;
+
+                    const actionButton = `<button class="btn btn-outline-primary btn-sm px-3" style="border-radius:6px;" onclick="saveStoreManager('${store.id}')">
+                                            <i class="fa-solid fa-circle-check"></i> حفظ الإسناد
+                                          </button>`;
+
+                    tr.innerHTML = `
+                        <td class="fw-bold text-start ps-4"><i class="fa-solid fa-store text-orange me-2"></i> ${store.name}</td>
+                        <td><strong>${store.id}</strong></td>
+                        <td class="text-uppercase small text-muted">${store.city}</td>
+                        <td><span class="badge bg-secondary py-1 px-2">${store.manager}</span></td>
+                        <td>${selectHtml}</td>
+                        <td>${actionButton}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-danger py-3">فشل استرداد بيانات المعارض: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function saveStoreManager(storeId) {
+            const selectEl = document.getElementById(`assign-select-${storeId}`);
+            if (!selectEl) return;
+            const newManager = selectEl.value;
+
+            // Find store details in cache
+            const store = allShowroomsList.find(s => s.id === storeId);
+            const storeName = store ? store.name : storeId;
+
+            if (!confirm(`هل أنت متأكد من رغبتك في إسناد المعرض "${storeName}" إلى المدير "${newManager}"؟`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/save_store_manager`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ store_id: storeId, manager: newManager })
+                });
+
+                if (res.ok) {
+                    alert(`✅ تم إسناد المعرض "${storeName}" إلى المدير "${newManager}" بنجاح! جاري تحديث ملفات النظام...`);
+                    await loadShowroomsData(); // Reload Table
+                    loadShowroomPerformance(); // Reload Tab 1
+                    loadAuditLogs(); // Reload Audit Logs
+                } else {
+                    const err = await res.json();
+                    alert(`❌ خطأ أثناء إسناد المعرض: ${err.error}`);
+                }
+            } catch (err) {
+                alert(`❌ خطأ في الاتصال بالسيرفر: ${err.message}`);
+            }
+        }
+
 
         // ==========================================
         // Visitor / Daily & Hourly Overrides Logic
