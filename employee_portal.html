@@ -128,7 +128,7 @@
             background: var(--accent);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 10px;
             cursor: pointer;
             font-weight: 700;
@@ -206,7 +206,7 @@
             margin-bottom: 20px;
         }
 
-        /* Interactive table styling */
+        /* Expandable Table Premium Styling */
         .table-premium {
             width: 100%;
             margin-bottom: 0;
@@ -214,20 +214,20 @@
             border-spacing: 0 8px;
         }
 
-        .table-premium tr {
+        .table-premium tr.main-row {
             background: #ffffff;
             border-radius: 10px;
             transition: all 0.2s;
             cursor: pointer;
         }
 
-        .table-premium tr:hover {
+        .table-premium tr.main-row:hover {
             background: #fff8f2 !important;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(254, 121, 0, 0.06);
         }
 
-        .table-premium tr.selected-row {
+        .table-premium tr.main-row.expanded-active {
             background: #fff3e6 !important;
             border-right: 4px solid var(--accent);
         }
@@ -262,8 +262,63 @@
             border-left: 1px solid #f1f5f9;
         }
 
+        .collapse-row {
+            background-color: transparent !important;
+        }
+
+        .collapse-row td {
+            padding: 0 !important;
+            border: none !important;
+        }
+
+        .expanded-card {
+            background: #ffffff;
+            border: 1.5px solid rgba(254, 121, 0, 0.15);
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            margin: 5px 16px 20px 16px;
+            padding: 25px;
+            border-top: 5px solid var(--accent);
+            animation: fadeInSlide 0.25s ease-out;
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chevron-icon {
+            transition: transform 0.3s ease;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .expanded-active .chevron-icon {
+            transform: rotate(180deg);
+            color: var(--accent);
+        }
+
+        .border-end-md {
+            border-left: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            .border-end-md {
+                border-left: none;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+            }
+        }
+
         .table-container {
-            max-height: 70vh;
+            max-height: 80vh;
             overflow-y: auto;
             padding-left: 5px;
         }
@@ -286,13 +341,6 @@
             padding-right: 45px;
             font-size: 0.95rem;
         }
-
-        /* Responsive */
-        @media (max-width: 992px) {
-            .table-container {
-                max-height: 40vh;
-            }
-        }
     </style>
 </head>
 
@@ -307,7 +355,7 @@
                     <h1>⚙️ بوابة إدارة ونقل الموظفين (D365 Mappings)</h1>
                     <span id="userNameDisplay" class="user-badge">المدير: ...</span>
                 </div>
-                <p class="text-secondary mt-2 mb-0 small">بوابة إسناد ونقل الموظفين وتحديث الأكواد مباشرة بقاعدة بيانات Microsoft Dynamics 365. اختر موظفاً من الجدول لبدء تعديله.</p>
+                <p class="text-secondary mt-2 mb-0 small">بوابة إسناد ونقل الموظفين وتحديث الأكواد مباشرة بقاعدة بيانات Microsoft Dynamics 365. انقر على أي موظف في الجدول أدناه لفتح لوحة النقل والربط الخاصة به.</p>
             </div>
             <div>
                 <a href="employees.html" class="back-btn"><i class="fas fa-arrow-left"></i> العودة للأداء</a>
@@ -318,94 +366,35 @@
         <div id="statusAlert" class="alert status-alert" role="alert"></div>
 
         <!-- Main Workspace -->
-        <div class="row g-4">
+        <div class="row">
             
-            <!-- Right Panel: Full List of Employees -->
-            <div class="col-lg-7">
-                <div class="glass-card d-flex flex-column gap-3 h-100">
+            <!-- Full List of Employees (Interactive Accordion Table) -->
+            <div class="col-12">
+                <div class="glass-card d-flex flex-column gap-3">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h5 class="section-title mb-0"><i class="fa-solid fa-users text-orange me-2"></i> قائمة الموظفين التابعين لك</h5>
-                        <div class="search-container" style="width: 280px;">
+                        <h5 class="section-title mb-0"><i class="fa-solid fa-users text-orange me-2"></i> قائمة موظفيك النشطين</h5>
+                        <div class="search-container" style="width: 320px;">
                             <i class="fa-solid fa-magnifying-glass search-icon"></i>
                             <input type="text" id="searchInput" class="search-input" placeholder="بحث باسم أو رقم الموظف..." oninput="filterEmployeesTable()">
                         </div>
                     </div>
 
-                    <!-- Interactive Table -->
+                    <!-- Interactive Collapsible Table -->
                     <div class="table-container mt-2">
                         <table class="table table-premium align-middle">
                             <thead>
                                 <tr>
                                     <th>الموظف</th>
                                     <th>الرقم الوظيفي</th>
-                                    <th>المعاهد النشطة حالياً (Dynamics 365)</th>
+                                    <th>المعارض النشطة حالياً (Dynamics 365)</th>
                                     <th id="thManager" style="display: none;">مدير المنطقة</th>
                                 </tr>
                             </thead>
                             <tbody id="employeesTableBody">
-                                <!-- Populated dynamically -->
+                                <!-- Populated dynamically with expandable main/details row pairs -->
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-
-            <!-- Left Panel: Selected Employee Management Actions -->
-            <div class="col-lg-5">
-                <div id="noSelectionMsg" class="glass-card d-flex flex-column align-items-center justify-content-center text-center py-5 text-muted h-100 bg-white">
-                    <i class="fa-solid fa-id-card-clip fa-4x mb-4 text-orange" style="opacity: 0.3;"></i>
-                    <h5 class="fw-bold text-dark">لم يتم اختيار أي موظف</h5>
-                    <p class="text-secondary small max-width-300">الرجاء النقر على اسم أي موظف من الجدول المقابل لفتح خيارات النقل، الربط، أو الإزالة المباشرة له.</p>
-                </div>
-
-                <div id="operationsContainer" class="d-flex flex-column gap-4 h-100" style="display: none !important;">
-                    
-                    <!-- Mappings Card -->
-                    <div class="glass-card">
-                        <h5 class="section-title text-danger"><i class="fa-solid fa-trash-can me-2"></i> إدارة الموظف: <span id="targetEmpName" class="text-dark fw-bold">...</span></h5>
-                        <p class="text-muted small mb-3">فروع الموظف النشطة حالياً في Dynamics 365. اضغط على "إزالة الربط" لحذف الموظف من هذا المعرض.</p>
-                        
-                        <div id="activeShowroomsList" class="d-flex flex-column gap-2 mt-3">
-                            <!-- Populated dynamically -->
-                        </div>
-                    </div>
-
-                    <!-- Operation A: Transfer & Replace -->
-                    <div class="glass-card">
-                        <h5 class="section-title text-orange"><i class="fa-solid fa-arrows-spin me-2"></i> نقل واستبدال المعرض (Transfer)</h5>
-                        <p class="text-muted small mb-4">نقل الموظف من معرضه الحالي إلى معرض جديد مباشرة (يتم الحذف والإضافة بخطوة واحدة آمنة).</p>
-                        
-                        <div class="d-flex flex-column gap-3">
-                            <div>
-                                <label class="form-label small text-muted fw-bold mb-1">المعرض الحالي المراد حذفه:</label>
-                                <select id="transferFromSelect" class="form-select"></select>
-                            </div>
-                            <div>
-                                <label class="form-label small text-muted fw-bold mb-1">الوجهة (المعرض الجديد المراد إضافته):</label>
-                                <select id="transferToSelect" class="form-select"></select>
-                            </div>
-                            <button id="transferBtn" class="btn-accent w-100 py-3 mt-2" onclick="executeTransfer()">
-                                <i class="fa-solid fa-right-left"></i> تأكيد النقل والاستبدال فوراً
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Operation B: Add to Additional Showroom -->
-                    <div class="glass-card">
-                        <h5 class="section-title text-success"><i class="fa-solid fa-plus me-2"></i> ربط بمعرض إضافي (دون حذف المعرض الحالي)</h5>
-                        <p class="text-muted small mb-4">إضافة معرض مبيعات إضافي للموظف لربطه بفرعين في نفس الوقت.</p>
-                        
-                        <div class="d-flex flex-column gap-3">
-                            <div>
-                                <label class="form-label small text-muted fw-bold mb-1">المعرض الإضافي المراد ربطه بالموظف:</label>
-                                <select id="addToSelect" class="form-select"></select>
-                            </div>
-                            <button id="addBtn" class="btn-success-custom w-100 py-3 mt-2" onclick="executeAdd()">
-                                <i class="fa-solid fa-square-plus"></i> تأكيد ربط الموظف بالمعرض الإضافي
-                            </button>
-                        </div>
-                    </div>
-
                 </div>
             </div>
 
@@ -509,36 +498,11 @@
             // Render table
             renderEmployeesTable();
 
-            // Populate all showrooms in destination selects
-            const toSelect = document.getElementById('transferToSelect');
-            const addSelect = document.getElementById('addToSelect');
-            toSelect.innerHTML = '<option value="" selected disabled>-- اختر الفرع الجديد --</option>';
-            addSelect.innerHTML = '<option value="" selected disabled>-- اختر الفرع الإضافي --</option>';
-
-            if (typeof ALL_SHOWROOMS !== "undefined") {
-                // Sort showrooms alphabetically
-                const sortedShowrooms = [...ALL_SHOWROOMS].sort((a, b) => a.name.localeCompare(b.name));
-                
-                sortedShowrooms.forEach(shw => {
-                    const codesStr = JSON.stringify(shw.codes);
-                    
-                    const opt1 = document.createElement('option');
-                    opt1.value = codesStr;
-                    opt1.textContent = shw.name;
-                    toSelect.appendChild(opt1);
-                    
-                    const opt2 = document.createElement('option');
-                    opt2.value = codesStr;
-                    opt2.textContent = shw.name;
-                    addSelect.appendChild(opt2);
-                });
-            }
-
             // Trigger server detection in background
             detectActiveApiBase();
         });
 
-        // Render employees list in the table
+        // Render employees list in the table with collapsible details row structure
         function renderEmployeesTable() {
             const tbody = document.getElementById('employeesTableBody');
             tbody.innerHTML = '';
@@ -568,10 +532,6 @@
             }
 
             filtered.forEach(emp => {
-                const tr = document.createElement('tr');
-                tr.id = `emp-row-${emp.personnelNumber}`;
-                tr.onclick = () => selectEmployee(emp.personnelNumber);
-
                 // Showrooms list as badges
                 let showroomsHtml = '';
                 if (emp.showroomDetails && emp.showroomDetails.length > 0) {
@@ -582,19 +542,46 @@
                     showroomsHtml = '<span class="badge-d365 badge-d365-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> غير مربوط بأي فروع</span>';
                 }
 
-                tr.innerHTML = `
-                    <td><strong>${emp.name}</strong></td>
+                // Main Row
+                const trMain = document.createElement('tr');
+                trMain.className = 'main-row';
+                trMain.id = `emp-row-${emp.personnelNumber}`;
+                trMain.onclick = () => toggleEmployeeRow(emp.personnelNumber);
+                trMain.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-chevron-down chevron-icon me-2" id="chevron-${emp.personnelNumber}"></i>
+                            <strong>${emp.name}</strong>
+                        </div>
+                    </td>
                     <td><span class="badge bg-light text-dark border px-2 py-1">${emp.personnelNumber}</span></td>
                     <td>${showroomsHtml}</td>
                     ${isAdmin ? `<td><span class="text-secondary small fw-bold">${emp.manager || 'غير محدد'}</span></td>` : ''}
                 `;
-                tbody.appendChild(tr);
+
+                // Collapsible Detail Row
+                const trDetail = document.createElement('tr');
+                trDetail.className = 'collapse-row';
+                trDetail.id = `details-row-${emp.personnelNumber}`;
+                trDetail.style.display = 'none';
+                trDetail.innerHTML = `
+                    <td colspan="${isAdmin ? 4 : 3}">
+                        <div class="expanded-card" id="details-content-${emp.personnelNumber}">
+                            <!-- Dynamic Content Rendered on Expand -->
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(trMain);
+                tbody.appendChild(trDetail);
             });
 
-            // Re-highlight if active employee is still in list
+            // Re-highlight and expand active employee if still present
             if (activeEmp) {
-                const activeRow = document.getElementById(`emp-row-${activeEmp.personnelNumber}`);
-                if (activeRow) activeRow.classList.add('selected-row');
+                const mainRow = document.getElementById(`emp-row-${activeEmp.personnelNumber}`);
+                if (mainRow) {
+                    toggleEmployeeRow(activeEmp.personnelNumber);
+                }
             }
         }
 
@@ -602,61 +589,140 @@
             renderEmployeesTable();
         }
 
-        // Selection event
-        function selectEmployee(personnelNum) {
-            // Remove previous highlights
-            document.querySelectorAll('.table-premium tr').forEach(r => r.classList.remove('selected-row'));
+        // Toggle Accordion function
+        function toggleEmployeeRow(personnelNumber) {
+            const detailsRow = document.getElementById(`details-row-${personnelNumber}`);
+            const mainRow = document.getElementById(`emp-row-${personnelNumber}`);
+            const chevron = document.getElementById(`chevron-${personnelNumber}`);
+            const isCurrentlyExpanded = detailsRow.style.display !== 'none';
 
-            // Set active
-            activeEmp = filteredEmployeesList.find(e => e.personnelNumber === personnelNum);
-            if (!activeEmp) return;
+            // First, collapse all other open details rows
+            document.querySelectorAll('.collapse-row').forEach(row => {
+                row.style.display = 'none';
+            });
+            document.querySelectorAll('.main-row').forEach(row => {
+                row.classList.remove('expanded-active');
+            });
+            document.querySelectorAll('.chevron-icon').forEach(icon => {
+                icon.style.transform = 'rotate(0deg)';
+                icon.classList.remove('text-orange');
+            });
 
-            // Highlight selected row
-            const activeRow = document.getElementById(`emp-row-${personnelNum}`);
-            if (activeRow) activeRow.classList.add('selected-row');
+            if (!isCurrentlyExpanded) {
+                // Expand selected employee
+                detailsRow.style.display = 'table-row';
+                mainRow.classList.add('expanded-active');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(180deg)';
+                    chevron.classList.add('text-orange');
+                }
 
-            // Hide instruction placeholder
-            document.getElementById('noSelectionMsg').style.display = 'none';
+                // Render dynamic operational details
+                renderEmployeeDetails(personnelNumber);
+            } else {
+                activeEmp = null;
+            }
+        }
 
-            // Show action panel
-            document.getElementById('operationsContainer').setAttribute('style', 'display: flex !important; flex-direction: column; gap: 1.5rem;');
+        // Render Action Forms dynamically inside the expanded row
+        function renderEmployeeDetails(personnelNum) {
+            const emp = filteredEmployeesList.find(e => e.personnelNumber === personnelNum);
+            if (!emp) return;
 
-            // Set targets
-            document.getElementById('targetEmpName').textContent = activeEmp.name;
+            activeEmp = emp; // set active reference
+            const container = document.getElementById(`details-content-${personnelNum}`);
 
-            // Render showrooms
-            const removeList = document.getElementById('activeShowroomsList');
-            removeList.innerHTML = '';
-            
-            const fromSelect = document.getElementById('transferFromSelect');
-            fromSelect.innerHTML = '<option value="" selected disabled>-- اختر الفرع للحذف --</option>';
+            // 1. Build list of current showrooms with inline delete buttons
+            let currentShowroomsHtml = '';
+            let fromSelectOptions = '<option value="" selected disabled>-- اختر الفرع للحذف --</option>';
 
-            if (activeEmp.showroomDetails && activeEmp.showroomDetails.length > 0) {
-                activeEmp.showroomDetails.forEach(shw => {
+            if (emp.showroomDetails && emp.showroomDetails.length > 0) {
+                emp.showroomDetails.forEach(shw => {
                     const codesStr = JSON.stringify(shw.codes);
                     
-                    // Deletion item
-                    const div = document.createElement('div');
-                    div.className = 'shw-item';
-                    div.innerHTML = `
-                        <div>
-                            <span class="fw-bold small text-dark">${shw.name}</span>
+                    currentShowroomsHtml += `
+                        <div class="shw-item mb-2">
+                            <div>
+                                <span class="fw-bold small text-dark"><i class="fa-solid fa-store text-orange me-1"></i> ${shw.name}</span>
+                            </div>
+                            <button class="btn btn-danger btn-sm px-3 py-1 fw-bold" onclick="executeRemove('${shw.name}', ${codesStr.replace(/"/g, '&quot;')})">
+                                <i class="fa-solid fa-minus-circle me-1"></i> إزالة الربط
+                            </button>
                         </div>
-                        <button class="btn btn-danger btn-sm px-3 py-1" onclick="executeRemove('${shw.name}', ${codesStr.replace(/"/g, '&quot;')})">
-                            <i class="fa-solid fa-minus-circle me-1"></i> إزالة الربط
-                        </button>
                     `;
-                    removeList.appendChild(div);
 
-                    // Add to transfer old list
-                    const opt = document.createElement('option');
-                    opt.value = codesStr;
-                    opt.textContent = shw.name;
-                    fromSelect.appendChild(opt);
+                    fromSelectOptions += `<option value='${codesStr}'>${shw.name}</option>`;
                 });
             } else {
-                removeList.innerHTML = '<div class="text-muted text-center py-3 small bg-light rounded">غير مربوط بأي فروع حالياً.</div>';
+                currentShowroomsHtml = '<div class="text-muted text-center py-3 small bg-light rounded">غير مربوط بأي فروع حالياً.</div>';
             }
+
+            // 2. Build Destination Select Options (Sort alphabetically)
+            let toSelectOptions = '<option value="" selected disabled>-- اختر الفرع الجديد --</option>';
+            let addSelectOptions = '<option value="" selected disabled>-- اختر الفرع الإضافي --</option>';
+
+            if (typeof ALL_SHOWROOMS !== "undefined") {
+                const sortedShowrooms = [...ALL_SHOWROOMS].sort((a, b) => a.name.localeCompare(b.name));
+                sortedShowrooms.forEach(shw => {
+                    const codesStr = JSON.stringify(shw.codes);
+                    toSelectOptions += `<option value='${codesStr}'>${shw.name}</option>`;
+                    addSelectOptions += `<option value='${codesStr}'>${shw.name}</option>`;
+                });
+            }
+
+            // Write forms HTML right inside the table accordion card
+            container.innerHTML = `
+                <div class="row g-4">
+                    <!-- Column 1: Current Showrooms & Add Showroom Mappings -->
+                    <div class="col-md-6 border-end-md">
+                        <h6 class="fw-bold mb-3 text-orange border-bottom pb-2"><i class="fa-solid fa-store me-2"></i> الفروع الحالية والربط الإضافي</h6>
+                        <p class="text-secondary small mb-3">الفروع المنسوبة للموظف حالياً في Dynamics 365. يمكنك إزالة الربط بفرع معين، أو ربطه بفروع إضافية دون إلغاء فروع الحالية.</p>
+                        
+                        <div class="mb-4">
+                            <label class="form-label small text-muted fw-bold mb-2">الفروع النشطة حالياً:</label>
+                            <div class="d-flex flex-column gap-1">
+                                ${currentShowroomsHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="pt-3 border-top">
+                            <label class="form-label small text-muted fw-bold mb-2">ربط الموظف بمعرض إضافي جديد:</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <select id="expanded-add-to-${personnelNum}" class="form-select flex-grow-1" style="min-width: 200px;">
+                                    ${addSelectOptions}
+                                </select>
+                                <button class="btn btn-success fw-bold px-4" onclick="executeAdd('${personnelNum}')">
+                                    <i class="fa-solid fa-square-plus me-1"></i> ربط إضافي
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: D365 Transfer (Delete & Add in One Step) -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3 text-orange border-bottom pb-2"><i class="fa-solid fa-arrows-spin me-2"></i> نقل الموظف واستبدال معرضه (Transfer)</h6>
+                        <p class="text-secondary small mb-3">نقل الموظف مباشرة من معرضه القديم إلى معرض جديد. سيقوم النظام بإلغاء إسناد المعرض القديم وإضافة المعرض الجديد في خطوة واحدة آمنة.</p>
+                        
+                        <div class="d-flex flex-column gap-3">
+                            <div>
+                                <label class="form-label small text-muted fw-bold mb-1">المعرض الحالي المراد حذفه:</label>
+                                <select id="expanded-transfer-from-${personnelNum}" class="form-select w-100">
+                                    ${fromSelectOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label small text-muted fw-bold mb-1">الوجهة (المعرض الجديد المراد نقله إليه):</label>
+                                <select id="expanded-transfer-to-${personnelNum}" class="form-select w-100">
+                                    ${toSelectOptions}
+                                </select>
+                            </div>
+                            <button class="btn btn-accent w-100 py-3 mt-2 fw-bold" onclick="executeTransfer('${personnelNum}')">
+                                <i class="fa-solid fa-right-left"></i> تأكيد النقل والاستبدال فوراً
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Show Alert utility
@@ -700,9 +766,12 @@
         }
 
         // Execute Transfer
-        async function executeTransfer() {
-            const fromCodesVal = document.getElementById('transferFromSelect').value;
-            const toCodesVal = document.getElementById('transferToSelect').value;
+        async function executeTransfer(personnelNum) {
+            const fromSelect = document.getElementById(`expanded-transfer-from-${personnelNum}`);
+            const toSelect = document.getElementById(`expanded-transfer-to-${personnelNum}`);
+            
+            const fromCodesVal = fromSelect.value;
+            const toCodesVal = toSelect.value;
 
             if (!fromCodesVal || !toCodesVal) {
                 alert("الرجاء اختيار المعرض الحالي والوجهة.");
@@ -745,8 +814,10 @@
         }
 
         // Execute Add Showroom
-        async function executeAdd() {
-            const codesVal = document.getElementById('addToSelect').value;
+        async function executeAdd(personnelNum) {
+            const addSelect = document.getElementById(`expanded-add-to-${personnelNum}`);
+            const codesVal = addSelect.value;
+            
             if (!codesVal) {
                 alert("الرجاء اختيار المعرض الإضافي.");
                 return;
