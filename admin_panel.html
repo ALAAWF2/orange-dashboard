@@ -217,6 +217,21 @@
             color: white;
         }
 
+        .btn-outline-orange-premium {
+            border: 1.5px solid var(--orange) !important;
+            color: var(--orange) !important;
+            background-color: transparent !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            transition: all 0.3s !important;
+        }
+        .btn-outline-orange-premium:hover {
+            background-color: var(--orange) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(254, 121, 0, 0.2) !important;
+            transform: translateY(-1px) !important;
+        }
+
         /* Badge design */
         .badge-premium {
             padding: 6px 12px;
@@ -502,7 +517,7 @@
                         <div class="glass-card">
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                                 <h4 class="fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left text-orange me-2"></i> سجل العمليات والتعديلات الإدارية</h4>
-                                <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()"><i class="fa-solid fa-sync"></i></button>
+                                <button class="btn btn-outline-dark btn-sm" onclick="loadAuditLogs()"><i class="fa-solid fa-sync text-orange"></i></button>
                             </div>
                             <p class="text-muted small">سجل يوضح تاريخ ووقت العمليات التي أجراها المسؤولون في تغيير الأهداف أو التعديلات.</p>
                             
@@ -843,9 +858,11 @@
 
                 // MTD Targets current year
                 let storeTarget = 0;
-                const storeTargetsObj = mgmtData.targets?.[storeId];
-                if (storeTargetsObj) {
-                    storeTarget = storeTargetsObj[`${selectedMonth}-01`] || 0;
+                if (mgmtData.targets) {
+                    const targetRow = mgmtData.targets.find(row => row[1] === storeId && row[0].startsWith(selectedMonth));
+                    if (targetRow) {
+                        storeTarget = targetRow[2] || 0;
+                    }
                 }
 
                 const achievement = storeTarget > 0 ? (mtdSales / storeTarget * 100) : 0;
@@ -895,7 +912,7 @@
                     <td>${bills.toLocaleString()}</td>
                     <td class="fw-bold" style="color: #fe7900;">${conversion.toFixed(2)}%</td>
                     <td>
-                        <button class="btn btn-outline-light btn-sm" onclick="openVisitorOverrideModal('${storeId}', '${storeName}')">
+                        <button class="btn btn-outline-orange-premium btn-sm" onclick="openVisitorOverrideModal('${storeId}', '${storeName}')">
                             <i class="fa-solid fa-user-pen"></i> تعديل الزوار/البيانات
                         </button>
                     </td>
@@ -930,30 +947,173 @@
                     const accItem = document.createElement('div');
                     accItem.className = 'accordion-item accordion-item-dark';
                     
-                    // Fetch active active employees mapped in D365 mapping
-                    const storeEmployees = typeof EMPLOYEES !== "undefined" ? EMPLOYEES.filter(emp => {
-                        // Check if active mapped showrooms has this store name
-                        return emp.showroomDetails.some(shw => shw.name.includes(store.outlet));
-                    }) : [];
+                    // Selected year and month from 'targetMonth' input (format YYYY-MM)
+                    const [selYear, selMonth] = month.split('-').map(Number);
+                    const employeeHistory = empData ? (empData.history || {}) : {};
+                    const employeeNamesMap = empData ? (empData.employee_names || {}) : {};
+                    const storesInHistory = Object.keys(employeeHistory || {});
+                    const matchSCode = (code) => String(code || '').replace(/^0+/, '');
+                    const storeCode = String(store.id);
+
+                    // 1. Scan ALL Gofrugal stores in history to perform global Primary Store determination
+                    const empAgg = {};
+                    storesInHistory.forEach(sCode => {
+                        const records = employeeHistory[sCode] || [];
+                        records.forEach(rec => {
+                            const [date, rawName, sales, trans, items, maxTicket] = rec;
+                            const d = new Date(date);
+                            const dYear = d.getFullYear();
+                            const dMonth = d.getMonth() + 1; // 1-12
+
+                            if (dYear === selYear && dMonth === selMonth) {
+                                let empName = rawName;
+                                let empId = rawName;
+
+                                if (rawName.includes('-')) {
+                                    const parts = rawName.split('-');
+                                    empId = parts[0].trim();
+                                    empName = parts[1].trim();
+                                } else {
+                                    empId = rawName;
+                                }
+
+                                if (empName === 'مرتجع') return;
+                                if (employeeNamesMap[empId]) empName = employeeNamesMap[empId];
+
+                                if (!empAgg[empId]) {
+                                    empAgg[empId] = {
+                                        id: empId,
+                                        name: empName,
+                                        sales: 0,
+                                        transactions: 0,
+                                        latestDates: {},
+                                        storeCode: sCode
+                                    };
+                                }
+
+                                empAgg[empId].sales += sales || 0;
+                                empAgg[empId].transactions += trans || 0;
+
+                                if ((sales || 0) > 0) {
+                                    if (!empAgg[empId].latestDates[sCode] || date > empAgg[empId].latestDates[sCode]) {
+                                        empAgg[empId].latestDates[sCode] = date;
+                                    }
+                                }
+                            }
+                        });
+                    });
+
+                    // Filter employees by selected store code and active status
+                    let storeEmployees = Object.values(empAgg).filter(e => {
+                        let bestStore = e.storeCode;
+                        let latestDate = "";
+
+                        if (Object.keys(e.latestDates).length > 0) {
+                            Object.entries(e.latestDates).forEach(([sCode, dStr]) => {
+                                if (dStr > latestDate) {
+                                    latestDate = dStr;
+                                    bestStore = sCode;
+                                }
+                            });
+                            e.storeCode = bestStore;
+                        }
+
+                        // Compare stripped store codes
+                        if (matchSCode(e.storeCode) !== matchSCode(storeCode)) return false;
+                        if (e.sales === 0 && e.transactions === 0) return false;
+                        return true;
+                    });
+
+                    // 2. Fallback: 60-day active window if no active records for selected month
+                    if (storeEmployees.length === 0) {
+                        const fallbackAgg = {};
+                        const limitDate = new Date();
+                        limitDate.setDate(limitDate.getDate() - 60);
+                        const limitDateStr = limitDate.toISOString().split('T')[0];
+
+                        storesInHistory.forEach(sCode => {
+                            const records = employeeHistory[sCode] || [];
+                            records.forEach(rec => {
+                                const [date, rawName, sales, trans, items, maxTicket] = rec;
+                                if (date >= limitDateStr) {
+                                    let empName = rawName;
+                                    let empId = rawName;
+
+                                    if (rawName.includes('-')) {
+                                        const parts = rawName.split('-');
+                                        empId = parts[0].trim();
+                                        empName = parts[1].trim();
+                                    } else {
+                                        empId = rawName;
+                                    }
+
+                                    if (empName === 'مرتجع') return;
+                                    if (employeeNamesMap[empId]) empName = employeeNamesMap[empId];
+
+                                    if (!fallbackAgg[empId]) {
+                                        fallbackAgg[empId] = {
+                                            id: empId,
+                                            name: empName,
+                                            sales: 0,
+                                            transactions: 0,
+                                            latestDates: {},
+                                            storeCode: sCode
+                                        };
+                                    }
+
+                                    fallbackAgg[empId].sales += sales || 0;
+                                    fallbackAgg[empId].transactions += trans || 0;
+
+                                    if ((sales || 0) > 0) {
+                                        if (!fallbackAgg[empId].latestDates[sCode] || date > fallbackAgg[empId].latestDates[sCode]) {
+                                            fallbackAgg[empId].latestDates[sCode] = date;
+                                        }
+                                    }
+                                }
+                            });
+                        });
+
+                        storeEmployees = Object.values(fallbackAgg).filter(e => {
+                            let bestStore = e.storeCode;
+                            let latestDate = "";
+
+                            if (Object.keys(e.latestDates).length > 0) {
+                                Object.entries(e.latestDates).forEach(([sCode, dStr]) => {
+                                    if (dStr > latestDate) {
+                                        latestDate = dStr;
+                                        bestStore = sCode;
+                                    }
+                                });
+                                e.storeCode = bestStore;
+                            }
+
+                            if (matchSCode(e.storeCode) !== matchSCode(storeCode)) return false;
+                            if (e.sales === 0 && e.transactions === 0) return false;
+                            return true;
+                        });
+                    }
+
+                    // Sort alphabetically
+                    storeEmployees.sort((a, b) => a.name.localeCompare(b.name));
                     
                     let empRowsHtml = '';
                     storeEmployees.forEach(emp => {
                         // Get current MTD employee target
-                        const empTargetObj = data.employee_targets_raw?.[emp.personnelNumber] || { amount: 0 };
+                        const empTargetObj = data.employee_targets_raw?.[emp.id] || { amount: 0 };
                         empRowsHtml += `
-                            <div class="row align-items-center mb-3 pb-2 border-bottom border-secondary">
+                            <div class="row align-items-center mb-3 pb-2 border-bottom">
                                 <div class="col-md-4">
                                     <span class="fw-bold">${emp.name}</span>
-                                    <small class="text-muted d-block">كود: ${emp.personnelNumber}</small>
+                                    <small class="text-muted d-block">كود: ${emp.id}</small>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
-                                        <input type="number" class="form-control form-control-dark" id="target-emp-${store.id}-${emp.personnelNumber}" value="${empTargetObj.amount || 0}" placeholder="تارجت الموظف">
-                                        <span class="input-group-text bg-dark border-secondary text-light">SAR</span>
+                                        <input type="number" class="form-control form-control-dark" id="target-emp-${store.id}-${emp.id}" value="${empTargetObj.amount || 0}" placeholder="تارجت الموظف">
+                                        <span class="input-group-text border">SAR</span>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <button class="btn btn-outline-light w-100 btn-sm" onclick="saveEmployeeTarget('${month}', '${emp.personnelNumber}', '${emp.name}', ${store.id})">
+                                    <button class="btn btn-outline-orange-premium w-100 btn-sm" onclick="saveEmployeeTarget('${month}', '${emp.id}', '${emp.name}', ${store.id})">
                                         <i class="fa-solid fa-save"></i> حفظ الموظف
                                     </button>
                                 </div>
