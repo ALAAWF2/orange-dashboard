@@ -9,5 +9,5 @@ const USERS = {
     "محمدكلو": { pin: "4891", role: "Manager" },
     "المنطقة الشمالية": { pin: "6342", role: "Manager" },
 
-    "علاء": { pin: "0000", role: "Auditor" }
+    "علاء": { pin: "0000", role: "Admin" }
 };

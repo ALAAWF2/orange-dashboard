@@ -1,7 +1,7 @@
 import json
 import os
 
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+base_dir = r"C:\Users\ALAA-ORANGE\Desktop\orangedata"
 showrooms_path = os.path.join(base_dir, "showrooms.json")
 mgmt_path = os.path.join(base_dir, "allorangedashboard", "management_data.json")
 
@@ -39,10 +39,9 @@ for item in showrooms:
         item["manager"] = active_manager
         item["name"] = f"{store_id}-{active_name}"
         updated_count += 1
-        print(f"Synced ID: {store_id} -> Name: {item['name']} | Manager: {item['manager']}")
 
 # 3. Save showrooms back
 with open(showrooms_path, "w", encoding="utf-8") as f:
     json.dump(showrooms, f, ensure_ascii=False, indent=4)
 
-print(f"\nSuccessfully synced {updated_count} showrooms inside showrooms.json")
+print(f"Successfully synced {updated_count} showrooms inside showrooms.json")
