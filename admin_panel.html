@@ -2624,7 +2624,7 @@
                 // Process and find unmapped
                 unmappedProductsCache = [];
                 Object.entries(allProductsCache).forEach(([pid, p]) => {
-                    const mappedCat = categoriesMapCache[pid];
+                    const mappedCat = categoriesMapCache[p.alias] || categoriesMapCache[pid];
                     // Unmapped if not in mapping, or mapped to 'غير مصنف'
                     if (!mappedCat || mappedCat === 'غير مصنف') {
                         const totalStock = p.stock ? (p.stock.total || 0) : 0;
@@ -2672,27 +2672,110 @@
             }
         }
 
-        function getSuggestedCategory(pid) {
-            if (!pid) return null;
-            const cleanPid = String(pid).trim().replace(/^KIT-/, '');
+        function getSuggestedCategory(pidOrAlias, price, productName) {
+            if (!pidOrAlias) return null;
+            const cleanPid = String(pidOrAlias).trim().replace(/^KIT-/, '');
+            const priceVal = price ? Math.round(price) : null;
+            const priceStr = priceVal ? String(priceVal) : '';
             
-            // Try prefixes from cleanPid.length - 1 down to 3
+            // Step 1: Search for prefixes of pidOrAlias (length from cleanPid.length - 1 down to 3)
             for (let len = cleanPid.length - 1; len >= 3; len--) {
                 const prefix = cleanPid.substring(0, len);
                 
-                // Find any classified item in categoriesMapCache that starts with this prefix
-                const match = Object.entries(categoriesMapCache).find(([code, cat]) => {
+                // Find all classified items starting with this prefix in their clean code
+                const matches = Object.entries(categoriesMapCache).filter(([code, cat]) => {
                     const cleanCode = code.trim().replace(/^KIT-/, '');
                     return cleanCode.startsWith(prefix) && cat && cat !== 'غير مصنف';
                 });
                 
-                if (match) {
+                if (matches.length > 0) {
+                    // Match Type A: Prefix + Exact Price
+                    if (priceStr) {
+                        const priceMatch = matches.find(([_, cat]) => {
+                            const reg = new RegExp('\\b' + priceStr + '\\b|-' + priceStr + '\\b');
+                            return reg.test(cat) || cat.includes(priceStr);
+                        });
+                        if (priceMatch) {
+                            return {
+                                category: priceMatch[1],
+                                prefix: prefix,
+                                matchType: 'tree_price'
+                            };
+                        }
+                    }
+                    
+                    // Match Type B: Higher-Level Tree + Price Match
+                    if (priceStr) {
+                        for (const [_, catName] of matches) {
+                            const parts = catName.split('-');
+                            if (parts.length > 1) {
+                                const baseName = parts.slice(0, -1).join('-').trim();
+                                
+                                // Search entire categoriesMapCache for a category starting with baseName and containing priceStr
+                                const equivalentCat = Object.values(categoriesMapCache).find(c => {
+                                    return c.startsWith(baseName) && (c.includes(priceStr) || new RegExp('\\b' + priceStr + '\\b').test(c)) && c !== 'غير مصنف';
+                                });
+                                if (equivalentCat) {
+                                    return {
+                                        category: equivalentCat,
+                                        prefix: prefix,
+                                        matchType: 'tree_price_equivalent'
+                                    };
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Match Type C: Fallback to most common sibling category
+                    const freqs = {};
+                    let maxFreq = 0;
+                    let mostCommonCat = matches[0][1];
+                    matches.forEach(([_, cat]) => {
+                        freqs[cat] = (freqs[cat] || 0) + 1;
+                        if (freqs[cat] > maxFreq) {
+                            maxFreq = freqs[cat];
+                            mostCommonCat = cat;
+                        }
+                    });
+                    
                     return {
-                        category: match[1],
-                        prefix: prefix
+                        category: mostCommonCat,
+                        prefix: prefix,
+                        matchType: 'tree_only'
                     };
                 }
             }
+            
+            // Step 2: Semantic Matching based on product name keywords + price
+            if (productName && priceStr) {
+                const name = productName.toLowerCase();
+                const keywords = [
+                    { keys: ['بحر', 'شاطئ'], base: 'مناشف بحر' },
+                    { keys: ['حمام', 'استحمام'], base: 'مناشف حمام' },
+                    { keys: ['مطبخ', 'طاول'], base: 'مناشف مطبخ' },
+                    { keys: ['مطرز'], base: 'مناشف مطرز' },
+                    { keys: ['روب', 'ارواب', 'أرواب'], base: 'أرواب حمام' },
+                    { keys: ['لحاف', 'كويلت', 'كينغ', 'كينج'], base: 'لحافات كينغ' },
+                    { keys: ['لحاف', 'كويلت', 'مفرد', 'نفر', 'فل'], base: 'لحافات فل' }
+                ];
+                
+                for (const kw of keywords) {
+                    const matchKeyword = kw.keys.some(k => name.includes(k));
+                    if (matchKeyword) {
+                        const matchingCat = Object.values(categoriesMapCache).find(c => {
+                            return c.toLowerCase().includes(kw.base.toLowerCase()) && c.includes(priceStr) && c !== 'غير مصنف';
+                        });
+                        if (matchingCat) {
+                            return {
+                                category: matchingCat,
+                                prefix: 'اسم المنتج',
+                                matchType: 'name_price'
+                            };
+                        }
+                    }
+                }
+            }
+            
             return null;
         }
 
@@ -2766,11 +2849,27 @@
                     ? `<span class="badge-premium badge-achievement-warn"><i class="fa-solid fa-warehouse me-1"></i> به مخزون نشط</span>`
                     : `<span class="badge-premium bg-secondary text-white small"><i class="fa-solid fa-plus me-1"></i> جديد (كتالوج)</span>`;
 
-                // Calculate Suggested Category based on prefix tree
-                const suggested = getSuggestedCategory(p.id);
+                // Calculate Suggested Category based on prefix tree + price
+                const suggested = getSuggestedCategory(p.alias || p.id, p.price, p.name);
                 let suggestedHtml = '';
                 if (suggested) {
-                    suggestedHtml = `<td><span class="badge bg-light text-success border px-2 py-1 text-wrap text-start small fw-bold" style="max-width:250px;"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> مقترح: ${suggested.category} <small class="text-muted d-block mt-1 font-monospace">بناءً على الشجرة: ${suggested.prefix}</small></span></td>`;
+                    let icon = 'fa-network-wired';
+                    let typeLabel = 'شجرة فقط';
+                    let badgeClass = 'text-primary';
+                    if (suggested.matchType === 'tree_price') {
+                        icon = 'fa-wand-magic-sparkles';
+                        typeLabel = 'شجرة + سعر';
+                        badgeClass = 'text-success';
+                    } else if (suggested.matchType === 'tree_price_equivalent') {
+                        icon = 'fa-arrows-split-up-and-left';
+                        typeLabel = 'شجرة أعلى + سعر معادل';
+                        badgeClass = 'text-success-emphasis';
+                    } else if (suggested.matchType === 'name_price') {
+                        icon = 'fa-language';
+                        typeLabel = 'اسم المنتج + سعر';
+                        badgeClass = 'text-warning-emphasis';
+                    }
+                    suggestedHtml = `<td><span class="badge bg-light ${badgeClass} border px-2 py-1 text-wrap text-start small fw-bold" style="max-width:250px;"><i class="fa-solid ${icon} me-1"></i> مقترح: ${suggested.category} <small class="text-muted d-block mt-1 font-monospace">مطابقة: ${typeLabel} (${suggested.prefix})</small></span></td>`;
                 } else {
                     suggestedHtml = `<td><span class="badge bg-light text-danger border px-2 py-1 small fw-bold"><i class="fa-solid fa-tag me-1"></i> صنف فردي جديد</span></td>`;
                 }
