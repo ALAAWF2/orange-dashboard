@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة إدارة ونقل الموظفين - Dynamics 365</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="users.js"></script>
+    <script src="data.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f5f7fb;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #fe7900;
+            --accent-hover: #e86800;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            --font-main: 'Cairo', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 10% 20%, rgba(254, 121, 0, 0.04) 0%, transparent 60%);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 20px;
+            border-bottom: 4px solid var(--accent);
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 900;
+            color: var(--accent);
+            font-size: 1.8rem;
+        }
+
+        .user-badge {
+            background: rgba(254, 121, 0, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(254, 121, 0, 0.2);
+            padding: 6px 18px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .back-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: #1e293b;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            transition: all 0.3s;
+        }
+
+        .section-title {
+            font-weight: 800;
+            color: var(--text-primary);
+            border-right: 4px solid var(--accent);
+            padding-right: 12px;
+            margin-bottom: 20px;
+        }
+
+        select, input {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: var(--text-primary) !important;
+            font-family: var(--font-main);
+            font-weight: 600;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.2);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-accent:hover {
+            background: var(--accent-hover);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-success-custom {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-success-custom:hover {
+            background: #059669;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .shw-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .shw-item:hover {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+        }
+
+        .badge-d365 {
+            background: rgba(254, 121, 0, 0.08);
+            color: var(--accent);
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin: 2px;
+        }
+
+        .badge-d365-danger {
+            background: rgba(239, 68, 68, 0.08);
+            color: var(--danger);
+        }
+
+        .status-alert {
+            display: none;
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        /* Interactive table styling */
+        .table-premium {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        .table-premium tr {
+            background: #ffffff;
+            border-radius: 10px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .table-premium tr:hover {
+            background: #fff8f2 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(254, 121, 0, 0.06);
+        }
+
+        .table-premium tr.selected-row {
+            background: #fff3e6 !important;
+            border-right: 4px solid var(--accent);
+        }
+
+        .table-premium th {
+            color: var(--text-secondary);
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border: none;
+            padding: 12px 16px;
+        }
+
+        .table-premium td {
+            border: none;
+            padding: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-top: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .table-premium td:first-child {
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .table-premium td:last-child {
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-left: 1px solid #f1f5f9;
+        }
+
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-left: 5px;
+        }
+
+        /* Search input styling */
+        .search-container {
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .search-input {
+            width: 100%;
+            padding-right: 45px;
+            font-size: 0.95rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .table-container {
+                max-height: 40vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-fluid px-md-4">
+        
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <h1>⚙️ بوابة إدارة ونقل الموظفين (D365 Mappings)</h1>
+                    <span id="userNameDisplay" class="user-badge">المدير: ...</span>
+                </div>
+                <p class="text-secondary mt-2 mb-0 small">بوابة إسناد ونقل الموظفين وتحديث الأكواد مباشرة بقاعدة بيانات Microsoft Dynamics 365. اختر موظفاً من الجدول لبدء تعديله.</p>
+            </div>
+            <div>
+                <a href="employees.html" class="back-btn"><i class="fas fa-arrow-left"></i> العودة للأداء</a>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="statusAlert" class="alert status-alert" role="alert"></div>
+
+        <!-- Main Workspace -->
+        <div class="row g-4">
+            
+            <!-- Right Panel: Full List of Employees -->
+            <div class="col-lg-7">
+                <div class="glass-card d-flex flex-column gap-3 h-100">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="section-title mb-0"><i class="fa-solid fa-users text-orange me-2"></i> قائمة الموظفين التابعين لك</h5>
+                        <div class="search-container" style="width: 280px;">
+                            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                            <input type="text" id="searchInput" class="search-input" placeholder="بحث باسم أو رقم الموظف..." oninput="filterEmployeesTable()">
+                        </div>
+                    </div>
+
+                    <!-- Interactive Table -->
+                    <div class="table-container mt-2">
+                        <table class="table table-premium align-middle">
+                            <thead>
+                                <tr>
+                                    <th>الموظف</th>
+                                    <th>الرقم الوظيفي</th>
+                                    <th>المعاهد النشطة حالياً (Dynamics 365)</th>
+                                    <th id="thManager" style="display: none;">مدير المنطقة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeesTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Left Panel: Selected Employee Management Actions -->
+            <div class="col-lg-5">
+                <div id="noSelectionMsg" class="glass-card d-flex flex-column align-items-center justify-content-center text-center py-5 text-muted h-100 bg-white">
+                    <i class="fa-solid fa-id-card-clip fa-4x mb-4 text-orange" style="opacity: 0.3;"></i>
+                    <h5 class="fw-bold text-dark">لم يتم اختيار أي موظف</h5>
+                    <p class="text-secondary small max-width-300">الرجاء النقر على اسم أي موظف من الجدول المقابل لفتح خيارات النقل، الربط، أو الإزالة المباشرة له.</p>
+                </div>
+
+                <div id="operationsContainer" class="d-flex flex-column gap-4 h-100" style="display: none !important;">
+                    
+                    <!-- Mappings Card -->
+                    <div class="glass-card">
+                        <h5 class="section-title text-danger"><i class="fa-solid fa-trash-can me-2"></i> إدارة الموظف: <span id="targetEmpName" class="text-dark fw-bold">...</span></h5>
+                        <p class="text-muted small mb-3">فروع الموظف النشطة حالياً في Dynamics 365. اضغط على "إزالة الربط" لحذف الموظف من هذا المعرض.</p>
+                        
+                        <div id="activeShowroomsList" class="d-flex flex-column gap-2 mt-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Operation A: Transfer & Replace -->
+                    <div class="glass-card">
+                        <h5 class="section-title text-orange"><i class="fa-solid fa-arrows-spin me-2"></i> نقل واستبدال المعرض (Transfer)</h5>
+                        <p class="text-muted small mb-4">نقل الموظف من معرضه الحالي إلى معرض جديد مباشرة (يتم الحذف والإضافة بخطوة واحدة آمنة).</p>
+                        
+                        <div class="d-flex flex-column gap-3">
+                            <div>
+                                <label class="form-label small text-muted fw-bold mb-1">المعرض الحالي المراد حذفه:</label>
+                                <select id="transferFromSelect" class="form-select"></select>
+                            </div>
+                            <div>
+                                <label class="form-label small text-muted fw-bold mb-1">الوجهة (المعرض الجديد المراد إضافته):</label>
+                                <select id="transferToSelect" class="form-select"></select>
+                            </div>
+                            <button id="transferBtn" class="btn-accent w-100 py-3 mt-2" onclick="executeTransfer()">
+                                <i class="fa-solid fa-right-left"></i> تأكيد النقل والاستبدال فوراً
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Operation B: Add to Additional Showroom -->
+                    <div class="glass-card">
+                        <h5 class="section-title text-success"><i class="fa-solid fa-plus me-2"></i> ربط بمعرض إضافي (دون حذف المعرض الحالي)</h5>
+                        <p class="text-muted small mb-4">إضافة معرض مبيعات إضافي للموظف لربطه بفرعين في نفس الوقت.</p>
+                        
+                        <div class="d-flex flex-column gap-3">
+                            <div>
+                                <label class="form-label small text-muted fw-bold mb-1">المعرض الإضافي المراد ربطه بالموظف:</label>
+                                <select id="addToSelect" class="form-select"></select>
+                            </div>
+                            <button id="addBtn" class="btn-success-custom w-100 py-3 mt-2" onclick="executeAdd()">
+                                <i class="fa-solid fa-square-plus"></i> تأكيد ربط الموظف بالمعرض الإضافي
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Check local storage session login
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        // Setup API Base
+        let API_BASE = "http://localhost:5000";
+        if (window.location.hostname && window.location.port !== "5000") {
+            API_BASE = window.location.protocol + "//" + window.location.hostname + ":5000";
+        }
+        
+        let activeEmp = null;
+        let filteredEmployeesList = [];
+
+        // Dynamic Auth Header compilation utilizing USERS master fallback
+        function getAuthHeader() {
+            const userName = currentUser ? currentUser.name : "علاء";
+            const userPin = (currentUser && currentUser.pin) ? currentUser.pin : (typeof USERS !== "undefined" && USERS[userName] ? USERS[userName].pin : "0000");
+            return "Basic " + btoa(unescape(encodeURIComponent(userName + ":" + userPin)));
+        }
+
+        // Smart dynamic API connection autodetect to support localhost, Ngrok, LAN IP, and public DNS
+        async function detectActiveApiBase() {
+            const candidates = [];
+            const storedIp = sessionStorage.getItem('serverIp') || localStorage.getItem('serverIp');
+            if (storedIp) candidates.push(storedIp);
+            candidates.push(window.location.origin);
+            if (window.location.hostname && window.location.port !== "5000") {
+                candidates.push(window.location.protocol + "//" + window.location.hostname + ":5000");
+            }
+            candidates.push("http://localhost:5000");
+            candidates.push("http://127.0.0.1:5000");
+            
+            const uniqueCandidates = [...new Set(candidates)];
+            const authHeader = getAuthHeader();
+
+            for (const url of uniqueCandidates) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1200);
+                    
+                    const testUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+                    const res = await fetch(`${testUrl}/api/targets?month=2026-05`, {
+                        method: 'GET',
+                        headers: { 
+                            'Authorization': authHeader,
+                            'ngrok-skip-browser-warning': 'true'
+                        },
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (res.ok || res.status === 401) {
+                        API_BASE = testUrl;
+                        sessionStorage.setItem('serverIp', testUrl);
+                        return;
+                    }
+                } catch (err) {
+                    // Ignore
+                }
+            }
+        }
+
+        // Initial setup on DOM load
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Verify roles
+            const isManager = (currentUser.role === 'Manager');
+            const isAdmin = (currentUser.role === 'Admin' || currentUser.name === 'Sales Manager');
+            
+            if (!isAdmin && !isManager) {
+                alert("عذراً، هذه الصفحة مخصصة لمدراء الفروع والمبيعات فقط.");
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.getElementById('userNameDisplay').textContent = isAdmin ? `المسؤول: ${currentUser.name}` : `المدير: ${currentUser.name}`;
+            
+            if (isAdmin) {
+                document.getElementById('thManager').style.display = '';
+            }
+
+            // Load and filter employees list
+            if (typeof EMPLOYEES !== "undefined") {
+                filteredEmployeesList = isAdmin 
+                    ? EMPLOYEES 
+                    : EMPLOYEES.filter(emp => emp.manager === currentUser.name);
+
+                // Sort alphabetically
+                filteredEmployeesList.sort((a, b) => a.name.localeCompare(b.name));
+            }
+
+            // Render table
+            renderEmployeesTable();
+
+            // Populate all showrooms in destination selects
+            const toSelect = document.getElementById('transferToSelect');
+            const addSelect = document.getElementById('addToSelect');
+            toSelect.innerHTML = '<option value="" selected disabled>-- اختر الفرع الجديد --</option>';
+            addSelect.innerHTML = '<option value="" selected disabled>-- اختر الفرع الإضافي --</option>';
+
+            if (typeof ALL_SHOWROOMS !== "undefined") {
+                // Sort showrooms alphabetically
+                const sortedShowrooms = [...ALL_SHOWROOMS].sort((a, b) => a.name.localeCompare(b.name));
+                
+                sortedShowrooms.forEach(shw => {
+                    const codesStr = JSON.stringify(shw.codes);
+                    
+                    const opt1 = document.createElement('option');
+                    opt1.value = codesStr;
+                    opt1.textContent = shw.name;
+                    toSelect.appendChild(opt1);
+                    
+                    const opt2 = document.createElement('option');
+                    opt2.value = codesStr;
+                    opt2.textContent = shw.name;
+                    addSelect.appendChild(opt2);
+                });
+            }
+
+            // Trigger server detection in background
+            detectActiveApiBase();
+        });
+
+        // Render employees list in the table
+        function renderEmployeesTable() {
+            const tbody = document.getElementById('employeesTableBody');
+            tbody.innerHTML = '';
+
+            const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
+            const isAdmin = (currentUser.role === 'Admin' || currentUser.name === 'Sales Manager');
+
+            const filtered = filteredEmployeesList.filter(emp => {
+                if (searchVal) {
+                    const matchName = emp.name.toLowerCase().includes(searchVal);
+                    const matchNum = emp.personnelNumber.toLowerCase().includes(searchVal);
+                    return matchName || matchNum;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${isAdmin ? 4 : 3}" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-users-slash fa-2x mb-2 d-block" style="opacity:0.3"></i>
+                            لا توجد نتائج تطابق البحث.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filtered.forEach(emp => {
+                const tr = document.createElement('tr');
+                tr.id = `emp-row-${emp.personnelNumber}`;
+                tr.onclick = () => selectEmployee(emp.personnelNumber);
+
+                // Showrooms list as badges
+                let showroomsHtml = '';
+                if (emp.showroomDetails && emp.showroomDetails.length > 0) {
+                    emp.showroomDetails.forEach(s => {
+                        showroomsHtml += `<span class="badge-d365"><i class="fa-solid fa-store me-1"></i> ${s.name}</span>`;
+                    });
+                } else {
+                    showroomsHtml = '<span class="badge-d365 badge-d365-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> غير مربوط بأي فروع</span>';
+                }
+
+                tr.innerHTML = `
+                    <td><strong>${emp.name}</strong></td>
+                    <td><span class="badge bg-light text-dark border px-2 py-1">${emp.personnelNumber}</span></td>
+                    <td>${showroomsHtml}</td>
+                    ${isAdmin ? `<td><span class="text-secondary small fw-bold">${emp.manager || 'غير محدد'}</span></td>` : ''}
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Re-highlight if active employee is still in list
+            if (activeEmp) {
+                const activeRow = document.getElementById(`emp-row-${activeEmp.personnelNumber}`);
+                if (activeRow) activeRow.classList.add('selected-row');
+            }
+        }
+
+        function filterEmployeesTable() {
+            renderEmployeesTable();
+        }
+
+        // Selection event
+        function selectEmployee(personnelNum) {
+            // Remove previous highlights
+            document.querySelectorAll('.table-premium tr').forEach(r => r.classList.remove('selected-row'));
+
+            // Set active
+            activeEmp = filteredEmployeesList.find(e => e.personnelNumber === personnelNum);
+            if (!activeEmp) return;
+
+            // Highlight selected row
+            const activeRow = document.getElementById(`emp-row-${personnelNum}`);
+            if (activeRow) activeRow.classList.add('selected-row');
+
+            // Hide instruction placeholder
+            document.getElementById('noSelectionMsg').style.display = 'none';
+
+            // Show action panel
+            document.getElementById('operationsContainer').setAttribute('style', 'display: flex !important; flex-direction: column; gap: 1.5rem;');
+
+            // Set targets
+            document.getElementById('targetEmpName').textContent = activeEmp.name;
+
+            // Render showrooms
+            const removeList = document.getElementById('activeShowroomsList');
+            removeList.innerHTML = '';
+            
+            const fromSelect = document.getElementById('transferFromSelect');
+            fromSelect.innerHTML = '<option value="" selected disabled>-- اختر الفرع للحذف --</option>';
+
+            if (activeEmp.showroomDetails && activeEmp.showroomDetails.length > 0) {
+                activeEmp.showroomDetails.forEach(shw => {
+                    const codesStr = JSON.stringify(shw.codes);
+                    
+                    // Deletion item
+                    const div = document.createElement('div');
+                    div.className = 'shw-item';
+                    div.innerHTML = `
+                        <div>
+                            <span class="fw-bold small text-dark">${shw.name}</span>
+                        </div>
+                        <button class="btn btn-danger btn-sm px-3 py-1" onclick="executeRemove('${shw.name}', ${codesStr.replace(/"/g, '&quot;')})">
+                            <i class="fa-solid fa-minus-circle me-1"></i> إزالة الربط
+                        </button>
+                    `;
+                    removeList.appendChild(div);
+
+                    // Add to transfer old list
+                    const opt = document.createElement('option');
+                    opt.value = codesStr;
+                    opt.textContent = shw.name;
+                    fromSelect.appendChild(opt);
+                });
+            } else {
+                removeList.innerHTML = '<div class="text-muted text-center py-3 small bg-light rounded">غير مربوط بأي فروع حالياً.</div>';
+            }
+        }
+
+        // Show Alert utility
+        function showAlert(msg, type = 'success') {
+            const alertEl = document.getElementById('statusAlert');
+            alertEl.textContent = msg;
+            alertEl.className = `alert status-alert alert-${type}`;
+            alertEl.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Execute Remove Showroom
+        async function executeRemove(shwName, codesToRemove) {
+            if (!confirm(`هل أنت متأكد من إزالة الموظف من معرض "${shwName}"؟`)) return;
+
+            showAlert("جاري تنفيذ طلب الإزالة وإلغاء الربط من خوادم Dynamics 365...", "warning");
+
+            try {
+                const res = await fetch(`${API_BASE}/api/remove_employee`, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": getAuthHeader(), 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        personnelNumber: activeEmp.personnelNumber,
+                        addressBookCodes: codesToRemove
+                    })
+                });
+
+                if (res.ok) {
+                    showAlert(`✅ تمت إزالة الموظف "${activeEmp.name}" من المعرض "${shwName}" بنجاح! جاري تحديث الصفحة لإعادة مزامنة التغييرات...`, "success");
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    const err = await res.json();
+                    showAlert("❌ حدث خطأ من السيرفر: " + (err.error || "خطأ غير معروف"), "danger");
+                }
+            } catch (e) {
+                showAlert("❌ خطأ في الاتصال بالشبكة: " + e.message, "danger");
+            }
+        }
+
+        // Execute Transfer
+        async function executeTransfer() {
+            const fromCodesVal = document.getElementById('transferFromSelect').value;
+            const toCodesVal = document.getElementById('transferToSelect').value;
+
+            if (!fromCodesVal || !toCodesVal) {
+                alert("الرجاء اختيار المعرض الحالي والوجهة.");
+                return;
+            }
+
+            if (fromCodesVal === toCodesVal) {
+                alert("المعرض القديم والجديد متطابقان!");
+                return;
+            }
+
+            if (!confirm("هل أنت متأكد من عملية النقل؟ سيتم استبدال المعرض للموظف في قاعدة بيانات Dynamics 365.")) return;
+
+            showAlert("جاري معالجة ونقل الموظف في دايناميكس... يرجى الانتظار ولا تغلق الصفحة...", "warning");
+
+            try {
+                const res = await fetch(`${API_BASE}/api/transfer_employee`, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": getAuthHeader(), 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        personnelNumber: activeEmp.personnelNumber,
+                        oldAddressBookCodes: JSON.parse(fromCodesVal),
+                        newAddressBookCodes: JSON.parse(toCodesVal)
+                    })
+                });
+
+                if (res.ok) {
+                    showAlert(`✅ تم نقل الموظف "${activeEmp.name}" بنجاح! يتم الآن إعادة تحميل الصفحة لتطبيق التحديثات.`, "success");
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    const err = await res.json();
+                    showAlert("❌ حدث خطأ أثناء عملية النقل: " + (err.error || "خطأ غير معروف"), "danger");
+                }
+            } catch (e) {
+                showAlert("❌ خطأ في الاتصال بالسيرفر: " + e.message, "danger");
+            }
+        }
+
+        // Execute Add Showroom
+        async function executeAdd() {
+            const codesVal = document.getElementById('addToSelect').value;
+            if (!codesVal) {
+                alert("الرجاء اختيار المعرض الإضافي.");
+                return;
+            }
+
+            if (!confirm("هل أنت متأكد من إضافة هذا المعرض للموظف؟ لن يتم حذفه من الفروع الحالية.")) return;
+
+            showAlert("جاري ربط الموظف بالفرع الإضافي على خوادم Dynamics 365...", "warning");
+
+            try {
+                const res = await fetch(`${API_BASE}/api/add_employee`, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": getAuthHeader(), 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        personnelNumber: activeEmp.personnelNumber,
+                        addressBookCodes: JSON.parse(codesVal)
+                    })
+                });
+
+                if (res.ok) {
+                    showAlert(`✅ تم ربط الموظف "${activeEmp.name}" بالمعرض الإضافي بنجاح! جاري تحديث الصفحة لتحديث مزامنة البيانات.`, "success");
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    const err = await res.json();
+                    showAlert("❌ حدث خطأ من السيرفر: " + (err.error || "خطأ غير معروف"), "danger");
+                }
+            } catch (e) {
+                showAlert("❌ خطأ في الاتصال بالشبكة: " + e.message, "danger");
+            }
+        }
+    </script>
+
+</body>
+
+</html>
