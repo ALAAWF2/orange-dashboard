@@ -599,6 +599,7 @@
     <script src="assets/amiri_font.js"></script>
     <!-- SheetJS for Excel Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="data.js?t=<?= time() ?>"></script>
     <script src="pdf_export_employees.js"></script>
 
     <script>
@@ -621,14 +622,265 @@
         }
 
 
-        function openEmployeePortal() {
-            const user = JSON.parse(localStorage.getItem('currentUser'));
-            if (user && (user.name || user.username)) {
-                const userName = user.name || user.username;
-                const portalUrl = "https://alaawf2.github.io/EmployeePortal/login.html?autoLoginUser=" + encodeURIComponent(userName);
-                window.open(portalUrl, '_blank');
+        let API_BASE = "http://localhost:5000";
+        let activeEmp = null;
+
+        // Smart dynamic API connection autodetect to support localhost, Ngrok, LAN IP, and public DNS
+        async function detectActiveApiBase() {
+            const candidates = [];
+            const storedIp = sessionStorage.getItem('serverIp');
+            if (storedIp) candidates.push(storedIp);
+            candidates.push(window.location.origin);
+            if (window.location.hostname && window.location.port !== "5000") {
+                candidates.push(window.location.protocol + "//" + window.location.hostname + ":5000");
+            }
+            candidates.push("http://localhost:5000");
+            candidates.push("http://127.0.0.1:5000");
+            
+            const uniqueCandidates = [...new Set(candidates)];
+            const userPin = currentUser ? currentUser.pin : "0000";
+            const userName = currentUser ? currentUser.name : "علاء";
+            const authHeader = "Basic " + btoa(unescape(encodeURIComponent(userName + ":" + userPin)));
+
+            for (const url of uniqueCandidates) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1200);
+                    
+                    const testUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+                    const res = await fetch(`${testUrl}/api/targets?month=2026-05`, {
+                        method: 'GET',
+                        headers: { 
+                            'Authorization': authHeader,
+                            'ngrok-skip-browser-warning': 'true'
+                        },
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (res.ok || res.status === 401) {
+                        API_BASE = testUrl;
+                        sessionStorage.setItem('serverIp', testUrl);
+                        return;
+                    }
+                } catch (err) {
+                    // Ignore
+                }
+            }
+        }
+
+        // Setup dynamic auth header
+        function getAuthHeader() {
+            const userPin = currentUser ? currentUser.pin : "0000";
+            const userName = currentUser ? currentUser.name : "علاء";
+            return "Basic " + btoa(unescape(encodeURIComponent(userName + ":" + userPin)));
+        }
+
+        async function openEmployeePortal() {
+            await detectActiveApiBase();
+            
+            // Populate employee dropdown inside the modal
+            const selectEl = document.getElementById('portalEmpSelect');
+            selectEl.innerHTML = '<option value="">-- اختر الموظف --</option>';
+            
+            if (typeof EMPLOYEES !== "undefined") {
+                // Filter employees by manager if not Admin
+                const filteredEmps = currentUser.role === 'Admin' 
+                    ? EMPLOYEES 
+                    : EMPLOYEES.filter(emp => emp.manager === currentUser.name);
+
+                filteredEmps.sort((a, b) => a.name.localeCompare(b.name));
+
+                filteredEmps.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.personnelNumber;
+                    opt.textContent = `${emp.name} (رقم: ${emp.personnelNumber})`;
+                    selectEl.appendChild(opt);
+                });
+            }
+
+            // Populate all showrooms inside destination selects
+            const toSelect = document.getElementById('portalTransferToSelect');
+            const addSelect = document.getElementById('portalAddToSelect');
+            toSelect.innerHTML = '<option value="">-- اختر الفرع الجديد --</option>';
+            addSelect.innerHTML = '<option value="">-- اختر الفرع الإضافي --</option>';
+
+            if (typeof ALL_SHOWROOMS !== "undefined") {
+                ALL_SHOWROOMS.forEach(shw => {
+                    const codesStr = JSON.stringify(shw.codes);
+                    
+                    const opt1 = document.createElement('option');
+                    opt1.value = codesStr;
+                    opt1.textContent = shw.name;
+                    toSelect.appendChild(opt1);
+                    
+                    const opt2 = document.createElement('option');
+                    opt2.value = codesStr;
+                    opt2.textContent = shw.name;
+                    addSelect.appendChild(opt2);
+                });
+            }
+
+            // Reset actions container
+            document.getElementById('portalActionsContainer').style.display = 'none';
+
+            // Show Modal
+            const modal = new bootstrap.Modal(document.getElementById('empPortalModal'));
+            modal.show();
+        }
+
+        function onPortalEmployeeSelected() {
+            const selectEl = document.getElementById('portalEmpSelect');
+            const personnelNum = selectEl.value;
+            
+            if (!personnelNum || typeof EMPLOYEES === "undefined") {
+                document.getElementById('portalActionsContainer').style.display = 'none';
+                return;
+            }
+
+            activeEmp = EMPLOYEES.find(e => e.personnelNumber === personnelNum);
+            if (!activeEmp) {
+                document.getElementById('portalActionsContainer').style.display = 'none';
+                return;
+            }
+
+            // Show actions
+            document.getElementById('portalActionsContainer').style.display = 'block';
+
+            // Populate active showrooms
+            const removeList = document.getElementById('portalShowroomsList');
+            removeList.innerHTML = '';
+            
+            const fromSelect = document.getElementById('portalTransferFromSelect');
+            fromSelect.innerHTML = '<option value="">-- اختر الفرع للحذف --</option>';
+
+            if (activeEmp.showroomDetails && activeEmp.showroomDetails.length > 0) {
+                activeEmp.showroomDetails.forEach(shw => {
+                    const codesStr = JSON.stringify(shw.codes);
+                    
+                    // Add deletion row
+                    const div = document.createElement('div');
+                    div.className = 'd-flex justify-content-between align-items-center p-2 bg-light border rounded mb-2';
+                    div.innerHTML = `
+                        <span class="fw-bold text-dark small">${shw.name}</span>
+                        <button class="btn btn-danger btn-sm py-1" onclick="submitPortalEmpRemove('${shw.name}', ${codesStr.replace(/"/g, '&quot;')})">
+                            <i class="fa-solid fa-minus-circle"></i> إزالة
+                        </button>
+                    `;
+                    removeList.appendChild(div);
+
+                    // Add to transfer select options
+                    const opt = document.createElement('option');
+                    opt.value = codesStr;
+                    opt.textContent = shw.name;
+                    fromSelect.appendChild(opt);
+                });
             } else {
-                alert("لم يتم العثور على بيانات المستخدم للربط.");
+                removeList.innerHTML = '<div class="text-muted text-center small">غير مربوط بأي فروع حالياً.</div>';
+            }
+        }
+
+        async function submitPortalEmpRemove(shwName, codesToRemove) {
+            if (!confirm(`هل أنت متأكد من إزالة الموظف من معرض "${shwName}"؟`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/remove_employee`, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": getAuthHeader(), 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        personnelNumber: activeEmp.personnelNumber,
+                        addressBookCodes: codesToRemove
+                    })
+                });
+
+                if (res.ok) {
+                    alert("✅ تمت إزالة الموظف من المعرض بنجاح! يتم الآن إعادة تحديث البيانات.");
+                    window.location.reload();
+                } else {
+                    const err = await res.json();
+                    alert("حدث خطأ: " + err.error);
+                }
+            } catch (e) {
+                alert("خطأ اتصال: " + e.message);
+            }
+        }
+
+        async function submitPortalEmpTransfer() {
+            const fromCodesVal = document.getElementById('portalTransferFromSelect').value;
+            const toCodesVal = document.getElementById('portalTransferToSelect').value;
+
+            if (!fromCodesVal || !toCodesVal) {
+                alert("الرجاء اختيار المعرض الحالي والوجهة.");
+                return;
+            }
+
+            if (fromCodesVal === toCodesVal) {
+                alert("المعرض القديم والجديد متطابقان!");
+                return;
+            }
+
+            if (!confirm("هل أنت متأكد من عملية النقل؟ سيتم استبدال المعرض للموظف في قاعدة بيانات Dynamics 365.")) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/transfer_employee`, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": getAuthHeader(), 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        personnelNumber: activeEmp.personnelNumber,
+                        oldAddressBookCodes: JSON.parse(fromCodesVal),
+                        newAddressBookCodes: JSON.parse(toCodesVal)
+                    })
+                });
+
+                if (res.ok) {
+                    alert("✅ تم نقل الموظف بنجاح! جاري تحديث البيانات.");
+                    window.location.reload();
+                } else {
+                    const err = await res.json();
+                    alert("حدث خطأ: " + err.error);
+                }
+            } catch (e) {
+                alert("خطأ اتصال: " + e.message);
+            }
+        }
+
+        async function submitPortalEmpAdd() {
+            const codesVal = document.getElementById('portalAddToSelect').value;
+            if (!codesVal) {
+                alert("الرجاء اختيار المعرض الإضافي.");
+                return;
+            }
+
+            if (!confirm("هل أنت متأكد من إضافة هذا المعرض للموظف؟ لن يتم حذفه من الفروع الحالية.")) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/add_employee`, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": getAuthHeader(), 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        personnelNumber: activeEmp.personnelNumber,
+                        addressBookCodes: JSON.parse(codesVal)
+                    })
+                });
+
+                if (res.ok) {
+                    alert("✅ تم ربط الموظف بالمعرض الإضافي بنجاح! جاري تحديث البيانات.");
+                    window.location.reload();
+                } else {
+                    const err = await res.json();
+                    alert("حدث خطأ: " + err.error);
+                }
+            } catch (e) {
+                alert("خطأ اتصال: " + e.message);
             }
         }
     </script>
@@ -1057,6 +1309,66 @@
                 </div>
             </div>
         </div>
+
+    <!-- Employee Dynamics Portal Modal for Area Managers -->
+    <div class="modal fade" id="empPortalModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-white border" style="border-radius: 16px; border: 2px solid var(--bs-primary) !important;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-orange"><i class="fa-solid fa-users-gear me-2"></i> بوابة إدارة ونقل الموظفين (D365)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Dropdown to select employee -->
+                    <div class="mb-4">
+                        <label class="form-label small text-muted fw-bold">اختر الموظف المراد نقله أو إدارته:</label>
+                        <select id="portalEmpSelect" class="form-select" onchange="onPortalEmployeeSelected()">
+                            <option value="">-- اختر الموظف --</option>
+                        </select>
+                    </div>
+
+                    <!-- Actions Container (Hidden until employee selected) -->
+                    <div id="portalActionsContainer" style="display: none;">
+                        <!-- Section A: Remove from specific Showroom -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-trash-can me-1"></i> فروع الموظف النشطة حالياً (إزالة):</h6>
+                            <div id="portalShowroomsList" class="d-flex flex-column gap-2">
+                                <!-- Showrooms with delete button -->
+                            </div>
+                        </div>
+                        
+                        <hr>
+     
+                        <!-- Section B: Transfer Employee -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-orange mb-2"><i class="fa-solid fa-arrows-spin me-1"></i> نقل واستبدال المعرض (Transfer):</h6>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted fw-bold">المعرض الحالي المراد حذفه:</label>
+                                <select id="portalTransferFromSelect" class="form-select select-sm"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted fw-bold">الوجهة (المعرض الجديد المراد إضافته):</label>
+                                <select id="portalTransferToSelect" class="form-select select-sm"></select>
+                            </div>
+                            <button class="btn btn-primary w-100 py-2 text-white fw-bold" onclick="submitPortalEmpTransfer()"><i class="fa-solid fa-right-left"></i> تأكيد النقل والاستبدال</button>
+                        </div>
+     
+                        <hr>
+     
+                        <!-- Section C: Add to Additional Showroom -->
+                        <div>
+                            <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-plus me-1"></i> إضافة لمعرض إضافي (دون إزالة الحالي):</h6>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted fw-bold">المعرض الإضافي المراد ربطه بالموظف:</label>
+                                <select id="portalAddToSelect" class="form-select select-sm"></select>
+                            </div>
+                            <button class="btn btn-success w-100 py-2 text-white fw-bold" onclick="submitPortalEmpAdd()"><i class="fa-solid fa-square-plus"></i> تأكيد إضافة الموظف للمعرض</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
         <!-- Main Logic -->
         <script>
