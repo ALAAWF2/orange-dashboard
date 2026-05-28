@@ -404,6 +404,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="uncategorized-tab" data-bs-toggle="tab" data-bs-target="#uncategorized-content" type="button" role="tab"><i class="fa-solid fa-box-open me-2"></i> منتجات غير مصنفة <span class="badge bg-danger rounded-pill ms-1" id="uncategorizedBadgeCount" style="display:none; font-size:0.7rem; padding: 3px 6px;">0</span></button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dispatch-tab" data-bs-toggle="tab" data-bs-target="#dispatch-content" type="button" role="tab"><i class="fa-solid fa-paper-plane me-2"></i> إرسال تقارير الفروع</button>
+            </li>
         </ul>
 
         <div class="tab-content" id="adminTabContent">
@@ -740,6 +743,42 @@
                 </div>
             </div>
 
+            <!-- Tab 9: Report Dispatch Portal -->
+            <div class="tab-pane fade" id="dispatch-content" role="tabpanel">
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-paper-plane me-2"></i> بوابة إرسال تقارير الأداء اليومية للمعارض</h4>
+                            <p class="text-muted small mb-0">يمكنك هنا تحديد معارض معينة لإرسال تقرير المبيعات وتقرير الموظفين اليومي لها، أو تحديد الكل للإرسال لجميع الفروع.</p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <input type="text" id="dispatchSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو كود المعرض..." oninput="filterDispatchShowrooms()" style="width: 250px;">
+                            <div class="form-check form-switch bg-white border rounded px-3 py-2 d-flex align-items-center gap-2" style="height: 44px; margin-left: 10px; direction: rtl;">
+                                <input class="form-check-input ms-0" type="checkbox" id="dispatchSelectAll" onchange="toggleSelectAllDispatch(this)">
+                                <label class="form-check-label fw-bold text-dark small" for="dispatchSelectAll" style="margin-right: 8px;">تحديد الكل</label>
+                            </div>
+                            <button class="btn btn-orange-premium px-4" onclick="submitDispatchSelected()">
+                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال التقارير للمعارض المحددة
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-info border-opacity-25 d-flex align-items-center mb-4" role="alert" style="border-radius:12px; background: rgba(56, 189, 248, 0.05); color: #0369a1;">
+                        <i class="fa-solid fa-circle-info fs-5 me-2 text-info"></i>
+                        <div class="small fw-bold">
+                            تنويه: عند الضغط على "إرسال"، سيتم توليد تقارير المبيعات وتقارير الموظفين الخاصة بكل معرض وإرسالها بالبريد الإلكتروني تلقائياً عبر Outlook في خلفية السيرفر دون حظر المتصفح.
+                        </div>
+                    </div>
+
+                    <div class="row g-3" id="dispatchShowroomsGrid">
+                        <div class="text-center py-5 text-muted col-12">
+                            <div class="spinner-border text-orange mb-2" role="status"></div>
+                            <div class="fw-bold">جاري تحميل قائمة المعارض وإيميلاتها...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -1054,6 +1093,7 @@
             loadShowroomsData(); // Load Alaa store assignments mapping
             loadOffersData(); // Load Dynamics offers data
             loadUnmappedProductsData(); // Load unmapped products catalog
+            loadDispatchShowroomsData(); // Load showrooms for report dispatch
         });
 
         // Logout
@@ -2941,6 +2981,127 @@
 
         function filterUnmappedProductsTable() {
             renderUnmappedTable();
+        }
+
+        // ==========================================
+        // TAB 9: Showrooms Report Dispatch Portal
+        // ==========================================
+        let dispatchShowroomsCache = [];
+
+        async function loadDispatchShowroomsData() {
+            const grid = document.getElementById('dispatchShowroomsGrid');
+            if (!grid) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/showrooms_emails`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) throw new Error("Failed to load showrooms emails");
+                
+                dispatchShowroomsCache = await res.json();
+                renderDispatchShowroomsGrid();
+            } catch (e) {
+                grid.innerHTML = `<div class="text-danger py-5 text-center col-12">فشل تحميل المعارض: ${e.message}</div>`;
+            }
+        }
+
+        function renderDispatchShowroomsGrid() {
+            const grid = document.getElementById('dispatchShowroomsGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            if (dispatchShowroomsCache.length === 0) {
+                grid.innerHTML = '<div class="text-muted py-5 text-center col-12 fw-bold">لا توجد معارض مسجلة في ملف showrooms_summary.xlsx</div>';
+                return;
+            }
+            
+            dispatchShowroomsCache.forEach(s => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3 dispatch-card-item';
+                col.setAttribute('data-code', s.code);
+                col.setAttribute('data-name', s.name.toLowerCase());
+                
+                col.innerHTML = `
+                    <div class="glass-card p-3 d-flex align-items-center justify-content-between" style="border-radius: 12px; height: 100%; border: 1px solid var(--border-light);">
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="checkbox" class="form-check-input dispatch-store-checkbox" value="${s.code}" style="width: 20px; height: 20px; cursor: pointer; border-color: var(--orange);">
+                            <div>
+                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">${s.name}</span>
+                                <span class="text-muted small d-block font-monospace mt-1"><i class="fa-solid fa-hashtag text-orange me-1"></i>كود: ${s.code}</span>
+                                <span class="text-muted small d-block text-wrap mt-1" style="font-size: 0.78rem; word-break: break-all;"><i class="fa-solid fa-envelope me-1 text-secondary"></i>${s.email}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            });
+        }
+
+        function filterDispatchShowrooms() {
+            const query = document.getElementById('dispatchSearchInput').value.trim().toLowerCase();
+            const items = document.querySelectorAll('.dispatch-card-item');
+            
+            items.forEach(item => {
+                const code = item.getAttribute('data-code');
+                const name = item.getAttribute('data-name');
+                if (code.includes(query) || name.includes(query)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function toggleSelectAllDispatch(masterCheckbox) {
+            const checkboxes = document.querySelectorAll('.dispatch-store-checkbox');
+            checkboxes.forEach(cb => {
+                const parent = cb.closest('.dispatch-card-item');
+                if (parent.style.display !== 'none') {
+                    cb.checked = masterCheckbox.checked;
+                }
+            });
+        }
+
+        async function submitDispatchSelected() {
+            const selectedCheckboxes = document.querySelectorAll('.dispatch-store-checkbox:checked');
+            const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            
+            if (selectedIds.length === 0) {
+                alert("⚠️ يرجى تحديد معرض واحد على الأقل لإرسال التقارير إليه.");
+                return;
+            }
+            
+            const count = selectedIds.length;
+            const confirmMsg = count === dispatchShowroomsCache.length
+                ? "هل أنت متأكد من إرسال التقارير لجميع المعارض؟"
+                : `هل أنت متأكد من إرسال التقارير لـ ${count} معارض محددة؟`;
+                
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/send_selected_reports`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ store_ids: selectedIds })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    alert("✈️ " + (data.message || "تم تشغيل إرسال التقارير للفروع المحددة في الخلفية بنجاح!"));
+                    
+                    document.getElementById('dispatchSelectAll').checked = false;
+                    document.querySelectorAll('.dispatch-store-checkbox').forEach(cb => cb.checked = false);
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل تشغيل العملية: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
         }
     </script>
 </body>

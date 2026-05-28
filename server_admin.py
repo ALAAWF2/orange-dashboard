@@ -916,7 +916,68 @@ def save_users_api():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/admin/showrooms_emails', methods=['GET', 'OPTIONS'])
+@requires_auth
+def get_showrooms_emails():
+    try:
+        import pandas as pd
+        excel_path = r"c:\Users\ALAA-ORANGE\Desktop\orangedata\showrooms_summary.xlsx"
+        if not os.path.exists(excel_path):
+            return jsonify({"error": "ملف المعارض غير موجود"}), 404
+            
+        df = pd.read_excel(excel_path)
+        showrooms = []
+        for _, row in df.iterrows():
+            store_code = str(row['كود المعرض (Store Number)']).strip()
+            if store_code.endswith('.0'):
+                store_code = store_code[:-2]
+            
+            store_name = str(row['اسم المعرض']).strip()
+            store_email = str(row['إيميل المعرض']).strip()
+            
+            if store_code and store_email and store_email.lower() != 'nan':
+                showrooms.append({
+                    "code": store_code,
+                    "name": store_name,
+                    "email": store_email
+                })
+        return jsonify(showrooms)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/admin/send_selected_reports', methods=['POST', 'OPTIONS'])
+@requires_auth
+def send_selected_reports():
+    try:
+        import subprocess
+        import sys
+        
+        data = request.json or {}
+        selected_ids = data.get("store_ids", [])
+        
+        script_path = r"c:\Users\ALAA-ORANGE\Desktop\orangedata\send_all_showrooms_report.py"
+        script_path = os.path.abspath(script_path)
+        
+        if not os.path.exists(script_path):
+            return jsonify({"error": "سكربت الإرسال غير موجود"}), 404
+            
+        # Run background process
+        cmd = [sys.executable, script_path] + [str(sid) for sid in selected_ids]
+        subprocess.Popen(cmd, close_fds=True)
+        
+        return jsonify({
+            "status": "success", 
+            "message": "تم تشغيل إرسال التقارير للفروع المحددة في الخلفية بنجاح!" if selected_ids else "تم تشغيل إرسال التقارير لجميع المعارض في الخلفية بنجاح!"
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     # Listen on all interfaces
     print("Starting Admin Server on 0.0.0.0:5000...")
     app.run(host='0.0.0.0', port=5000, debug=True)
+
