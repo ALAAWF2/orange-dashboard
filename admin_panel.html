@@ -400,6 +400,9 @@
                 <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content" type="button" role="tab"><i class="fa-solid fa-users-gear me-2"></i> إدارة المستخدمين والرموز (PINs)</button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="discounts-tab" data-bs-toggle="tab" data-bs-target="#discounts-content" type="button" role="tab"><i class="fa-solid fa-percent me-2"></i> خصومات الفواتير 💸</button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="offers-tab" data-bs-toggle="tab" data-bs-target="#offers-content" type="button" role="tab"><i class="fa-solid fa-tags me-2"></i> عروض النظام والخصومات 🏷️</button>
             </li>
             <li class="nav-item" role="presentation">
@@ -412,6 +415,124 @@
 
         <div class="tab-content" id="adminTabContent">
             
+            <!-- Tab: Manual Discount Adjustments -->
+            <div class="tab-pane fade" id="discounts-content" role="tabpanel">
+                <div class="glass-card mb-4">
+                    <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-percent me-2"></i> تعديل خصومات الفواتير محلياً 💸</h4>
+                    <p class="text-muted small mb-4">أدخل رقم الفاتورة للتحقق منها وجلب تفاصيلها من داينامكس، ثم أدخل قيمة الخصم المراد تطبيقه محلياً في تقارير لوحة التحكم (دون أي تعديل على نظام Dynamics الفعلي).</p>
+
+                    <!-- Alert message to reassure user -->
+                    <div class="alert alert-info py-2 px-3 small border-0 shadow-sm mb-4" style="border-radius: 8px;">
+                        <i class="fa-solid fa-circle-info me-2 text-info"></i>
+                        <strong>تنبيه أمان:</strong> هذه الميزة آمنة 100% وتقوم بـ (قراءة فقط) من نظام داينامكس للتحقق، والتعديل الفعلي للخصم يطبق <strong>محلياً فقط</strong> في قاعدة بيانات لوحة التحكم Showroom Sales لتصحيح التقارير والإحصائيات دون أي تأثير مالي أو مخزني على داينامكس.
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Left column: input and verification -->
+                        <div class="col-md-5">
+                            <div class="card p-3 shadow-sm border-light" style="border-radius: 12px; background: #ffffff;">
+                                <h5 class="fw-bold mb-3 small text-muted text-uppercase">خطوة 1: التحقق من الفاتورة</h5>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-dark">رقم الفاتورة (مثال: in1011-1-000004711):</label>
+                                    <div class="input-group mb-2">
+                                        <input type="text" id="discountReceiptIdInput" class="form-control form-control-dark" placeholder="أدخل رقم الفاتورة بالكامل...">
+                                        <button class="btn btn-orange-premium px-3" type="button" id="btnVerifyReceipt" onclick="verifyDiscountReceipt()">
+                                            <span id="spinnerVerify" class="spinner-border spinner-border-sm me-1" style="display:none;" role="status"></span>
+                                            <i class="fa-solid fa-magnifying-glass" id="iconVerify"></i> تحقق 🔍
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="receiptVerificationDetails" style="display: none;">
+                                    <hr class="my-3 text-muted">
+                                    <h5 class="fw-bold mb-3 small text-muted text-uppercase">خطوة 2: تطبيق الخصم</h5>
+                                    
+                                    <!-- Premium mini details card -->
+                                    <div class="p-3 mb-3 bg-light rounded animate__animated animate__fadeIn" style="border-right: 4px solid var(--orange);">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small text-muted">الفرع:</span>
+                                            <span class="small fw-bold text-dark" id="verifiedStoreName">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small text-muted">تاريخ المعاملة:</span>
+                                            <span class="small fw-bold text-dark" id="verifiedTransactionDate">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small text-muted">القيمة الأصلية:</span>
+                                            <span class="small fw-bold text-dark" id="verifiedTotalAmount">-</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-dark">قيمة الخصم المراد تطبيقه (ريال):</label>
+                                        <input type="number" id="discountValueInput" class="form-control form-control-dark" placeholder="أدخل مبلغ الخصم بالريال..." min="1" step="any">
+                                    </div>
+
+                                    <button class="btn btn-orange-premium w-100 py-2 fw-bold" onclick="applyManualDiscount()">
+                                        <i class="fa-solid fa-check-double me-2"></i> اعتماد وتطبيق الخصم محلياً 💾
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right column: items table preview -->
+                        <div class="col-md-7">
+                            <div class="card p-3 shadow-sm border-light" style="border-radius: 12px; background: #ffffff; min-height: 250px;">
+                                <h5 class="fw-bold mb-3 small text-muted text-uppercase">تفاصيل محتويات الفاتورة</h5>
+                                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                    <table class="table table-sm text-center align-middle" style="font-size: 0.82rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>كود الصنف</th>
+                                                <th class="text-start ps-3">اسم الصنف</th>
+                                                <th>الكمية</th>
+                                                <th>المبلغ شامل الضريبة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="verifiedReceiptItemsBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center py-5 text-muted">
+                                                    أدخل رقم الفاتورة واضغط على تحقق لعرض التفاصيل هنا.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Adjustments Table -->
+                    <div class="mt-5">
+                        <h4 class="fw-bold mb-3 text-orange"><i class="fa-solid fa-list-check me-2"></i> قائمة الخصومات اليدوية النشطة حالياً</h4>
+                        <p class="text-muted small">هذه هي الفواتير التي تم إدخال تعديل خصم يدوي عليها. في حال حذف أي خصم من هنا، سيقوم النظام تلقائياً باستعادة البيانات الأصلية غير المعدلة.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-premium text-center align-middle" id="activeAdjustmentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الفاتورة</th>
+                                        <th>المعرف الداخلي (Transaction ID)</th>
+                                        <th>كود الفرع</th>
+                                        <th>تاريخ المعاملة</th>
+                                        <th>مبلغ الخصم المطبق</th>
+                                        <th>تاريخ التطبيق</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeAdjustmentsBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            لا توجد خصومات يدوية نشطة حالياً.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab 7: Dynamics Offers List -->
             <div class="tab-pane fade" id="offers-content" role="tabpanel">
                 <div class="glass-card mb-4">
@@ -1184,6 +1305,7 @@
             loadOffersData(); // Load Dynamics offers data
             loadUnmappedProductsData(); // Load unmapped products catalog
             loadDispatchShowroomsData(); // Load showrooms for report dispatch
+            loadDiscountAdjustments(); // Load manual showroom discounts
         });
 
         // Logout
@@ -3310,6 +3432,233 @@
                 } else {
                     const err = await res.json();
                     alert("❌ فشل تشغيل العملية: " + (err.error || "خطأ غير معروف"));
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
+        }
+
+        // ==========================================
+        // TAB: Manual Discount Adjustments Logic
+        // ==========================================
+        let activeDiscountAdjustmentsCache = [];
+        let verifiedReceiptCache = null;
+
+        async function loadDiscountAdjustments() {
+            const tbody = document.getElementById('activeAdjustmentsBody');
+            if (!tbody) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/discount-adjustments`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) throw new Error("Failed to load discount adjustments");
+                
+                activeDiscountAdjustmentsCache = await res.json();
+                renderDiscountAdjustmentsTable();
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-danger py-4 text-center">فشل تحميل الخصومات النشطة: ${e.message}</td></tr>`;
+            }
+        }
+
+        function renderDiscountAdjustmentsTable() {
+            const tbody = document.getElementById('activeAdjustmentsBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (activeDiscountAdjustmentsCache.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            لا توجد خصومات يدوية نشطة حالياً في لوحة التحكم.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            activeDiscountAdjustmentsCache.forEach(adj => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong class="text-orange font-monospace">${adj.receipt_id}</strong></td>
+                    <td><span class="badge bg-light text-dark border font-monospace py-1 px-2">${adj.transaction_id}</span></td>
+                    <td><span class="badge bg-secondary font-monospace py-1 px-2">${adj.store_number}</span></td>
+                    <td><span class="font-monospace text-dark">${adj.transaction_date}</span></td>
+                    <td><strong class="text-success">${adj.discount_amount.toFixed(2)} ريال</strong></td>
+                    <td><span class="text-muted small">${adj.applied_at}</span></td>
+                    <td>
+                        <button class="btn btn-outline-danger btn-sm px-3 fw-bold" style="border-radius: 6px;" onclick="deleteDiscountAdjustment('${adj.receipt_id}')">
+                            <i class="fa-solid fa-trash me-1"></i> حذف واستعادة
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function verifyDiscountReceipt() {
+            const receiptInput = document.getElementById('discountReceiptIdInput');
+            const btn = document.getElementById('btnVerifyReceipt');
+            const spinner = document.getElementById('spinnerVerify');
+            const icon = document.getElementById('iconVerify');
+            const detailsDiv = document.getElementById('receiptVerificationDetails');
+            const itemsTbody = document.getElementById('verifiedReceiptItemsBody');
+
+            if (!receiptInput || !btn) return;
+            const receiptId = receiptInput.value.trim();
+
+            if (!receiptId) {
+                alert("⚠️ يرجى إدخال رقم الفاتورة أولاً.");
+                return;
+            }
+
+            // Reset UI
+            detailsDiv.style.display = 'none';
+            itemsTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">جاري الفحص والتحقق...</td></tr>`;
+            
+            // Show loading
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/discount-adjustments/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ receipt_id: receiptId })
+                });
+
+                if (res.status === 404) {
+                    itemsTbody.innerHTML = `<tr><td colspan="4" class="text-danger py-4 text-center fw-bold">❌ الفاتورة غير موجودة في نظام Dynamics 365! يرجى التأكد من الرقم والفرع.</td></tr>`;
+                    return;
+                }
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || "Failed to validate receipt");
+                }
+
+                verifiedReceiptCache = await res.json();
+
+                // Populate details card
+                document.getElementById('verifiedStoreName').textContent = verifiedReceiptCache.store_name;
+                document.getElementById('verifiedTransactionDate').textContent = verifiedReceiptCache.transaction_date;
+                document.getElementById('verifiedTotalAmount').textContent = `${verifiedReceiptCache.total_amount.toFixed(2)} ريال`;
+
+                // Populate items list
+                itemsTbody.innerHTML = '';
+                verifiedReceiptCache.items.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><span class="font-monospace text-muted small">${item.item_id}</span></td>
+                        <td class="text-start ps-3 fw-bold text-dark">${item.item_name}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">${item.qty}</span></td>
+                        <td><span class="text-success fw-bold">${item.amount.toFixed(2)} ريال</span></td>
+                    `;
+                    itemsTbody.appendChild(row);
+                });
+
+                // Show details tab
+                detailsDiv.style.display = 'block';
+                document.getElementById('discountValueInput').value = '';
+
+            } catch (e) {
+                itemsTbody.innerHTML = `<tr><td colspan="4" class="text-danger py-4 text-center">❌ خطأ في عملية التحقق: ${e.message}</td></tr>`;
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                icon.style.display = 'inline-block';
+            }
+        }
+
+        async function applyManualDiscount() {
+            if (!verifiedReceiptCache) return;
+
+            const discountVal = parseFloat(document.getElementById('discountValueInput').value);
+            if (isNaN(discountVal) || discountVal <= 0) {
+                alert("⚠️ يرجى إدخال قيمة خصم صالحة أكبر من صفر.");
+                return;
+            }
+
+            if (discountVal >= verifiedReceiptCache.total_amount) {
+                alert(`⚠️ لا يمكن أن تكون قيمة الخصم أكبر من أو مساوية لقيمة الفاتورة الإجمالية (${verifiedReceiptCache.total_amount.toFixed(2)} ريال).`);
+                return;
+            }
+
+            if (!confirm(`هل أنت متأكد من تطبيق خصم بقيمة ${discountVal} ريال على الفاتورة ${verifiedReceiptCache.receipt_id}؟\nسيتم تصحيح المبيعات والتقارير محلياً فوراً.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/discount-adjustments`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        receipt_id: verifiedReceiptCache.receipt_id,
+                        transaction_id: verifiedReceiptCache.transaction_id,
+                        discount_amount: discountVal,
+                        store_number: verifiedReceiptCache.store_number,
+                        transaction_date: verifiedReceiptCache.transaction_date
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    alert("✅ " + data.message);
+                    
+                    // Reset Verification UI
+                    document.getElementById('receiptVerificationDetails').style.display = 'none';
+                    document.getElementById('verifiedReceiptItemsBody').innerHTML = `<tr><td colspan="4" class="text-center py-5 text-muted">أدخل رقم الفاتورة واضغط على تحقق لعرض التفاصيل هنا.</td></tr>`;
+                    document.getElementById('discountReceiptIdInput').value = '';
+                    verifiedReceiptCache = null;
+
+                    // Reload Active adjustments list and rebuild performance data
+                    loadDiscountAdjustments();
+                    loadAllSystemData().then(() => {
+                        loadShowroomPerformance();
+                    });
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل تطبيق الخصم: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
+        }
+
+        async function deleteDiscountAdjustment(receiptId) {
+            if (!confirm(`هل أنت متأكد من حذف تعديل الخصم للفاتورة ${receiptId}؟\nسيتم استعادة البيانات الأصلية غير المعدلة وإعادة بناء التقارير.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/discount-adjustments/${receiptId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    alert("🗑️ " + data.message);
+                    
+                    // Reload adjustments and system data
+                    loadDiscountAdjustments();
+                    loadAllSystemData().then(() => {
+                        loadShowroomPerformance();
+                    });
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل حذف الخصم: " + (err.error || "خطأ غير معروف"));
                 }
             } catch (e) {
                 alert("❌ خطأ اتصال: " + e.message);
