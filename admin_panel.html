@@ -415,19 +415,19 @@
 
         <div class="tab-content" id="adminTabContent">
             
-            <!-- Tab: Manual Discount Adjustments -->
+            <!-- Tab: Dynamics 365 Real-Time Discount Corrections -->
             <div class="tab-pane fade" id="discounts-content" role="tabpanel">
                 <div class="glass-card mb-4">
-                    <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-percent me-2"></i> تعديل خصومات الفواتير محلياً 💸</h4>
-                    <p class="text-muted small mb-4">أدخل رقم الفاتورة للتحقق منها وجلب تفاصيلها من داينامكس، ثم أدخل قيمة الخصم المراد تطبيقه محلياً في تقارير لوحة التحكم (دون أي تعديل على نظام Dynamics الفعلي).</p>
+                    <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-percent me-2"></i> تطبيق وإرسال خصومات حقيقية لنظام Dynamics 365 🚀</h4>
+                    <p class="text-muted small mb-4">أدخل رقم الفاتورة للتحقق منها وجلب تفاصيل الأصناف من Dynamics 365، ثم أدخل قيمة الخصم ليقوم النظام تلقائياً بإنشاء وإرسال حركتي (مرتجع بالكامل + مبيعات جديدة بالخصم الموزع) مباشرة إلى Dynamics OData دون الحاجة لاستخدام TeamViewer!</p>
 
-                    <!-- Alert message to reassure user -->
-                    <div class="alert alert-info py-2 px-3 small border-0 shadow-sm mb-4" style="border-radius: 8px;">
-                        <i class="fa-solid fa-circle-info me-2 text-info"></i>
-                        <strong>تنبيه أمان:</strong> هذه الميزة آمنة 100% وتقوم بـ (قراءة فقط) من نظام داينامكس للتحقق، والتعديل الفعلي للخصم يطبق <strong>محلياً فقط</strong> في قاعدة بيانات لوحة التحكم Showroom Sales لتصحيح التقارير والإحصائيات دون أي تأثير مالي أو مخزني على داينامكس.
+                    <!-- Safe enterprise message -->
+                    <div class="alert alert-warning py-3 px-4 small border-0 shadow-sm mb-4" style="border-radius: 8px; background: rgba(254, 121, 0, 0.1); border-right: 4px solid var(--orange) !important;">
+                        <i class="fa-solid fa-triangle-exclamation me-2 text-orange"></i>
+                        <strong>تنبيه مالي وضريبي هام:</strong> هذه العملية تقوم بإنشاء حركات مالية حقيقية ورسمية (Full Return & Discounted Re-Sale) داخل نظام <strong>Microsoft Dynamics 365</strong>. هذا يضمن مطابقة الكاش والمخزون والإقرارات الضريبية لشركة Orange رسمياً 100%. يرجى التأكد من المبالغ قبل الاعتماد.
                     </div>
 
-                    <div class="row g-4">
+                    <div class="row g-4 mb-3">
                         <!-- Left column: input and verification -->
                         <div class="col-md-5">
                             <div class="card p-3 shadow-sm border-light" style="border-radius: 12px; background: #ffffff;">
@@ -445,7 +445,7 @@
 
                                 <div id="receiptVerificationDetails" style="display: none;">
                                     <hr class="my-3 text-muted">
-                                    <h5 class="fw-bold mb-3 small text-muted text-uppercase">خطوة 2: تطبيق الخصم</h5>
+                                    <h5 class="fw-bold mb-3 small text-muted text-uppercase">خطوة 2: تطبيق الخصم وإرساله</h5>
                                     
                                     <!-- Premium mini details card -->
                                     <div class="p-3 mb-3 bg-light rounded animate__animated animate__fadeIn" style="border-right: 4px solid var(--orange);">
@@ -458,18 +458,23 @@
                                             <span class="small fw-bold text-dark" id="verifiedTransactionDate">-</span>
                                         </div>
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span class="small text-muted">القيمة الأصلية:</span>
+                                            <span class="small text-muted">القيمة الحالية بالفاتورة:</span>
                                             <span class="small fw-bold text-dark" id="verifiedTotalAmount">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2" id="verifiedDiscountRow">
+                                            <span class="small text-muted">الخصم السابق المسجل:</span>
+                                            <span class="small fw-bold text-danger" id="verifiedDiscountAmount">-</span>
                                         </div>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label fw-bold small text-dark">قيمة الخصم المراد تطبيقه (ريال):</label>
-                                        <input type="number" id="discountValueInput" class="form-control form-control-dark" placeholder="أدخل مبلغ الخصم بالريال..." min="1" step="any">
+                                        <label class="form-label fw-bold small text-dark">مبلغ الخصم الإضافي المطلوب (ريال):</label>
+                                        <input type="number" id="discountValueInput" class="form-control form-control-dark" placeholder="أدخل مبلغ الخصم الإضافي بالريال..." min="1" step="any">
                                     </div>
 
-                                    <button class="btn btn-orange-premium w-100 py-2 fw-bold" onclick="applyManualDiscount()">
-                                        <i class="fa-solid fa-check-double me-2"></i> اعتماد وتطبيق الخصم محلياً 💾
+                                    <button class="btn btn-orange-premium w-100 py-2 fw-bold" id="btnSubmitDiscount" onclick="applyManualDiscount()">
+                                        <span id="spinnerSubmit" class="spinner-border spinner-border-sm me-1" style="display:none;" role="status"></span>
+                                        <i class="fa-solid fa-cloud-arrow-up me-2" id="iconSubmit"></i> إرسال حركات التصحيح لـ Dynamics 365 🚀
                                     </button>
                                 </div>
                             </div>
@@ -478,13 +483,13 @@
                         <!-- Right column: items table preview -->
                         <div class="col-md-7">
                             <div class="card p-3 shadow-sm border-light" style="border-radius: 12px; background: #ffffff; min-height: 250px;">
-                                <h5 class="fw-bold mb-3 small text-muted text-uppercase">تفاصيل محتويات الفاتورة</h5>
+                                <h5 class="fw-bold mb-3 small text-muted text-uppercase">تفاصيل محتويات الفاتورة المسترجعة من Dynamics</h5>
                                 <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
                                     <table class="table table-sm text-center align-middle" style="font-size: 0.82rem;">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>كود الصنف</th>
-                                                <th class="text-start ps-3">اسم الصنف</th>
+                                                <th class="text-start ps-3">فئة الصنف</th>
                                                 <th>الكمية</th>
                                                 <th>المبلغ شامل الضريبة</th>
                                             </tr>
@@ -492,7 +497,7 @@
                                         <tbody id="verifiedReceiptItemsBody">
                                             <tr>
                                                 <td colspan="4" class="text-center py-5 text-muted">
-                                                    أدخل رقم الفاتورة واضغط على تحقق لعرض التفاصيل هنا.
+                                                    أدخل رقم الفاتورة واضغط على تحقق لعرض التفاصيل المباشرة هنا.
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -501,37 +506,9 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Active Adjustments Table -->
-                    <div class="mt-5">
-                        <h4 class="fw-bold mb-3 text-orange"><i class="fa-solid fa-list-check me-2"></i> قائمة الخصومات اليدوية النشطة حالياً</h4>
-                        <p class="text-muted small">هذه هي الفواتير التي تم إدخال تعديل خصم يدوي عليها. في حال حذف أي خصم من هنا، سيقوم النظام تلقائياً باستعادة البيانات الأصلية غير المعدلة.</p>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-premium text-center align-middle" id="activeAdjustmentsTable">
-                                <thead>
-                                    <tr>
-                                        <th>رقم الفاتورة</th>
-                                        <th>المعرف الداخلي (Transaction ID)</th>
-                                        <th>كود الفرع</th>
-                                        <th>تاريخ المعاملة</th>
-                                        <th>مبلغ الخصم المطبق</th>
-                                        <th>تاريخ التطبيق</th>
-                                        <th>الإجراء</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="activeAdjustmentsBody">
-                                    <tr>
-                                        <td colspan="7" class="text-center py-4 text-muted">
-                                            لا توجد خصومات يدوية نشطة حالياً.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             </div>
+
 
             <!-- Tab 7: Dynamics Offers List -->
             <div class="tab-pane fade" id="offers-content" role="tabpanel">
@@ -3432,68 +3409,17 @@
                 } else {
                     const err = await res.json();
                     alert("❌ فشل تشغيل العملية: " + (err.error || "خطأ غير معروف"));
+                }
             } catch (e) {
                 alert("❌ خطأ اتصال: " + e.message);
             }
         }
 
         // ==========================================
-        // TAB: Manual Discount Adjustments Logic
         // ==========================================
-        let activeDiscountAdjustmentsCache = [];
+        // TAB: Dynamics 365 Real-Time Discount Corrections Logic
+        // ==========================================
         let verifiedReceiptCache = null;
-
-        async function loadDiscountAdjustments() {
-            const tbody = document.getElementById('activeAdjustmentsBody');
-            if (!tbody) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/discount-adjustments`, {
-                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
-                });
-                if (!res.ok) throw new Error("Failed to load discount adjustments");
-                
-                activeDiscountAdjustmentsCache = await res.json();
-                renderDiscountAdjustmentsTable();
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-danger py-4 text-center">فشل تحميل الخصومات النشطة: ${e.message}</td></tr>`;
-            }
-        }
-
-        function renderDiscountAdjustmentsTable() {
-            const tbody = document.getElementById('activeAdjustmentsBody');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            if (activeDiscountAdjustmentsCache.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
-                            لا توجد خصومات يدوية نشطة حالياً في لوحة التحكم.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            activeDiscountAdjustmentsCache.forEach(adj => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong class="text-orange font-monospace">${adj.receipt_id}</strong></td>
-                    <td><span class="badge bg-light text-dark border font-monospace py-1 px-2">${adj.transaction_id}</span></td>
-                    <td><span class="badge bg-secondary font-monospace py-1 px-2">${adj.store_number}</span></td>
-                    <td><span class="font-monospace text-dark">${adj.transaction_date}</span></td>
-                    <td><strong class="text-success">${adj.discount_amount.toFixed(2)} ريال</strong></td>
-                    <td><span class="text-muted small">${adj.applied_at}</span></td>
-                    <td>
-                        <button class="btn btn-outline-danger btn-sm px-3 fw-bold" style="border-radius: 6px;" onclick="deleteDiscountAdjustment('${adj.receipt_id}')">
-                            <i class="fa-solid fa-trash me-1"></i> حذف واستعادة
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
 
         async function verifyDiscountReceipt() {
             const receiptInput = document.getElementById('discountReceiptIdInput');
@@ -3513,7 +3439,7 @@
 
             // Reset UI
             detailsDiv.style.display = 'none';
-            itemsTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">جاري الفحص والتحقق...</td></tr>`;
+            itemsTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">جاري الاتصال والتحقق من Dynamics 365 OData...</td></tr>`;
             
             // Show loading
             btn.disabled = true;
@@ -3521,42 +3447,50 @@
             icon.style.display = 'none';
 
             try {
-                const res = await fetch(`${API_BASE}/api/discount-adjustments/validate`, {
-                    method: 'POST',
+                const res = await fetch(`${API_BASE}/api/dynamics/validate-receipt?receipt_id=${encodeURIComponent(receiptId)}`, {
+                    method: 'GET',
                     headers: {
                         'Authorization': authHeader,
-                        'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
-                    },
-                    body: JSON.stringify({ receipt_id: receiptId })
+                    }
                 });
 
-                if (res.status === 404) {
-                    itemsTbody.innerHTML = `<tr><td colspan="4" class="text-danger py-4 text-center fw-bold">❌ الفاتورة غير موجودة في نظام Dynamics 365! يرجى التأكد من الرقم والفرع.</td></tr>`;
+                if (res.status === 404 || res.status === 500) {
+                    const err = await res.json();
+                    itemsTbody.innerHTML = `<tr><td colspan="4" class="text-danger py-4 text-center fw-bold">❌ خطأ: ${err.error || "الفاتورة غير موجودة أو تعذر فحصها."}</td></tr>`;
                     return;
                 }
 
                 if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || "Failed to validate receipt");
+                    throw new Error("تعذر الاتصال بـ Dynamics 365.");
                 }
 
                 verifiedReceiptCache = await res.json();
 
                 // Populate details card
-                document.getElementById('verifiedStoreName').textContent = verifiedReceiptCache.store_name;
-                document.getElementById('verifiedTransactionDate').textContent = verifiedReceiptCache.transaction_date;
+                document.getElementById('verifiedStoreName').textContent = `معرض ${verifiedReceiptCache.store_number}`;
+                
+                // Format transaction date nicely
+                const txDate = new Date(verifiedReceiptCache.business_date);
+                document.getElementById('verifiedTransactionDate').textContent = txDate.toLocaleDateString('ar-EG', {
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                
                 document.getElementById('verifiedTotalAmount').textContent = `${verifiedReceiptCache.total_amount.toFixed(2)} ريال`;
+                document.getElementById('verifiedDiscountAmount').textContent = `${verifiedReceiptCache.discount_amount.toFixed(2)} ريال`;
 
                 // Populate items list
                 itemsTbody.innerHTML = '';
                 verifiedReceiptCache.items.forEach(item => {
                     const row = document.createElement('tr');
+                    // standard retail lines have negative qty in Dynamics BI OData, we represent as positive for easier viewing
+                    const displayQty = Math.abs(item.quantity);
+                    const displayAmount = Math.abs(item.net_amount);
                     row.innerHTML = `
                         <td><span class="font-monospace text-muted small">${item.item_id}</span></td>
-                        <td class="text-start ps-3 fw-bold text-dark">${item.item_name}</td>
-                        <td><span class="badge bg-light text-dark border font-monospace">${item.qty}</span></td>
-                        <td><span class="text-success fw-bold">${item.amount.toFixed(2)} ريال</span></td>
+                        <td class="text-start ps-3 fw-bold text-dark">${item.category_name}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">${displayQty}</span></td>
+                        <td><span class="text-success fw-bold">${displayAmount.toFixed(2)} ريال</span></td>
                     `;
                     itemsTbody.appendChild(row);
                 });
@@ -3584,16 +3518,25 @@
             }
 
             if (discountVal >= verifiedReceiptCache.total_amount) {
-                alert(`⚠️ لا يمكن أن تكون قيمة الخصم أكبر من أو مساوية لقيمة الفاتورة الإجمالية (${verifiedReceiptCache.total_amount.toFixed(2)} ريال).`);
+                alert(`⚠️ لا يمكن أن تكون قيمة الخصم أكبر من أو مساوية لقيمة الفاتورة الحالية (${verifiedReceiptCache.total_amount.toFixed(2)} ريال).`);
                 return;
             }
 
-            if (!confirm(`هل أنت متأكد من تطبيق خصم بقيمة ${discountVal} ريال على الفاتورة ${verifiedReceiptCache.receipt_id}؟\nسيتم تصحيح المبيعات والتقارير محلياً فوراً.`)) {
+            if (!confirm(`⚠️ تحذير مالي: أنت على وشك إنشاء وإرسال حركتي (مرتجع بالكامل + مبيعات جديدة بالخصم) بقيمة ${discountVal} ريال للفاتورة ${verifiedReceiptCache.receipt_id} مباشرة إلى Microsoft Dynamics 365.\n\nهل أنت متأكد من المتابعة؟`)) {
                 return;
             }
+
+            const btnSubmit = document.getElementById('btnSubmitDiscount');
+            const spinnerSubmit = document.getElementById('spinnerSubmit');
+            const iconSubmit = document.getElementById('iconSubmit');
+
+            // Show loading state
+            btnSubmit.disabled = true;
+            spinnerSubmit.style.display = 'inline-block';
+            iconSubmit.style.display = 'none';
 
             try {
-                const res = await fetch(`${API_BASE}/api/discount-adjustments`, {
+                const res = await fetch(`${API_BASE}/api/dynamics/apply-discount`, {
                     method: 'POST',
                     headers: {
                         'Authorization': authHeader,
@@ -3602,66 +3545,37 @@
                     },
                     body: JSON.stringify({
                         receipt_id: verifiedReceiptCache.receipt_id,
-                        transaction_id: verifiedReceiptCache.transaction_id,
-                        discount_amount: discountVal,
-                        store_number: verifiedReceiptCache.store_number,
-                        transaction_date: verifiedReceiptCache.transaction_date
+                        discount_amount: discountVal
                     })
                 });
 
                 if (res.ok) {
                     const data = await res.json();
-                    alert("✅ " + data.message);
+                    
+                    alert(`✅ تم إرسال حركات التصحيح والخصم إلى Dynamics 365 بنجاح!\n\nرقم فاتورة المرتجع: ${data.return_receipt_id}\nرقم فاتورة المبيعات الجديدة: ${data.sale_receipt_id}\nالقيمة الإجمالية الجديدة شامل الضريبة: ${data.new_total.toFixed(2)} ريال\n\nتم تحديث قاعدة بيانات لوحة التحكم محلياً فوراً.`);
                     
                     // Reset Verification UI
                     document.getElementById('receiptVerificationDetails').style.display = 'none';
-                    document.getElementById('verifiedReceiptItemsBody').innerHTML = `<tr><td colspan="4" class="text-center py-5 text-muted">أدخل رقم الفاتورة واضغط على تحقق لعرض التفاصيل هنا.</td></tr>`;
+                    document.getElementById('verifiedReceiptItemsBody').innerHTML = `<tr><td colspan="4" class="text-center py-5 text-muted">أدخل رقم الفاتورة واضغط على تحقق لعرض التفاصيل المباشرة هنا.</td></tr>`;
                     document.getElementById('discountReceiptIdInput').value = '';
                     verifiedReceiptCache = null;
 
-                    // Reload Active adjustments list and rebuild performance data
-                    loadDiscountAdjustments();
+                    // Reload all system performance indicators and dashboard data
                     loadAllSystemData().then(() => {
-                        loadShowroomPerformance();
+                        if (typeof loadShowroomPerformance === 'function') {
+                            loadShowroomPerformance();
+                        }
                     });
                 } else {
                     const err = await res.json();
-                    alert("❌ فشل تطبيق الخصم: " + (err.error || "خطأ غير معروف"));
+                    alert("❌ فشل إرسال التصحيح إلى Dynamics: " + (err.error || "خطأ غير معروف"));
                 }
             } catch (e) {
-                alert("❌ خطأ اتصال: " + e.message);
-            }
-        }
-
-        async function deleteDiscountAdjustment(receiptId) {
-            if (!confirm(`هل أنت متأكد من حذف تعديل الخصم للفاتورة ${receiptId}؟\nسيتم استعادة البيانات الأصلية غير المعدلة وإعادة بناء التقارير.`)) {
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_BASE}/api/discount-adjustments/${receiptId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': authHeader,
-                        'ngrok-skip-browser-warning': 'true'
-                    }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    alert("🗑️ " + data.message);
-                    
-                    // Reload adjustments and system data
-                    loadDiscountAdjustments();
-                    loadAllSystemData().then(() => {
-                        loadShowroomPerformance();
-                    });
-                } else {
-                    const err = await res.json();
-                    alert("❌ فشل حذف الخصم: " + (err.error || "خطأ غير معروف"));
-                }
-            } catch (e) {
-                alert("❌ خطأ اتصال: " + e.message);
+                alert("❌ خطأ اتصال بالخادم: " + e.message);
+            } finally {
+                btnSubmit.disabled = false;
+                spinnerSubmit.style.display = 'none';
+                iconSubmit.style.display = 'inline-block';
             }
         }
     </script>
