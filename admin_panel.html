@@ -671,15 +671,109 @@
             <!-- Tab 4: System Auditing & Error Detection -->
             <div class="tab-pane fade" id="audit-content" role="tabpanel">
                 <div class="row g-4">
-                    <!-- Data Auditing and Anomaly Alerts -->
+                    <!-- IT Pipeline & Mapping Diagnostics -->
                     <div class="col-md-6">
                         <div class="glass-card">
-                            <h4 class="fw-bold mb-3"><i class="fa-solid fa-circle-nodes text-orange me-2"></i> كشف وتدقيق أخطاء المزامنة المباشر</h4>
-                            <p class="text-muted small">فحص ذكي للبيانات الخام للـ 60 يوماً الأخيرة لرصد السجلات المشوهة أو المبيعات الشاذة.</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                                <h4 class="fw-bold mb-0"><i class="fa-solid fa-screwdriver-wrench text-orange me-2"></i> مركز تدقيق وتشخيص النظام والربط (IT Diagnostic Center)</h4>
+                                <span class="badge bg-danger" id="itDiagnosticAlertsCount" style="font-size: 0.8rem; padding: 6px 10px;">0 تنبيه نشط</span>
+                            </div>
+                            <p class="text-muted small">فحص برمي متقدم وذكي للربط الحي مع Dynamics وقاعدة بيانات PostgreSQL المباشرة.</p>
                             
-                            <div class="list-group list-group-flush" id="auditAnomaliesContainer">
-                                <!-- Anomalies listed here -->
-                                <div class="text-center py-4 text-muted">جاري تشغيل الفحص...</div>
+                            <div class="accordion mt-3" id="itDiagnosticsAccordion">
+                                
+                                <!-- 1. DB Sizes & Vacuum -->
+                                <div class="accordion-item accordion-item-dark">
+                                    <h2 class="accordion-header" id="headingDbStats">
+                                        <button class="accordion-button accordion-button-dark collapsed d-flex justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDbStats" aria-expanded="false">
+                                            <span><i class="fa-solid fa-database text-orange me-2"></i> إحصائيات الجداول وحجم قاعدة البيانات</span>
+                                        </button>
+                                    </h2>
+                                    <div id="collapseDbStats" class="accordion-collapse collapse" data-bs-parent="#itDiagnosticsAccordion">
+                                        <div class="accordion-body accordion-body-dark">
+                                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                                <small class="text-muted">حجم ومساحة سجلات خادم PostgreSQL الرئيسي.</small>
+                                                <button class="btn btn-orange-premium btn-sm" id="btnVacuumDb" onclick="triggerVacuumDb()"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> تشغيل تحسين الجداول (VACUUM)</button>
+                                            </div>
+                                            <div id="vacuumStatusContainer"></div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered text-center align-middle text-dark" style="font-size: 0.8rem; background: #ffffff; margin-bottom: 0;">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>اسم الجدول</th>
+                                                            <th>عدد السجلات</th>
+                                                            <th>الحجم الكلي</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="dbStatsTableBody">
+                                                        <!-- Dynamic stats rows -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Unmapped Sales Groups -->
+                                <div class="accordion-item accordion-item-dark">
+                                    <h2 class="accordion-header" id="headingUnmapped">
+                                        <button class="accordion-button accordion-button-dark collapsed d-flex justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnmapped" aria-expanded="false">
+                                            <span>
+                                                <i class="fa-solid fa-user-xmark text-orange me-2"></i> أكواد مبيعات غير مربوطة في الميزانية 
+                                                <span class="badge bg-danger ms-2" id="badgeUnmappedCount">0</span>
+                                            </span>
+                                        </button>
+                                    </h2>
+                                    <div id="collapseUnmapped" class="accordion-collapse collapse" data-bs-parent="#itDiagnosticsAccordion">
+                                        <div class="accordion-body accordion-body-dark">
+                                            <p class="text-muted small mb-3">أكواد موظفين (Sales Groups) تسجل مبيعات نشطة بالـ 30 يوماً الأخيرة ولكنه مفقودة من خريطة الموظفين:</p>
+                                            <div class="list-group list-group-flush" id="unmappedSalespeopleContainer" style="max-height: 250px; overflow-y: auto; border-radius: 8px;">
+                                                <!-- Dynamic unmapped -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Placeholder Names -->
+                                <div class="accordion-item accordion-item-dark">
+                                    <h2 class="accordion-header" id="headingPlaceholders">
+                                        <button class="accordion-button accordion-button-dark collapsed d-flex justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePlaceholders" aria-expanded="false">
+                                            <span>
+                                                <i class="fa-solid fa-triangle-exclamation text-orange me-2"></i> سجلات ربط بأسماء مؤقتة / مجهولة 
+                                                <span class="badge bg-warning text-dark ms-2" id="badgePlaceholderCount">0</span>
+                                            </span>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePlaceholders" class="accordion-collapse collapse" data-bs-parent="#itDiagnosticsAccordion">
+                                        <div class="accordion-body accordion-body-dark">
+                                            <p class="text-muted small mb-3">موظفون نشطون تفتقد سجلات ربطهم لأسماء حقيقية معتمدة:</p>
+                                            <div class="list-group list-group-flush" id="placeholderEmployeesContainer" style="max-height: 250px; overflow-y: auto; border-radius: 8px;">
+                                                <!-- Dynamic placeholders -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Offline Cameras -->
+                                <div class="accordion-item accordion-item-dark">
+                                    <h2 class="accordion-header" id="headingCameras">
+                                        <button class="accordion-button accordion-button-dark collapsed d-flex justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCameras" aria-expanded="false">
+                                            <span>
+                                                <i class="fa-solid fa-camera text-orange me-2"></i> تشخيص أعطال كاميرات زوار الفروع (V-Count)
+                                                <span class="badge bg-danger ms-2" id="badgeCameraOfflineCount">0</span>
+                                            </span>
+                                        </button>
+                                    </h2>
+                                    <div id="collapseCameras" class="accordion-collapse collapse" data-bs-parent="#itDiagnosticsAccordion">
+                                        <div class="accordion-body accordion-body-dark">
+                                            <p class="text-muted small mb-3">فروع تسجل مبيعات فعلية بالـ 3 أيام الأخيرة بينما زوار الكاميرات (0) (احتمال انقطاع الكهرباء أو الكابل):</p>
+                                            <div class="list-group list-group-flush" id="offlineCamerasContainer" style="max-height: 250px; overflow-y: auto; border-radius: 8px;">
+                                                <!-- Dynamic cameras -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -1723,74 +1817,180 @@
         // ==========================================
         // TAB 4: Live Data Auditing & Debugging
         // ==========================================
-        function runLiveAuditing() {
-            const anomaliesContainer = document.getElementById('auditAnomaliesContainer');
-            anomaliesContainer.innerHTML = '';
-
-            let errorsCount = 0;
-
-            if (!mgmtData) {
-                anomaliesContainer.innerHTML = '<div class="text-center py-4 text-muted">البيانات غير متوفرة.</div>';
-                return;
-            }
-
-            const visitorMap = new Map();
-            mgmtData.visitors?.forEach(([date, s, count]) => {
-                visitorMap.set(`${s}|${date}`, count);
-            });
-
-            // 1. Negative Sales Check
-            mgmtData.sales?.forEach(([d, s, v]) => {
-                if (v < 0) {
-                    errorsCount++;
-                    const storeName = mgmtData.stores[s] || s;
-                    const div = document.createElement('div');
-                    div.className = 'list-group-item bg-light border d-flex justify-content-between align-items-center mb-2 rounded p-3 shadow-sm';
-                    div.innerHTML = `
-                        <div>
-                            <span class="badge bg-danger me-2"><i class="fa-solid fa-circle-minus"></i> مبيعات سالبة</span>
-                            <strong class="text-dark">${storeName}</strong>
-                            <small class="text-muted d-block mt-1">التاريخ: ${d} | المبيعات: ${v.toLocaleString()} SAR</small>
-                        </div>
-                        <i class="fa-solid fa-triangle-exclamation text-danger fs-5"></i>
-                    `;
-                    anomaliesContainer.appendChild(div);
+        async function runLiveAuditing() {
+            const btnVacuum = document.getElementById('btnVacuumDb');
+            const itAlertsBadge = document.getElementById('itDiagnosticAlertsCount');
+            const kpiErrors = document.getElementById('kpiDataErrors');
+            
+            if (!document.getElementById('dbStatsTableBody')) return; // Guard for non-admin context if any
+            
+            // Set loading indicators
+            document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="3" class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+            document.getElementById('unmappedSalespeopleContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
+            document.getElementById('placeholderEmployeesContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
+            document.getElementById('offlineCamerasContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/it_diagnostics`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                
+                if (!res.ok) {
+                    throw new Error("فشل الاتصال بالخادم");
                 }
-            });
-
-            // 2. Positive Sales with Zero Visitors
-            mgmtData.sales?.forEach(([d, s, v]) => {
-                if (v > 0 && !['0', '1013'].includes(String(s))) {
-                    const visCount = visitorMap.get(`${s}|${d}`);
-                    if (!visCount || visCount === 0) {
-                        errorsCount++;
-                        const storeName = mgmtData.stores[s] || s;
-                        const div = document.createElement('div');
-                        div.className = 'list-group-item bg-light border d-flex justify-content-between align-items-center mb-2 rounded p-3 shadow-sm';
-                        div.innerHTML = `
-                            <div>
-                                <span class="badge bg-warning text-dark me-2"><i class="fa-solid fa-eye-slash"></i> مبيعات بلا زوار</span>
-                                <strong class="text-dark">${storeName}</strong>
-                                <small class="text-muted d-block mt-1">التاريخ: ${d} | مبيعات: ${v.toLocaleString()} SAR (عدد الزوار: 0)</small>
-                            </div>
-                            <button class="btn btn-outline-warning btn-sm py-1" onclick="openVisitorOverrideModal('${s}', '${storeName}')"><i class="fa-solid fa-user-pen"></i></button>
+                
+                const data = await res.json();
+                
+                // 1. Render DB Stats
+                let dbStatsHtml = '';
+                if (data.db_stats && data.db_stats.length > 0) {
+                    data.db_stats.forEach(tbl => {
+                        dbStatsHtml += `
+                            <tr>
+                                <td><code class="text-primary fw-bold" style="font-size:0.75rem;">${tbl.table_name}</code></td>
+                                <td class="fw-bold text-dark">${tbl.row_count.toLocaleString()}</td>
+                                <td><span class="badge bg-secondary">${tbl.size}</span></td>
+                            </tr>
                         `;
-                        anomaliesContainer.appendChild(div);
-                    }
+                    });
+                } else {
+                    dbStatsHtml = '<tr><td colspan="3" class="text-muted">لا تتوفر إحصائيات.</td></tr>';
                 }
-            });
+                document.getElementById('dbStatsTableBody').innerHTML = dbStatsHtml;
+                
+                // 2. Render Unmapped Sales Groups
+                let unmappedHtml = '';
+                let unmappedCount = 0;
+                if (data.unmapped_salespeople && data.unmapped_salespeople.length > 0) {
+                    unmappedCount = data.unmapped_salespeople.length;
+                    data.unmapped_salespeople.forEach(emp => {
+                        unmappedHtml += `
+                            <div class="list-group-item bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <strong class="text-danger" style="font-size:0.85rem;">${emp.sales_group}</strong>
+                                    <small class="text-muted d-block" style="font-size:0.75rem;">الفرع: ${emp.branch}</small>
+                                </div>
+                                <span class="badge bg-danger-subtle text-danger rounded-pill" style="font-size:0.75rem;">${emp.sales_amount.toLocaleString()} SAR</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    unmappedHtml = `
+                        <div class="text-center py-4 text-success">
+                            <i class="fa-solid fa-circle-check fs-2 mb-2"></i>
+                            <div class="small fw-bold">جميع أكواد المبيعات مربوطة بالكامل!</div>
+                        </div>
+                    `;
+                }
+                document.getElementById('unmappedSalespeopleContainer').innerHTML = unmappedHtml;
+                document.getElementById('badgeUnmappedCount').textContent = unmappedCount;
+                
+                // 3. Render Placeholder Names
+                let placeholderHtml = '';
+                let placeholderCount = 0;
+                if (data.placeholder_employees && data.placeholder_employees.length > 0) {
+                    placeholderCount = data.placeholder_employees.length;
+                    data.placeholder_employees.forEach(emp => {
+                        placeholderHtml += `
+                            <div class="list-group-item bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <strong class="text-warning" style="font-size:0.85rem;">${emp.employee_id}</strong>
+                                    <small class="text-muted d-block" style="font-size:0.75rem;">كود المبيعات: ${emp.sales_group}</small>
+                                </div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis" style="font-size:0.7rem;">اسم فارغ أو افتراضي</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    placeholderHtml = `
+                        <div class="text-center py-4 text-success">
+                            <i class="fa-solid fa-circle-check fs-2 mb-2"></i>
+                            <div class="small fw-bold">لا يوجد سجلات بأسماء افتراضية مجهولة!</div>
+                        </div>
+                    `;
+                }
+                document.getElementById('placeholderEmployeesContainer').innerHTML = placeholderHtml;
+                document.getElementById('badgePlaceholderCount').textContent = placeholderCount;
+                
+                // 4. Render Offline Cameras
+                let camerasHtml = '';
+                let cameraCount = 0;
+                if (data.offline_cameras && data.offline_cameras.length > 0) {
+                    cameraCount = data.offline_cameras.length;
+                    data.offline_cameras.forEach(cam => {
+                        camerasHtml += `
+                            <div class="list-group-item bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <strong class="text-danger" style="font-size:0.85rem;">${cam.branch}</strong>
+                                    <small class="text-muted d-block" style="font-size:0.75rem;">كود الفرع: ${cam.code}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-danger rounded-pill mb-1" style="font-size:0.7rem; padding: 3px 6px;">الزوار: ${cam.visitors_count}</span>
+                                    <small class="text-muted d-block" style="font-size:0.75rem;">المبيعات: ${cam.sales_amount.toLocaleString()} SAR</small>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    camerasHtml = `
+                        <div class="text-center py-4 text-success">
+                            <i class="fa-solid fa-circle-check fs-2 mb-2"></i>
+                            <div class="small fw-bold">جميع كاميرات الزوار نشطة وتبث البيانات!</div>
+                        </div>
+                    `;
+                }
+                document.getElementById('offlineCamerasContainer').innerHTML = camerasHtml;
+                document.getElementById('badgeCameraOfflineCount').textContent = cameraCount;
+                
+                // 5. Update Alerts Header and KPI Box
+                const totalAlerts = unmappedCount + placeholderCount + cameraCount;
+                itAlertsBadge.textContent = `${totalAlerts} تنبيه نشط`;
+                if (totalAlerts > 0) {
+                    itAlertsBadge.className = "badge bg-danger";
+                } else {
+                    itAlertsBadge.className = "badge bg-success";
+                }
+                kpiErrors.textContent = totalAlerts;
+                
+            } catch (err) {
+                console.error("IT Audit Error: ", err);
+                document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="3" class="text-danger">فشل جلب البيانات من الخادم.</td></tr>';
+            }
+        }
 
-            // Update KPI
-            document.getElementById('kpiDataErrors').textContent = errorsCount;
-
-            if (errorsCount === 0) {
-                anomaliesContainer.innerHTML = `
-                    <div class="text-center py-5 text-success">
-                        <i class="fa-solid fa-circle-check fs-1 mb-3"></i>
-                        <h6 class="fw-bold">تهانينا! فحص تدقيق البيانات خالي من الأخطاء تماماً.</h6>
-                        <p class="text-muted small">كل المبيعات مسجلة بزوار حقيقيين ولا توجد قيم مبيعات سالبة.</p>
-                    </div>
-                `;
+        // Database vacuum optimize trigger
+        async function triggerVacuumDb() {
+            const btn = document.getElementById('btnVacuumDb');
+            const statusContainer = document.getElementById('vacuumStatusContainer');
+            
+            if (!confirm("هل أنت متأكد من رغبتك في تشغيل VACUUM ANALYZE لتحسين جداول قاعدة البيانات بالكامل؟ قد يستغرق ذلك بضع ثوانٍ.")) return;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري التشغيل...';
+            statusContainer.innerHTML = '<div class="alert alert-info py-2 small mb-3"><i class="fa-solid fa-hourglass-start me-1"></i> يتم تشغيل الاستعلام وتحليل الجداول حالياً، يرجى الانتظار...</div>';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/vacuum_db`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                
+                if (res.ok) {
+                    statusContainer.innerHTML = '<div class="alert alert-success py-2 small mb-3"><i class="fa-solid fa-circle-check me-1"></i> تم تحسين قاعدة البيانات بنجاح! تم ضغط المساحة وإعادة بناء الفهارس.</div>';
+                    // Reload diagnostics to show updated counts and size
+                    runLiveAuditing();
+                } else {
+                    const err = await res.json();
+                    statusContainer.innerHTML = `<div class="alert alert-danger py-2 small mb-3"><i class="fa-solid fa-triangle-exclamation me-1"></i> فشل التحسين: ${err.error}</div>`;
+                }
+            } catch (e) {
+                statusContainer.innerHTML = `<div class="alert alert-danger py-2 small mb-3"><i class="fa-solid fa-triangle-exclamation me-1"></i> خطأ اتصال: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i> تشغيل تحسين الجداول (VACUUM)';
+                setTimeout(() => {
+                    statusContainer.innerHTML = '';
+                }, 8000);
             }
         }
 
