@@ -754,21 +754,28 @@
                                     </div>
                                 </div>
 
-                                <!-- 4. Offline Cameras -->
+                                <!-- 4. Counters Malfunctions -->
                                 <div class="accordion-item accordion-item-dark">
                                     <h2 class="accordion-header" id="headingCameras">
                                         <button class="accordion-button accordion-button-dark collapsed d-flex justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCameras" aria-expanded="false">
                                             <span>
-                                                <i class="fa-solid fa-camera text-orange me-2"></i> تشخيص أعطال كاميرات زوار الفروع (V-Count)
+                                                <i class="fa-solid fa-users-line text-orange me-2"></i> تشخيص أعطال العدادات
                                                 <span class="badge bg-danger ms-2" id="badgeCameraOfflineCount">0</span>
                                             </span>
                                         </button>
                                     </h2>
                                     <div id="collapseCameras" class="accordion-collapse collapse" data-bs-parent="#itDiagnosticsAccordion">
                                         <div class="accordion-body accordion-body-dark">
-                                            <p class="text-muted small mb-3">فروع تسجل مبيعات فعلية بالـ 3 أيام الأخيرة بينما زوار الكاميرات (0) (احتمال انقطاع الكهرباء أو الكابل):</p>
-                                            <div class="list-group list-group-flush" id="offlineCamerasContainer" style="max-height: 250px; overflow-y: auto; border-radius: 8px;">
-                                                <!-- Dynamic cameras -->
+                                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                                <span class="text-muted small fw-bold">فروع تسجل مبيعات فعلية مع وجود مشاكل في قراءات العدادات (انقطاع تام أو بث جزئي متقطع):</span>
+                                                <select id="cameraDiagnosticDays" class="form-select form-select-dark py-1 px-2" style="width: 140px; font-size: 0.8rem;" onchange="runLiveAuditing()">
+                                                    <option value="3" selected>آخر 3 أيام</option>
+                                                    <option value="14">آخر 14 يوماً</option>
+                                                    <option value="30">آخر 30 يوماً</option>
+                                                </select>
+                                            </div>
+                                            <div class="list-group list-group-flush" id="offlineCamerasContainer" style="max-height: 380px; overflow-y: auto; border-radius: 8px;">
+                                                <!-- Dynamic counters -->
                                             </div>
                                         </div>
                                     </div>
@@ -1066,7 +1073,7 @@
         }
 
         // Setup Authorization Header
-        const AUTH_PIN = "0000";
+        const AUTH_PIN = currentUser ? currentUser.pin : "0000";
         const authHeader = "Basic " + btoa(unescape(encodeURIComponent("علاء:" + AUTH_PIN)));
         
         let API_BASE = "http://localhost:5000"; // Will be auto-detected on load
@@ -1824,6 +1831,9 @@
             
             if (!document.getElementById('dbStatsTableBody')) return; // Guard for non-admin context if any
             
+            const daysSelect = document.getElementById('cameraDiagnosticDays');
+            const days = daysSelect ? daysSelect.value : 3;
+            
             // Set loading indicators
             document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="3" class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
             document.getElementById('unmappedSalespeopleContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
@@ -1831,7 +1841,7 @@
             document.getElementById('offlineCamerasContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
             
             try {
-                const res = await fetch(`${API_BASE}/api/admin/it_diagnostics`, {
+                const res = await fetch(`${API_BASE}/api/admin/it_diagnostics?days=${days}`, {
                     headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
                 });
                 
@@ -1848,7 +1858,7 @@
                         dbStatsHtml += `
                             <tr>
                                 <td><code class="text-primary fw-bold" style="font-size:0.75rem;">${tbl.table_name}</code></td>
-                                <td class="fw-bold text-dark">${tbl.row_count.toLocaleString()}</td>
+                                <td>${tbl.row_count === -1 ? 'خطأ' : tbl.row_count.toLocaleString()}</td>
                                 <td><span class="badge bg-secondary">${tbl.size}</span></td>
                             </tr>
                         `;
@@ -1912,20 +1922,33 @@
                 document.getElementById('placeholderEmployeesContainer').innerHTML = placeholderHtml;
                 document.getElementById('badgePlaceholderCount').textContent = placeholderCount;
                 
-                // 4. Render Offline Cameras
+                // 4. Render Offline / Malfunctioning Counters
                 let camerasHtml = '';
                 let cameraCount = 0;
                 if (data.offline_cameras && data.offline_cameras.length > 0) {
                     cameraCount = data.offline_cameras.length;
                     data.offline_cameras.forEach(cam => {
+                        const dateFormatted = new Date(cam.date).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', weekday: 'short' });
+                        const badgeColor = cam.issue_type === 'completely_offline' ? 'bg-danger' : 'bg-warning text-dark';
+                        const statusLabel = cam.issue_type === 'completely_offline' ? 'متوقف تماماً (0 زوار)' : 'بث جزئي / متقطع';
+                        
                         camerasHtml += `
-                            <div class="list-group-item bg-white border-bottom d-flex justify-content-between align-items-center py-2">
-                                <div>
-                                    <strong class="text-danger" style="font-size:0.85rem;">${cam.branch}</strong>
-                                    <small class="text-muted d-block" style="font-size:0.75rem;">كود الفرع: ${cam.code}</small>
+                            <div class="list-group-item bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                                <div class="d-flex align-items-start gap-2">
+                                    <div class="mt-1">
+                                        <i class="fa-solid ${cam.issue_type === 'completely_offline' ? 'fa-ban text-danger' : 'fa-triangle-exclamation text-warning'} fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark" style="font-size:0.9rem;">${cam.branch}</strong>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge ${badgeColor} rounded-pill" style="font-size:0.7rem; padding: 2px 8px;">${statusLabel}</span>
+                                            <span class="text-muted" style="font-size:0.75rem;"><i class="fa-regular fa-calendar me-1"></i>${dateFormatted}</span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1" style="font-size:0.78rem;">${cam.details}</small>
+                                    </div>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-danger rounded-pill mb-1" style="font-size:0.7rem; padding: 3px 6px;">الزوار: ${cam.visitors_count}</span>
+                                    <span class="badge bg-secondary rounded-pill mb-1" style="font-size:0.7rem; padding: 3px 6px;">الزوار: ${cam.visitors_count}</span>
                                     <small class="text-muted d-block" style="font-size:0.75rem;">المبيعات: ${cam.sales_amount.toLocaleString()} SAR</small>
                                 </div>
                             </div>
@@ -1935,7 +1958,7 @@
                     camerasHtml = `
                         <div class="text-center py-4 text-success">
                             <i class="fa-solid fa-circle-check fs-2 mb-2"></i>
-                            <div class="small fw-bold">جميع كاميرات الزوار نشطة وتبث البيانات!</div>
+                            <div class="small fw-bold">جميع العدادات نشطة وتبث البيانات بشكل سليم!</div>
                         </div>
                     `;
                 }
