@@ -1282,7 +1282,6 @@
             loadOffersData(); // Load Dynamics offers data
             loadUnmappedProductsData(); // Load unmapped products catalog
             loadDispatchShowroomsData(); // Load showrooms for report dispatch
-            loadDiscountAdjustments(); // Load manual showroom discounts
         });
 
         // Logout
@@ -3454,6 +3453,11 @@
                         'ngrok-skip-browser-warning': 'true'
                     }
                 });
+
+                if (res.status === 401) {
+                    itemsTbody.innerHTML = `<tr><td colspan="4" class="text-danger py-4 text-center fw-bold">❌ خطأ في الصلاحيات (401): يرجى تسجيل الخروج وإعادة تسجيل الدخول بالرقم السري الصحيح.</td></tr>`;
+                    return;
+                }
 
                 if (res.status === 404 || res.status === 500) {
                     const err = await res.json();
