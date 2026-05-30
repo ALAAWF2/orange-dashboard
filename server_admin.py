@@ -976,6 +976,194 @@ def send_selected_reports():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/finance/stats', methods=['GET', 'OPTIONS'])
+@requires_auth
+def get_finance_stats():
+    try:
+        import pandas as pd
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        if not start_date or not end_date:
+            return jsonify({"error": "start and end dates are required"}), 400
+            
+        with engine.connect() as conn:
+            # 1. Store list and metadata lookup
+            outlets_query = "SELECT outlet_name, dynamic_number FROM gofrugal_outlets_mapping WHERE dynamic_number IS NOT NULL"
+            df_outlets = pd.read_sql(outlets_query, conn)
+            df_outlets['dynamic_number'] = pd.to_numeric(df_outlets['dynamic_number'], errors='coerce').fillna(0).astype(int).astype(str)
+            store_map = dict(zip(df_outlets['dynamic_number'], df_outlets['outlet_name']))
+            
+            # 2. Main Store stats query
+            store_stats_q = text("""
+                SELECT 
+                    store_number,
+                    SUM(net_amount) as gross_sales,
+                    SUM(net_amount_excl_tax) as net_sales_excl_tax,
+                    SUM(tax_amount) as vat_collected,
+                    SUM(discount_amount) as discount_amount,
+                    SUM(CASE WHEN net_amount < 0 THEN net_amount ELSE 0 END) as returns,
+                    COUNT(DISTINCT transaction_id) as trans_count
+                FROM dynamic_sales_items
+                WHERE item_date >= :start AND item_date <= :end
+                  AND transaction_status != 'Voided'
+                GROUP BY store_number
+            """)
+            df_stats = pd.read_sql(store_stats_q, conn, params={"start": start_date, "end": end_date})
+            
+            # 3. Overall summary calculations
+            gross_sum = float(df_stats["gross_sales"].sum() or 0)
+            net_sum = float(df_stats["net_sales_excl_tax"].sum() or 0)
+            vat_sum = float(df_stats["vat_collected"].sum() or 0)
+            disc_sum = float(df_stats["discount_amount"].sum() or 0)
+            returns_sum = float(df_stats["returns"].sum() or 0)
+            
+            # Showroom vs Online classification
+            showroom_vat = 0.0
+            online_vat = 0.0
+            
+            stores_list = []
+            for _, row in df_stats.iterrows():
+                sid = str(row['store_number'])
+                name = store_map.get(sid, f"معرض {sid}")
+                
+                gross_val = float(row['gross_sales'] or 0)
+                net_val = float(row['net_sales_excl_tax'] or 0)
+                vat_val = float(row['vat_collected'] or 0)
+                disc_val = float(row['discount_amount'] or 0)
+                ret_val = float(row['returns'] or 0)
+                t_count = int(row['trans_count'] or 0)
+                
+                # Classification
+                is_online = 'warehouse' in name.lower() or 'platform' in name.lower()
+                if is_online:
+                    online_vat += vat_val
+                else:
+                    showroom_vat += vat_val
+                    
+                stores_list.append({
+                    "id": sid,
+                    "name": name,
+                    "gross": gross_val,
+                    "net": net_val,
+                    "vat": vat_val,
+                    "discount": disc_val,
+                    "returns": ret_val,
+                    "trans_count": t_count
+                })
+                
+            # Sort stores by gross sales descending
+            stores_list.sort(key=lambda x: x['gross'], reverse=True)
+            
+            return jsonify({
+                "summary": {
+                    "gross_sales": gross_sum,
+                    "net_sales_excl_tax": net_sum,
+                    "vat_collected": vat_sum,
+                    "discount_amount": disc_sum,
+                    "returns": returns_sum,
+                    "showroom_vat": showroom_vat,
+                    "online_vat": online_vat
+                },
+                "stores": stores_list
+            })
+            
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/finance/tax-report', methods=['GET', 'OPTIONS'])
+@requires_auth
+def get_tax_excel_report():
+    try:
+        import io
+        import pandas as pd
+        
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        if not start_date or not end_date:
+            return "Start and end dates are required", 400
+            
+        with engine.connect() as conn:
+            # 1. Fetch Store Names Map
+            outlets_query = "SELECT outlet_name, dynamic_number FROM gofrugal_outlets_mapping WHERE dynamic_number IS NOT NULL"
+            df_outlets = pd.read_sql(outlets_query, conn)
+            df_outlets['dynamic_number'] = pd.to_numeric(df_outlets['dynamic_number'], errors='coerce').fillna(0).astype(int).astype(str)
+            store_map = dict(zip(df_outlets['dynamic_number'], df_outlets['outlet_name']))
+
+            # 2. Fetch Bills
+            bills_q = text("""
+                SELECT 
+                    bill_date as "التاريخ",
+                    store_number as "كود المعرض",
+                    transaction_id as "رقم الفاتورة",
+                    payment_amount as "مبلغ الدفع"
+                FROM dynamic_sales_bills
+                WHERE bill_date >= :start AND bill_date <= :end
+                ORDER BY bill_date ASC, transaction_id ASC
+            """)
+            df_bills = pd.read_sql(bills_q, conn, params={"start": start_date, "end": end_date})
+            
+            # Map Store names to Bills
+            df_bills["اسم المعرض"] = df_bills["كود المعرض"].map(store_map)
+            # Reorder columns
+            bills_columns = ["التاريخ", "كود المعرض", "اسم المعرض", "رقم الفاتورة", "مبلغ الدفع"]
+            df_bills = df_bills[bills_columns]
+            
+            # 3. Fetch Items
+            items_q = text("""
+                SELECT 
+                    item_date as "التاريخ",
+                    store_number as "كود المعرض",
+                    transaction_id as "رقم الفاتورة",
+                    item_id as "رقم الصنف",
+                    quantity as "الكمية",
+                    net_amount as "المبلغ شامل الضريبة",
+                    net_amount_excl_tax as "المبلغ قبل الضريبة",
+                    tax_amount as "مبلغ الضريبة",
+                    tax_percent as "نسبة الضريبة",
+                    tax_item_group as "التصنيف الضريبي",
+                    discount_amount as "قيمة الخصم",
+                    return_transaction_id as "رقم فاتورة الشراء الأصلية",
+                    sales_group as "مجموعة المبيعات"
+                FROM dynamic_sales_items
+                WHERE item_date >= :start AND item_date <= :end
+                  AND transaction_status != 'Voided'
+                ORDER BY item_date ASC, transaction_id ASC, line_number ASC
+            """)
+            df_items = pd.read_sql(items_q, conn, params={"start": start_date, "end": end_date})
+            
+            # Map Store names to Items
+            df_items["اسم المعرض"] = df_items["كود المعرض"].map(store_map)
+            # Reorder columns
+            items_columns = [
+                "التاريخ", "كود المعرض", "اسم المعرض", "رقم الفاتورة", "رقم الصنف", "الكمية", 
+                "المبلغ شامل الضريبة", "المبلغ قبل الضريبة", "مبلغ الضريبة", "نسبة الضريبة", 
+                "التصنيف الضريبي", "قيمة الخصم", "رقم فاتورة الشراء الأصلية", "مجموعة المبيعات"
+            ]
+            df_items = df_items[items_columns]
+            
+        # 4. Generate Excel in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_bills.to_excel(writer, sheet_name="ملخص الفواتير", index=False)
+            df_items.to_excel(writer, sheet_name="تفاصيل الأصناف الضريبية", index=False)
+            
+        output.seek(0)
+        
+        response = make_response(output.read())
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response.headers['Content-Disposition'] = f'attachment; filename=Orange_Tax_Report_{start_date}_to_{end_date}.xlsx'
+        
+        return response
+        
+    except Exception as e:
+        traceback.print_exc()
+        return str(e), 500
+
+
 if __name__ == '__main__':
     # Listen on all interfaces
     print("Starting Admin Server on 0.0.0.0:5000...")

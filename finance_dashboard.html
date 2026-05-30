@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم المالية | Orange Dashboard</title>
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #fe7900;
+            --primary-light: #fff3e0;
+            --primary-dark: #cc6000;
+            --bg-light: #f8f9fa;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            --card-radius: 16px;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg-light);
+            color: #2b2b2b;
+            min-height: 100vh;
+        }
+
+        /* Navbar Styling */
+        .navbar {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            background: white !important;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: #000 !important;
+        }
+
+        .brand-orange {
+            color: var(--primary);
+        }
+
+        .user-badge {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+        }
+
+        /* Main Container */
+        .dashboard-container {
+            padding: 2rem 1.5rem;
+        }
+
+        /* KPI Cards */
+        .kpi-card {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            border-right: 4px solid var(--primary);
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(254, 121, 0, 0.08);
+        }
+
+        .kpi-icon-container {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-left: 20px;
+        }
+
+        .kpi-info h6 {
+            font-size: 0.85rem;
+            color: #828282;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .kpi-info h3 {
+            font-size: 1.65rem;
+            font-weight: 800;
+            margin-bottom: 0;
+        }
+
+        /* Specific KPI Card Colors */
+        .kpi-gross { border-right-color: #0d6efd; }
+        .kpi-gross .kpi-icon-container { background-color: #e7f1ff; color: #0d6efd; }
+        
+        .kpi-net { border-right-color: #198754; }
+        .kpi-net .kpi-icon-container { background-color: #d1e7dd; color: #198754; }
+
+        .kpi-vat { border-right-color: var(--primary); }
+        .kpi-vat .kpi-icon-container { background-color: var(--primary-light); color: var(--primary); }
+
+        .kpi-discount { border-right-color: #ffc107; }
+        .kpi-discount .kpi-icon-container { background-color: #fff8e1; color: #ffc107; }
+
+        .kpi-returns { border-right-color: #dc3545; }
+        .kpi-returns .kpi-icon-container { background-color: #f8d7da; color: #dc3545; }
+
+        /* Filter Section */
+        .filter-card {
+            background: white;
+            border: none;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .btn-primary-custom {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            font-weight: bold;
+            padding: 10px 24px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary-custom:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+            color: white;
+        }
+
+        .btn-outline-custom {
+            background: none;
+            border: 1px solid #ced4da;
+            color: #4f4f4f;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-outline-custom:hover, .btn-outline-custom.active {
+            background-color: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Tables & Charts Panels */
+        .content-panel {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .panel-title {
+            font-weight: 700;
+            font-size: 1.15rem;
+            margin-bottom: 20px;
+            border-right: 4px solid var(--primary);
+            padding-right: 12px;
+            color: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-custom th {
+            background-color: #f1f3f5;
+            color: #4f4f4f;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border: none;
+            padding: 12px 16px;
+        }
+
+        .table-custom td {
+            padding: 14px 16px;
+            font-size: 0.9rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .table-custom tbody tr:hover {
+            background-color: #fafafa;
+        }
+
+        /* Log out button */
+        .logout-btn {
+            color: #dc3545;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #fff5f5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <span class="brand-orange me-2">ORANGE</span> DASHBOARD <span class="ms-2 fs-6 text-muted fw-bold">| الإدارة المالية</span>
+            </a>
+            
+            <div class="d-flex align-items-center gap-3">
+                <span class="user-badge" id="userBadge"><i class="fa-solid fa-user-tie me-1"></i> الإدارة المالية</span>
+                <a href="#" onclick="logout()" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid dashboard-container">
+        
+        <!-- Filters Panel -->
+        <div class="filter-card">
+            <div class="row align-items-end g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-muted small">تاريخ البداية</label>
+                    <input type="date" id="startDate" class="form-control py-2">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-muted small">تاريخ النهاية</label>
+                    <input type="date" id="endDate" class="form-control py-2">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-muted small d-block">فترات سريعة</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button onclick="setFilterDates('today')" class="btn btn-outline-custom py-2">اليوم</button>
+                        <button onclick="setFilterDates('yesterday')" class="btn btn-outline-custom py-2">أمس</button>
+                        <button onclick="setFilterDates('last7days')" class="btn btn-outline-custom py-2">آخر 7 أيام</button>
+                        <button onclick="setFilterDates('thisMonth')" class="btn btn-outline-custom py-2 active">هذا الشهر</button>
+                        <button onclick="setFilterDates('lastMonth')" class="btn btn-outline-custom py-2">الشهر الماضي</button>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button onclick="loadFinancialData()" class="btn btn-primary-custom w-100 py-2"><i class="fa-solid fa-rotate me-1"></i> عرض البيانات</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-md">
+                <div class="kpi-card kpi-gross">
+                    <div class="kpi-icon-container">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <h6>المبيعات شاملة الضريبة (Gross)</h6>
+                        <h3 id="kpiGross">0.00 ر.س</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="kpi-card kpi-net">
+                    <div class="kpi-icon-container">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <h6>المبيعات الصافية قبل الضريبة (Net)</h6>
+                        <h3 id="kpiNet">0.00 ر.س</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="kpi-card kpi-vat">
+                    <div class="kpi-icon-container">
+                        <i class="fa-solid fa-percent"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <h6>ضريبة القيمة المضافة المحصلة (VAT)</h6>
+                        <h3 id="kpiVat">0.00 ر.س</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="kpi-card kpi-discount">
+                    <div class="kpi-icon-container">
+                        <i class="fa-solid fa-tags"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <h6>إجمالي الخصومات الممنوحة</h6>
+                        <h3 id="kpiDiscount">0.00 ر.س</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="kpi-card kpi-returns">
+                    <div class="kpi-icon-container">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <h6>المرتجعات شاملة الضريبة</h6>
+                        <h3 id="kpiReturns">0.00 ر.س</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Store Tax Table Panel -->
+            <div class="col-lg-8">
+                <div class="content-panel h-100">
+                    <div class="panel-title">
+                        <span>تقرير الضريبة على مستوى الفروع والمبيعات</span>
+                        <button onclick="downloadExcelReport()" class="btn btn-success btn-sm px-3 py-2 fw-bold" style="border-radius: 8px;">
+                            <i class="fa-solid fa-file-excel me-1"></i> تصدير تقرير الضرائب (Excel)
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>المعرض</th>
+                                    <th class="text-end">شامل الضريبة (Gross)</th>
+                                    <th class="text-end">قبل الضريبة (Net)</th>
+                                    <th class="text-end">مبلغ الضريبة (VAT)</th>
+                                    <th class="text-end">الخصومات الممنوحة</th>
+                                    <th class="text-end">المرتجع شامل الضريبة</th>
+                                    <th class="text-end">عدد الفواتير</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financialTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VAT Classification Chart Panel -->
+            <div class="col-lg-4">
+                <div class="content-panel h-100">
+                    <div class="panel-title">توزيع مبيعات المعارض ضريبياً</div>
+                    <div class="d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                        <canvas id="vatChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Auth check
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser || currentUser.role !== 'Finance') {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('userBadge').innerHTML = `<i class="fa-solid fa-user-tie me-1"></i> ${currentUser.name}`;
+        }
+
+        // Initialize Dates
+        window.addEventListener('DOMContentLoaded', () => {
+            setFilterDates('thisMonth');
+            loadFinancialData();
+        });
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+
+        // Date helper
+        function setFilterDates(period) {
+            const today = new Date();
+            let start, end;
+
+            // Reset active button
+            document.querySelectorAll('.btn-outline-custom').forEach(btn => btn.classList.remove('active'));
+            event?.target?.classList?.add('active');
+
+            if (period === 'today') {
+                start = today;
+                end = today;
+            } else if (period === 'yesterday') {
+                const yesterday = new Date();
+                yesterday.setDate(today.getDate() - 1);
+                start = yesterday;
+                end = yesterday;
+            } else if (period === 'last7days') {
+                const last7 = new Date();
+                last7.setDate(today.getDate() - 6);
+                start = last7;
+                end = today;
+            } else if (period === 'thisMonth') {
+                start = new Date(today.getFullYear(), today.getMonth(), 1);
+                end = today;
+            } else if (period === 'lastMonth') {
+                start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                end = new Date(today.getFullYear(), today.getMonth(), 0);
+            }
+
+            document.getElementById('startDate').value = formatDate(start);
+            document.getElementById('endDate').value = formatDate(end);
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        let vatChartInstance = null;
+
+        // Fetch local financial statistics
+        async function loadFinancialData() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+
+            try {
+                // Fetch directly from server_admin Flask API
+                const authHeader = 'Basic ' + btoa('alaa:orange123'); // Safe internally hardcoded credential matching server
+                const r = await fetch(`http://localhost:5000/api/finance/stats?start=${start}&end=${end}`, {
+                    headers: {
+                        'Authorization': authHeader
+                    }
+                });
+                
+                if (!r.ok) throw new Error('API Error');
+                const data = await r.json();
+
+                // 1. Populate KPIs
+                document.getElementById('kpiGross').textContent = formatCurrency(data.summary.gross_sales);
+                document.getElementById('kpiNet').textContent = formatCurrency(data.summary.net_sales_excl_tax);
+                document.getElementById('kpiVat').textContent = formatCurrency(data.summary.vat_collected);
+                document.getElementById('kpiDiscount').textContent = formatCurrency(data.summary.discount_amount);
+                document.getElementById('kpiReturns').textContent = formatCurrency(data.summary.returns);
+
+                // 2. Populate Table
+                const tbody = document.getElementById('financialTableBody');
+                tbody.innerHTML = '';
+
+                data.stores.forEach(store => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="fw-bold">${store.name}</td>
+                        <td class="text-end fw-bold text-primary">${formatCurrency(store.gross)}</td>
+                        <td class="text-end">${formatCurrency(store.net)}</td>
+                        <td class="text-end text-success">${formatCurrency(store.vat)}</td>
+                        <td class="text-end text-warning">${formatCurrency(store.discount)}</td>
+                        <td class="text-end text-danger">${formatCurrency(store.returns)}</td>
+                        <td class="text-end fw-bold">${store.trans_count.toLocaleString()}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                // 3. Render Distribution Chart
+                renderChart(data.summary.showroom_vat, data.summary.online_vat);
+
+            } catch (err) {
+                console.error("Failed to load financial data:", err);
+                alert("حدث خطأ أثناء تحميل البيانات. يرجى التأكد من تشغيل خادم الإدارة (server_admin.py).");
+            }
+        }
+
+        function formatCurrency(val) {
+            return parseFloat(val || 0).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+        }
+
+        function renderChart(showroomVat, onlineVat) {
+            const ctx = document.getElementById('vatChart').getContext('2d');
+            
+            if (vatChartInstance) {
+                vatChartInstance.destroy();
+            }
+
+            vatChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['المعارض الفروع', 'الأونلاين والمستودع'],
+                    datasets: [{
+                        data: [showroomVat, onlineVat],
+                        backgroundColor: ['#fe7900', '#2d3436'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'Tajawal',
+                                    size: 13,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Trigger tax report excel download
+        function downloadExcelReport() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            
+            // Redirect browser directly to the Flask download URL
+            const url = `http://localhost:5000/api/finance/tax-report?start=${start}&end=${end}`;
+            
+            // To pass Basic Auth in a download link, we can open it directly or fetch it
+            // Since we need Auth, the best UX is to create a temp link with basic auth in the url or open it
+            const secureUrl = `http://alaa:orange123@localhost:5000/api/finance/tax-report?start=${start}&end=${end}`;
+            window.open(secureUrl, '_blank');
+        }
+    </script>
+
+</body>
+
+</html>
