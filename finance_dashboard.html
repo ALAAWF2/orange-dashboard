@@ -433,6 +433,16 @@
             return date.toISOString().split('T')[0];
         }
 
+        // Configuration
+        let API_BASE = window.location.origin;
+        if (!API_BASE || API_BASE.startsWith('file://') || API_BASE.includes('github.io')) {
+            API_BASE = "http://localhost:5000";
+        }
+        const storedIp = sessionStorage.getItem('serverIp');
+        if (storedIp) {
+            API_BASE = storedIp;
+        }
+
         let vatChartInstance = null;
 
         // Fetch local financial statistics
@@ -441,9 +451,9 @@
             const end = document.getElementById('endDate').value;
 
             try {
-                // Fetch directly from server_admin Flask API
-                const authHeader = 'Basic ' + btoa('alaa:orange123'); // Safe internally hardcoded credential matching server
-                const r = await fetch(`http://localhost:5000/api/finance/stats?start=${start}&end=${end}`, {
+                // Dynamically resolve auth header using logged in user's Arabic/UTF-8 credentials
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const r = await fetch(`${API_BASE}/api/finance/stats?start=${start}&end=${end}`, {
                     headers: {
                         'Authorization': authHeader
                     }
@@ -472,7 +482,7 @@
                         <td class="text-end text-success">${formatCurrency(store.vat)}</td>
                         <td class="text-end text-warning">${formatCurrency(store.discount)}</td>
                         <td class="text-end text-danger">${formatCurrency(store.returns)}</td>
-                        <td class="text-end fw-bold">${store.trans_count.toLocaleString()}</td>
+                        <td class="text-end fw-bold">${store.trans_count.toLocaleString('en-US')}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -482,12 +492,12 @@
 
             } catch (err) {
                 console.error("Failed to load financial data:", err);
-                alert("حدث خطأ أثناء تحميل البيانات. يرجى التأكد من تشغيل خادم الإدارة (server_admin.py).");
+                alert("حدث خطأ أثناء تحميل البيانات. يرجى التأكد من تشغيل خادم الإدارة (dashboard_server/server.py).");
             }
         }
 
         function formatCurrency(val) {
-            return parseFloat(val || 0).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+            return parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ر.س';
         }
 
         function renderChart(showroomVat, onlineVat) {
@@ -525,18 +535,44 @@
             });
         }
 
-        // Trigger tax report excel download
-        function downloadExcelReport() {
+        // Trigger tax report excel download securely via blob fetch
+        async function downloadExcelReport() {
             const start = document.getElementById('startDate').value;
             const end = document.getElementById('endDate').value;
             
-            // Redirect browser directly to the Flask download URL
-            const url = `http://localhost:5000/api/finance/tax-report?start=${start}&end=${end}`;
-            
-            // To pass Basic Auth in a download link, we can open it directly or fetch it
-            // Since we need Auth, the best UX is to create a temp link with basic auth in the url or open it
-            const secureUrl = `http://alaa:orange123@localhost:5000/api/finance/tax-report?start=${start}&end=${end}`;
-            window.open(secureUrl, '_blank');
+            const btn = event?.target || document.querySelector('button[onclick="downloadExcelReport()"]');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري التحضير...';
+
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const r = await fetch(`${API_BASE}/api/finance/tax-report?start=${start}&end=${end}`, {
+                    headers: {
+                        'Authorization': authHeader
+                    }
+                });
+
+                if (!r.ok) {
+                    throw new Error(`فشل تحميل الملف: ${r.statusText}`);
+                }
+
+                const blob = await r.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Orange_Tax_Report_${start}_to_${end}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Failed to download tax report:", err);
+                alert("حدث خطأ أثناء تحميل التقرير: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
     </script>
 
