@@ -683,7 +683,6 @@
                                 <h4 class="fw-bold mb-0"><i class="fa-solid fa-screwdriver-wrench text-orange me-2"></i> مركز تدقيق وتشخيص النظام والربط (IT Diagnostic Center)</h4>
                                 <span class="badge bg-danger" id="itDiagnosticAlertsCount" style="font-size: 0.8rem; padding: 6px 10px;">0 تنبيه نشط</span>
                             </div>
-                            <p class="text-muted small">فحص برمي متقدم وذكي للربط الحي مع Dynamics وقاعدة بيانات PostgreSQL المباشرة.</p>
                             
                             <div class="accordion mt-3" id="itDiagnosticsAccordion">
                                 
@@ -706,6 +705,7 @@
                                                     <thead class="table-light">
                                                         <tr>
                                                             <th>اسم الجدول</th>
+                                                            <th>وصف الجدول</th>
                                                             <th>عدد السجلات</th>
                                                             <th>الحجم الكلي</th>
                                                         </tr>
@@ -1840,7 +1840,7 @@
             const days = daysSelect ? daysSelect.value : 3;
             
             // Set loading indicators
-            document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="3" class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+            document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="4" class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
             document.getElementById('unmappedSalespeopleContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
             document.getElementById('placeholderEmployeesContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
             document.getElementById('offlineCamerasContainer').innerHTML = '<div class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...</div>';
@@ -1860,16 +1860,30 @@
                 let dbStatsHtml = '';
                 if (data.db_stats && data.db_stats.length > 0) {
                     data.db_stats.forEach(tbl => {
+                        const colsList = tbl.columns || [];
                         dbStatsHtml += `
-                            <tr>
-                                <td><code class="text-primary fw-bold" style="font-size:0.75rem;">${tbl.table_name}</code></td>
+                            <tr onclick="toggleTableColumns('${tbl.table_name}')" style="cursor: pointer; transition: background-color 0.2s;">
+                                <td class="text-start ps-3">
+                                    <code class="text-primary fw-bold" style="font-size:0.75rem;">
+                                        <i class="fa-solid fa-chevron-down me-1 small text-muted" id="icon-${tbl.table_name}"></i> ${tbl.table_name}
+                                    </code>
+                                </td>
+                                <td class="text-start ps-3 text-muted" style="font-size:0.78rem;">${tbl.description || 'لا يوجد وصف'}</td>
                                 <td>${tbl.row_count === -1 ? 'خطأ' : tbl.row_count.toLocaleString()}</td>
                                 <td><span class="badge bg-secondary">${tbl.size}</span></td>
+                            </tr>
+                            <tr id="cols-${tbl.table_name}" class="d-none bg-light">
+                                <td colspan="4" class="text-start p-3 border-top-0">
+                                    <div class="d-flex flex-wrap gap-2 align-items-center ps-4" style="line-height: 2;">
+                                        <span class="text-muted fw-bold small"><i class="fa-solid fa-list-check text-orange me-1"></i> الأعمدة (${colsList.length}):</span>
+                                        ${colsList.map(col => `<span class="badge bg-white text-dark border px-2 py-1 small" style="font-family: Consolas, monospace; font-size:0.74rem; border-radius: 4px;">${col}</span>`).join('')}
+                                    </div>
+                                </td>
                             </tr>
                         `;
                     });
                 } else {
-                    dbStatsHtml = '<tr><td colspan="3" class="text-muted">لا تتوفر إحصائيات.</td></tr>';
+                    dbStatsHtml = '<tr><td colspan="4" class="text-muted">لا تتوفر إحصائيات.</td></tr>';
                 }
                 document.getElementById('dbStatsTableBody').innerHTML = dbStatsHtml;
                 
@@ -1982,7 +1996,30 @@
                 
             } catch (err) {
                 console.error("IT Audit Error: ", err);
-                document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="3" class="text-danger">فشل جلب البيانات من الخادم.</td></tr>';
+                document.getElementById('dbStatsTableBody').innerHTML = '<tr><td colspan="4" class="text-danger">فشل جلب البيانات من الخادم.</td></tr>';
+            }
+        }
+
+        // Toggle Table Columns Dropdown
+        function toggleTableColumns(tableName) {
+            const row = document.getElementById(`cols-${tableName}`);
+            const icon = document.getElementById(`icon-${tableName}`);
+            if (row) {
+                if (row.classList.contains('d-none')) {
+                    row.classList.remove('d-none');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                        icon.classList.add('text-orange');
+                    }
+                } else {
+                    row.classList.add('d-none');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.remove('text-orange');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                }
             }
         }
 
