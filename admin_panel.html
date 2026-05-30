@@ -639,17 +639,30 @@
             <!-- Tab 3: Employee Dynamics 365 Mappings Portal -->
             <div class="tab-pane fade" id="employees-content" role="tabpanel">
                 <div class="glass-card mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
-                            <h4 class="fw-bold mb-1"><i class="fa-solid fa-id-card text-orange me-2"></i> بوابة إدارة موظفي الفروع (D365 Mappings)</h4>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-id-card me-2"></i> بوابة إدارة موظفي الفروع (D365 Mappings)</h4>
                             <p class="text-muted small mb-0">ربط ونقل الموظفين بين المعارض وإدارة فهارس العناوين (Address Books) في قاعدة بيانات Microsoft Dynamics 365 فورياً.</p>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="fw-bold small text-muted text-nowrap">تصفية حسب المدير:</label>
-                            <select id="empManagerFilter" class="form-select form-select-dark select-sm" style="width: 200px;" onchange="renderEmployeesTable()">
+                    </div>
+
+                    <!-- Filter Options Panel -->
+                    <div class="row g-2 mb-4">
+                        <div class="col-md-3">
+                            <input type="text" id="empSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو رقم الموظف..." oninput="renderEmployeesTable()">
+                        </div>
+                        <div class="col-md-3">
+                            <select id="empShowroomFilter" class="form-select form-select-dark" onchange="renderEmployeesTable()">
+                                <option value="all">كل المعارض (D365 Showrooms)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="empManagerFilter" class="form-select form-select-dark" onchange="renderEmployeesTable()">
                                 <option value="all">كل مدراء المناطق</option>
                             </select>
-                            <button class="btn btn-orange-premium btn-sm" onclick="syncD365Portal()"><i class="fa-solid fa-sync"></i> تحديث المزامنة</button>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button class="btn btn-orange-premium w-100 fw-bold" onclick="syncD365Portal()"><i class="fa-solid fa-sync me-1"></i> تحديث المزامنة</button>
                         </div>
                     </div>
 
@@ -669,6 +682,34 @@
                                 <!-- Injected dynamically from data.js -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Quick Statistics Row -->
+                    <div class="row g-3 mt-4 pt-3 border-top">
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded border text-center">
+                                <span class="text-muted small d-block mb-1"><i class="fa-solid fa-users text-primary me-1"></i> إجمالي موظفي المعارض</span>
+                                <strong class="fs-5 text-dark" id="statTotalEmps">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded border text-center">
+                                <span class="text-muted small d-block mb-1"><i class="fa-solid fa-clone text-danger me-1"></i> موظفون في معارض متعددة</span>
+                                <strong class="fs-5 text-danger" id="statMultiStoreEmps">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded border text-center">
+                                <span class="text-muted small d-block mb-1"><i class="fa-solid fa-user-slash text-warning me-1"></i> موظفون بلا فروع معينة</span>
+                                <strong class="fs-5 text-warning" id="statZeroStoreEmps">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded border text-center">
+                                <span class="text-muted small d-block mb-1"><i class="fa-solid fa-user-check text-success me-1"></i> موظفون ملتزمون بفرع واحد</span>
+                                <strong class="fs-5 text-success" id="statSingleStoreEmps">0</strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1613,7 +1654,7 @@
             const filter = document.getElementById('empManagerFilter');
             const seen = new Set();
             
-            if (typeof EMPLOYEES !== "undefined") {
+            if (typeof EMPLOYEES !== "undefined" && filter) {
                 EMPLOYEES.forEach(emp => {
                     if (emp.manager && !seen.has(emp.manager)) {
                         seen.add(emp.manager);
@@ -1622,6 +1663,18 @@
                         opt.textContent = emp.manager;
                         filter.appendChild(opt);
                     }
+                });
+            }
+
+            // Populate Showrooms Filter Dropdown
+            const showroomFilter = document.getElementById('empShowroomFilter');
+            if (typeof ALL_SHOWROOMS !== "undefined" && showroomFilter) {
+                showroomFilter.innerHTML = '<option value="all">كل المعارض (D365 Showrooms)</option>';
+                ALL_SHOWROOMS.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(shw => {
+                    const opt = document.createElement('option');
+                    opt.value = shw.name;
+                    opt.textContent = shw.name;
+                    showroomFilter.appendChild(opt);
                 });
             }
 
@@ -1636,34 +1689,85 @@
                     const opt1 = document.createElement('option');
                     opt1.value = codesStr;
                     opt1.textContent = shw.name;
-                    toSelect.appendChild(opt1);
+                    if (toSelect) toSelect.appendChild(opt1);
                     
                     const opt2 = document.createElement('option');
                     opt2.value = codesStr;
                     opt2.textContent = shw.name;
-                    addSelect.appendChild(opt2);
+                    if (addSelect) addSelect.appendChild(opt2);
                 });
             }
         }
 
+        // Quick dynamic employee statistics calculator
+        function updateEmployeeStats() {
+            if (typeof EMPLOYEES === "undefined") return;
+
+            let total = EMPLOYEES.length;
+            let multi = 0;
+            let zero = 0;
+            let single = 0;
+
+            EMPLOYEES.forEach(emp => {
+                const count = emp.showroomDetails ? emp.showroomDetails.length : 0;
+                if (count > 1) multi++;
+                else if (count === 0) zero++;
+                else single++;
+            });
+
+            const statTotal = document.getElementById('statTotalEmps');
+            const statMulti = document.getElementById('statMultiStoreEmps');
+            const statZero = document.getElementById('statZeroStoreEmps');
+            const statSingle = document.getElementById('statSingleStoreEmps');
+
+            if (statTotal) statTotal.textContent = total;
+            if (statMulti) statMulti.textContent = multi;
+            if (statZero) statZero.textContent = zero;
+            if (statSingle) statSingle.textContent = single;
+        }
+
         function renderEmployeesTable() {
             const tbody = document.getElementById('employeesTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
-            const selectedManager = document.getElementById('empManagerFilter').value;
-            
             if (typeof EMPLOYEES === "undefined") {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-danger py-4">ملف المزامنة data.js مفقود أو معطوب.</td></tr>';
                 return;
             }
 
-            // Filter employees
-            const filtered = selectedManager === 'all' 
-                ? EMPLOYEES 
-                : EMPLOYEES.filter(emp => emp.manager === selectedManager);
+            const selectedManager = document.getElementById('empManagerFilter').value;
+            const selectedShowroom = document.getElementById('empShowroomFilter').value;
+            const searchQuery = document.getElementById('empSearchInput').value.trim().toLowerCase();
+
+            // Perform robust multi-layer filtering
+            const filtered = EMPLOYEES.filter(emp => {
+                // 1. Filter by Manager
+                if (selectedManager !== 'all' && emp.manager !== selectedManager) {
+                    return false;
+                }
+
+                // 2. Filter by Showroom
+                if (selectedShowroom !== 'all') {
+                    const hasShowroom = emp.showroomDetails && emp.showroomDetails.some(s => s.name === selectedShowroom);
+                    if (!hasShowroom) return false;
+                }
+
+                // 3. Filter by Search Query (Name or Personnel Number)
+                if (searchQuery) {
+                    const nameMatch = emp.name && emp.name.toLowerCase().includes(searchQuery);
+                    const personnelMatch = emp.personnelNumber && emp.personnelNumber.toLowerCase().includes(searchQuery);
+                    if (!nameMatch && !personnelMatch) return false;
+                }
+
+                return true;
+            });
+
+            // Update stats whenever list is drawn
+            updateEmployeeStats();
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-4">لا يوجد موظفون نشطون للمدير المختار.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-4">لا يوجد موظفون مطابقة لخيارات التصفية والبحث المحددة.</td></tr>';
                 return;
             }
 
@@ -1679,7 +1783,7 @@
                     <td class="text-warning">${emp.manager || 'غير معين'}</td>
                     <td>
                         <button class="btn btn-outline-warning btn-sm" onclick="openEmpManageModal('${emp.personnelNumber}')">
-                            <i class="fa-solid fa-gears"></i> إدارة ⚙️
+                             ⚙️ إدارة <i class="fa-solid fa-gears ms-1"></i>
                         </button>
                     </td>
                 `;
