@@ -378,10 +378,24 @@
     <script>
         // Auth check
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || currentUser.role !== 'Finance') {
+        if (!currentUser || (currentUser.role !== 'Finance' && currentUser.role !== 'Admin')) {
             window.location.href = 'login.html';
         } else {
             document.getElementById('userBadge').innerHTML = `<i class="fa-solid fa-user-tie me-1"></i> ${currentUser.name}`;
+            
+            // Add premium back to Admin Panel button for Admin users
+            if (currentUser.role === 'Admin') {
+                const navContainer = document.querySelector('.navbar .d-flex.align-items-center.gap-3');
+                if (navContainer) {
+                    const adminBtn = document.createElement('a');
+                    adminBtn.href = 'admin_panel.html';
+                    adminBtn.className = 'btn btn-outline-dark btn-sm fw-bold px-3';
+                    adminBtn.style.borderRadius = '20px';
+                    adminBtn.style.fontSize = '0.85rem';
+                    adminBtn.innerHTML = '<i class="fa-solid fa-screwdriver-wrench me-1" style="color: #fe7900;"></i> لوحة التحكم الإدارية';
+                    navContainer.insertBefore(adminBtn, navContainer.firstChild);
+                }
+            }
         }
 
         // Initialize Dates
