@@ -4522,25 +4522,6 @@ const EMPLOYEES = [
         "addressBooks": "1008-C;1008-E"
     },
     {
-        "employeeId": "4611-الهنوف سالم",
-        "personnelNumber": "4611",
-        "name": "الهنوف سالم",
-        "startDate": "2025-06-10",
-        "manager": "جهاد ايوبي",
-        "showroom": "1602-49-AlAhsa Mall",
-        "showroomDetails": [
-            {
-                "name": "1602-49-AlAhsa Mall",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "1602-C",
-                    "1602-E"
-                ]
-            }
-        ],
-        "addressBooks": "1602-C;1602-E"
-    },
-    {
         "employeeId": "4612-محمد الخيري",
         "personnelNumber": "4612",
         "name": "محمد الخيري",
