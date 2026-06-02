@@ -6917,7 +6917,7 @@ const EMPLOYEES = [
         "name": "شهير عبدالله",
         "startDate": "2026-02-10",
         "manager": "محمدكلو",
-        "showroom": "1113-51-Park Avenue Riyadh",
+        "showroom": "1113-51-Park Avenue Riyadh و 1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1113-51-Park Avenue Riyadh",
@@ -6926,9 +6926,17 @@ const EMPLOYEES = [
                     "1113-C",
                     "1113-E"
                 ]
+            },
+            {
+                "name": "1102-15-Riyadh Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1102-C",
+                    "1102-E"
+                ]
             }
         ],
-        "addressBooks": "1113-C;1113-E"
+        "addressBooks": "1113-C;1113-E;1102-C;1102-E"
     },
     {
         "employeeId": "4868-ريماس الرحيلي",
