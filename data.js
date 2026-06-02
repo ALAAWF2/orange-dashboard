@@ -612,7 +612,7 @@ const EMPLOYEES = [
         "name": "انس عبد القادر نوايا",
         "startDate": "2020-09-04",
         "manager": "رضوان عطيوي",
-        "showroom": "1302-14-Al Kamal Mall",
+        "showroom": "1302-14-Al Kamal Mall و 1301-11-Jouri Mall",
         "showroomDetails": [
             {
                 "name": "1302-14-Al Kamal Mall",
@@ -621,9 +621,17 @@ const EMPLOYEES = [
                     "1302-C",
                     "1302-E"
                 ]
+            },
+            {
+                "name": "1301-11-Jouri Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1301-C",
+                    "1301-E"
+                ]
             }
         ],
-        "addressBooks": "1302-C;1302-E"
+        "addressBooks": "1302-C;1302-E;1301-C;1301-E"
     },
     {
         "employeeId": "1271-Fadwa Rashed Aldosse",
