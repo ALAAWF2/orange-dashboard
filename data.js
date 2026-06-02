@@ -6917,18 +6917,18 @@ const EMPLOYEES = [
         "name": "شهير عبدالله",
         "startDate": "2026-02-10",
         "manager": "محمدكلو",
-        "showroom": "1104-29-Al Nakheel Mall Riyadh",
+        "showroom": "1113-51-Park Avenue Riyadh",
         "showroomDetails": [
             {
-                "name": "1104-29-Al Nakheel Mall Riyadh",
+                "name": "1113-51-Park Avenue Riyadh",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1104-C",
-                    "1104-E"
+                    "1113-C",
+                    "1113-E"
                 ]
             }
         ],
-        "addressBooks": "1104-C;1104-E"
+        "addressBooks": "1113-C;1113-E"
     },
     {
         "employeeId": "4868-ريماس الرحيلي",
