@@ -1627,6 +1627,45 @@
                             offer_names: itemOffersMap[pid] ? itemOffersMap[pid].join(' | ') : ''
                         });
                     }
+                } else if (viewMode === 'by_month' && searchType === 'sales_stock') {
+                    for (const key of Object.keys(itemAgg)) {
+                        const agg = itemAgg[key];
+                        const pid = agg.item_id;
+                        const month = agg.month;
+
+                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
+
+                        const prod = PRODUCTS[pid];
+                        if (!prod) continue;
+
+                        if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
+                        if (!matchConditions(prod, conditions)) continue;
+
+                        let totalStock = 0;
+                        if (prod.stock) {
+                            if (storeFilter !== 'all') {
+                                totalStock = prod.stock[storeFilter] || 0;
+                            } else {
+                                totalStock = prod.stock.total || 0;
+                            }
+                        }
+
+                        if (stockFilter === 'in_stock' && totalStock <= 0) continue;
+                        if (stockFilter === 'out_of_stock' && totalStock > 0) continue;
+                        if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
+
+                        results.push({
+                            item_id: pid,
+                            alias: prod.alias || '',
+                            name: prod.name || '',
+                            category: prod.category || '',
+                            price: prod.price || 0,
+                            qty: agg.qty,
+                            amount: Math.round(agg.amount * 100) / 100,
+                            stock_total: totalStock,
+                            month: month
+                        });
+                    }
                 } else {
                     // Default aggregated mode (and fallback for stock_only with by_store)
                     const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
@@ -1770,6 +1809,19 @@
                         case 8: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
+                } else if (isByMonth) {
+                    switch (col) {
+                        case 0: return 0;
+                        case 1: va = a.month || ''; vb = b.month || ''; break;
+                        case 2: va = a.alias; vb = b.alias; break;
+                        case 3: va = a.name; vb = b.name; break;
+                        case 4: va = a.category; vb = b.category; break;
+                        case 5: va = a.price; vb = b.price; break;
+                        case 6: va = a.qty; vb = b.qty; break;
+                        case 7: va = a.amount; vb = b.amount; break;
+                        case 8: va = a.stock_total; vb = b.stock_total; break;
+                        default: return 0;
+                    }
                 } else {
                     switch (col) {
                         case 0: return 0;
@@ -1822,6 +1874,7 @@
             const isByWeek = viewMode === 'by_week';
             const isByDay = viewMode === 'by_day';
 
+            const isByMonth = viewMode === 'by_month';
             // Update table headers based on view mode
             const thead = document.getElementById('mainTableHead');
             if (isByStore) {
@@ -1997,6 +2050,20 @@
                     html += `<tr>
                     <td>${i + 1}</td>
                     <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.period || ''}</td>
+                    <td style="font-family:monospace;font-weight:700">${r.alias}</td>
+                    <td>${r.name}</td>
+                    <td>${r.category}</td>
+                    <td>${r.price.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
+                    <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
+                    <td class="stock-cell">
+                        <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
+                    </td>
+                </tr>`;
+                } else if (isByMonth) {
+                    html += `<tr>
+                    <td>${i + 1}</td>
+                    <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.month || ''}</td>
                     <td style="font-family:monospace;font-weight:700">${r.alias}</td>
                     <td>${r.name}</td>
                     <td>${r.category}</td>
