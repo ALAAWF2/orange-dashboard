@@ -416,6 +416,7 @@
         let managedStores = [];
         let employeeHistory = {};
         let employeeNamesMap = {};
+        let isEditAllowed = true; // Lock state flag
 
         // Safe base64 utf-8 encoding function to handle Arabic characters in username
         function getUtf8Base64(str) {
@@ -628,6 +629,10 @@
                 });
                 const targetsData = await targetsRes.json();
                 globalEmpTargets = targetsData.employee_targets_raw || {};
+                
+                // Determine if manager is allowed to edit targets
+                const isManager = (currentUser.role === 'Manager');
+                isEditAllowed = !isManager || (targetsData.allow_manager_target_edit !== false);
 
                 // Selected year and month from 'targetMonth' input (format YYYY-MM)
                 const [selYear, selMonth] = month.split('-').map(Number);
@@ -744,6 +749,13 @@
         function renderEmployeesList(emps, container) {
             container.innerHTML = '';
 
+            if (!isEditAllowed) {
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert alert-warning text-center fw-bold py-3 mb-4';
+                warningDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i> عذراً، تم إيقاف تعديل المستهدفات مؤقتاً من قبل الإدارة العامة. يمكنك استعراض المستهدفات الحالية فقط.';
+                container.appendChild(warningDiv);
+            }
+
             emps.forEach((emp, idx) => {
                 const div = document.createElement('div');
                 div.className = 'emp-row';
@@ -779,6 +791,7 @@
                                 class="emp-input" 
                                 value="${targetVal}" 
                                 id="target-input-${idx}"
+                                ${isEditAllowed ? '' : 'disabled'}
                                 onchange="saveEmployeeTarget('${emp.id}', '${emp.name}', this.value, this)">
                         <span class="save-indicator" id="save-indicator-${idx}"><i class="fas fa-check-circle"></i></span>
                     </div>

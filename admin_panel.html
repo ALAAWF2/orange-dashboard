@@ -2534,6 +2534,18 @@
 
                 if (res.ok) {
                     alert(`✅ ${successMessage}`);
+                    
+                    // Check if current user credentials were changed and force logout if so
+                    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                    if (currentUser && usersDict[currentUser.name]) {
+                        const newPin = usersDict[currentUser.name].pin;
+                        if (newPin !== currentUser.pin) {
+                            alert("⚠️ لقد قمت بتغيير الرمز السري الخاص بك. سيتم تسجيل الخروج تلقائياً لتسجيل الدخول بالرمز الجديد.");
+                            logout();
+                            return;
+                        }
+                    }
+                    
                     await loadUsersData(); // Reload Table
                 } else {
                     const err = await res.json();
