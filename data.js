@@ -5974,25 +5974,6 @@ const EMPLOYEES = [
         "addressBooks": "2201-C;2201-E"
     },
     {
-        "employeeId": "4866-خلود الجعفري",
-        "personnelNumber": "4866",
-        "name": "خلود الجعفري",
-        "startDate": "2026-02-09",
-        "manager": "المنطقة الغربية",
-        "showroom": "1010-54-THE VILLAGE",
-        "showroomDetails": [
-            {
-                "name": "1010-54-THE VILLAGE",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1010-C",
-                    "1010-E"
-                ]
-            }
-        ],
-        "addressBooks": "1010-C;1010-E"
-    },
-    {
         "employeeId": "4867-ريم الشريف",
         "personnelNumber": "4867",
         "name": "ريم الشريف",
