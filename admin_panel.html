@@ -835,9 +835,14 @@
                     <!-- Target Change Audit Log -->
                     <div class="col-md-6">
                         <div class="glass-card">
-                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <h4 class="fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left text-orange me-2"></i> سجل العمليات والتعديلات الإدارية</h4>
-                                <button class="btn btn-outline-dark btn-sm" onclick="loadAuditLogs()"><i class="fa-solid fa-sync text-orange"></i></button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-outline-success btn-sm fw-bold px-3" onclick="exportAuditLogsToExcel()" style="border-radius: 20px;">
+                                        <i class="fa-solid fa-file-excel me-1"></i> تصدير إكسل
+                                    </button>
+                                    <button class="btn btn-outline-dark btn-sm" onclick="loadAuditLogs()"><i class="fa-solid fa-sync text-orange"></i></button>
+                                </div>
                             </div>
                             <p class="text-muted small">سجل يوضح تاريخ ووقت العمليات التي أجراها المسؤولون في تغيير الأهداف أو التعديلات.</p>
                             
@@ -1109,6 +1114,9 @@
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- SheetJS (XLSX) for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    
     <!-- Dynamically Generated data.js which contains unique global employees and mapping values -->
     <script src="data.js?t=<?= time() ?>"></script>
     
@@ -1191,6 +1199,7 @@
         let currentHourlyRowIndex = null;
         
         let allSystemUsers = {}; // Global cache for Alaa user management
+        let auditLogsCache = []; // Cache for admin operation logs to enable Excel export
 
         // Helper to format currency
         function formatSAR(val) {
@@ -2176,6 +2185,7 @@
 
                 if (!res.ok) throw new Error("Unauthorized or server error");
                 const logs = await res.json();
+                auditLogsCache = logs; // Cache the fetched logs for Excel export
 
                 tbody.innerHTML = '';
 
@@ -2204,6 +2214,60 @@
                 });
             } catch (e) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-danger py-3">فشل استدعاء السجلات الإدارية: ${e.message}</td></tr>`;
+            }
+        }
+
+        // Export Audit Logs to Excel
+        function exportAuditLogsToExcel() {
+            if (!auditLogsCache || auditLogsCache.length === 0) {
+                alert("لا توجد سجلات لتصديرها حالياً!");
+                return;
+            }
+
+            try {
+                // Construct Excel rows (RTL / Arabic friendly)
+                const excelRows = auditLogsCache.map(row => {
+                    const dateLocal = new Date(row.action_time).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+                    return {
+                        "الوقت": dateLocal,
+                        "المستخدم": row.operator_name,
+                        "الشهر": row.target_month,
+                        "النوع": row.target_type === 'Store' ? 'معرض (Store)' : 'موظف (Employee)',
+                        "الاسم": row.target_name,
+                        "المستهدف السابق": row.old_amount,
+                        "المستهدف الجديد": row.new_amount
+                    };
+                });
+
+                // Create worksheet
+                const ws = XLSX.utils.json_to_sheet(excelRows);
+
+                // Set layout to Right-to-Left (RTL) for Arabic language
+                if (!ws['!views']) ws['!views'] = [];
+                ws['!views'].push({ RTL: true });
+
+                // Set column widths
+                ws['!cols'] = [
+                    { wch: 22 }, // Time
+                    { wch: 18 }, // Operator
+                    { wch: 15 }, // Month
+                    { wch: 18 }, // Type
+                    { wch: 25 }, // Name
+                    { wch: 18 }, // Old Target
+                    { wch: 18 }  // New Target
+                ];
+
+                // Create workbook and append worksheet
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "سجل العمليات والتعديلات");
+
+                // Download Excel File
+                const filename = `سجل_العمليات_والتعديلات_الإدارية_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(wb, filename);
+
+            } catch (err) {
+                console.error("فشل تصدير سجل التعديلات الإدارية:", err);
+                alert("حدث خطأ أثناء محاولة التصدير إلى إكسل: " + err.message);
             }
         }
 
