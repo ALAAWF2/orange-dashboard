@@ -617,6 +617,21 @@
 
             <!-- Tab 2: Target & Visitor Override Editor -->
             <div class="tab-pane fade" id="targets-content" role="tabpanel">
+                
+                <!-- System Settings: Toggle Manager Target Editing -->
+                <div class="glass-card mb-4 border-start border-4 border-warning">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-user-lock text-warning me-2"></i> إذن تعديل المستهدفات لمدراء المناطق</h5>
+                            <p class="text-muted small mb-0">عند إيقاف هذا الإذن، لن يتمكن مدراء المناطق من تعديل مستهدفات موظفيهم عبر صفحة تعديل المستهدفات، وسيقتصر التعديل عليك فقط.</p>
+                        </div>
+                        <div class="form-check form-switch bg-white border rounded px-3 py-2 d-flex align-items-center gap-2" style="height: 46px; direction: rtl;">
+                            <input class="form-check-input ms-0" type="checkbox" id="toggleManagerEditSwitch" onchange="toggleManagerEditPermission(this.checked)" style="width: 44px; height: 22px; cursor: pointer;">
+                            <label class="form-check-label fw-bold text-dark small" for="toggleManagerEditSwitch" id="toggleManagerEditLabel" style="margin-right: 8px;">جاري التحميل...</label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="glass-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -1239,6 +1254,7 @@
             loadOffersData(); // Load Dynamics offers data
             loadUnmappedProductsData(); // Load unmapped products catalog
             loadDispatchShowroomsData(); // Load showrooms for report dispatch
+            loadSystemSettings(); // Load manager target editing permission
         });
 
         // Logout
@@ -2227,9 +2243,17 @@
             try {
                 // Construct Excel rows (RTL / Arabic friendly)
                 const excelRows = auditLogsCache.map(row => {
-                    const dateLocal = new Date(row.action_time).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+                    const d = new Date(row.action_time);
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    const ss = String(d.getSeconds()).padStart(2, '0');
+                    const dateFormatted = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+
                     return {
-                        "الوقت": dateLocal,
+                        "الوقت": dateFormatted,
                         "المستخدم": row.operator_name,
                         "الشهر": row.target_month,
                         "النوع": row.target_type === 'Store' ? 'معرض (Store)' : 'موظف (Employee)',
@@ -2268,6 +2292,61 @@
             } catch (err) {
                 console.error("فشل تصدير سجل التعديلات الإدارية:", err);
                 alert("حدث خطأ أثناء محاولة التصدير إلى إكسل: " + err.message);
+            }
+        }
+
+        // Toggle manager target edit permission
+        async function loadSystemSettings() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/settings`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (res.ok) {
+                    const settings = await res.json();
+                    const allowEdit = settings.allow_manager_target_edit !== 'false';
+                    
+                    const sw = document.getElementById('toggleManagerEditSwitch');
+                    const lbl = document.getElementById('toggleManagerEditLabel');
+                    if (sw && lbl) {
+                        sw.checked = allowEdit;
+                        lbl.textContent = allowEdit ? "مسموح بالتعديل ✅" : "مغلق ومحمي 🔒";
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load system settings:", e);
+            }
+        }
+
+        async function toggleManagerEditPermission(checked) {
+            const lbl = document.getElementById('toggleManagerEditLabel');
+            if (lbl) {
+                lbl.textContent = "...";
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/save_setting`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ key: 'allow_manager_target_edit', value: checked ? 'true' : 'false' })
+                });
+                
+                if (res.ok) {
+                    if (lbl) {
+                        lbl.textContent = checked ? "مسموح بالتعديل ✅" : "مغلق ومحمي 🔒";
+                    }
+                    alert(checked ? "🔓 تم فتح باب تعديل المستهدفات لمدراء المناطق بنجاح!" : "🔒 تم إغلاق وحظر تعديل المستهدفات على مدراء المناطق بنجاح!");
+                    loadAuditLogs(); // Refresh audit logs to show setting change
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل حفظ الإعداد: " + err.error);
+                    loadSystemSettings(); // Reset switch
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+                loadSystemSettings(); // Reset switch
             }
         }
 
