@@ -631,6 +631,14 @@
 
                 // Selected year and month from 'targetMonth' input (format YYYY-MM)
                 const [selYear, selMonth] = month.split('-').map(Number);
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const currentMonth = now.getMonth() + 1;
+                const isCurrentOrFuture = (selYear > currentYear) || (selYear === currentYear && selMonth >= currentMonth);
+
+                const limitDate = new Date();
+                limitDate.setDate(limitDate.getDate() - 30);
+                const limitDateStr = limitDate.toISOString().split('T')[0];
 
                 // 2. Scan ALL stores in history to perform global Primary Store determination!
                 const empAgg = {};
@@ -645,8 +653,10 @@
                         const dYear = d.getFullYear();
                         const dMonth = d.getMonth() + 1; // 1-12
 
-                        // Only process records within the selected month/year
-                        if (dYear === selYear && dMonth === selMonth) {
+                        const isSelectedMonth = (dYear === selYear && dMonth === selMonth);
+                        const isActiveRecent = (isCurrentOrFuture && date >= limitDateStr);
+
+                        if (isSelectedMonth || isActiveRecent) {
                             let empName = rawName;
                             let empId = rawName;
 
@@ -672,9 +682,11 @@
                                 };
                             }
 
-                            // Accumulate total monthly sales & transactions
-                            empAgg[empId].sales += sales || 0;
-                            empAgg[empId].transactions += trans || 0;
+                            // Accumulate total monthly sales & transactions if it's the selected month
+                            if (isSelectedMonth) {
+                                empAgg[empId].sales += sales || 0;
+                                empAgg[empId].transactions += trans || 0;
+                            }
 
                             // Track latest positive sales date per store to determine primary store
                             if ((sales || 0) > 0) {
@@ -705,81 +717,11 @@
                     // 1. Filter by selected store code (must match their Primary Store!)
                     if (e.storeCode !== storeCode) return false;
 
-                    // 2. Filter out non-active employees (exactly like employees.html!)
-                    if (e.sales === 0 && e.transactions === 0) return false;
+                    // 2. Filter out non-active employees for past months
+                    if (!isCurrentOrFuture && e.sales === 0 && e.transactions === 0) return false;
 
                     return true;
                 });
-
-                // Fallback: If no active records in selected month (e.g. future month), use last 60 days of history
-                if (emps.length === 0) {
-                    const fallbackAgg = {};
-                    const limitDate = new Date();
-                    limitDate.setDate(limitDate.getDate() - 60);
-                    const limitDateStr = limitDate.toISOString().split('T')[0];
-
-                    storesInHistory.forEach(sCode => {
-                        const records = employeeHistory[sCode] || [];
-                        records.forEach(rec => {
-                            const [date, rawName, sales, trans, items, maxTicket] = rec;
-                            if (date >= limitDateStr) {
-                                let empName = rawName;
-                                let empId = rawName;
-
-                                if (rawName.includes('-')) {
-                                    const parts = rawName.split('-');
-                                    empId = parts[0].trim();
-                                    empName = parts[1].trim();
-                                } else {
-                                    empId = rawName;
-                                }
-
-                                if (empName === 'مرتجع') return;
-                                if (employeeNamesMap[empId]) empName = employeeNamesMap[empId];
-
-                                if (!fallbackAgg[empId]) {
-                                    fallbackAgg[empId] = {
-                                        id: empId,
-                                        name: empName,
-                                        sales: 0,
-                                        transactions: 0,
-                                        latestDates: {},
-                                        storeCode: sCode
-                                    };
-                                }
-
-                                fallbackAgg[empId].sales += sales || 0;
-                                fallbackAgg[empId].transactions += trans || 0;
-
-                                if ((sales || 0) > 0) {
-                                    if (!fallbackAgg[empId].latestDates[sCode] || date > fallbackAgg[empId].latestDates[sCode]) {
-                                        fallbackAgg[empId].latestDates[sCode] = date;
-                                    }
-                                }
-                            }
-                        });
-                    });
-
-                    emps = Object.values(fallbackAgg).filter(e => {
-                        let bestStore = e.storeCode;
-                        let latestDate = "";
-
-                        if (Object.keys(e.latestDates).length > 0) {
-                            Object.entries(e.latestDates).forEach(([sCode, dStr]) => {
-                                if (dStr > latestDate) {
-                                    latestDate = dStr;
-                                    bestStore = sCode;
-                                }
-                            });
-                            e.storeCode = bestStore;
-                        }
-
-                        if (e.storeCode !== storeCode) return false;
-                        if (e.sales === 0 && e.transactions === 0) return false;
-
-                        return true;
-                    });
-                }
 
                 // Sort alphabetically
                 emps.sort((a, b) => a.name.localeCompare(b.name));
