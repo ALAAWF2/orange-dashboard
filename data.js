@@ -2556,44 +2556,6 @@ const EMPLOYEES = [
         "addressBooks": "1005-C;1005-E"
     },
     {
-        "employeeId": "4145-صالحه سعود القرشي",
-        "personnelNumber": "4145",
-        "name": "صالحه سعود القرشي",
-        "startDate": "2024-05-14",
-        "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall",
-        "showroomDetails": [
-            {
-                "name": "1201-08-Makkah Mall",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1201-C",
-                    "1201-E"
-                ]
-            }
-        ],
-        "addressBooks": "1201-C;1201-E"
-    },
-    {
-        "employeeId": "4147-ياسر غنايم الحربي",
-        "personnelNumber": "4147",
-        "name": "ياسر غنايم الحربي",
-        "startDate": "2024-05-14",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
-    },
-    {
         "employeeId": "4148-وعد هادي عبسي",
         "personnelNumber": "4148",
         "name": "وعد هادي عبسي",
@@ -5936,25 +5898,6 @@ const EMPLOYEES = [
         "addressBooks": "1106-C;1106-E"
     },
     {
-        "employeeId": "4859-ليلى الشهري",
-        "personnelNumber": "4859",
-        "name": "ليلى الشهري",
-        "startDate": "2026-02-07",
-        "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall",
-        "showroomDetails": [
-            {
-                "name": "1201-08-Makkah Mall",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1201-C",
-                    "1201-E"
-                ]
-            }
-        ],
-        "addressBooks": "1201-C;1201-E"
-    },
-    {
         "employeeId": "4861-منيره العنزي",
         "personnelNumber": "4861",
         "name": "منيره العنزي",
@@ -5977,25 +5920,6 @@ const EMPLOYEES = [
         "employeeId": "4862-عبد الرحمن طوخي",
         "personnelNumber": "4862",
         "name": "عبد الرحمن طوخي",
-        "startDate": "2026-02-07",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
-    },
-    {
-        "employeeId": "4863-انس عصام",
-        "personnelNumber": "4863",
-        "name": "انس عصام",
         "startDate": "2026-02-07",
         "manager": "رضوان عطيوي",
         "showroom": "1203-55- Jabl Omar",
@@ -6305,33 +6229,6 @@ const EMPLOYEES = [
         "addressBooks": "1203-C;1203-E"
     },
     {
-        "employeeId": "4881-عصام علي",
-        "personnelNumber": "4881",
-        "name": "عصام علي",
-        "startDate": "2026-02-16",
-        "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall و 1202-20-Sitten Street Makkah",
-        "showroomDetails": [
-            {
-                "name": "1201-08-Makkah Mall",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1201-C",
-                    "1201-E"
-                ]
-            },
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
-                ]
-            }
-        ],
-        "addressBooks": "1201-C;1201-E;1202-C;1202-E"
-    },
-    {
         "employeeId": "4882-سديم الشهراني",
         "personnelNumber": "4882",
         "name": "سديم الشهراني",
@@ -6368,25 +6265,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1111-C;1111-E"
-    },
-    {
-        "employeeId": "4885-محمد اياد المغربل",
-        "personnelNumber": "4885",
-        "name": "محمد اياد المغربل",
-        "startDate": "2026-02-18",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
     },
     {
         "employeeId": "4870-عبدالله شجاع الدوسري",

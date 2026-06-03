@@ -933,6 +933,26 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Section 2: Send Current Month's Target -->
+                <div class="glass-card mb-4 mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-bullseye me-2"></i> إرسال تارجت الشهر الحالي للمعرض (PDF)</h4>
+                            <p class="text-muted small mb-0">يمكنك تحديد المعارض من القائمة أعلاه ثم اختيار الشهر المستهدف لإرسال ملف PDF يحتوي على تارجت المعرض وتوزيع مستهدفات الموظفين.</p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <label class="fw-bold small text-muted text-nowrap">الشهر المستهدف:</label>
+                            <input type="month" id="targetDispatchMonth" class="form-control form-control-dark" style="width: 170px;">
+                            <button class="btn btn-outline-success px-3 fw-bold" onclick="submitTargetDispatchSelected(true)">
+                                <i class="fa-solid fa-envelope me-1"></i> إرسال تجريبي لإيميلي 📧
+                            </button>
+                            <button class="btn btn-orange-premium px-4" onclick="submitTargetDispatchSelected(false)">
+                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال التارجت للفروع المحددة (إلى إيميلك مؤقتاً)
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -1232,6 +1252,7 @@
             const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
             document.getElementById('salesMonthFilter').value = currentMonth;
             document.getElementById('targetMonth').value = currentMonth;
+            document.getElementById('targetDispatchMonth').value = currentMonth;
 
             // Detect Active API Server URL first!
             await detectActiveApiBase();
@@ -3608,6 +3629,65 @@
                     
                     document.getElementById('dispatchSelectAll').checked = false;
                     document.querySelectorAll('.dispatch-store-checkbox').forEach(cb => cb.checked = false);
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل تشغيل العملية: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
+        }
+
+        async function submitTargetDispatchSelected(isTest) {
+            const selectedCheckboxes = document.querySelectorAll('.dispatch-store-checkbox:checked');
+            const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            
+            if (selectedIds.length === 0) {
+                alert("⚠️ يرجى تحديد معرض واحد على الأعل لإرسال المستهدفات إليه.");
+                return;
+            }
+            
+            const month = document.getElementById('targetDispatchMonth').value;
+            if (!month) {
+                alert("⚠️ يرجى تحديد الشهر المستهدف أولاً.");
+                return;
+            }
+            
+            const count = selectedIds.length;
+            let confirmMsg = "";
+            if (isTest) {
+                confirmMsg = `هل أنت متأكد من إرسال مستند التارجت التجريبي لشهر ${month} لـ ${count} معارض إلى إيميلك الشخصي alaa.wafae@orangebedbath.com ؟`;
+            } else {
+                confirmMsg = count === dispatchShowroomsCache.length
+                    ? `هل أنت متأكد من إرسال مستندات التارجت الرسمية لشهر ${month} لجميع المعارض (مؤقتاً إلى إيميلك الشخصي)؟`
+                    : `هل أنت متأكد من إرسال مستندات التارجت الرسمية لشهر ${month} لـ ${count} معارض محددة (مؤقتاً إلى إيميلك الشخصي)؟`;
+            }
+                
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/send_target_reports`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ 
+                        month: month,
+                        store_ids: selectedIds,
+                        is_test: isTest
+                    })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    alert("✈️ " + (data.message || "تم تشغيل إرسال ملفات تارجت الفروع في الخلفية بنجاح!"));
+                    
+                    if (!isTest) {
+                        document.getElementById('dispatchSelectAll').checked = false;
+                        document.querySelectorAll('.dispatch-store-checkbox').forEach(cb => cb.checked = false);
+                    }
                 } else {
                     const err = await res.json();
                     alert("❌ فشل تشغيل العملية: " + (err.error || "خطأ غير معروف"));
