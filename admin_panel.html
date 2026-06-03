@@ -914,13 +914,21 @@
                             <p class="text-muted small mb-0">يمكنك هنا تحديد معارض معينة لإرسال تقرير المبيعات وتقرير الموظفين اليومي لها، أو تحديد الكل للإرسال لجميع الفروع.</p>
                         </div>
                         <div class="d-flex gap-2 flex-wrap align-items-center">
-                            <input type="text" id="dispatchSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو كود المعرض..." oninput="filterDispatchShowrooms()" style="width: 250px;">
-                            <div class="form-check form-switch bg-white border rounded px-3 py-2 d-flex align-items-center gap-2" style="height: 44px; margin-left: 10px; direction: rtl;">
+                            <input type="text" id="dispatchSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو كود..." oninput="filterDispatchShowrooms()" style="width: 180px;">
+                            <div class="form-check form-switch bg-white border rounded px-3 py-2 d-flex align-items-center gap-2" style="height: 44px; margin-left: 5px; direction: rtl;">
                                 <input class="form-check-input ms-0" type="checkbox" id="dispatchSelectAll" onchange="toggleSelectAllDispatch(this)">
-                                <label class="form-check-label fw-bold text-dark small" for="dispatchSelectAll" style="margin-right: 8px;">تحديد الكل</label>
+                                <label class="form-check-label fw-bold text-dark small" for="dispatchSelectAll" style="margin-right: 8px;">الكل</label>
                             </div>
-                            <button class="btn btn-orange-premium px-4" onclick="submitDispatchSelected()">
-                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال التقارير للمعارض المحددة
+                            <select id="dailyRecipientSelect" class="form-select form-control-dark" style="width: 170px;">
+                                <option value="test" selected>🧪 إيميل علاء التجريبي</option>
+                                <option value="showroom">📧 إيميل المعرض الحقيقي</option>
+                                <option value="manager">👤 إيميل مدير المنطقة</option>
+                            </select>
+                            <button class="btn btn-orange-premium px-3" onclick="submitDispatchSelectedNew()">
+                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال التقارير
+                            </button>
+                            <button class="btn btn-outline-secondary px-3 fw-bold" onclick="openEmailSettingsModal()">
+                                <i class="fa-solid fa-envelope-open-text me-1"></i> إعدادات الإيميلات ⚙️
                             </button>
                         </div>
                     </div>
@@ -944,11 +952,14 @@
                         <div class="d-flex gap-2 flex-wrap align-items-center">
                             <label class="fw-bold small text-muted text-nowrap">الشهر المستهدف:</label>
                             <input type="month" id="targetDispatchMonth" class="form-control form-control-dark" style="width: 170px;">
-                            <button class="btn btn-outline-success px-3 fw-bold" onclick="submitTargetDispatchSelected(true)">
-                                <i class="fa-solid fa-envelope me-1"></i> إرسال تجريبي لإيميلي 📧
-                            </button>
-                            <button class="btn btn-orange-premium px-4" onclick="submitTargetDispatchSelected(false)">
-                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال التارجت للفروع المحددة (إلى إيميلك مؤقتاً)
+                            <label class="fw-bold small text-muted text-nowrap">إرسال إلى:</label>
+                            <select id="targetRecipientSelect" class="form-select form-control-dark" style="width: 170px;">
+                                <option value="test" selected>🧪 إيميل علاء التجريبي</option>
+                                <option value="showroom">📧 إيميل المعرض الحقيقي</option>
+                                <option value="manager">👤 إيميل مدير المنطقة</option>
+                            </select>
+                            <button class="btn btn-orange-premium px-4" onclick="submitTargetDispatchSelectedNew()">
+                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال مستندات التارجت
                             </button>
                         </div>
                     </div>
@@ -957,6 +968,85 @@
 
         </div>
 
+    </div>
+
+    <!-- Email Settings Management Modal -->
+    <div class="modal fade" id="emailSettingsModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); direction: rtl;">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-white border" style="border-radius: 16px; border: 2px solid var(--orange) !important;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-orange"><i class="fa-solid fa-envelope-open-text me-2 text-orange"></i> ⚙️ إدارة وتعديل إيميلات الفروع ومدراء المناطق</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="margin-right: auto; margin-left: 0;"></button>
+                </div>
+                <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- Nav tabs for Modal -->
+                    <ul class="nav nav-pills mb-3 gap-2" id="pills-tab" role="tablist" style="padding-right: 0;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold" id="pills-showrooms-tab" data-bs-toggle="pill" data-bs-target="#pills-showrooms" type="button" role="tab">📧 إيميلات الفروع (Showrooms)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold" id="pills-managers-tab" data-bs-toggle="pill" data-bs-target="#pills-managers" type="button" role="tab">👤 إيميلات مدراء المناطق (Area Managers)</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="pills-tabContent">
+                        <!-- Tab A: Showrooms Emails List -->
+                        <div class="tab-pane fade show active" id="pills-showrooms" role="tabpanel">
+                            <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="text-muted small">يمكنك تعديل إيميل الفرع مباشرة ثم الضغط على زر حفظ لحفظه في قاعدة البيانات.</span>
+                                <input type="text" id="modalShowroomSearch" class="form-control form-control-sm" placeholder="🔍 تصفية المعارض..." oninput="filterModalShowroomsTable()" style="width: 250px;">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped align-middle text-center small">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>كود المعرض</th>
+                                            <th>اسم المعرض</th>
+                                            <th>إيميل المعرض الحالي</th>
+                                            <th>مدير المنطقة</th>
+                                            <th>حفظ التعديل</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modalShowroomsTableBody">
+                                        <!-- Showrooms rows populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab B: Managers Emails List -->
+                        <div class="tab-pane fade" id="pills-managers" role="tabpanel">
+                            <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="text-muted small">يمكنك إضافة أو تعديل إيميل مدير المنطقة هنا.</span>
+                                <!-- Add Manager Mini-Form -->
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="text" id="newManagerName" class="form-control form-control-sm" placeholder="اسم المدير الجديد" style="width: 150px;">
+                                    <input type="email" id="newManagerEmail" class="form-control form-control-sm" placeholder="الإيميل" style="width: 200px;">
+                                    <button class="btn btn-orange-premium btn-sm fw-bold text-nowrap" onclick="submitAddNewManager()">➕ إضافة مدير</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped align-middle text-center small">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>اسم مدير المنطقة</th>
+                                            <th>إيميل المدير الحالي</th>
+                                            <th>تعديل وحفظ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modalManagersTableBody">
+                                        <!-- Managers rows populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Employee Dynamics Manager Modal (Ported from linaproj) -->
@@ -3545,7 +3635,7 @@
             grid.innerHTML = '';
             
             if (dispatchShowroomsCache.length === 0) {
-                grid.innerHTML = '<div class="text-muted py-5 text-center col-12 fw-bold">لا توجد معارض مسجلة في ملف showrooms_summary.xlsx</div>';
+                grid.innerHTML = '<div class="text-muted py-5 text-center col-12 fw-bold">لا توجد معارض مسجلة في قاعدة البيانات.</div>';
                 return;
             }
             
@@ -3557,12 +3647,13 @@
                 
                 col.innerHTML = `
                     <div class="glass-card p-3 d-flex align-items-center justify-content-between" style="border-radius: 12px; height: 100%; border: 1px solid var(--border-light);">
-                        <div class="d-flex align-items-center gap-3">
-                            <input type="checkbox" class="form-check-input dispatch-store-checkbox" value="${s.code}" style="width: 20px; height: 20px; cursor: pointer; border-color: var(--orange);">
-                            <div>
-                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">${s.name}</span>
+                        <div class="d-flex align-items-center gap-3 w-100">
+                            <input type="checkbox" class="form-check-input dispatch-store-checkbox" value="${s.code}" style="width: 20px; height: 20px; cursor: pointer; border-color: var(--orange); flex-shrink: 0;">
+                            <div style="min-width: 0; flex-grow: 1;">
+                                <span class="fw-bold text-dark d-block text-truncate" style="font-size: 0.95rem;" title="${s.name}">${s.name}</span>
                                 <span class="text-muted small d-block font-monospace mt-1"><i class="fa-solid fa-hashtag text-orange me-1"></i>كود: ${s.code}</span>
-                                <span class="text-muted small d-block text-wrap mt-1" style="font-size: 0.78rem; word-break: break-all;"><i class="fa-solid fa-envelope me-1 text-secondary"></i>${s.email}</span>
+                                <span class="text-muted small d-block text-truncate mt-1" style="font-size: 0.78rem;" title="${s.email || 'لا يوجد إيميل'}"><i class="fa-solid fa-envelope me-1 text-secondary"></i><b>المعرض:</b> ${s.email || '—'}</span>
+                                <span class="text-muted small d-block text-truncate mt-1" style="font-size: 0.78rem;" title="${s.manager_name || 'لا يوجد مدير'} (${s.manager_email || 'لا يوجد إيميل'})"><i class="fa-solid fa-user me-1 text-primary"></i><b>المدير:</b> ${s.manager_name || '—'}</span>
                             </div>
                         </div>
                     </div>
@@ -3596,7 +3687,7 @@
             });
         }
 
-        async function submitDispatchSelected() {
+        async function submitDispatchSelectedNew() {
             const selectedCheckboxes = document.querySelectorAll('.dispatch-store-checkbox:checked');
             const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
             
@@ -3605,10 +3696,9 @@
                 return;
             }
             
+            const recipient = document.getElementById('dailyRecipientSelect').value;
             const count = selectedIds.length;
-            const confirmMsg = count === dispatchShowroomsCache.length
-                ? "هل أنت متأكد من إرسال التقارير لجميع المعارض؟"
-                : `هل أنت متأكد من إرسال التقارير لـ ${count} معارض محددة؟`;
+            const confirmMsg = `هل أنت متأكد من تشغيل إرسال التقارير لـ ${count} معارض محددة؟\nجهة الاستلام المفضلة: ${recipient === 'test' ? 'إيميل علاء التجريبي' : recipient === 'showroom' ? 'إيميل المعرض الحقيقي' : 'إيميل مدير المنطقة'}`;
                 
             if (!confirm(confirmMsg)) return;
             
@@ -3620,12 +3710,15 @@
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ store_ids: selectedIds })
+                    body: JSON.stringify({ 
+                        store_ids: selectedIds,
+                        recipient_type: recipient
+                    })
                 });
                 
                 if (res.ok) {
                     const data = await res.json();
-                    alert("✈️ " + (data.message || "تم تشغيل إرسال التقارير للفروع المحددة في الخلفية بنجاح!"));
+                    alert("✈️ " + (data.message || "تم تشغيل إرسال التقارير في الخلفية بنجاح!"));
                     
                     document.getElementById('dispatchSelectAll').checked = false;
                     document.querySelectorAll('.dispatch-store-checkbox').forEach(cb => cb.checked = false);
@@ -3638,12 +3731,12 @@
             }
         }
 
-        async function submitTargetDispatchSelected(isTest) {
+        async function submitTargetDispatchSelectedNew() {
             const selectedCheckboxes = document.querySelectorAll('.dispatch-store-checkbox:checked');
             const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
             
             if (selectedIds.length === 0) {
-                alert("⚠️ يرجى تحديد معرض واحد على الأعل لإرسال المستهدفات إليه.");
+                alert("⚠️ يرجى تحديد معرض واحد على الأقل لإرسال المستهدفات إليه.");
                 return;
             }
             
@@ -3653,15 +3746,9 @@
                 return;
             }
             
+            const recipient = document.getElementById('targetRecipientSelect').value;
             const count = selectedIds.length;
-            let confirmMsg = "";
-            if (isTest) {
-                confirmMsg = `هل أنت متأكد من إرسال مستند التارجت التجريبي لشهر ${month} لـ ${count} معارض إلى إيميلك الشخصي alaa.wafae@orangebedbath.com ؟`;
-            } else {
-                confirmMsg = count === dispatchShowroomsCache.length
-                    ? `هل أنت متأكد من إرسال مستندات التارجت الرسمية لشهر ${month} لجميع المعارض (مؤقتاً إلى إيميلك الشخصي)؟`
-                    : `هل أنت متأكد من إرسال مستندات التارجت الرسمية لشهر ${month} لـ ${count} معارض محددة (مؤقتاً إلى إيميلك الشخصي)؟`;
-            }
+            const confirmMsg = `هل أنت متأكد من تشغيل إرسال مستندات التارجت لشهر ${month} لـ ${count} معارض محددة؟\nجهة الاستلام المفضلة: ${recipient === 'test' ? 'إيميل علاء التجريبي' : recipient === 'showroom' ? 'إيميل المعرض الحقيقي' : 'إيميل مدير المنطقة'}`;
                 
             if (!confirm(confirmMsg)) return;
             
@@ -3676,7 +3763,7 @@
                     body: JSON.stringify({ 
                         month: month,
                         store_ids: selectedIds,
-                        is_test: isTest
+                        recipient_type: recipient
                     })
                 });
                 
@@ -3684,13 +3771,203 @@
                     const data = await res.json();
                     alert("✈️ " + (data.message || "تم تشغيل إرسال ملفات تارجت الفروع في الخلفية بنجاح!"));
                     
-                    if (!isTest) {
-                        document.getElementById('dispatchSelectAll').checked = false;
-                        document.querySelectorAll('.dispatch-store-checkbox').forEach(cb => cb.checked = false);
-                    }
+                    document.getElementById('dispatchSelectAll').checked = false;
+                    document.querySelectorAll('.dispatch-store-checkbox').forEach(cb => cb.checked = false);
                 } else {
                     const err = await res.json();
                     alert("❌ فشل تشغيل العملية: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
+        }
+
+        // --- Email Settings Modal Functions ---
+        let modalManagersCache = [];
+
+        function openEmailSettingsModal() {
+            renderModalShowroomsTable();
+            loadModalManagersData();
+            const modal = new bootstrap.Modal(document.getElementById('emailSettingsModal'));
+            modal.show();
+        }
+
+        function renderModalShowroomsTable(filterQuery = "") {
+            const tbody = document.getElementById('modalShowroomsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            const filtered = dispatchShowroomsCache.filter(s => {
+                const q = filterQuery.trim().toLowerCase();
+                return s.code.includes(q) || s.name.toLowerCase().includes(q) || (s.manager_name && s.manager_name.toLowerCase().includes(q));
+            });
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-3">لا توجد معارض مطابقة للبحث</td></tr>';
+                return;
+            }
+            
+            filtered.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="font-monospace fw-bold">${s.code}</td>
+                    <td class="fw-bold">${s.name}</td>
+                    <td>
+                        <input type="email" id="modalEmailStore-${s.code}" class="form-control form-control-sm text-center" value="${s.email || ''}" placeholder="لا يوجد إيميل">
+                    </td>
+                    <td><span class="badge bg-secondary p-2" style="font-size: 0.85rem;">${s.manager_name || 'غير محدد'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-success fw-bold px-3" onclick="saveShowroomEmail('${s.code}')">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> حفظ
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterModalShowroomsTable() {
+            const query = document.getElementById('modalShowroomSearch').value;
+            renderModalShowroomsTable(query);
+        }
+
+        async function saveShowroomEmail(code) {
+            const emailInput = document.getElementById(`modalEmailStore-${code}`);
+            if (!emailInput) return;
+            const newEmail = emailInput.value.trim();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/update_showroom_email`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ code: code, email: newEmail })
+                });
+                
+                if (res.ok) {
+                    alert("✅ تم حفظ وتحديث إيميل المعرض بنجاح!");
+                    // Refresh parent cache
+                    await loadDispatchShowroomsData();
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل تحديث الإيميل: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
+        }
+
+        async function loadModalManagersData() {
+            const tbody = document.getElementById('modalManagersTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3" class="text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i>جاري التحميل...</td></tr>';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/area_managers`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) throw new Error("Failed to load managers");
+                
+                modalManagersCache = await res.json();
+                renderModalManagersTable();
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-danger">فشل التحميل: ${e.message}</td></tr>`;
+            }
+        }
+
+        function renderModalManagersTable() {
+            const tbody = document.getElementById('modalManagersTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (modalManagersCache.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-muted py-3">لا يوجد مدراء مناطق مسجلين</td></tr>';
+                return;
+            }
+            
+            modalManagersCache.forEach((m, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold text-dark">${m.manager_name}</td>
+                    <td>
+                        <input type="email" id="modalEmailMgr-${idx}" class="form-control form-control-sm text-center" value="${m.email || ''}" placeholder="لا يوجد إيميل">
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-success fw-bold px-3" onclick="saveManagerEmail('${m.manager_name}', 'modalEmailMgr-${idx}')">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> حفظ
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function saveManagerEmail(name, inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const newEmail = input.value.trim();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/update_manager_email`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ manager_name: name, email: newEmail })
+                });
+                
+                if (res.ok) {
+                    alert("✅ تم حفظ وتحديث إيميل مدير المنطقة بنجاح!");
+                    await loadModalManagersData();
+                    // Refresh showroom cards as well
+                    await loadDispatchShowroomsData();
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل تحديث الإيميل: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
+            }
+        }
+
+        async function submitAddNewManager() {
+            const nameInput = document.getElementById('newManagerName');
+            const emailInput = document.getElementById('newManagerEmail');
+            if (!nameInput || !emailInput) return;
+            
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            
+            if (!name) {
+                alert("⚠️ يرجى إدخال اسم المدير أولاً.");
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/update_manager_email`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ manager_name: name, email: email })
+                });
+                
+                if (res.ok) {
+                    alert("✅ تم إضافة مدير المنطقة وإيميله بنجاح!");
+                    nameInput.value = '';
+                    emailInput.value = '';
+                    await loadModalManagersData();
+                    await loadDispatchShowroomsData();
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل إضافة المدير: " + (err.error || "خطأ غير معروف"));
                 }
             } catch (e) {
                 alert("❌ خطأ اتصال: " + e.message);
