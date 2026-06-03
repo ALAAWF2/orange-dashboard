@@ -5463,26 +5463,18 @@ const EMPLOYEES = [
         "name": "مهند محمد ال مرعي",
         "startDate": "2025-10-15",
         "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh و 1109-40-Hayat Mall Riyad",
+        "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
-                "name": "1105-30-Tala Mall Riyadh",
+                "name": "1108-39-Salam Mall Riyadh",
                 "manager": "عبدالله السرداح",
                 "codes": [
-                    "1105-C",
-                    "1105-E"
-                ]
-            },
-            {
-                "name": "1109-40-Hayat Mall Riyad",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1109-C",
-                    "1109-E"
+                    "1108-C",
+                    "1108-E"
                 ]
             }
         ],
-        "addressBooks": "1105-C;1105-E;1109-C;1109-E"
+        "addressBooks": "1108-C;1108-E"
     },
     {
         "employeeId": "4715-ندى القرني",
@@ -6286,25 +6278,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1115-C;1115-E"
-    },
-    {
-        "employeeId": "4818-عائشة ناصر",
-        "personnelNumber": "4818",
-        "name": "عائشة ناصر",
-        "startDate": "2026-01-10",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
     },
     {
         "employeeId": "4820-غزلان فيصل",
@@ -7143,25 +7116,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1106-C;1106-E"
-    },
-    {
-        "employeeId": "4876-وجدان العميري",
-        "personnelNumber": "4876",
-        "name": "وجدان العميري",
-        "startDate": "2026-02-14",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
     },
     {
         "employeeId": "4877-نوره الحربي",
