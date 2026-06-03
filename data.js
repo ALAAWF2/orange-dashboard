@@ -2575,25 +2575,6 @@ const EMPLOYEES = [
         "addressBooks": "2201-C;2201-E"
     },
     {
-        "employeeId": "4149-شمسير علي",
-        "personnelNumber": "4149",
-        "name": "شمسير علي",
-        "startDate": "2024-05-15",
-        "manager": "المنطقة الغربية",
-        "showroom": "1010-54-THE VILLAGE",
-        "showroomDetails": [
-            {
-                "name": "1010-54-THE VILLAGE",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1010-C",
-                    "1010-E"
-                ]
-            }
-        ],
-        "addressBooks": "1010-C;1010-E"
-    },
-    {
         "employeeId": "4151-يونس عبدالبديع ملبيا",
         "personnelNumber": "4151",
         "name": "يونس عبدالبديع ملبيا",
@@ -5051,7 +5032,7 @@ const EMPLOYEES = [
         "name": "خديجة مجش",
         "startDate": "2025-11-04",
         "manager": "المنطقة الغربية",
-        "showroom": "1006-13-Al-Yasmin Mall",
+        "showroom": "1006-13-Al-Yasmin Mall و 1010-54-THE VILLAGE",
         "showroomDetails": [
             {
                 "name": "1006-13-Al-Yasmin Mall",
@@ -5060,9 +5041,17 @@ const EMPLOYEES = [
                     "1006-C",
                     "1006-E"
                 ]
+            },
+            {
+                "name": "1010-54-THE VILLAGE",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1010-C",
+                    "1010-E"
+                ]
             }
         ],
-        "addressBooks": "1006-C;1006-E"
+        "addressBooks": "1006-C;1006-E;1010-C;1010-E"
     },
     {
         "employeeId": "4750-Maha Alamri",
