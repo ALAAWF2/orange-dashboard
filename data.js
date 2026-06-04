@@ -4048,25 +4048,6 @@ const EMPLOYEES = [
         "addressBooks": "1401-C;1401-E;1402-C;1402-E"
     },
     {
-        "employeeId": "4585-بشاير الحميدي",
-        "personnelNumber": "4585",
-        "name": "بشاير الحميدي",
-        "startDate": "2025-05-14",
-        "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall",
-        "showroomDetails": [
-            {
-                "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1102-C",
-                    "1102-E"
-                ]
-            }
-        ],
-        "addressBooks": "1102-C;1102-E"
-    },
-    {
         "employeeId": "4586-ريناد عبدالله",
         "personnelNumber": "4586",
         "name": "ريناد عبدالله",
@@ -4533,18 +4514,18 @@ const EMPLOYEES = [
         "name": "جميله محمد سفياني",
         "startDate": "2025-08-12",
         "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh",
+        "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
-                "name": "1105-30-Tala Mall Riyadh",
+                "name": "1109-40-Hayat Mall Riyad",
                 "manager": "عبدالله السرداح",
                 "codes": [
-                    "1105-C",
-                    "1105-E"
+                    "1109-C",
+                    "1109-E"
                 ]
             }
         ],
-        "addressBooks": "1105-C;1105-E"
+        "addressBooks": "1109-C;1109-E"
     },
     {
         "employeeId": "4663-رحمه احمد القرني",
