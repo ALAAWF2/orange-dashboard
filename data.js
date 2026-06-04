@@ -4994,16 +4994,8 @@ const EMPLOYEES = [
         "name": "خديجة مجش",
         "startDate": "2025-11-04",
         "manager": "المنطقة الغربية",
-        "showroom": "1006-13-Al-Yasmin Mall و 1010-54-THE VILLAGE",
+        "showroom": "1010-54-THE VILLAGE",
         "showroomDetails": [
-            {
-                "name": "1006-13-Al-Yasmin Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1006-C",
-                    "1006-E"
-                ]
-            },
             {
                 "name": "1010-54-THE VILLAGE",
                 "manager": "المنطقة الغربية",
@@ -5013,7 +5005,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1006-C;1006-E;1010-C;1010-E"
+        "addressBooks": "1010-C;1010-E"
     },
     {
         "employeeId": "4750-Maha Alamri",
