@@ -457,25 +457,6 @@ const EMPLOYEES = [
         "addressBooks": "1008-C;1008-E"
     },
     {
-        "employeeId": "0869-MOTAR MOKHTAR ALHASA",
-        "personnelNumber": "0869",
-        "name": "MOTAR MOKHTAR ALHASA",
-        "startDate": "2019-12-01",
-        "manager": "عبدالله السرداح",
-        "showroom": "1112-50-Meem Plaza Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1112-C",
-                    "1112-E"
-                ]
-            }
-        ],
-        "addressBooks": "1112-C;1112-E"
-    },
-    {
         "employeeId": "0896-سونير فاديل اليكويا",
         "personnelNumber": "0896",
         "name": "سونير فاديل اليكويا",
