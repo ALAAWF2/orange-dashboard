@@ -6498,7 +6498,7 @@ const EMPLOYEES = [
         "employeeId": "4935-حمدي حمود",
         "personnelNumber": "4935",
         "name": "حمدي حمود",
-        "startDate": "2026-05-09",
+        "startDate": "2026-04-09",
         "manager": "محمدكلو",
         "showroom": "1115-1115-Alrabie Mall",
         "showroomDetails": [
