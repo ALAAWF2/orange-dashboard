@@ -760,18 +760,18 @@ const EMPLOYEES = [
         "name": "صالح",
         "startDate": "2021-08-01",
         "manager": "عبدالله السرداح",
-        "showroom": "1109-40-Hayat Mall Riyad",
+        "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
-                "name": "1109-40-Hayat Mall Riyad",
+                "name": "1102-15-Riyadh Othaim Mall",
                 "manager": "عبدالله السرداح",
                 "codes": [
-                    "1109-C",
-                    "1109-E"
+                    "1102-C",
+                    "1102-E"
                 ]
             }
         ],
-        "addressBooks": "1109-C;1109-E"
+        "addressBooks": "1102-C;1102-E"
     },
     {
         "employeeId": "1544-محمد شاجاهان فالاثود",
@@ -5461,25 +5461,6 @@ const EMPLOYEES = [
         "addressBooks": "1101-C;1101-E"
     },
     {
-        "employeeId": "4803-نوال عويضة",
-        "personnelNumber": "4803",
-        "name": "نوال عويضة",
-        "startDate": "2026-01-03",
-        "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall",
-        "showroomDetails": [
-            {
-                "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1102-C",
-                    "1102-E"
-                ]
-            }
-        ],
-        "addressBooks": "1102-C;1102-E"
-    },
-    {
         "employeeId": "4805-رزان ناصر",
         "personnelNumber": "4805",
         "name": "رزان ناصر",
@@ -5948,17 +5929,9 @@ const EMPLOYEES = [
         "personnelNumber": "4755",
         "name": "شهير عبدالله",
         "startDate": "2025-11-02",
-        "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall و 1113-51-Park Avenue Riyadh",
+        "manager": "محمدكلو",
+        "showroom": "1113-51-Park Avenue Riyadh",
         "showroomDetails": [
-            {
-                "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1102-C",
-                    "1102-E"
-                ]
-            },
             {
                 "name": "1113-51-Park Avenue Riyadh",
                 "manager": "محمدكلو",
@@ -5968,7 +5941,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1102-C;1102-E;1113-C;1113-E"
+        "addressBooks": "1113-C;1113-E"
     },
     {
         "employeeId": "4869-مرام الحربي",
@@ -6031,25 +6004,6 @@ const EMPLOYEES = [
         "employeeId": "4845-نوير القحطاني",
         "personnelNumber": "4845",
         "name": "نوير القحطاني",
-        "startDate": "2026-02-07",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
-    },
-    {
-        "employeeId": "4853-روان الشيباني",
-        "personnelNumber": "4853",
-        "name": "روان الشيباني",
         "startDate": "2026-02-07",
         "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
@@ -7029,16 +6983,8 @@ const EMPLOYEES = [
         "name": "ريما عبدالله",
         "startDate": "2026-05-14",
         "manager": "عبدالله السرداح",
-        "showroom": "1109-40-Hayat Mall Riyad و 1105-30-Tala Mall Riyadh",
+        "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
-            {
-                "name": "1109-40-Hayat Mall Riyad",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1109-C",
-                    "1109-E"
-                ]
-            },
             {
                 "name": "1105-30-Tala Mall Riyadh",
                 "manager": "عبدالله السرداح",
@@ -7048,7 +6994,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1109-C;1109-E;1105-C;1105-E"
+        "addressBooks": "1105-C;1105-E"
     },
     {
         "employeeId": "4961-رغد طارق",
