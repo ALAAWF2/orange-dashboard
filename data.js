@@ -758,7 +758,7 @@ const EMPLOYEES = [
         "employeeId": "1543-صالح",
         "personnelNumber": "1543",
         "name": "صالح",
-        "startDate": "2021-08-01",
+        "startDate": "2021-08-02",
         "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
