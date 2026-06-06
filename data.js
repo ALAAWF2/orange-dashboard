@@ -5567,25 +5567,6 @@ const EMPLOYEES = [
         "addressBooks": "1115-C;1115-E"
     },
     {
-        "employeeId": "4820-غزلان فيصل",
-        "personnelNumber": "4820",
-        "name": "غزلان فيصل",
-        "startDate": "2026-01-13",
-        "manager": "محمدكلو",
-        "showroom": "1111-46-Khaleej Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1111-46-Khaleej Mall Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1111-C",
-                    "1111-E"
-                ]
-            }
-        ],
-        "addressBooks": "1111-C;1111-E"
-    },
-    {
         "employeeId": "4822-سمية عماد",
         "personnelNumber": "4822",
         "name": "سمية عماد",
