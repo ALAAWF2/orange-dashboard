@@ -798,7 +798,7 @@ const EMPLOYEES = [
         "name": "محمد علي بانشيبالا",
         "startDate": "2021-08-01",
         "manager": "عبيدة السباعي",
-        "showroom": "1005-09-Al-Salam Mall",
+        "showroom": "1005-09-Al-Salam Mall و 1001-04-Andalos Mall",
         "showroomDetails": [
             {
                 "name": "1005-09-Al-Salam Mall",
@@ -807,9 +807,17 @@ const EMPLOYEES = [
                     "1005-C",
                     "1005-E"
                 ]
+            },
+            {
+                "name": "1001-04-Andalos Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1001-C",
+                    "1001-E"
+                ]
             }
         ],
-        "addressBooks": "1005-C;1005-E"
+        "addressBooks": "1005-C;1005-E;1001-C;1001-E"
     },
     {
         "employeeId": "1546-ساجاد يونين ميليكالا",
