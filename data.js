@@ -3850,25 +3850,6 @@ const EMPLOYEES = [
         "addressBooks": "1203-C;1203-E"
     },
     {
-        "employeeId": "4523-نهلة محمد",
-        "personnelNumber": "4523",
-        "name": "نهلة محمد",
-        "startDate": "2025-03-02",
-        "manager": "عبيدة السباعي",
-        "showroom": "1001-04-Andalos Mall",
-        "showroomDetails": [
-            {
-                "name": "1001-04-Andalos Mall",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1001-C",
-                    "1001-E"
-                ]
-            }
-        ],
-        "addressBooks": "1001-C;1001-E"
-    },
-    {
         "employeeId": "4532-Ali Khalil Kunayd",
         "personnelNumber": "4532",
         "name": "Ali Khalil Kunayd",
