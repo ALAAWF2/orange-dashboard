@@ -1303,25 +1303,6 @@ const EMPLOYEES = [
         "addressBooks": "2101-C;2101-E"
     },
     {
-        "employeeId": "2821-عبدالسليم كابيل",
-        "personnelNumber": "2821",
-        "name": "عبدالسليم كابيل",
-        "startDate": "2021-12-25",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
-    },
-    {
         "employeeId": "3029-محمد شان",
         "personnelNumber": "3029",
         "name": "محمد شان",
