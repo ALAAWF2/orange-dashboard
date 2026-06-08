@@ -121,7 +121,7 @@ async function exportStoreSales(startDate, endDate) {
     // Dates in JSON are YYYY-MM-DD string. Inputs are same. String comparison works perfectly for ISO dates.
     const inRange = (dStr) => dStr >= startDate && dStr <= endDate;
 
-    // Aggregation Map: "Date_StoreId" -> { date, storeId, sales, trans, visitors }
+    // Aggregation Map: "Date_StoreId" -> { date, storeId, sales, trans, visitors, items }
     let dataMap = {};
 
     const getKey = (d, s) => `${d}_${s}`;
@@ -134,7 +134,8 @@ async function exportStoreSales(startDate, endDate) {
                 sales: 0,
                 target: 0,
                 trans: 0,
-                visitors: 0
+                visitors: 0,
+                items: 0
             };
         }
         return dataMap[k];
@@ -158,6 +159,9 @@ async function exportStoreSales(startDate, endDate) {
 
     const salesDict = {};
     const visitorsDict = {};
+    const transDict = {};
+    const itemsDict = {};
+
     // 1. Process Sales
     if (window.rawData.sales) {
         window.rawData.sales.forEach(([d, s, v]) => {
@@ -182,9 +186,21 @@ async function exportStoreSales(startDate, endDate) {
     // 2. Process Transactions
     if (window.rawData.transactions) {
         window.rawData.transactions.forEach(([d, s, v]) => {
+            transDict[`${d}_${s}`] = v;
             if (inRange(d) && passFilter(s)) {
                 let entry = ensureEntry(d, s);
                 entry.trans += v;
+            }
+        });
+    }
+
+    // 2.1 Process Items (Pieces)
+    if (window.rawData.items) {
+        window.rawData.items.forEach(([d, s, v]) => {
+            itemsDict[`${d}_${s}`] = v;
+            if (inRange(d) && passFilter(s)) {
+                let entry = ensureEntry(d, s);
+                entry.items += v;
             }
         });
     }
@@ -255,6 +271,8 @@ async function exportStoreSales(startDate, endDate) {
 
         let prevSales = salesDict[`${pyStr}_${r.storeId}`] || 0;
         let prevVisitors = visitorsDict[`${pyStr}_${r.storeId}`] || 0;
+        let prevTrans = transDict[`${pyStr}_${r.storeId}`] || 0;
+        let prevItems = itemsDict[`${pyStr}_${r.storeId}`] || 0;
 
         return {
             "التاريخ": r.date,
@@ -266,9 +284,15 @@ async function exportStoreSales(startDate, endDate) {
             "الهدف": r.target,
             "نسبة التحقيق": ach,
             "عدد الفواتير": r.trans,
+            "عدد فواتير السنة السابقة": prevTrans,
             "الزوار": r.visitors,
             "زوار السنة السابقة": prevVisitors,
             "متوسط الفاتورة": r.trans > 0 ? (r.sales / r.trans).toFixed(0) : 0,
+            "متوسط الفاتورة السنة السابقة": prevTrans > 0 ? (prevSales / prevTrans).toFixed(0) : 0,
+            "عدد القطع": r.items || 0,
+            "عدد قطع السنة السابقة": prevItems || 0,
+            "معدل القطع بالفاتورة": r.trans > 0 ? (r.items / r.trans).toFixed(1) : 0,
+            "معدل القطع بالفاتورة السنة السابقة": prevTrans > 0 ? (prevItems / prevTrans).toFixed(1) : 0,
             "نسبة التحويل": r.visitors > 0 ? ((r.trans / r.visitors) * 100).toFixed(1) + '%' : '0%'
         };
     });
@@ -285,12 +309,18 @@ async function exportStoreSales(startDate, endDate) {
         { wch: 10 }, // Sales
         { wch: 20 }, // Prev Sales
         { wch: 10 }, // Target
-        { wch: 10 }, // Achievement
-        { wch: 10 }, // Trans
+        { wch: 12 }, // Achievement
+        { wch: 12 }, // Trans
+        { wch: 22 }, // Prev Trans
         { wch: 10 }, // Visitors
         { wch: 20 }, // Prev Visitors
-        { wch: 10 }, // Avg
-        { wch: 10 }  // Conv
+        { wch: 15 }, // Avg
+        { wch: 25 }, // Prev Avg
+        { wch: 12 }, // Items
+        { wch: 22 }, // Prev Items
+        { wch: 20 }, // Avg Items/Invoice
+        { wch: 30 }, // Prev Avg Items/Invoice
+        { wch: 12 }  // Conv
     ];
     ws['!cols'] = wscols;
 
