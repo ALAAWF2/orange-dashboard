@@ -798,16 +798,8 @@ const EMPLOYEES = [
         "name": "محمد علي بانشيبالا",
         "startDate": "2021-08-01",
         "manager": "عبيدة السباعي",
-        "showroom": "1005-09-Al-Salam Mall و 1001-04-Andalos Mall",
+        "showroom": "1001-04-Andalos Mall و 1005-09-Al-Salam Mall",
         "showroomDetails": [
-            {
-                "name": "1005-09-Al-Salam Mall",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1005-C",
-                    "1005-E"
-                ]
-            },
             {
                 "name": "1001-04-Andalos Mall",
                 "manager": "عبيدة السباعي",
@@ -815,9 +807,17 @@ const EMPLOYEES = [
                     "1001-C",
                     "1001-E"
                 ]
+            },
+            {
+                "name": "1005-09-Al-Salam Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1005-C",
+                    "1005-E"
+                ]
             }
         ],
-        "addressBooks": "1005-C;1005-E;1001-C;1001-E"
+        "addressBooks": "1001-C;1001-E;1005-C;1005-E"
     },
     {
         "employeeId": "1546-ساجاد يونين ميليكالا",
@@ -4962,7 +4962,7 @@ const EMPLOYEES = [
         "employeeId": "4752-خديجة مجش",
         "personnelNumber": "4752",
         "name": "خديجة مجش",
-        "startDate": "2025-11-04",
+        "startDate": "2025-11-02",
         "manager": "المنطقة الغربية",
         "showroom": "1010-54-THE VILLAGE",
         "showroomDetails": [
@@ -6533,6 +6533,25 @@ const EMPLOYEES = [
         "addressBooks": "1111-C;1111-E"
     },
     {
+        "employeeId": "4928-محمد شهير بينكانور",
+        "personnelNumber": "4928",
+        "name": "محمد شهير بينكانور",
+        "startDate": "2026-03-12",
+        "manager": "عبيدة السباعي",
+        "showroom": "1005-09-Al-Salam Mall",
+        "showroomDetails": [
+            {
+                "name": "1005-09-Al-Salam Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1005-C",
+                    "1005-E"
+                ]
+            }
+        ],
+        "addressBooks": "1005-C;1005-E"
+    },
+    {
         "employeeId": "4922-مونافير علي باليالتو",
         "personnelNumber": "4922",
         "name": "مونافير علي باليالتو",
@@ -7076,7 +7095,7 @@ const EMPLOYEES = [
         "employeeId": "4969-هدى محمد",
         "personnelNumber": "4969",
         "name": "هدى محمد",
-        "startDate": "2026-05-31",
+        "startDate": "2026-06-01",
         "manager": "المنطقة الغربية",
         "showroom": "1004-07-Arab Mall",
         "showroomDetails": [
@@ -7114,7 +7133,7 @@ const EMPLOYEES = [
         "employeeId": "4971-شيماء القرني",
         "personnelNumber": "4971",
         "name": "شيماء القرني",
-        "startDate": "2026-05-31",
+        "startDate": "2026-06-01",
         "manager": "اماني عسيري",
         "showroom": "1901-21-Abha Al_Rashid Mall New",
         "showroomDetails": [
@@ -7133,7 +7152,7 @@ const EMPLOYEES = [
         "employeeId": "4972-مرام المطيري",
         "personnelNumber": "4972",
         "name": "مرام المطيري",
-        "startDate": "2026-05-31",
+        "startDate": "2026-06-01",
         "manager": "عبدالله السرداح",
         "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
@@ -7152,7 +7171,7 @@ const EMPLOYEES = [
         "employeeId": "4973-خلود هزازي",
         "personnelNumber": "4973",
         "name": "خلود هزازي",
-        "startDate": "2026-06-01",
+        "startDate": "2026-06-02",
         "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
