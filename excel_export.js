@@ -44,9 +44,9 @@ function getPrevDateForExport(dStr) {
     pDate.setFullYear(pDate.getFullYear() - 1);
     if (dStr.startsWith('2026-02') || dStr.startsWith('2026-03')) {
         pDate.setDate(pDate.getDate() + 11);
-    } else if (dStr.startsWith('2026-04')) {
-        pDate.setDate(pDate.getDate() + 5);
     }
+    // To enable April shift (+5 days) for Ramadan/Eid alignment, uncomment below:
+    // else if (dStr.startsWith('2026-04')) { pDate.setDate(pDate.getDate() + 5); }
     return pDate.toLocaleDateString('en-CA');
 }
 
@@ -259,9 +259,9 @@ async function exportStoreSales(startDate, endDate) {
             pDate.setFullYear(pDate.getFullYear() - 1);
             if (r.date.startsWith('2026-02') || r.date.startsWith('2026-03')) {
                 pDate.setDate(pDate.getDate() + 11);
-            } else if (r.date.startsWith('2026-04')) {
-                pDate.setDate(pDate.getDate() + 5);
             }
+            // To enable April shift (+5 days) for Ramadan/Eid alignment, uncomment below:
+            // else if (r.date.startsWith('2026-04')) { pDate.setDate(pDate.getDate() + 5); }
         }
 
         let pyy = pDate.getFullYear();
@@ -450,9 +450,9 @@ async function exportEmployeeSales(startDate, endDate) {
                     pDate.setFullYear(pDate.getFullYear() - 1);
                     if (date.startsWith('2026-02') || date.startsWith('2026-03')) {
                         pDate.setDate(pDate.getDate() + 11);
-                    } else if (date.startsWith('2026-04')) {
-                        pDate.setDate(pDate.getDate() + 5);
                     }
+                    // To enable April shift (+5 days) for Ramadan/Eid alignment, uncomment below:
+                    // else if (date.startsWith('2026-04')) { pDate.setDate(pDate.getDate() + 5); }
                 }
 
                 let pyStr = pDate.toLocaleDateString('en-CA');
