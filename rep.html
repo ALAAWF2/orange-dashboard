@@ -888,6 +888,8 @@
                 style="display:none; background:#d35400;">📥 تصدير الأكثر مبيعاً</button>
             <button class="btn-excel" id="btnTopCategoryExcel" onclick="exportTopCategoryExcel()"
                 style="display:none; background:#8e44ad;">📥 تقرير الاكثر مبيعا-فئات</button>
+            <button class="btn-excel" id="btnTopCategoryDetailedExcel" onclick="exportTopCategoryDetailedExcel()"
+                style="display:none; background:#6c5ce7;">📥 تقرير الاكثر مبيعا-فئات تفصيلي</button>
             <button class="btn-pdf" id="btnPdf" onclick="exportPDF()" disabled>📄 تصدير PDF</button>
             <button class="btn-excel" id="btnFullStockExcel" onclick="exportFullStockExcel()" style="background:#2980b9;">📦 استخراج الستوك بالكامل</button>
             <button class="btn-reset" onclick="resetFilters()">🔄 إعادة تعيين</button>
@@ -2001,10 +2003,12 @@
             if (searchType === 'sales_stock' && results.length > 0) {
                 document.getElementById('btnTopExcel').style.display = 'inline-block';
                 document.getElementById('btnTopCategoryExcel').style.display = 'inline-block';
+                document.getElementById('btnTopCategoryDetailedExcel').style.display = 'inline-block';
                 document.getElementById('btnAnalysis').style.display = 'inline-block';
             } else {
                 document.getElementById('btnTopExcel').style.display = 'none';
                 document.getElementById('btnTopCategoryExcel').style.display = 'none';
+                document.getElementById('btnTopCategoryDetailedExcel').style.display = 'none';
                 document.getElementById('btnAnalysis').style.display = 'none';
             }
 
@@ -2564,6 +2568,137 @@
             }, 100);
         }
 
+        function exportTopCategoryDetailedExcel() {
+            if (!CURRENT_RESULTS.length) return;
+            showLoading('جاري تصدير الاكثر مبيعا-فئات تفصيلي...');
+            setTimeout(() => {
+                try {
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+                    const storeFilter = document.getElementById('storeFilter').value;
+                    let groups = {};
+                    for (const r of CURRENT_RESULTS) {
+                        const mappedCategory = CATEGORY_MAP[r.alias] || CATEGORY_MAP[r.item_id] || 'غير مصنف';
+                        if (!groups[mappedCategory]) {
+                            groups[mappedCategory] = {
+                                categoryName: mappedCategory,
+                                products: [],
+                                totalQty: 0,
+                                totalAmount: 0,
+                                totalStock: 0
+                            };
+                        }
+                        groups[mappedCategory].products.push(r);
+                        groups[mappedCategory].totalQty += r.qty;
+                        groups[mappedCategory].totalAmount += r.amount;
+                    }
+                    for (const [pid, prod] of Object.entries(PRODUCTS)) {
+                        if (!prod.stock) continue;
+                        const prodAlias = prod.alias || '';
+                        const mappedCat = CATEGORY_MAP[prodAlias] || CATEGORY_MAP[pid] || 'غير مصنف';
+                        if (groups[mappedCat]) {
+                            let st = 0;
+                            if (storeFilter !== 'all') {
+                                st = prod.stock[storeFilter] || 0;
+                            } else {
+                                st = prod.stock.total || 0;
+                            }
+                            groups[mappedCat].totalStock += st;
+                        }
+                    }
+                    const sortedGroupsByQty = Object.values(groups).sort((a, b) => b.totalQty - a.totalQty);
+                    const qtyRows = [];
+                    let qtyRowIdx = 1;
+                    for (const group of sortedGroupsByQty) {
+                        const sortedProds = [...group.products].sort((a, b) => b.qty - a.qty);
+                        for (const p of sortedProds) {
+                            const sellingPrice = p.qty > 0 ? (p.amount / p.qty) : 0;
+                            qtyRows.push({
+                                '#': qtyRowIdx++,
+                                'الفئة': group.categoryName,
+                                'ITEMCODE': p.item_id,
+                                'Item name': p.name,
+                                'Item_Alias': p.alias,
+                                'Stock': p.stock_total,
+                                'MRP': p.price,
+                                'Selling P': parseFloat(sellingPrice.toFixed(2)),
+                                'SALES QTY': p.qty,
+                                'SALES AMOUNT': p.amount
+                            });
+                        }
+                        const catAvgSellingPrice = group.totalQty > 0 ? (group.totalAmount / group.totalQty) : 0;
+                        qtyRows.push({
+                            '#': '',
+                            'الفئة': 'إجمالي ' + group.categoryName,
+                            'ITEMCODE': '---',
+                            'Item name': '---',
+                            'Item_Alias': '---',
+                            'Stock': group.totalStock,
+                            'MRP': '',
+                            'Selling P': parseFloat(catAvgSellingPrice.toFixed(2)),
+                            'SALES QTY': group.totalQty,
+                            'SALES AMOUNT': Math.round(group.totalAmount * 100) / 100
+                        });
+                        qtyRows.push({
+                            '#': '', 'الفئة': '', 'ITEMCODE': '', 'Item name': '', 'Item_Alias': '',
+                            'Stock': '', 'MRP': '', 'Selling P': '', 'SALES QTY': '', 'SALES AMOUNT': ''
+                        });
+                    }
+                    const sortedGroupsByAmt = Object.values(groups).sort((a, b) => b.totalAmount - a.totalAmount);
+                    const amtRows = [];
+                    let amtRowIdx = 1;
+                    for (const group of sortedGroupsByAmt) {
+                        const sortedProds = [...group.products].sort((a, b) => b.amount - a.amount);
+                        for (const p of sortedProds) {
+                            const sellingPrice = p.qty > 0 ? (p.amount / p.qty) : 0;
+                            amtRows.push({
+                                '#': amtRowIdx++,
+                                'الفئة': group.categoryName,
+                                'ITEMCODE': p.item_id,
+                                'Item name': p.name,
+                                'Item_Alias': p.alias,
+                                'Stock': p.stock_total,
+                                'MRP': p.price,
+                                'Selling P': parseFloat(sellingPrice.toFixed(2)),
+                                'SALES QTY': p.qty,
+                                'SALES AMOUNT': p.amount
+                            });
+                        }
+                        const catAvgSellingPrice = group.totalQty > 0 ? (group.totalAmount / group.totalQty) : 0;
+                        amtRows.push({
+                            '#': '',
+                            'الفئة': 'إجمالي ' + group.categoryName,
+                            'ITEMCODE': '---',
+                            'Item name': '---',
+                            'Item_Alias': '---',
+                            'Stock': group.totalStock,
+                            'MRP': '',
+                            'Selling P': parseFloat(catAvgSellingPrice.toFixed(2)),
+                            'SALES QTY': group.totalQty,
+                            'SALES AMOUNT': Math.round(group.totalAmount * 100) / 100
+                        });
+                        amtRows.push({
+                            '#': '', 'الفئة': '', 'ITEMCODE': '', 'Item name': '', 'Item_Alias': '',
+                            'Stock': '', 'MRP': '', 'Selling P': '', 'SALES QTY': '', 'SALES AMOUNT': ''
+                        });
+                    }
+                    const wb = XLSX.utils.book_new();
+                    const ws1 = XLSX.utils.json_to_sheet(qtyRows);
+                    ws1['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 15 }, { wch: 45 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws1, 'الاكثر مبيعا حسب الكمية تفصيلي');
+                    const ws2 = XLSX.utils.json_to_sheet(amtRows);
+                    ws2['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 15 }, { wch: 45 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws2, 'الاكثر مبيعا حسب القيمة تفصيلي');
+                    const fileName = 'REP_Detailed_Category_Selling_' + dateFrom + '_' + dateTo + '.xlsx';
+                    XLSX.writeFile(wb, fileName);
+                } catch (err) {
+                    console.error('Export Top Category Detailed error:', err);
+                    alert('خطأ في تصدير التقرير التفصيلي: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
         // =====================
         // FULL STOCK EXCEL EXPORT
         // =====================
@@ -3101,6 +3236,7 @@
             document.getElementById('topProductsContainer').style.display = 'none';
             document.getElementById('btnTopExcel').style.display = 'none';
             document.getElementById('btnTopCategoryExcel').style.display = 'none';
+            document.getElementById('btnTopCategoryDetailedExcel').style.display = 'none';
             document.getElementById('btnAnalysis').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('emptyState').querySelector('p').textContent = 'اختر الفلاتر واضغط "بحث" لعرض النتائج';
