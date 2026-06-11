@@ -456,6 +456,7 @@
       <button class="tab-btn" onclick="switchTab('tabSync')">⏳ تحديث الكاتالوج الفوري</button>
       <button class="tab-btn" onclick="switchTab('tabImages')">🖼️ المنتجات بدون صور</button>
       <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
+      <button class="tab-btn" onclick="switchTab('tabUsers')">👥 إدارة الحسابات</button>
     </div>
 
     <!-- TAB 1: Blocked items -->
@@ -597,7 +598,106 @@
         </table>
       </div>
     </div>
+
+    <!-- TAB 5: Users management -->
+    <div id="tabUsers" class="tab-content">
+      <div class="controls-container">
+        <div class="controls-row">
+          <div class="control-group" style="flex:2;">
+            <label>بحث بالبريد الإلكتروني أو الاسم</label>
+            <input type="text" id="usersSearch" placeholder="ابحث عن مستخدم بالبريد أو الاسم..." oninput="renderUsersTable()">
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>البريد الإلكتروني</th>
+              <th>الاسم المعروض</th>
+              <th>الدور (Role)</th>
+              <th>المعرض (Mall)</th>
+              <th>المستودع (Warehouse)</th>
+              <th style="width: 180px; text-align: center;">الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل الحسابات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
+
+  <!-- User Edit Modal -->
+  <div class="modal-overlay" id="userEditModal">
+    <div class="modal-content" style="max-width: 500px; width: 90%;">
+      <div class="modal-header">
+        <h3>👥 تعديل حساب المستخدم</h3>
+        <button class="modal-close" onclick="closeUserEditModal()">×</button>
+      </div>
+      
+      <input type="hidden" id="editUserId">
+      
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">البريد الإلكتروني</label>
+        <input type="text" id="editUserEmail" readonly style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:#f8fafc; font-family:inherit;">
+      </div>
+
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">الاسم المعروض</label>
+        <input type="text" id="editUserDisplayName" readonly style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:#f8fafc; font-family:inherit;">
+      </div>
+
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">الدور (Role)</label>
+        <select id="editUserRole" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;" onchange="onEditUserRoleChange()">
+          <option value="user">مستخدم عادي (معرض) - user</option>
+          <option value="manager">مدير منطقة (عدة معارض) - manager</option>
+          <option value="admin">مدير كلي (أدمن) - admin</option>
+          <option value="maintenance_admin">مدير صيانة - maintenance_admin</option>
+        </select>
+      </div>
+
+      <!-- Default Mall drop-down -->
+      <div style="margin-bottom:15px; text-align:right;" id="editUserMallContainer">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">المعرض الافتراضي (Mall)</label>
+        <select id="editUserMall" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+          <!-- Injected dynamically -->
+        </select>
+      </div>
+
+      <!-- Default Warehouse drop-down -->
+      <div style="margin-bottom:15px; text-align:right;" id="editUserWarehouseContainer">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">المستودع الافتراضي (Warehouse)</label>
+        <select id="editUserWarehouse" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+          <option value="">لا يوجد</option>
+          <option value="Warehouse">مستودع جدة (Warehouse)</option>
+          <option value="warehouse riyadh">مستودع الرياض (warehouse riyadh)</option>
+          <option value="TOTAL_WAREHOUSES">إجمالي المستودعات</option>
+        </select>
+      </div>
+
+      <!-- Managed outlets (shown only for manager role) -->
+      <div style="margin-bottom:15px; text-align:right; display:none;" id="editUserManagedContainer">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">المعارض المدارة (Managed Outlets)</label>
+        <div id="editUserManagedList" style="border:1px solid var(--border-color); border-radius:8px; padding:10px; max-height:150px; overflow-y:auto; background: #fafafa; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Checkboxes injected dynamically -->
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px; text-align:right; border-top:1px solid var(--border-color); padding-top:15px;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold; color:var(--primary);">تغيير كلمة المرور (اختياري)</label>
+        <input type="password" id="editUserPassword" placeholder="اتركها فارغة لعدم التغيير" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button id="btnSubmitUserEdit" onclick="submitUserEdit()" class="btn btn-primary" style="flex:1;">حفظ التعديلات</button>
+        <button onclick="closeUserEditModal()" class="btn btn-outline" style="flex:1;">إلغاء</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Upload Modal -->
   <div class="modal-overlay" id="uploadModal">
@@ -828,6 +928,8 @@
          renderMissingImagesTable();
       } else if (tabId === 'tabOrders') {
          loadSupabaseOrders();
+      } else if (tabId === 'tabUsers') {
+         loadSupabaseUsers();
       }
     }
 
@@ -1330,6 +1432,181 @@
 
     function closeOrderDetailModal() {
       document.getElementById('orderDetailModal').style.display = 'none';
+    }
+
+    // === TAB 5: Users management logic ===
+    let usersList = [];
+    let usersFilteredList = [];
+
+    async function loadSupabaseUsers() {
+      if (!userSessionToken) return;
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل حسابات المستخدمين...</td></tr>';
+      
+      try {
+        const res = await fetch('/api/catalog/admin/users', {
+          headers: {
+            'Authorization': `Bearer ${userSessionToken}`
+          }
+        });
+        if (res.ok) {
+          usersList = await res.json();
+          renderUsersTable();
+        } else {
+          const err = await res.json();
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger);">❌ فشل تحميل الحسابات: ${err.error || 'خطأ غير معروف'}</td></tr>`;
+        }
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger);">❌ خطأ في الاتصال بالخادم</td></tr>';
+      }
+    }
+
+    function renderUsersTable() {
+      const search = document.getElementById('usersSearch').value.trim().toLowerCase();
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '';
+
+      usersFilteredList = usersList.filter(u => {
+        return !search || 
+          (u.email && u.email.toLowerCase().includes(search)) ||
+          (u.display_name && u.display_name.toLowerCase().includes(search));
+      });
+
+      if (usersFilteredList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد حسابات مطابقة للبحث</td></tr>';
+        return;
+      }
+
+      usersFilteredList.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight:bold; color:var(--primary);">${u.email}</td>
+          <td>${u.display_name || '—'}</td>
+          <td><span class="btn" style="background:#e3fafc; color:#0b7285; padding:4px 8px; pointer-events:none; font-size:0.85em; font-weight:bold;">${u.role}</span></td>
+          <td>${u.mall || '—'}</td>
+          <td>${u.warehouse || '—'}</td>
+          <td style="text-align:center;">
+            <button onclick="openUserEditModal('${u.id}')" class="btn btn-outline" style="padding:6px 12px; font-size:0.85rem;">
+              ⚙️ تعديل الحساب
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openUserEditModal(userId) {
+      const user = usersList.find(u => u.id === userId);
+      if (!user) return;
+
+      document.getElementById('editUserId').value = user.id;
+      document.getElementById('editUserEmail').value = user.email;
+      document.getElementById('editUserDisplayName').value = user.display_name || '';
+      document.getElementById('editUserRole').value = user.role;
+      document.getElementById('editUserPassword').value = ''; // Reset password input
+
+      // Gather branches from products list dynamically
+      const branches = [...new Set(productsList.flatMap(p => Object.keys(p.branches || {})))].filter(b => b.toLowerCase() !== 'warehouse' && !b.toLowerCase().includes('riyadh') && !b.toLowerCase().includes('مستودع')).sort();
+      
+      // Populate default mall drop-down
+      const mallSelect = document.getElementById('editUserMall');
+      mallSelect.innerHTML = '<option value="">لا يوجد</option>' + 
+        branches.map(b => `<option value="${b}">${b}</option>`).join('');
+      
+      mallSelect.value = user.mall || '';
+      document.getElementById('editUserWarehouse').value = user.warehouse || '';
+
+      // Populate managed outlets list (checkboxes)
+      const managedListDiv = document.getElementById('editUserManagedList');
+      const userManaged = Array.isArray(user.managed_outlets) ? user.managed_outlets : [];
+      managedListDiv.innerHTML = branches.map(b => `
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:0.9em; cursor:pointer;">
+          <input type="checkbox" name="managedOutletCheckbox" value="${b}" ${userManaged.includes(b) ? 'checked' : ''}>
+          <span>${b}</span>
+        </label>
+      `).join('');
+
+      onEditUserRoleChange();
+      document.getElementById('userEditModal').style.display = 'flex';
+    }
+
+    function closeUserEditModal() {
+      document.getElementById('userEditModal').style.display = 'none';
+    }
+
+    function onEditUserRoleChange() {
+      const role = document.getElementById('editUserRole').value;
+      const mallContainer = document.getElementById('editUserMallContainer');
+      const warehouseContainer = document.getElementById('editUserWarehouseContainer');
+      const managedContainer = document.getElementById('editUserManagedContainer');
+
+      if (role === 'manager') {
+        mallContainer.style.display = 'none';
+        warehouseContainer.style.display = 'none';
+        managedContainer.style.display = 'block';
+      } else {
+        mallContainer.style.display = 'block';
+        warehouseContainer.style.display = 'block';
+        managedContainer.style.display = 'none';
+      }
+    }
+
+    async function submitUserEdit() {
+      if (!userSessionToken) return;
+      const uid = document.getElementById('editUserId').value;
+      const email = document.getElementById('editUserEmail').value;
+      const role = document.getElementById('editUserRole').value;
+      const password = document.getElementById('editUserPassword').value;
+      
+      let mall = '';
+      let warehouse = '';
+      let managed_outlets = [];
+
+      if (role === 'manager') {
+        const checkboxes = document.querySelectorAll('input[name="managedOutletCheckbox"]:checked');
+        managed_outlets = [...checkboxes].map(cb => cb.value);
+      } else {
+        mall = document.getElementById('editUserMall').value;
+        warehouse = document.getElementById('editUserWarehouse').value;
+      }
+
+      const btn = document.getElementById('btnSubmitUserEdit');
+      btn.disabled = true;
+      btn.textContent = 'جاري حفظ التعديلات...';
+
+      try {
+        const response = await fetch('/api/catalog/admin/users/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userSessionToken}`
+          },
+          body: JSON.stringify({
+            id: uid,
+            email,
+            role,
+            mall,
+            warehouse,
+            managed_outlets,
+            password
+          })
+        });
+
+        if (response.ok) {
+          showToast('✅ تم تحديث بيانات وحساب المستخدم بنجاح!', 'success');
+          closeUserEditModal();
+          await loadSupabaseUsers();
+        } else {
+          const err = await response.json();
+          showToast(`❌ فشل تعديل المستخدم: ${err.error || 'خطأ غير معروف'}`, 'error');
+        }
+      } catch (e) {
+        showToast('❌ خطأ في الاتصال بالشبكة', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'حفظ التعديلات';
+      }
     }
 
     // === Global Toast Helper ===
