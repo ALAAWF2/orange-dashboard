@@ -1113,6 +1113,39 @@
                 META = await metaRes.json();
                 PRODUCTS = (await prodRes.json()).products;
                 
+                for (const pid of Object.keys(PRODUCTS)) {
+                    if (pid.startsWith('KIT-')) {
+                        const basePid = pid.substring(4);
+                        const baseProd = PRODUCTS[basePid];
+                        const kitProd = PRODUCTS[pid];
+                        if (baseProd) {
+                            const mergedStock = {};
+                            if (baseProd.stock) {
+                                for (const [storeId, qty] of Object.entries(baseProd.stock)) {
+                                    if (storeId !== 'total') {
+                                        mergedStock[storeId] = (mergedStock[storeId] || 0) + qty;
+                                    }
+                                }
+                            }
+                            if (kitProd.stock) {
+                                for (const [storeId, qty] of Object.entries(kitProd.stock)) {
+                                    if (storeId !== 'total') {
+                                        mergedStock[storeId] = (mergedStock[storeId] || 0) + qty;
+                                    }
+                                }
+                            }
+                            let total = 0;
+                            for (const qty of Object.values(mergedStock)) {
+                                total += qty;
+                            }
+                            mergedStock.total = total;
+                            baseProd.stock = mergedStock;
+                            kitProd.stock = { ...mergedStock };
+                            baseProd.hasKitCounterpart = true;
+                        }
+                    }
+                }
+                
                 if (catMapRes && catMapRes.ok) {
                     CATEGORY_MAP = await catMapRes.json();
                 } else {
@@ -1550,7 +1583,7 @@
                         if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
                         const prod = PRODUCTS[pid];
-                        if (!prod) continue;
+                        if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!isAllOffers && !selectedOfferItemsSet.has(pid)) continue;
@@ -1590,7 +1623,7 @@
                         if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
                         const prod = PRODUCTS[pid];
-                        if (!prod) continue;
+                        if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!isAllOffers && !selectedOfferItemsSet.has(pid)) continue;
@@ -1638,7 +1671,7 @@
                         if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
                         const prod = PRODUCTS[pid];
-                        if (!prod) continue;
+                        if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!matchConditions(prod, conditions)) continue;
@@ -1676,7 +1709,7 @@
                         if (pid.startsWith('300') || pid.startsWith('290')) continue;
 
                         const prod = PRODUCTS[pid];
-                        if (!prod) continue;
+                        if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!isAllOffers && !selectedOfferItemsSet.has(pid)) continue;
@@ -2480,7 +2513,7 @@
                     }
 
                     for (const [pid, prod] of Object.entries(PRODUCTS)) {
-                        if (!prod.stock) continue;
+                        if (!prod.stock || prod.hasKitCounterpart) continue;
                         const prodAlias = prod.alias || '';
                         const mappedCat = CATEGORY_MAP[prodAlias] || CATEGORY_MAP[pid];
                         if (!mappedCat || mappedCat === 'غير مصنف') {
@@ -2548,7 +2581,6 @@
 
                     const wb = XLSX.utils.book_new();
 
-                    // Generate Sheets
                     const ws1 = XLSX.utils.json_to_sheet(topQty);
                     ws1['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
                     XLSX.utils.book_append_sheet(wb, ws1, 'الاكثر مبيعا حسب الكمية');
@@ -2556,6 +2588,103 @@
                     const ws2 = XLSX.utils.json_to_sheet(topAmt);
                     ws2['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
                     XLSX.utils.book_append_sheet(wb, ws2, 'الاكثر مبيعا حسب القيمة');
+
+                    const kingCatPatterns = ["لحافات كينغ", "لحافات كينج"];
+                    const kingGroups = groupedArray.filter(g => {
+                        if (!g._categoryName) return false;
+                        return kingCatPatterns.some(pat => g._categoryName.includes(pat));
+                    });
+
+                    function generateKingRows(sortedGroups) {
+                        const rows = [];
+                        let rowIdx = 1;
+                        for (const group of sortedGroups) {
+                            const catAvgPrice = group.qty > 0 ? (group.amount / group.qty) : 0;
+                            const p = group.topProduct || {};
+                            rows.push({
+                                '#': '',
+                                'ITEMCODE': p.item_id || '---',
+                                'Item name': p.name || ('إجمالي فئة: ' + group._categoryName),
+                                'Item_Alias': p.alias || group._categoryName,
+                                'Stock': group.stock,
+                                'MRP': p.price !== undefined ? p.price : '',
+                                'Selling P': parseFloat(catAvgPrice.toFixed(2)),
+                                'SALES QTY': group.qty,
+                                'SALES AMOUNT': group.amount
+                            });
+                            
+                            const prodsInCat = [];
+                            for (const [pid, prod] of Object.entries(PRODUCTS)) {
+                                if (prod.hasKitCounterpart) continue;
+                                const prodAlias = prod.alias || '';
+                                const mappedCat = CATEGORY_MAP[prodAlias] || CATEGORY_MAP[pid] || prod.category;
+                                
+                                if (mappedCat === group._categoryName) {
+                                    let st = 0;
+                                    const storeFilterOptions = Array.from(document.getElementById('storeFilter').selectedOptions).map(opt => opt.value);
+                                    const isAllStores = storeFilterOptions.includes('all') || storeFilterOptions.length === 0;
+                                    if (!isAllStores) {
+                                        storeFilterOptions.forEach(sId => {
+                                            if (sId !== 'all') st += prod.stock[sId] || 0;
+                                        });
+                                    } else {
+                                        if (prod.stock) {
+                                            st = prod.stock.total || 0;
+                                        }
+                                    }
+                                    
+                                    const resultItem = CURRENT_RESULTS.find(r => r.item_id === pid || (prodAlias && r.alias === prodAlias));
+                                    const qty = resultItem ? resultItem.qty : 0;
+                                    const amount = resultItem ? resultItem.amount : 0;
+                                    
+                                    prodsInCat.push({
+                                        item_id: pid,
+                                        name: prod.name,
+                                        alias: prodAlias,
+                                        stock: st,
+                                        price: prod.price || 0,
+                                        qty: qty,
+                                        amount: amount
+                                    });
+                                }
+                            }
+                            
+                            prodsInCat.sort((a, b) => b.stock - a.stock);
+                            const top5 = prodsInCat.slice(0, 5);
+                            for (const p of top5) {
+                                const sellingPrice = p.qty > 0 ? (p.amount / p.qty) : p.price;
+                                rows.push({
+                                    '#': rowIdx++,
+                                    'ITEMCODE': p.item_id,
+                                    'Item name': p.name,
+                                    'Item_Alias': p.alias,
+                                    'Stock': p.stock,
+                                    'MRP': p.price,
+                                    'Selling P': parseFloat(sellingPrice.toFixed(2)),
+                                    'SALES QTY': p.qty,
+                                    'SALES AMOUNT': p.amount
+                                });
+                            }
+                            
+                            rows.push({
+                                '#': '', 'ITEMCODE': '', 'Item name': '', 'Item_Alias': '',
+                                'Stock': '', 'MRP': '', 'Selling P': '', 'SALES QTY': '', 'SALES AMOUNT': ''
+                            });
+                        }
+                        return rows;
+                    }
+
+                    const kingGroupsQty = [...kingGroups].sort((a, b) => b.qty - a.qty);
+                    const kingQtyRows = generateKingRows(kingGroupsQty);
+                    const ws3 = XLSX.utils.json_to_sheet(kingQtyRows);
+                    ws3['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws3, 'لحافات كينغ - كمية');
+
+                    const kingGroupsAmt = [...kingGroups].sort((a, b) => b.amount - a.amount);
+                    const kingAmtRows = generateKingRows(kingGroupsAmt);
+                    const ws4 = XLSX.utils.json_to_sheet(kingAmtRows);
+                    ws4['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws4, 'لحافات كينغ - قيمة');
 
                     const fileName = `REP_Top_Category_Selling_${dateFrom}_${dateTo}.xlsx`;
                     XLSX.writeFile(wb, fileName);
@@ -2593,7 +2722,7 @@
                         groups[mappedCategory].totalAmount += r.amount;
                     }
                     for (const [pid, prod] of Object.entries(PRODUCTS)) {
-                        if (!prod.stock) continue;
+                        if (!prod.stock || prod.hasKitCounterpart) continue;
                         const prodAlias = prod.alias || '';
                         const mappedCat = CATEGORY_MAP[prodAlias] || CATEGORY_MAP[pid] || 'غير مصنف';
                         if (groups[mappedCat]) {
@@ -2717,6 +2846,7 @@
 
                     for (const pid in PRODUCTS) {
                         const prod = PRODUCTS[pid];
+                        if (prod.hasKitCounterpart) continue;
                         const stock = prod.stock || {};
                         
                         const mappedCat = CATEGORY_MAP[prod.alias] || CATEGORY_MAP[pid] || prod.category || 'غير مصنف';
@@ -2807,6 +2937,7 @@
 
             for (const pid in PRODUCTS) {
                 const prod = PRODUCTS[pid];
+                if (prod.hasKitCounterpart) continue;
                 if (!prod.name) continue;
 
                 // Category Filter (Apply if selected, otherwise ignore)
@@ -2964,6 +3095,7 @@
 
                         for (const pid in PRODUCTS) {
                             const p = PRODUCTS[pid];
+                            if (p.hasKitCounterpart) continue;
                             if (!isAllCategories && !categoryFilterOptions.includes(p.category || '')) continue;
                             if (!matchConditions(p, conditions)) continue;
 
