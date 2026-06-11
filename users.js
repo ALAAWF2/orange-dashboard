@@ -1,7 +1,7 @@
 const USERS = {
     "Sales Manager": { "pin": "6587", "role": "Admin", "hide_visitors": false },
     "المالية": { "pin": "2026", "role": "Finance", "hide_visitors": false },
-    "المنطقة الشمالية": { "pin": "6342", "role": "Manager", "hide_visitors": true },
+    "المنطقة الشمالية": { "pin": "6342", "role": "Manager", "hide_visitors": false },
     "المنطقة الغربية": { "pin": "1478", "role": "Manager", "hide_visitors": false },
     "اماني عسيري": { "pin": "3698", "role": "Manager", "hide_visitors": false },
     "جهاد ايوبي": { "pin": "2587", "role": "Manager", "hide_visitors": false },
