@@ -706,7 +706,7 @@
 
   <!-- Upload Modal -->
   <div class="modal-overlay" id="uploadModal">
-    <div class="modal-content">
+    <div class="modal-content" id="uploadModalContent" style="max-width:500px; transition: max-width 0.3s ease;">
       <div class="modal-header">
         <h3 id="uploadModalTitle">🖼️ رفع صورة للمنتج</h3>
         <button class="modal-close" onclick="closeUploadModal()">×</button>
@@ -717,20 +717,31 @@
           <p><strong>اسم المنتج:</strong> <span id="uploadProductName" style="color:var(--text-muted)"></span></p>
         </div>
         <div id="uploadManualCodeContainer" style="display:none; text-align:right;">
-          <label style="display:block; margin-bottom:4px; font-weight:bold;">أدخل كود المنتج (كود البضاعة):</label>
-          <input type="text" id="uploadManualCodeInput" placeholder="مثال: 990000210" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit; box-sizing:border-box;" oninput="onManualCodeInput()">
+          <p style="font-size:0.9em; color:var(--text-muted); margin-bottom:10px;">
+            يمكنك اختيار أو سحب عدة صور معاً. سيقوم النظام بمطابقة كل صورة تلقائياً بالمنتج المناسب بناءً على اسم الملف.
+          </p>
+          <div id="manualSingleCodeWrapper">
+            <label style="display:block; margin-bottom:4px; font-weight:bold;">أدخل كود المنتج (كود البضاعة):</label>
+            <input type="text" id="uploadManualCodeInput" placeholder="مثال: 990000210" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit; box-sizing:border-box;" oninput="onManualCodeInput()">
+          </div>
         </div>
       </div>
       
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <p>اسحب وأفلت ملف الصورة هنا أو انقر للاختيار</p>
+        <p id="dropZonePrompt">اسحب وأفلت ملف الصورة هنا أو انقر للاختيار</p>
         <span>صيغ الصور المدعومة: PNG, JPG, JPEG, WEBP</span>
-        <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" multiple onchange="handleFileSelect(event)">
       </div>
       
+      <!-- Single file preview -->
       <div id="uploadPreviewContainer" style="display:none; text-align:center; margin-bottom:15px;">
         <img id="uploadPreviewImage" style="max-height: 150px; object-fit: contain; border-radius:6px; border:1px solid var(--border-color); padding:5px;">
         <p id="uploadFileName" style="font-size:0.85em; color:var(--text-muted); margin-top:5px;"></p>
+      </div>
+
+      <!-- Multiple files preview grid -->
+      <div id="multiUploadPreviewContainer" style="display:none; margin-bottom:15px; max-height:300px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+        <div id="multiUploadGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px;"></div>
       </div>
 
       <button id="btnSubmitUpload" onclick="submitImageUpload()" class="btn btn-primary" style="width:100%;" disabled>
@@ -1200,11 +1211,15 @@
     let uploadTargetCode = "";
     let uploadTargetAlias = "";
     let selectedUploadFile = null;
+    let selectedUploadFiles = [];
 
     function openUploadModal(code, name, alias = "") {
       uploadTargetCode = code;
       uploadTargetAlias = alias;
+      selectedUploadFile = null;
+      selectedUploadFiles = [];
       
+      document.getElementById('uploadModalContent').style.maxWidth = '500px';
       document.getElementById('uploadProductDetailsContainer').style.display = 'block';
       document.getElementById('uploadManualCodeContainer').style.display = 'none';
       
@@ -1212,10 +1227,12 @@
       document.getElementById('uploadProductName').textContent = name;
       document.getElementById('uploadModalTitle').textContent = '🖼️ رفع صورة للمنتج';
       
-      // Reset uploader inputs
-      selectedUploadFile = null;
+      // Reset prompts and inputs
+      document.getElementById('dropZonePrompt').textContent = 'اسحب وأفلت ملف الصورة هنا أو انقر للاختيار';
       document.getElementById('btnSubmitUpload').disabled = true;
       document.getElementById('uploadPreviewContainer').style.display = 'none';
+      document.getElementById('multiUploadPreviewContainer').style.display = 'none';
+      document.getElementById('multiUploadGrid').innerHTML = '';
       
       document.getElementById('uploadModal').style.display = 'flex';
     }
@@ -1223,16 +1240,22 @@
     function openManualImageUploadModal() {
       uploadTargetCode = "";
       uploadTargetAlias = "";
+      selectedUploadFile = null;
+      selectedUploadFiles = [];
       
+      document.getElementById('uploadModalContent').style.maxWidth = '500px';
       document.getElementById('uploadProductDetailsContainer').style.display = 'none';
       document.getElementById('uploadManualCodeContainer').style.display = 'block';
+      document.getElementById('manualSingleCodeWrapper').style.display = 'block';
       document.getElementById('uploadManualCodeInput').value = '';
       document.getElementById('uploadModalTitle').textContent = '📤 رفع صورة للمنتج يدوياً';
       
-      // Reset uploader inputs
-      selectedUploadFile = null;
+      // Reset prompts and inputs
+      document.getElementById('dropZonePrompt').textContent = 'اسحب وأفلت ملف الصورة هنا أو انقر للاختيار';
       document.getElementById('btnSubmitUpload').disabled = true;
       document.getElementById('uploadPreviewContainer').style.display = 'none';
+      document.getElementById('multiUploadPreviewContainer').style.display = 'none';
+      document.getElementById('multiUploadGrid').innerHTML = '';
       
       document.getElementById('uploadModal').style.display = 'flex';
     }
@@ -1276,95 +1299,257 @@
     dropZone.addEventListener('drop', (e) => {
        const files = e.dataTransfer.files;
        if (files.length > 0) {
-          processFile(files[0]);
+          processFileList(files);
        }
     });
 
     function handleFileSelect(e) {
       const files = e.target.files;
       if (files.length > 0) {
-         processFile(files[0]);
+         processFileList(files);
       }
     }
 
-    function processFile(file) {
-      const ext = file.name.split('.')[-1]?.toLowerCase() || '';
-      selectedUploadFile = file;
-      
-      // Preview
-      const reader = new FileReader();
-      reader.onload = function(e) {
-         document.getElementById('uploadPreviewImage').src = e.target.result;
-         document.getElementById('uploadFileName').textContent = file.name;
-         document.getElementById('uploadPreviewContainer').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
+    function processFileList(files) {
+      const isManual = !uploadTargetCode;
 
-      document.getElementById('btnSubmitUpload').disabled = false;
+      if (!isManual) {
+         const file = files[0];
+         selectedUploadFile = file;
+         selectedUploadFiles = [];
+         
+         const reader = new FileReader();
+         reader.onload = function(e) {
+            document.getElementById('uploadPreviewImage').src = e.target.result;
+            document.getElementById('uploadFileName').textContent = file.name;
+            document.getElementById('uploadPreviewContainer').style.display = 'block';
+            document.getElementById('multiUploadPreviewContainer').style.display = 'none';
+         };
+         reader.readAsDataURL(file);
+         
+         document.getElementById('btnSubmitUpload').disabled = false;
+         document.getElementById('btnSubmitUpload').textContent = 'بدء الرفع والحفظ بالسيرفر';
+         
+      } else {
+         selectedUploadFiles = Array.from(files);
+         selectedUploadFile = null;
+         
+         if (selectedUploadFiles.length === 1) {
+            const file = selectedUploadFiles[0];
+            selectedUploadFile = file;
+            
+            document.getElementById('manualSingleCodeWrapper').style.display = 'block';
+            document.getElementById('uploadModalContent').style.maxWidth = '500px';
+            
+            const cleanName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            document.getElementById('uploadManualCodeInput').value = cleanName;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+               document.getElementById('uploadPreviewImage').src = e.target.result;
+               document.getElementById('uploadFileName').textContent = file.name;
+               document.getElementById('uploadPreviewContainer').style.display = 'block';
+               document.getElementById('multiUploadPreviewContainer').style.display = 'none';
+               updateUploadSubmitButtonState();
+            };
+            reader.readAsDataURL(file);
+            
+         } else {
+            document.getElementById('manualSingleCodeWrapper').style.display = 'none';
+            document.getElementById('uploadModalContent').style.maxWidth = '650px';
+            document.getElementById('uploadPreviewContainer').style.display = 'none';
+            document.getElementById('multiUploadPreviewContainer').style.display = 'block';
+            
+            const grid = document.getElementById('multiUploadGrid');
+            grid.innerHTML = '';
+            
+            document.getElementById('btnSubmitUpload').disabled = false;
+            document.getElementById('btnSubmitUpload').textContent = `رفع ${selectedUploadFiles.length} صور الآن 🚀`;
+            
+            selectedUploadFiles.forEach((file, index) => {
+               const cleanName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+               
+               const foundProd = productsList.find(p => String(p.code) === cleanName || (p.alias && String(p.alias).toLowerCase() === cleanName.toLowerCase()));
+               let initialVal = cleanName;
+               if (foundProd) {
+                  initialVal = foundProd.alias || foundProd.code;
+               }
+               
+               const card = document.createElement('div');
+               card.className = 'preview-card';
+               card.style = 'background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:10px; text-align:center; position:relative; display:flex; flex-direction:column; gap:5px;';
+               
+               const reader = new FileReader();
+               reader.onload = function(e) {
+                  card.innerHTML = `
+                     <img src="${e.target.result}" style="width:100%; height:90px; object-fit:contain; border-radius:4px; margin-bottom:5px;">
+                     <label style="font-size:11px; margin-bottom:2px; display:block; font-weight:bold; text-align:right;">الكود/Alias:</label>
+                     <input type="text" class="file-code-input" data-index="${index}" value="${initialVal}" style="width:100%; padding:5px; border:1px solid var(--border-color); border-radius:6px; font-family:inherit; font-size:12px; text-align:center; box-sizing:border-box;">
+                     <div class="file-status" id="file-status-${index}" style="font-size:12px; margin-top:5px; font-weight:bold; color:var(--text-muted);">⏳ جاهز</div>
+                  `;
+               };
+               reader.readAsDataURL(file);
+               grid.appendChild(card);
+            });
+         }
+      }
     }
 
     async function submitImageUpload() {
-      if (!selectedUploadFile || !userSessionToken) return;
+      if (!userSessionToken) return;
 
-      const isManual = document.getElementById('uploadManualCodeContainer').style.display !== 'none';
-      let targetCode = uploadTargetCode;
-      let targetAlias = uploadTargetAlias;
-
-      if (isManual) {
-        const typedVal = document.getElementById('uploadManualCodeInput').value.trim();
-        if (!typedVal) return;
-
-        // Try to resolve targetCode and targetAlias from productsList
-        const foundProd = productsList.find(p => String(p.code) === typedVal || (p.alias && String(p.alias).toLowerCase() === typedVal.toLowerCase()));
-        if (foundProd) {
-          targetCode = foundProd.code;
-          targetAlias = foundProd.alias || "";
-        } else {
-          targetCode = typedVal;
-          targetAlias = "";
-        }
-      }
-
-      if (!targetCode) return;
-
+      const isManual = !uploadTargetCode;
       const btn = document.getElementById('btnSubmitUpload');
-      btn.disabled = true;
-      btn.textContent = 'جاري رفع الملف وحفظه...';
+      
+      if (!isManual || (selectedUploadFiles.length <= 1 && selectedUploadFile)) {
+         let targetCode = uploadTargetCode;
+         let targetAlias = uploadTargetAlias;
 
-      const formData = new FormData();
-      formData.append('code', targetCode);
-      if (targetAlias) {
-         formData.append('alias', targetAlias);
-      }
-      formData.append('image', selectedUploadFile);
+         if (isManual) {
+           const typedVal = document.getElementById('uploadManualCodeInput').value.trim();
+           if (!typedVal) {
+              showToast('❌ يرجى إدخال كود المنتج', 'error');
+              return;
+           }
 
-      try {
-         const response = await fetch('/api/catalog/upload_image', {
-            method: 'POST',
-            headers: {
-               'Authorization': `Bearer ${userSessionToken}`
-            },
-            body: formData
-         });
+           const foundProd = productsList.find(p => String(p.code) === typedVal || (p.alias && String(p.alias).toLowerCase() === typedVal.toLowerCase()));
+           if (foundProd) {
+             targetCode = foundProd.code;
+             targetAlias = foundProd.alias || "";
+           } else {
+             targetCode = typedVal;
+             targetAlias = "";
+           }
+         }
 
-         if (response.ok) {
-            const data = await response.json();
-            showToast('✅ تم رفع وحفظ الصورة وتسميتها بنجاح!', 'success');
-            closeUploadModal();
-            
-            // Reload list and stats
-            await initializeCatalogAdmin();
-            switchTab('tabImages');
-         } else {
-            const err = await response.json();
-            showToast(`❌ فشل الرفع: ${err.error || 'خطأ غير معروف'}`, 'error');
+         if (!targetCode) return;
+
+         const activeFile = selectedUploadFile || selectedUploadFiles[0];
+         if (!activeFile) return;
+
+         btn.disabled = true;
+         btn.textContent = 'جاري رفع الملف وحفظه...';
+
+         const formData = new FormData();
+         formData.append('code', targetCode);
+         if (targetAlias) {
+            formData.append('alias', targetAlias);
+         }
+         formData.append('image', activeFile);
+
+         try {
+            const response = await fetch('/api/catalog/upload_image', {
+               method: 'POST',
+               headers: {
+                  'Authorization': `Bearer ${userSessionToken}`
+               },
+               body: formData
+            });
+
+            if (response.ok) {
+               showToast('✅ تم رفع وحفظ الصورة بنجاح!', 'success');
+               closeUploadModal();
+               await initializeCatalogAdmin();
+               switchTab('tabImages');
+            } else {
+               const err = await response.json();
+               showToast(`❌ فشل الرفع: ${err.error || 'خطأ غير معروف'}`, 'error');
+               btn.disabled = false;
+               btn.textContent = 'بدء الرفع والحفظ بالسيرفر';
+            }
+         } catch(e) {
+            showToast('❌ خطأ في الاتصال بالشبكة', 'error');
             btn.disabled = false;
             btn.textContent = 'بدء الرفع والحفظ بالسيرفر';
          }
-      } catch(e) {
-         showToast('❌ خطأ في الاتصال بالشبكة', 'error');
-         btn.disabled = false;
-         btn.textContent = 'بدء الرفع والحفظ بالسيرفر';
+      } else {
+         btn.disabled = true;
+         btn.textContent = 'جاري رفع الصور... ⏳';
+
+         let successCount = 0;
+         let errorCount = 0;
+
+         for (let i = 0; i < selectedUploadFiles.length; i++) {
+            const file = selectedUploadFiles[i];
+            const statusLabel = document.getElementById(`file-status-${i}`);
+            const inputField = document.querySelector(`.file-code-input[data-index="${i}"]`);
+            const typedVal = inputField ? inputField.value.trim() : "";
+
+            if (!typedVal) {
+               if (statusLabel) {
+                  statusLabel.textContent = "❌ كود مفقود";
+                  statusLabel.style.color = "var(--danger)";
+               }
+               errorCount++;
+               continue;
+            }
+
+            if (statusLabel) {
+               statusLabel.textContent = "🚀 جاري الرفع...";
+               statusLabel.style.color = "var(--primary)";
+            }
+
+            const foundProd = productsList.find(p => String(p.code) === typedVal || (p.alias && String(p.alias).toLowerCase() === typedVal.toLowerCase()));
+            let targetCode = typedVal;
+            let targetAlias = "";
+            if (foundProd) {
+               targetCode = foundProd.code;
+               targetAlias = foundProd.alias || "";
+            }
+
+            const formData = new FormData();
+            formData.append('code', targetCode);
+            if (targetAlias) {
+               formData.append('alias', targetAlias);
+            }
+            formData.append('image', file);
+
+            try {
+               const response = await fetch('/api/catalog/upload_image', {
+                  method: 'POST',
+                  headers: {
+                     'Authorization': `Bearer ${userSessionToken}`
+                  },
+                  body: formData
+               });
+
+               if (response.ok) {
+                  if (statusLabel) {
+                     statusLabel.textContent = "✅ تم الرفع";
+                     statusLabel.style.color = "var(--success)";
+                  }
+                  successCount++;
+               } else {
+                  const err = await response.json();
+                  if (statusLabel) {
+                     statusLabel.textContent = "❌ فشل";
+                     statusLabel.style.color = "var(--danger)";
+                     statusLabel.title = err.error || "خطأ غير معروف";
+                  }
+                  errorCount++;
+               }
+            } catch(err) {
+               if (statusLabel) {
+                  statusLabel.textContent = "❌ خطأ شبكة";
+                  statusLabel.style.color = "var(--danger)";
+               }
+               errorCount++;
+            }
+         }
+
+         if (successCount > 0) {
+            showToast(`✅ تم رفع ${successCount} صورة بنجاح!`, 'success');
+            await initializeCatalogAdmin();
+            switchTab('tabImages');
+         }
+
+         if (errorCount === 0) {
+            closeUploadModal();
+         } else {
+            showToast(`⚠ فشل رفع ${errorCount} صورة، يرجى مراجعة الحالات في الجدول.`, 'error');
+            btn.disabled = false;
+            btn.textContent = 'إعادة محاولة الرفع للفاشلة 🚀';
+         }
       }
     }
 
