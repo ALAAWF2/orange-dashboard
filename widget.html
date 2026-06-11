@@ -831,6 +831,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="users.js"></script>
     <script>
         // Global Variables
         let rawData = null;
@@ -839,6 +840,15 @@
         let currentUser = null;
         let deferredPrompt = null;
         let shiftViewActive = false;  // Shift view toggle state
+
+        function shouldHideVisitors() {
+            if (!currentUser) return false;
+            if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') return false;
+            if (typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+                return USERS[currentUser.name].hide_visitors === true;
+            }
+            return currentUser.hide_visitors === true;
+        }
 
         // Date Helpers
         function getTodayStr() {
@@ -1077,17 +1087,21 @@
         }
 
         // Render shift KPI cards
-                function renderShiftKPIs(shiftData) {
+        function renderShiftKPIs(shiftData) {
             [1, 2].forEach(s => {
                 const d = shiftData[s];
                 document.getElementById(`shift${s}Sales`).textContent = formatNumber(d.sales);
                 const rate = d.visitors > 0 ? ((d.bills / d.visitors) * 100).toFixed(1) : 0;
-                document.getElementById(`shift${s}Details`).textContent =
-                    `${formatNumber(d.bills)} فاتورة | ${formatNumber(d.visitors)} زائر (${rate}%)`;
+                if (shouldHideVisitors()) {
+                    document.getElementById(`shift${s}Details`).textContent =
+                        `${formatNumber(d.bills)} فاتورة | (${rate}%)`;
+                } else {
+                    document.getElementById(`shift${s}Details`).textContent =
+                        `${formatNumber(d.bills)} فاتورة | ${formatNumber(d.visitors)} زائر (${rate}%)`;
+                }
             });
         }
 
-        // Get per-branch shift detail HTML
         function getShiftBadgesHtml(storeId, shiftData) {
             if (!shiftViewActive) return '';
             const s1 = shiftData[1].byStore[storeId] || 0;
@@ -1099,24 +1113,43 @@
             const v1 = shiftData[1].byStoreVisitors[storeId] || 0;
             const v2 = shiftData[2].byStoreVisitors[storeId] || 0;
 
-            return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
-                <div style="display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
-                    <span style="font-weight:600; color:#888;"></span>
-                    <span style="text-align:center; font-weight:600; color:#888;">مبيعات</span>
-                    <span style="text-align:center; font-weight:600; color:#888;">فواتير</span>
-                    <span style="text-align:center; font-weight:600; color:#888;">زوار</span>
+            const isHidden = shouldHideVisitors();
+            if (isHidden) {
+                return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
+                    <div style="display: grid; grid-template-columns: auto 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
+                        <span style="font-weight:600; color:#888;"></span>
+                        <span style="text-align:center; font-weight:600; color:#888;">مبيعات</span>
+                        <span style="text-align:center; font-weight:600; color:#888;">فواتير</span>
 
-                    <span class="shift-branch-badge s1">🌅 ش1</span>
-                    <span style="text-align:center; font-weight:700;">${formatNumber(s1)}</span>
-                    <span style="text-align:center;">${b1}</span>
-                    <span style="text-align:center;">${v1 || '-'}</span>
+                        <span class="shift-branch-badge s1">🌅 ش1</span>
+                        <span style="text-align:center; font-weight:700;">${formatNumber(s1)}</span>
+                        <span style="text-align:center;">${b1}</span>
 
-                    <span class="shift-branch-badge s2">☀️ ش2</span>
-                    <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
-                    <span style="text-align:center;">${b2}</span>
-                    <span style="text-align:center;">${v2 || '-'}</span>
-                </div>
-            </div>`;
+                        <span class="shift-branch-badge s2">☀️ ش2</span>
+                        <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
+                        <span style="text-align:center;">${b2}</span>
+                    </div>
+                </div>`;
+            } else {
+                return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
+                    <div style="display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
+                        <span style="font-weight:600; color:#888;"></span>
+                        <span style="text-align:center; font-weight:600; color:#888;">مبيعات</span>
+                        <span style="text-align:center; font-weight:600; color:#888;">فواتير</span>
+                        <span style="text-align:center; font-weight:600; color:#888;">زوار</span>
+
+                        <span class="shift-branch-badge s1">🌅 ش1</span>
+                        <span style="text-align:center; font-weight:700;">${formatNumber(s1)}</span>
+                        <span style="text-align:center;">${b1}</span>
+                        <span style="text-align:center;">${v1 || '-'}</span>
+
+                        <span class="shift-branch-badge s2">☀️ ش2</span>
+                        <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
+                        <span style="text-align:center;">${b2}</span>
+                        <span style="text-align:center;">${v2 || '-'}</span>
+                    </div>
+                </div>`;
+            }
         }
 
         function renderMorningSummary(allowedBranches, periodSales, periodTrans, branchTargets, daysInMonth, currentDay, toDate) {
@@ -1224,10 +1257,17 @@
             const worstConversion = conversionRows[0];
 
             if (worstConversion) {
-                worstEl.innerHTML = `
-                    <div>${rawData.stores[worstConversion.storeId] || worstConversion.storeId}</div>
-                    <div class="morning-summary-sub">${worstConversion.conversion.toFixed(1)}% معدل استحواذ | ${formatNumber(worstConversion.trans)} فاتورة / ${formatNumber(worstConversion.visitors)} زائر</div>
-                `;
+                if (shouldHideVisitors()) {
+                    worstEl.innerHTML = `
+                        <div>${rawData.stores[worstConversion.storeId] || worstConversion.storeId}</div>
+                        <div class="morning-summary-sub">${worstConversion.conversion.toFixed(1)}% معدل استحواذ | ${formatNumber(worstConversion.trans)} فاتورة</div>
+                    `;
+                } else {
+                    worstEl.innerHTML = `
+                        <div>${rawData.stores[worstConversion.storeId] || worstConversion.storeId}</div>
+                        <div class="morning-summary-sub">${worstConversion.conversion.toFixed(1)}% معدل استحواذ | ${formatNumber(worstConversion.trans)} فاتورة / ${formatNumber(worstConversion.visitors)} زائر</div>
+                    `;
+                }
             } else {
                 worstEl.textContent = 'لا توجد بيانات كافية';
             }
@@ -1437,7 +1477,7 @@
             // Update UI
             document.getElementById('totalSales').textContent = formatNumber(totalSalesVal);
             document.getElementById('totalTrans').textContent = formatNumber(totalTransVal);
-            document.getElementById('totalVisitors').textContent = formatNumber(totalVisitorsVal);
+            document.getElementById('totalVisitors').textContent = shouldHideVisitors() ? '-' : formatNumber(totalVisitorsVal);
             document.getElementById('branchCount').textContent = branchesWithSales;
             document.getElementById('avgPerBranch').textContent =
                 branchesWithSales > 0 ? formatNumber(totalSalesVal / branchesWithSales) : '0';
@@ -1607,12 +1647,15 @@
                                         <div class="branch-sales">${formatNumber(sales)}</div>
                                         <div class="d-flex gap-2">
                                             <span class="branch-trans">${trans} فاتورة</span>
-                                            ${branchVisitors[storeId] ? (() => {
-                            const v = branchVisitors[storeId];
-                            const rate = v > 0 ? ((trans / v) * 100).toFixed(1) : 0;
-                            // Make it clickable to show hourly visitors modal
-                            return `<span class="branch-visitors" style="cursor: pointer; text-decoration: underline;" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', '${fromDate}', '${toDate}')">| ${v} زائر (${rate}%) <i class="bi bi-clock-history"></i></span>`;
-                        })() : ''}
+                                            ${(branchVisitors[storeId]) ? (() => {
+                                                const v = branchVisitors[storeId];
+                                                const rate = v > 0 ? ((trans / v) * 100).toFixed(1) : 0;
+                                                if (shouldHideVisitors()) {
+                                                    return `<span class="branch-visitors">| (${rate}%)</span>`;
+                                                }
+                                                // Make it clickable to show hourly visitors modal
+                                                return `<span class="branch-visitors" style="cursor: pointer; text-decoration: underline;" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', '${fromDate}', '${toDate}')">| ${v} زائر (${rate}%) <i class="bi bi-clock-history"></i></span>`;
+                                            })() : ''}
                                         </div>
                                     </div>
                                     <span class="toggle-icon">▼</span>
@@ -1819,6 +1862,10 @@
     <script>
         // --- Hourly Visitors Helper ---
         function showHourlyVisitors(storeId, encodedName, fromDateStr, toDateStr) {
+            if (shouldHideVisitors()) {
+                alert("ليس لديك الصلاحية لعرض بيانات الزوار بالساعة.");
+                return;
+            }
             if (!rawData || !rawData.visitors_hourly) {
                 alert("بيانات الزوار بالساعة غير متوفرة في هذا التحديث.");
                 return;

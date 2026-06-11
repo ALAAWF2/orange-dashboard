@@ -991,6 +991,7 @@
     <!-- SheetJS for Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="excel_export.js"></script>
+    <script src="users.js"></script>
 
     <script>
         // Session Check
@@ -1000,6 +1001,15 @@
         } else if (currentUser.name === 'علاء' && currentUser.role !== 'Admin') {
             currentUser.role = 'Admin';
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+
+        function shouldHideVisitors() {
+            if (!currentUser) return false;
+            if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') return false;
+            if (typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+                return USERS[currentUser.name].hide_visitors === true;
+            }
+            return currentUser.hide_visitors === true;
         }
 
         // Show Admin Panel Button only for Alaa
@@ -2114,7 +2124,11 @@
             // --- 3. Update KPI Cards (Current) ---
             fmt(document.getElementById('totalSales'), curr.sales);
             fmt(document.getElementById('totalTrans'), curr.trans);
-            fmt(document.getElementById('totalVisitors'), curr.visitors);
+            if (shouldHideVisitors()) {
+                document.getElementById('totalVisitors').textContent = '-';
+            } else {
+                fmt(document.getElementById('totalVisitors'), curr.visitors);
+            }
             fmt(document.getElementById('targetVal'), curr.target);
 
             // Growth
@@ -2142,7 +2156,11 @@
             // --- 4. Update KPI Cards (Previous) ---
             fmt(document.getElementById('prevSales'), prev.sales);
             fmt(document.getElementById('prevTrans'), prev.trans);
-            fmt(document.getElementById('prevVisitors'), prev.visitors);
+            if (shouldHideVisitors()) {
+                document.getElementById('prevVisitors').textContent = '-';
+            } else {
+                fmt(document.getElementById('prevVisitors'), prev.visitors);
+            }
 
             // Prev Rates
             let prevCustValue = prev.visitors > 0 ? prev.sales / prev.visitors : 0;
@@ -2283,8 +2301,8 @@
                     <td class="text-center" style="color:#f87171">${mDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td class="text-center">${mTrans.toLocaleString()}</td>
                     <td class="text-center">${mAvgInv.toFixed(0)}</td>
-                    <td class="text-center">${mVisitors.toLocaleString()}</td>
-                    <td class="text-center" style="opacity:0.7">${mPrevVisitors.toLocaleString()}</td>
+                    <td class="text-center">${shouldHideVisitors() ? '-' : mVisitors.toLocaleString()}</td>
+                    <td class="text-center" style="opacity:0.7">${shouldHideVisitors() ? '-' : mPrevVisitors.toLocaleString()}</td>
                     <td class="text-center">${mCustVal.toFixed(0)}</td>
                     <td class="text-center" style="opacity:0.7">${mCustValLY.toFixed(0)}</td>
                     <td class="text-center">${mConv.toFixed(1)}%</td>
@@ -2311,9 +2329,9 @@
                     <td class="text-center">${b.trans.toLocaleString()}</td>
                     <td class="text-center">${b.avgInv.toFixed(0)}</td>
                     <td class="text-center fw-bold">
-                        <a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                        ${shouldHideVisitors() ? '-' : `<a href="#" onclick="showHourlyVisitors('${b.sid}', '${encodeURIComponent(b.name)}', window.dashboardState.start, window.dashboardState.end); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${b.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>`}
                     </td>
-                    <td class="text-center text-muted">${b.prevVisitors.toLocaleString()}</td>
+                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : b.prevVisitors.toLocaleString()}</td>
                     <td class="text-center fw-bold">${b.custVal.toFixed(0)}</td>
                     <td class="text-center text-muted">${b.prevCustVal.toFixed(0)}</td>
                     <td class="text-center">${b.conv.toFixed(1)}%</td>
@@ -2362,8 +2380,8 @@
                     <td class="text-center text-danger">${tDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td class="text-center">${tTrans.toLocaleString()}</td>
                     <td class="text-center">${tAvgInv.toFixed(0)}</td>
-                    <td class="text-center">${tVisitors.toLocaleString()}</td>
-                    <td class="text-center text-light opacity-75">${tPrevVisitors.toLocaleString()}</td>
+                    <td class="text-center">${shouldHideVisitors() ? '-' : tVisitors.toLocaleString()}</td>
+                    <td class="text-center text-light opacity-75">${shouldHideVisitors() ? '-' : tPrevVisitors.toLocaleString()}</td>
                     <td class="text-center">${tCustVal.toFixed(0)}</td>
                     <td class="text-center text-light opacity-75">${tCustValLY.toFixed(0)}</td>
                     <td class="text-center">${tConv.toFixed(1)}%</td>
@@ -2431,11 +2449,11 @@
                             </div>
                             <div class="sc-item">
                                 <span class="sc-label">الزوار</span>
-                                <span class="sc-val" style="color:#0d6efd">${b.visitors.toLocaleString()}</span>
+                                <span class="sc-val" style="color:#0d6efd">${shouldHideVisitors() ? '-' : b.visitors.toLocaleString()}</span>
                             </div>
                             <div class="sc-item">
                                 <span class="sc-label">زوار سابق</span>
-                                <span class="sc-val" style="color:#888">${b.prevVisitors.toLocaleString()}</span>
+                                <span class="sc-val" style="color:#888">${shouldHideVisitors() ? '-' : b.prevVisitors.toLocaleString()}</span>
                             </div>
                             <div class="sc-item">
                                 <span class="sc-label">التحويل %</span>
@@ -2469,7 +2487,7 @@
                             <div class="sc-item"><span class="sc-label">قيمة النمو</span><span class="sc-val" style="${tAbsGrowth >= 0 ? 'color:#198754' : 'color:#dc3545'}">${tAbsGrowth.toLocaleString()}</span></div>
                             <div class="sc-item"><span class="sc-label">الفواتير</span><span class="sc-val">${tTrans.toLocaleString()}</span></div>
                             <div class="sc-item"><span class="sc-label">م. الفاتورة</span><span class="sc-val">${tAvgInv.toFixed(0)}</span></div>
-                            <div class="sc-item"><span class="sc-label">الزوار</span><span class="sc-val" style="color:#0d6efd">${tVisitors.toLocaleString()}</span></div>
+                            <div class="sc-item"><span class="sc-label">الزوار</span><span class="sc-val" style="color:#0d6efd">${shouldHideVisitors() ? '-' : tVisitors.toLocaleString()}</span></div>
                             <div class="sc-item"><span class="sc-label">التحويل</span><span class="sc-val">${tConv.toFixed(1)}%</span></div>
                         </div>
                     </div>`;
@@ -2614,10 +2632,10 @@
                     <td class="fw-bold">${r.custVal.toFixed(0)}</td>
                     <td class="text-secondary">${r.prevCustVal.toFixed(0)}</td>
                     <td class="fw-bold">
-                        <a href="#" onclick="showHourlyVisitors('${r.sid}', '${encodeURIComponent(r.name)}', new Date('${dateYest}'), new Date('${dateYest}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitY.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                        ${shouldHideVisitors() ? '-' : `<a href="#" onclick="showHourlyVisitors('${r.sid}', '${encodeURIComponent(r.name)}', new Date('${dateYest}'), new Date('${dateYest}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitY.toLocaleString()} <i class="bi bi-clock-history small"></i></a>`}
                     </td>
-                    <td class="text-secondary">${r.visitLY.toLocaleString()}</td>
-                    <td>${r.conv.toFixed(1)}%</td>
+                    <td class="text-secondary">${shouldHideVisitors() ? '-' : r.visitLY.toLocaleString()}</td>
+                    <td>${r.conv.toFixed(1) + '%'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2738,11 +2756,11 @@
                     <td class="text-center">${r.trans.toLocaleString()}</td>
                     <td class="text-center">${r.avgInv.toLocaleString()}</td>
                     <td class="text-center fw-bold">
-                        <a href="#" onclick="showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>
+                        ${shouldHideVisitors() ? '-' : `<a href="#" onclick="showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>`}
                     </td>
-                    <td class="text-center text-muted">${r.visitorsLY.toLocaleString()}</td>
+                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : r.visitorsLY.toLocaleString()}</td>
                     <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
-                    <td class="text-center">${r.conv.toFixed(1)}%</td>
+                    <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
                 </tr>
             `).join('');
 
@@ -2760,10 +2778,10 @@
                     <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
                     <td class="text-center">${grandTrans.toLocaleString()}</td>
                     <td class="text-center">${grandAvgInv.toLocaleString()}</td>
-                    <td class="text-center">${grandVisitors.toLocaleString()}</td>
-                    <td class="text-center">${grandVisitorsLY.toLocaleString()}</td>
+                    <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitors.toLocaleString()}</td>
+                    <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitorsLY.toLocaleString()}</td>
                     <td class="text-center fw-bold">${grandCustVal.toLocaleString()}</td>
-                    <td class="text-center">${grandConv.toFixed(1)}%</td>
+                    <td class="text-center">${grandConv.toFixed(1) + '%'}</td>
                 </tr>
             `;
 
@@ -3416,10 +3434,10 @@
                     <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
                     <td class="text-center">${r.trans.toLocaleString()}</td>
                     <td class="text-center">${r.avgInv.toLocaleString()}</td>
-                    <td class="text-center fw-bold">${r.visitors.toLocaleString()}</td>
-                    <td class="text-center text-muted">${r.visitorsLY.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${shouldHideVisitors() ? '-' : r.visitors.toLocaleString()}</td>
+                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : r.visitorsLY.toLocaleString()}</td>
                     <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
-                    <td class="text-center">${r.conv.toFixed(1)}%</td>
+                    <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
                 </tr>`;
             });
             html += `</tbody><tfoot><tr>
@@ -3429,10 +3447,10 @@
                 <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
                 <td class="text-center">${grandTrans.toLocaleString()}</td>
                 <td class="text-center">${grandAvgInv.toLocaleString()}</td>
-                <td class="text-center">${grandVisitors.toLocaleString()}</td>
-                <td class="text-center">${grandVisitorsLY.toLocaleString()}</td>
+                <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitors.toLocaleString()}</td>
+                <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitorsLY.toLocaleString()}</td>
                 <td class="text-center fw-bold">${grandCustVal.toLocaleString()}</td>
-                <td class="text-center">${grandConv.toFixed(1)}%</td>
+                <td class="text-center">${shouldHideVisitors() ? '-' : grandConv.toFixed(1) + '%'}</td>
             </tr></tfoot></table></div>`;
             return html;
         }
@@ -3748,11 +3766,11 @@
                     <td class="text-center">${r.trans.toLocaleString()}</td>
                     <td class="text-center">${r.avgInv.toLocaleString()}</td>
                     <td class="text-center fw-bold">
-                        <a href="#" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary">${r.visitors.toLocaleString()}</a>
+                        ${shouldHideVisitors() ? '-' : `<a href="#" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary">${r.visitors.toLocaleString()}</a>`}
                     </td>
-                    <td class="text-center text-muted">${r.visitorsLY.toLocaleString()}</td>
+                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : r.visitorsLY.toLocaleString()}</td>
                     <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
-                    <td class="text-center">${r.conv.toFixed(1)}%</td>
+                    <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
                 </tr>`;
             });
 
@@ -3763,10 +3781,10 @@
                 <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
                 <td class="text-center">${grandTrans.toLocaleString()}</td>
                 <td class="text-center">${grandAvgInv.toLocaleString()}</td>
-                <td class="text-center">${grandVisitors.toLocaleString()}</td>
-                <td class="text-center">${grandVisitorsLY.toLocaleString()}</td>
+                <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitors.toLocaleString()}</td>
+                <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitorsLY.toLocaleString()}</td>
                 <td class="text-center fw-bold">${grandCustVal.toLocaleString()}</td>
-                <td class="text-center">${grandConv.toFixed(1)}%</td>
+                <td class="text-center">${grandConv.toFixed(1) + '%'}</td>
             </tr></tfoot></table></div>`;
             return html;
         }
@@ -4072,7 +4090,7 @@
             html += `<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
                 <div class="rhythm-toggle-group">
                     <button class="rhythm-toggle-btn active" onclick="switchRhythmMode('${uid}', 'sales', this)">المبيعات</button>
-                    <button class="rhythm-toggle-btn" onclick="switchRhythmMode('${uid}', 'visitors', this)">الزوار</button>
+                    ${shouldHideVisitors() ? '' : `<button class="rhythm-toggle-btn" onclick="switchRhythmMode('${uid}', 'visitors', this)">الزوار</button>`}
                     <button class="rhythm-toggle-btn" onclick="event.stopPropagation(); toggleRhythmDetail('${uid}', this)" style="margin-right:10px; border-color:#8e44ad; color:#8e44ad;">📅 تفصيل الأيام</button>
                 </div>
                 <div class="rhythm-legend">
@@ -4161,8 +4179,8 @@
                     'النمو %': +(r.growth.toFixed(1)),
                     'الفواتير': r.trans,
                     'م. الفاتورة': r.avgInv,
-                    'الزوار': r.visitors,
-                    'زوار السنة السابقة': r.visitorsLY,
+                    'الزوار': shouldHideVisitors() ? '-' : r.visitors,
+                    'زوار السنة السابقة': shouldHideVisitors() ? '-' : r.visitorsLY,
                     'قيمة العميل': r.custVal,
                     'التحويل %': +(r.conv.toFixed(1))
                 }));
@@ -4591,6 +4609,10 @@
     <script>
         // --- Hourly Visitors Helper ---
         function showHourlyVisitors(storeId, encodedName, startDate, endDate) {
+            if (shouldHideVisitors()) {
+                alert("ليس لديك الصلاحية لعرض بيانات الزوار بالساعة.");
+                return;
+            }
             if (!rawData || !rawData.visitors_hourly) {
                 alert("بيانات الزوار بالساعة غير متوفرة في هذا التحديث.");
                 return;

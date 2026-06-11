@@ -5,6 +5,20 @@
 
 let excelModal = null;
 
+function shouldHideVisitorsGlobal() {
+    if (typeof shouldHideVisitors === 'function') {
+        return shouldHideVisitors();
+    }
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) return false;
+    const currentUser = JSON.parse(userStr);
+    if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') return false;
+    if (typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+        return USERS[currentUser.name].hide_visitors === true;
+    }
+    return currentUser.hide_visitors === true;
+}
+
 // Initialize Modal
 function showExcelModal() {
     if (!excelModal) {
@@ -285,15 +299,15 @@ async function exportStoreSales(startDate, endDate) {
             "نسبة التحقيق": ach,
             "عدد الفواتير": r.trans,
             "عدد فواتير السنة السابقة": prevTrans,
-            "الزوار": r.visitors,
-            "زوار السنة السابقة": prevVisitors,
+            "الزوار": shouldHideVisitorsGlobal() ? '-' : r.visitors,
+            "زوار السنة السابقة": shouldHideVisitorsGlobal() ? '-' : prevVisitors,
             "متوسط الفاتورة": r.trans > 0 ? (r.sales / r.trans).toFixed(0) : 0,
             "متوسط الفاتورة السنة السابقة": prevTrans > 0 ? (prevSales / prevTrans).toFixed(0) : 0,
             "عدد القطع": r.items || 0,
             "عدد قطع السنة السابقة": prevItems || 0,
             "معدل القطع بالفاتورة": r.trans > 0 ? (r.items / r.trans).toFixed(1) : 0,
             "معدل القطع بالفاتورة السنة السابقة": prevTrans > 0 ? (prevItems / prevTrans).toFixed(1) : 0,
-            "نسبة التحويل": r.visitors > 0 ? ((r.trans / r.visitors) * 100).toFixed(1) + '%' : '0%'
+            "نسبة التحويل": (r.visitors > 0 ? ((r.trans / r.visitors) * 100).toFixed(1) + '%' : '0%')
         };
     });
 

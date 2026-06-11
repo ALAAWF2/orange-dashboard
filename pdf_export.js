@@ -1,5 +1,19 @@
 /* PDF Export Logic - Final (Base64 Font) */
 
+function shouldHideVisitorsGlobal() {
+    if (typeof shouldHideVisitors === 'function') {
+        return shouldHideVisitors();
+    }
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) return false;
+    const currentUser = JSON.parse(userStr);
+    if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') return false;
+    if (typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+        return USERS[currentUser.name].hide_visitors === true;
+    }
+    return currentUser.hide_visitors === true;
+}
+
 async function generatePDF(targetStoreId = 'all', isDetailed = false) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -184,7 +198,9 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
 
             const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100).toFixed(1) + '%' : '-';
             const avgInv = trans > 0 ? Math.round(sales / trans) : 0;
-            const custVal = visitors > 0 ? Math.round(sales / visitors) : 0;
+            const custVal = visitors > 0 ? Math.round(sales / visitors) : '-';
+            const visitorsVal = shouldHideVisitorsGlobal() ? '-' : visitors;
+            const visitorsLYVal = shouldHideVisitorsGlobal() ? '-' : visitorsLY;
             const conv = visitors > 0 ? ((trans / visitors) * 100).toFixed(1) + '%' : '-';
 
             rows.push([
@@ -195,8 +211,8 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
                 trans,
                 avgInv,
                 custVal,
-                visitors,
-                visitorsLY,
+                visitorsVal,
+                visitorsLYVal,
                 conv
             ]);
 
@@ -212,7 +228,7 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         // Totals Row
         const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100).toFixed(1) + '%' : '-';
         const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
-        const grandCustVal = grandVisitors > 0 ? Math.round(grandTotalSales / grandVisitors) : 0;
+        const grandCustVal = grandVisitors > 0 ? Math.round(grandTotalSales / grandVisitors) : '-';
         const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100).toFixed(1) + '%' : '-';
 
         rows.push([
@@ -223,8 +239,8 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
             grandTrans,
             grandAvgInv,
             grandCustVal,
-            grandVisitors,
-            grandVisitorsLY,
+            shouldHideVisitorsGlobal() ? '-' : grandVisitors,
+            shouldHideVisitorsGlobal() ? '-' : grandVisitorsLY,
             grandConv
         ]);
 
