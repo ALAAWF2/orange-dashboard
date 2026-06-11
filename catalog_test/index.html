@@ -943,12 +943,25 @@
   <script>
     async function loadLocalCatalog() {
       try {
+        let blockedAliases = [];
+        
+        try {
+          const blockedRes = await fetch("/api/catalog/blocked?_=" + Date.now(), { cache: "no-store" });
+          if (blockedRes.ok) {
+            const dynamicBlocked = await blockedRes.json();
+            if (Array.isArray(dynamicBlocked)) {
+              blockedAliases = dynamicBlocked.map(String);
+            }
+          }
+        } catch (blockedErr) {
+          console.warn("تعذر جلب قائمة الحجب من السيرفر المحلي:", blockedErr);
+        }
+
         const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
         if (!productsRes.ok) throw new Error("Failed to load products.json");
         window.products = await productsRes.json();
 
-        // Filter out disabled items (from itemsfornotshow.xlsx)
-        const blockedAliases = ["489901","489902","489903","489904","489905","489906","489907","489908","489909","489910","489911","489912","489913","489914","489915","489916","489917","489918"];
+        // Filter out disabled items
         window.products = window.products.filter(p => !blockedAliases.includes(String(p.alias)) && !blockedAliases.includes(String(p.code)));
 
         console.log("✅ products.json loaded:", window.products.length);

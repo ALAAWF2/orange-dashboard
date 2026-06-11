@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة التحكم وإدارة الكاتالوج</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-app: #f4f6f9;
+      --bg-surface: #ffffff;
+      --primary: #f26522; /* ORANGE brand */
+      --primary-hover: #d55317;
+      --primary-soft: #fff0e8;
+      --secondary: #2c3e50;
+      --accent: #27ae60;
+      
+      --text-main: #2c3e50;
+      --text-muted: #7f8c8d;
+      --text-light: #b2bec3;
+      
+      --border-color: #ebedef;
+      --danger: #e74c3c;       
+      --warning: #f39c12;
+      --success: #2ecc71;      
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.1);
+      
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --font-family: 'Tajawal', sans-serif;
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+
+    /* Top Navbar */
+    .navbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-brand .logo-icon {
+      background: var(--primary);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .nav-brand h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--secondary);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .btn {
+      font-family: var(--font-family);
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(242, 101, 34, 0.3); }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(242, 101, 34, 0.4); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { opacity: 0.9; transform: translateY(-2px); }
+    
+    /* Main Layout */
+    .app-main {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .dashboard-greeting h2 { font-size: 1.8rem; font-weight: 800; }
+    .dashboard-greeting p { color: var(--text-muted); font-size: 1rem; margin-top: 4px; }
+
+    /* Stats Grid */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .stat-value { font-size: 2rem; font-weight: 900; color: var(--secondary); line-height: 1; margin-bottom: 0.5rem; }
+    .stat-title { font-size: 0.9rem; color: var(--text-muted); font-weight: 700; }
+    
+    /* Tab View Layout */
+    .tabs-bar {
+      display: flex;
+      gap: 10px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 2px;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Search & Filter Bar */
+    .controls-container {
+      background: var(--bg-surface);
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+    }
+    .controls-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    .control-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--secondary);
+      font-weight: 700;
+      font-size: 0.9em;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: var(--transition);
+      background: #f8fafc;
+    }
+    select:focus, input[type="text"]:focus {
+      border-color: var(--primary);
+      outline: none;
+      background: white;
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    /* Table styling */
+    .table-responsive {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+    }
+    th, td {
+      padding: 1rem 1.2rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95em;
+    }
+    th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-weight: 800;
+      white-space: nowrap;
+      font-size: 0.85em;
+      letter-spacing: 0.5px;
+    }
+    tr:hover { background: #f8fafc; }
+
+    /* Block Toggle button */
+    .toggle-block-btn {
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1.5px solid transparent;
+    }
+    .toggle-block-btn.blocked {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .toggle-block-btn.blocked:hover {
+      background: var(--primary);
+      color: white;
+    }
+    .toggle-block-btn.active-item {
+      background: #f0fdf4;
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .toggle-block-btn.active-item:hover {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    /* Product Thumbnail */
+    .product-thumb {
+      width: 45px;
+      height: 45px;
+      object-fit: contain;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #fdfdfd;
+      padding: 2px;
+    }
+
+    /* Refresh Log Panel */
+    .log-panel {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 1.5rem;
+      border-radius: var(--radius-sm);
+      font-family: monospace;
+      font-size: 0.9em;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 1.5rem;
+      border: 1px solid #1a252f;
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; background: rgba(44, 62, 80, 0.6); backdrop-filter: blur(4px);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: white; padding: 2rem; border-radius: var(--radius-md);
+      width: 90%; max-width: 500px; box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s ease; position: relative;
+    }
+    @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;
+    }
+    .modal-header h3 { font-size: 1.25em; font-weight: 800; color: var(--secondary); }
+    .modal-close {
+      background: #f1f3f5; border: none; width: 32px; height: 32px; border-radius: 50%;
+      font-size: 18px; color: var(--text-muted); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; transition: var(--transition);
+    }
+    .modal-close:hover { background: #fee2e2; color: var(--danger); }
+
+    /* Drag and Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--primary-soft);
+      margin-bottom: 1.5rem;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      background: #fff8f4;
+      border-color: var(--primary-hover);
+    }
+    .drop-zone p { color: var(--primary-hover); font-weight: bold; margin-bottom: 10px; }
+    .drop-zone span { font-size: 0.8em; color: var(--text-muted); }
+
+    /* Auth Screens */
+    .auth-overlay {
+      position: fixed; inset: 0; background: var(--bg-app); display: flex;
+      flex-direction: column; align-items: center; justify-content: center; z-index: 200;
+    }
+    .auth-card {
+      background: white; padding: 3rem; border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); text-align: center; max-width: 400px; width: 90%;
+      border: 1px solid var(--border-color);
+    }
+    .auth-card .logo {
+      width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem;
+    }
+    .auth-card h2 { font-size: 1.8rem; font-weight: 900; margin-bottom: 0.5rem; }
+    .auth-card p { color: var(--text-muted); margin-bottom: 2rem; }
+
+    /* Hide body on load */
+    #appBody { visibility: hidden; }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--secondary); color: white; padding: 1rem 2rem; border-radius: 99px;
+      font-weight: 700; box-shadow: var(--shadow-lg); z-index: 9999;
+      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--danger); }
+    .toast.success { background: var(--accent); }
+
+    /* Pagination controls */
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      padding: 10px;
+    }
+    .pagination-controls button {
+      padding: 6px 15px;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .pagination-controls button:disabled {
+      background: #f1f3f5;
+      color: #b2bec3;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body id="appBody">
+
+  <!-- App Header -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="logo-icon">🍊</div>
+      <h1>إدارة الكاتالوج وجدول البضاعة</h1>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html" class="btn btn-outline">📦 الكاتالوج الرئيسي</a>
+      <button class="btn btn-danger" onclick="logout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="dashboard-header">
+      <div class="dashboard-greeting">
+        <h2>لوحة تحكم المشرف</h2>
+        <p id="adminEmailText">جار التحقق من الصلاحيات...</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotalProducts">0</div>
+        <div class="stat-title">إجمالي المنتجات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statBlockedProducts" style="color:var(--danger)">0</div>
+        <div class="stat-title">المنتجات المخفية (المحجوبة)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statMissingImages" style="color:var(--warning)">0</div>
+        <div class="stat-title">المنتجات بدون صور</div>
+      </div>
+    </div>
+
+    <!-- Tabs Menu -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('tabBlocked')">🚫 إخفاء وحجب المنتجات</button>
+      <button class="tab-btn" onclick="switchTab('tabSync')">⏳ تحديث الكاتالوج الفوري</button>
+      <button class="tab-btn" onclick="switchTab('tabImages')">🖼️ المنتجات بدون صور</button>
+      <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
+    </div>
+
+    <!-- TAB 1: Blocked items -->
+    <div id="tabBlocked" class="tab-content active">
+      <div class="controls-container">
+        <div class="controls-row">
+          <div class="control-group" style="flex: 2;">
+            <label>بحث ذكي</label>
+            <input type="text" id="blockedSearch" placeholder="ابحث بكود المنتج، الاسم، أو الـ Alias..." oninput="onFilterBlockedChange()">
+          </div>
+          <div class="control-group">
+            <label>التصنيف</label>
+            <select id="blockedCategoryFilter" onchange="onFilterBlockedChange()">
+              <option value="all">كل التصنيفات</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>حالة الظهور</label>
+            <select id="blockedStatusFilter" onchange="onFilterBlockedChange()">
+              <option value="all">عرض الكل</option>
+              <option value="visible">الظاهرة فقط</option>
+              <option value="blocked">المخفية فقط</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 70px;">الصورة</th>
+              <th>كود المنتج</th>
+              <th>الـ Alias</th>
+              <th>الاسم العربي للمنتج</th>
+              <th>التصنيف</th>
+              <th style="width: 150px; text-align: center;">إجراءات الحجب</th>
+            </tr>
+          </thead>
+          <tbody id="blockedTableBody">
+            <tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>
+          </tbody>
+        </table>
+        
+        <div class="pagination-controls">
+          <button onclick="changeBlockedPage(-1)" id="prevBtn">السابق</button>
+          <span id="blockedPageInfo">الصفحة 1 من 1</span>
+          <button onclick="changeBlockedPage(1)" id="nextBtn">التالي</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Sync -->
+    <div id="tabSync" class="tab-content">
+      <div style="background:white; padding: 2rem; border-radius:var(--radius-md); border:1px solid var(--border-color); text-align:center;">
+        <h3 style="margin-bottom:10px;">تحديث بيانات ومخزون الكاتالوج</h3>
+        <p style="color:var(--text-muted); margin-bottom:2rem; max-width:600px; margin-left:auto; margin-right:auto;">
+          عند الضغط على الزر، سيقوم السيرفر بتشغيل عملية التحديث في الخلفية لجلب أحدث البيانات، الفواتير، كميات المخزون، والأسعار من خوادم Dynamics 365 وتحديث الكاتالوج فوراً للمعارض.
+        </p>
+        
+        <button id="btnTriggerSync" onclick="triggerSync()" class="btn btn-primary" style="font-size:1.1rem; padding:12px 30px;">
+          ⚡ تشغيل سكريبت التحديث الفوري الآن
+        </button>
+        
+        <div style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:10px;">
+          <span>حالة التشغيل الحالية:</span>
+          <span id="syncStatusBadge" class="btn" style="background:#e2e8f0; color:#475569; pointer-events:none; padding:4px 12px; font-size:0.85em;">خامل</span>
+        </div>
+        
+        <div class="log-panel" id="syncLogs">
+          لم يتم تشغيل التحديث في هذه الجلسة بعد.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Images -->
+    <div id="tabImages" class="tab-content">
+      <div class="controls-container">
+        <div class="controls-row">
+          <div class="control-group" style="flex:2;">
+            <label>بحث بالاسم أو الكود</label>
+            <input type="text" id="imagesSearch" placeholder="ابحث عن منتج مفقود الصورة..." oninput="renderMissingImagesTable()">
+          </div>
+          <div class="control-group">
+            <label>التصنيف</label>
+            <select id="imagesCategoryFilter" onchange="renderMissingImagesTable()">
+              <option value="all">كل التصنيفات</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>كود المنتج</th>
+              <th>الـ Alias</th>
+              <th>اسم المنتج</th>
+              <th>التصنيف</th>
+              <th style="width: 150px; text-align: center;">إجراءات الصورة</th>
+            </tr>
+          </thead>
+          <tbody id="missingImagesTableBody">
+            <tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: Showrooms Orders -->
+    <div id="tabOrders" class="tab-content">
+      <div class="controls-container">
+        <div class="controls-row">
+          <div class="control-group">
+            <label>فلترة حسب المعرض</label>
+            <select id="orderMallFilter" onchange="loadSupabaseOrders()">
+              <option value="all">كل المعارض</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>تاريخ الطلبية</th>
+              <th>الفرع/المعرض</th>
+              <th>المستودع الرئيسي</th>
+              <th>عدد المنتجات المختلفة</th>
+              <th>يحتوي مستلزمات</th>
+              <th style="width: 150px; text-align: center;">الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل الطلبات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Upload Modal -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🖼️ رفع صورة للمنتج</h3>
+        <button class="modal-close" onclick="closeUploadModal()">×</button>
+      </div>
+      <div style="margin-bottom:15px;">
+        <p><strong>كود المنتج:</strong> <span id="uploadProductCode"></span></p>
+        <p><strong>اسم المنتج:</strong> <span id="uploadProductName" style="color:var(--text-muted)"></span></p>
+      </div>
+      
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <p>اسحب وأفلت ملف الصورة هنا أو انقر للاختيار</p>
+        <span>صيغ الصور المدعومة: PNG, JPG, JPEG, WEBP</span>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+      </div>
+      
+      <div id="uploadPreviewContainer" style="display:none; text-align:center; margin-bottom:15px;">
+        <img id="uploadPreviewImage" style="max-height: 150px; object-fit: contain; border-radius:6px; border:1px solid var(--border-color); padding:5px;">
+        <p id="uploadFileName" style="font-size:0.85em; color:var(--text-muted); margin-top:5px;"></p>
+      </div>
+
+      <button id="btnSubmitUpload" onclick="submitImageUpload()" class="btn btn-primary" style="width:100%;" disabled>
+        بدء الرفع والحفظ بالسيرفر
+      </button>
+    </div>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div class="modal-overlay" id="orderDetailModal">
+    <div class="modal-content" style="max-width: 600px; max-height:85vh; display:flex; flex-direction:column;">
+      <div class="modal-header">
+        <h3>📋 تفاصيل طلبية البضاعة</h3>
+        <button class="modal-close" onclick="closeOrderDetailModal()">×</button>
+      </div>
+      <div class="modal-body" id="orderDetailBody" style="flex:1; overflow-y:auto; padding-right:5px;">
+        <!-- Injected -->
+      </div>
+      <div style="margin-top:15px; text-align:left;">
+        <button onclick="closeOrderDetailModal()" class="btn btn-outline">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Supabase Credentials -->
+  <script>
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+    });
+
+    let currentUser = null;
+    let userSessionToken = null;
+    let productsList = [];
+    let blockedList = [];
+    
+    // Pagination blocked items
+    let blockedFilteredList = [];
+    let blockedCurrentPage = 1;
+    const blockedPerPage = 50;
+
+    // missing images
+    let missingImagesList = [];
+
+    // init auth
+    (async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      const showAuthScreen = (title, subTitle, isError = false) => {
+        document.body.style.visibility = 'visible';
+        document.body.innerHTML = `
+          <div class="auth-overlay">
+            <div class="auth-card">
+              <div class="logo" style="background:${isError ? 'var(--danger)' : 'var(--primary)'}">🔐</div>
+              <h2 style="color:${isError ? 'var(--danger)' : 'var(--primary)'}">${title}</h2>
+              <p>${subTitle}</p>
+              <button class="btn btn-primary" onclick="doLogin()" style="width:100%; font-size:1.1rem; padding:12px;">🔑 الدخول بحساب المشرف</button>
+              
+              <div id="loginBox" style="display:none; margin-top:20px; text-align:right;">
+                <label style="display:block; margin-bottom:4px; font-weight:700; font-size:0.9em; color:var(--text-muted)">البريد الإلكتروني للأدمن</label>
+                <input id="emailInput" type="email" placeholder="admin@domain.com" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:12px; font-family:inherit;">
+                
+                <label style="display:block; margin-bottom:4px; font-weight:700; font-size:0.9em; color:var(--text-muted)">كلمة المرور</label>
+                <input id="passwordInput" type="password" placeholder="••••••••" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:16px; font-family:inherit;">
+                
+                <button onclick="confirmLogin()" class="btn btn-primary" style="width:100%; padding:12px;">تأكيد الدخول</button>
+              </div>
+            </div>
+          </div>
+        `;
+      };
+
+      if (!session?.user) {
+        showAuthScreen('🔒 تسجيل الدخول لصفحة المشرف', 'هذه الصفحة تتطلب صلاحيات المشرف لإدارة جدول البضاعة');
+        return;
+      }
+
+      // Check Profile Role or check email alaa.wafae@orangebedbath.com
+      let userRole = 'user';
+      let email = session.user.email.toLowerCase().strip();
+      try {
+        const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', session.user.id).single();
+        if (profile) {
+          userRole = profile.role;
+        }
+      } catch (err) {}
+
+      // Authorize if master admin alaa.wafae@orangebedbath.com or role matches admin/maintenance_admin
+      const isAuthorized = (email === "alaa.wafae@orangebedbath.com") || ['admin', 'maintenance_admin'].includes(userRole);
+
+      if (isAuthorized) {
+        currentUser = session.user;
+        userSessionToken = session.access_token;
+        document.body.style.visibility = 'visible';
+        document.getElementById('adminEmailText').textContent = `مرحباً بك: ${session.user.email}`;
+        
+        // Load All Data
+        await initializeCatalogAdmin();
+      } else {
+        await supabaseClient.auth.signOut();
+        showAuthScreen('⛔ حساب غير مصرح', 'عذراً، لا تمتلك صلاحيات الدخول لصفحة إدارة البضاعة.', true);
+      }
+    })();
+
+    // String strip helper
+    if (!String.prototype.strip) {
+      String.prototype.strip = function() {
+        return this.replace(/^\s+|\s+$/g, '');
+      };
+    }
+
+    function doLogin() {
+      const box = document.getElementById('loginBox');
+      if (box) box.style.display = 'block';
+    }
+
+    async function confirmLogin() {
+      const email = document.getElementById('emailInput').value.strip();
+      const password = document.getElementById('passwordInput').value.strip();
+      if (!email || !password) return;
+      
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) { alert('فشل الدخول: ' + error.message); }
+      else { location.reload(); }
+    }
+
+    function logout() {
+      supabaseClient.auth.signOut().then(() => location.reload());
+    }
+
+    // === Catalog Loading and Tab management ===
+    async function initializeCatalogAdmin() {
+      // 1. Fetch Blocked Items from Flask API
+      try {
+        const blockedRes = await fetch('/api/catalog/blocked?_=' + Date.now());
+        if (blockedRes.ok) {
+          blockedList = await blockedRes.json();
+        }
+      } catch (e) {
+        console.error("Failed to load blocked items from Local API:", e);
+      }
+
+      // 2. Fetch Catalog Products JSON
+      try {
+        const productsRes = await fetch('products.json?_=' + Date.now(), { cache: "no-store" });
+        if (productsRes.ok) {
+          productsList = await productsRes.json();
+        }
+      } catch (e) {
+        console.error("Failed to load products.json:", e);
+      }
+
+      // Compute statistics
+      document.getElementById('statTotalProducts').textContent = productsList.length.toLocaleString();
+      document.getElementById('statBlockedProducts').textContent = blockedList.length.toLocaleString();
+      
+      // Calculate products missing images
+      missingImagesList = productsList.filter(p => !p.image_path || p.image_path.trim() === '');
+      document.getElementById('statMissingImages').textContent = missingImagesList.length.toLocaleString();
+
+      // Populate Categories select
+      const categories = [...new Set(productsList.map(p => p.category))].filter(Boolean).sort();
+      
+      // Populate category filters
+      ['blockedCategoryFilter', 'imagesCategoryFilter'].forEach(id => {
+         const select = document.getElementById(id);
+         if (select) {
+            select.innerHTML = '<option value="all">كل التصنيفات</option>' + 
+               categories.map(c => `<option value="${c}">${c}</option>`).join('');
+         }
+      });
+
+      // Filter and render blocked tab initially
+      onFilterBlockedChange();
+
+      // Start periodic status sync for Dynamics refresh
+      pollSyncStatus();
+      setInterval(pollSyncStatus, 5000);
+      
+      // Load orders list
+      loadSupabaseOrders();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      // Toggle button
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+        btn.getAttribute('onclick').includes(tabId)
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+      
+      // Toggle content
+      const contentEl = document.getElementById(tabId);
+      if (contentEl) contentEl.classList.add('active');
+
+      // Refresh data if relevant
+      if (tabId === 'tabSync') {
+         pollSyncStatus();
+      } else if (tabId === 'tabImages') {
+         renderMissingImagesTable();
+      } else if (tabId === 'tabOrders') {
+         loadSupabaseOrders();
+      }
+    }
+
+    // === TAB 1: Blocked items logic ===
+    function onFilterBlockedChange() {
+      const search = document.getElementById('blockedSearch').value.trim().toLowerCase();
+      const category = document.getElementById('blockedCategoryFilter').value;
+      const status = document.getElementById('blockedStatusFilter').value;
+
+      blockedFilteredList = productsList.filter(p => {
+         // Search filter
+         const matchSearch = !search || 
+            (p.name && p.name.toLowerCase().includes(search)) ||
+            (p.code && String(p.code).toLowerCase().includes(search)) ||
+            (p.alias && String(p.alias).toLowerCase().includes(search));
+         
+         // Category filter
+         const matchCategory = category === 'all' || p.category === category;
+
+         // Status filter
+         const isBlocked = blockedList.includes(String(p.code)) || blockedList.includes(String(p.alias));
+         const matchStatus = status === 'all' || 
+            (status === 'blocked' && isBlocked) || 
+            (status === 'visible' && !isBlocked);
+
+         return matchSearch && matchCategory && matchStatus;
+      });
+
+      blockedCurrentPage = 1;
+      renderBlockedTable();
+    }
+
+    function renderBlockedTable() {
+      const tbody = document.getElementById('blockedTableBody');
+      tbody.innerHTML = '';
+
+      const totalItems = blockedFilteredList.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / blockedPerPage));
+      
+      document.getElementById('blockedPageInfo').textContent = `الصفحة ${blockedCurrentPage} من ${totalPages}`;
+      document.getElementById('prevBtn').disabled = blockedCurrentPage === 1;
+      document.getElementById('nextBtn').disabled = blockedCurrentPage === totalPages;
+
+      if (totalItems === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">لا توجد منتجات مطابقة لخيارات البحث</td></tr>';
+        return;
+      }
+
+      const start = (blockedCurrentPage - 1) * blockedPerPage;
+      const end = start + blockedPerPage;
+      const pageItems = blockedFilteredList.slice(start, end);
+
+      pageItems.forEach(p => {
+         const isBlocked = blockedList.includes(String(p.code)) || (p.alias && blockedList.includes(String(p.alias)));
+         const tr = document.createElement('tr');
+         
+         // Image cell
+         const imageId = (p.alias && String(p.alias).trim() !== '') ? p.alias : p.code;
+         const imgUrl = p.image_path ? 'images/' + p.image_path : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_200,q_auto,f_auto,d_noimage.png/${imageId}.jpg`;
+
+         tr.innerHTML = `
+           <td><img src="${imgUrl}" class="product-thumb" onerror="this.src='noimage.png'"></td>
+           <td style="font-weight:bold;">${p.code}</td>
+           <td>${p.alias || '—'}</td>
+           <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.name}">${p.name}</td>
+           <td><span class="btn" style="background:#f1f3f5; color:#7f8c8d; padding:4px 8px; pointer-events:none; font-size:0.85em;">${p.category}</span></td>
+           <td style="text-align:center;">
+             <button onclick="toggleBlock('${p.code}', ${isBlocked})" class="toggle-block-btn ${isBlocked ? 'blocked' : 'active-item'}">
+               ${isBlocked ? '🔓 إلغاء الحجب (إظهار)' : '🔒 حجب المنتج (إخفاء)'}
+             </button>
+           </td>
+         `;
+         tbody.appendChild(tr);
+      });
+    }
+
+    function changeBlockedPage(dir) {
+      const totalPages = Math.ceil(blockedFilteredList.length / blockedPerPage);
+      const targetPage = blockedCurrentPage + dir;
+      if (targetPage >= 1 && targetPage <= totalPages) {
+         blockedCurrentPage = targetPage;
+         renderBlockedTable();
+      }
+    }
+
+    async function toggleBlock(code, isCurrentlyBlocked) {
+      if (!userSessionToken) return;
+      
+      const action = isCurrentlyBlocked ? 'unblock' : 'block';
+      const toastMsg = isCurrentlyBlocked ? 'جاري إلغاء الحجب وإظهار المنتج...' : 'جاري حجب وإخفاء المنتج...';
+      showToast(toastMsg);
+
+      try {
+        const response = await fetch('/api/catalog/blocked/toggle', {
+           method: 'POST',
+           headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userSessionToken}`
+           },
+           body: JSON.stringify({ code, action })
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.status === 'success') {
+             showToast(isCurrentlyBlocked ? '✅ تم إلغاء حجب المنتج وإظهاره!' : '🔒 تم حجب المنتج بنجاح!', 'success');
+             
+             // Update local list
+             if (isCurrentlyBlocked) {
+                blockedList = blockedList.filter(c => c !== String(code));
+             } else {
+                blockedList.push(String(code));
+             }
+             
+             // Update stat
+             document.getElementById('statBlockedProducts').textContent = blockedList.length.toLocaleString();
+             
+             // Refresh table row view
+             renderBlockedTable();
+          }
+        } else {
+          const err = await response.json();
+          showToast(`❌ فشل الإجراء: ${err.error || 'خطأ غير معروف'}`, 'error');
+        }
+      } catch (e) {
+         showToast('❌ خطأ في الاتصال بالسيرفر المحلي', 'error');
+      }
+    }
+
+    // === TAB 2: Sync / Dynamics Refresh ===
+    async function triggerSync() {
+      if (!userSessionToken) return;
+      
+      const btn = document.getElementById('btnTriggerSync');
+      btn.disabled = true;
+      btn.textContent = 'جاري إطلاق سكريبت التحديث...';
+      
+      try {
+        const response = await fetch('/api/catalog/refresh', {
+           method: 'POST',
+           headers: {
+              'Authorization': `Bearer ${userSessionToken}`
+           }
+        });
+
+        if (response.ok) {
+           showToast('⚡ تم تشغيل عملية التحديث في الخلفية!', 'success');
+           pollSyncStatus();
+        } else {
+           const err = await response.json();
+           showToast(`❌ فشل التحديث: ${err.error || 'خطأ غير معروف'}`, 'error');
+           btn.disabled = false;
+           btn.textContent = '⚡ تشغيل سكريبت التحديث الفوري الآن';
+        }
+      } catch (e) {
+         showToast('❌ خطأ في الاتصال بالسيرفر', 'error');
+         btn.disabled = false;
+         btn.textContent = '⚡ تشغيل سكريبت التحديث الفوري الآن';
+      }
+    }
+
+    async function pollSyncStatus() {
+      try {
+         const res = await fetch('/api/catalog/refresh/status');
+         if (res.ok) {
+            const data = await res.json();
+            const badge = document.getElementById('syncStatusBadge');
+            const logBox = document.getElementById('syncLogs');
+            const btn = document.getElementById('btnTriggerSync');
+
+            badge.textContent = translateStatus(data.status);
+            
+            if (data.status === 'running') {
+               badge.style.background = '#eff6ff';
+               badge.style.color = '#2563eb';
+               btn.disabled = true;
+               btn.textContent = '⏳ عملية التحديث قيد العمل الآن...';
+            } else if (data.status === 'success') {
+               badge.style.background = '#ecfdf5';
+               badge.style.color = '#10b981';
+               btn.disabled = false;
+               btn.textContent = '⚡ تشغيل سكريبت التحديث الفوري الآن';
+            } else if (data.status === 'failed') {
+               badge.style.background = '#fef2f2';
+               badge.style.color = '#ef4444';
+               btn.disabled = false;
+               btn.textContent = '⚡ تشغيل سكريبت التحديث الفوري الآن';
+            } else {
+               badge.style.background = '#e2e8f0';
+               badge.style.color = '#475569';
+               btn.disabled = false;
+               btn.textContent = '⚡ تشغيل سكريبت التحديث الفوري الآن';
+            }
+
+            if (data.log) {
+               logBox.textContent = data.log;
+               logBox.scrollTop = logBox.scrollHeight; // Auto scroll to bottom
+            }
+         }
+      } catch (e) {
+         console.warn("Error polling status:", e);
+      }
+    }
+
+    function translateStatus(s) {
+       switch(s) {
+          case 'idle': return 'خامل (جاهز)';
+          case 'running': return '⏳ قيد المعالجة وجلب البيانات';
+          case 'success': return '✅ تم الانتهاء بنجاح';
+          case 'failed': return '❌ فشلت العملية';
+          default: return s;
+       }
+    }
+
+    // === TAB 3: Missing Images Logic ===
+    function renderMissingImagesTable() {
+      const search = document.getElementById('imagesSearch').value.trim().toLowerCase();
+      const category = document.getElementById('imagesCategoryFilter').value;
+      const tbody = document.getElementById('missingImagesTableBody');
+      tbody.innerHTML = '';
+
+      const filtered = missingImagesList.filter(p => {
+         const matchSearch = !search || 
+            (p.name && p.name.toLowerCase().includes(search)) ||
+            (p.code && String(p.code).toLowerCase().includes(search)) ||
+            (p.alias && String(p.alias).toLowerCase().includes(search));
+         const matchCategory = category === 'all' || p.category === category;
+         return matchSearch && matchCategory;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد منتجات بدون صور مطابقة للبحث</td></tr>';
+        return;
+      }
+
+      // Limit missing image list in DOM to 100 entries for rendering efficiency
+      const displayList = filtered.slice(0, 100);
+
+      displayList.forEach(p => {
+         const tr = document.createElement('tr');
+         tr.innerHTML = `
+           <td style="font-weight:bold;">${p.code}</td>
+           <td>${p.alias || '—'}</td>
+           <td style="max-width:350px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}</td>
+           <td><span class="btn" style="background:#f1f3f5; color:#7f8c8d; padding:4px 8px; pointer-events:none; font-size:0.85em;">${p.category}</span></td>
+           <td style="text-align:center;">
+             <button onclick="openUploadModal('${p.code}', '${p.name.replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding:6px 12px; font-size:0.85rem;">
+               📤 رفع صورة
+             </button>
+           </td>
+         `;
+         tbody.appendChild(tr);
+      });
+    }
+
+    // Image Upload Logic
+    let uploadTargetCode = "";
+    let selectedUploadFile = null;
+
+    function openUploadModal(code, name) {
+      uploadTargetCode = code;
+      document.getElementById('uploadProductCode').textContent = code;
+      document.getElementById('uploadProductName').textContent = name;
+      
+      // Reset uploader inputs
+      selectedUploadFile = null;
+      document.getElementById('btnSubmitUpload').disabled = true;
+      document.getElementById('uploadPreviewContainer').style.display = 'none';
+      
+      document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').style.display = 'none';
+    }
+
+    // Drag and drop events
+    const dropZone = document.getElementById('dropZone');
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+         e.preventDefault();
+         dropZone.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+         e.preventDefault();
+         dropZone.classList.remove('dragover');
+      });
+    });
+    dropZone.addEventListener('drop', (e) => {
+       const files = e.dataTransfer.files;
+       if (files.length > 0) {
+          processFile(files[0]);
+       }
+    });
+
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files.length > 0) {
+         processFile(files[0]);
+      }
+    }
+
+    function processFile(file) {
+      const ext = file.name.split('.')[-1]?.toLowerCase() || '';
+      selectedUploadFile = file;
+      
+      // Preview
+      const reader = new FileReader();
+      reader.onload = function(e) {
+         document.getElementById('uploadPreviewImage').src = e.target.result;
+         document.getElementById('uploadFileName').textContent = file.name;
+         document.getElementById('uploadPreviewContainer').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+
+      document.getElementById('btnSubmitUpload').disabled = false;
+    }
+
+    async function submitImageUpload() {
+      if (!selectedUploadFile || !uploadTargetCode || !userSessionToken) return;
+
+      const btn = document.getElementById('btnSubmitUpload');
+      btn.disabled = true;
+      btn.textContent = 'جاري رفع الملف وحفظه...';
+
+      const formData = new FormData();
+      formData.append('code', uploadTargetCode);
+      formData.append('image', selectedUploadFile);
+
+      try {
+         const response = await fetch('/api/catalog/upload_image', {
+            method: 'POST',
+            headers: {
+               'Authorization': `Bearer ${userSessionToken}`
+            },
+            body: formData
+         });
+
+         if (response.ok) {
+            const data = await response.json();
+            showToast('✅ تم رفع وحفظ الصورة وتسميتها بنجاح!', 'success');
+            closeUploadModal();
+            
+            // Reload list and stats
+            await initializeCatalogAdmin();
+            switchTab('tabImages');
+         } else {
+            const err = await response.json();
+            showToast(`❌ فشل الرفع: ${err.error || 'خطأ غير معروف'}`, 'error');
+            btn.disabled = false;
+            btn.textContent = 'بدء الرفع والحفظ بالسيرفر';
+         }
+      } catch(e) {
+         showToast('❌ خطأ في الاتصال بالشبكة', 'error');
+         btn.disabled = false;
+         btn.textContent = 'بدء الرفع والحفظ بالسيرفر';
+      }
+    }
+
+    // === TAB 4: Malls Orders from Supabase ===
+    async function loadSupabaseOrders() {
+      const filterMall = document.getElementById('orderMallFilter').value;
+      const tbody = document.getElementById('ordersTableBody');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل الطلبيات...</td></tr>';
+
+      try {
+         // 1. Fetch malls for filter list if empty
+         const mallSelect = document.getElementById('orderMallFilter');
+         if (mallSelect.options.length <= 1) {
+            const { data: mallsData } = await supabaseClient.from('orders').select('mall');
+            if (mallsData) {
+               const uniqueMalls = [...new Set(mallsData.map(m => m.mall).filter(Boolean))].sort();
+               uniqueMalls.forEach(m => {
+                  const opt = document.createElement('option');
+                  opt.value = m;
+                  opt.textContent = m;
+                  mallSelect.appendChild(opt);
+               });
+            }
+         }
+
+         // 2. Fetch orders
+         let query = supabaseClient.from('orders').select('*');
+         if (filterMall !== 'all') {
+            query = query.eq('mall', filterMall);
+         }
+
+         const { data: orders, error } = await query.order('created_at', { ascending: false }).limit(200);
+         
+         if (error) throw error;
+
+         tbody.innerHTML = '';
+         if (!orders || orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد طلبيات مسجلة</td></tr>';
+            return;
+         }
+
+         orders.forEach(order => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(order.created_at).toLocaleString('ar-EG');
+            const itemsCount = Array.isArray(order.items) ? order.items.length : 0;
+            const hasExtras = order.has_extras ? '✅ نعم' : '❌ لا';
+
+            tr.innerHTML = `
+              <td>${dateStr}</td>
+              <td style="font-weight:bold; color:var(--primary);">${order.mall}</td>
+              <td>${order.warehouse || '—'}</td>
+              <td>${itemsCount} أصناف</td>
+              <td>${hasExtras}</td>
+              <td style="text-align:center;">
+                <button onclick="showOrderDetails('${order.id}')" class="btn btn-outline" style="padding:4px 10px; font-size:0.85em;">
+                  👁️ عرض محتوى الطلبية
+                </button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+         });
+
+      } catch (e) {
+         console.error(e);
+         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--danger);">❌ حدث خطأ أثناء جلب الطلبات</td></tr>';
+      }
+    }
+
+    async function showOrderDetails(orderId) {
+      try {
+         const { data: order, error } = await supabaseClient.from('orders').select('*').eq('id', orderId).single();
+         if (error) throw error;
+
+         const modalBody = document.getElementById('orderDetailBody');
+         
+         let itemsHtml = `
+           <table style="width:100%; font-size:0.9em; border-collapse:collapse; margin-bottom:15px;">
+             <thead>
+               <tr style="background:#f8fafc;">
+                 <th style="padding:6px;">كود البضاعة</th>
+                 <th style="padding:6px;">الـ Alias</th>
+                 <th style="padding:6px;">اسم الصنف</th>
+                 <th style="padding:6px; text-align:center;">الكمية</th>
+               </tr>
+             </thead>
+             <tbody>
+         `;
+
+         order.items.forEach(item => {
+            itemsHtml += `
+              <tr>
+                <td style="padding:6px; font-weight:bold;">${item.code || '—'}</td>
+                <td style="padding:6px;">${item.alias || '—'}</td>
+                <td style="padding:6px; max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name || '—'}</td>
+                <td style="padding:6px; text-align:center; font-weight:bold; color:var(--primary);">${item.qty}</td>
+              </tr>
+            `;
+         });
+         itemsHtml += '</tbody></table>';
+
+         let extrasHtml = '';
+         if (order.has_extras && order.extras_items && order.extras_items.length > 0) {
+            extrasHtml = `
+              <h4 style="margin-top:15px; border-bottom:1.5px solid var(--primary); padding-bottom:5px; margin-bottom:10px; color:var(--primary);">📦 مستلزمات استهلاكية إضافية</h4>
+              <table style="width:100%; font-size:0.9em; border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#fff7ed;">
+                    <th style="padding:6px;">البيان</th>
+                    <th style="padding:6px;">الوحدة</th>
+                    <th style="padding:6px; text-align:center;">الكمية المطلوبة</th>
+                  </tr>
+                </thead>
+                <tbody>
+            `;
+            order.extras_items.forEach(ext => {
+               extrasHtml += `
+                 <tr>
+                   <td style="padding:6px; font-weight:bold;">${ext.name}</td>
+                   <td style="padding:6px;">${ext.unit}</td>
+                   <td style="padding:6px; text-align:center; font-weight:bold; color:var(--accent);">${ext.qty}</td>
+                 </tr>
+               `;
+            });
+            extrasHtml += '</tbody></table>';
+         }
+
+         modalBody.innerHTML = `
+           <p style="margin-bottom:5px;"><strong>تاريخ الطلب:</strong> ${new Date(order.created_at).toLocaleString('ar-EG')}</p>
+           <p style="margin-bottom:5px;"><strong>المعرض:</strong> ${order.mall}</p>
+           <p style="margin-bottom:15px;"><strong>المستودع الرئيسي للطلب:</strong> ${order.warehouse}</p>
+           <h4 style="border-bottom:1.5px solid var(--secondary); padding-bottom:5px; margin-bottom:10px;">📦 البضاعة المطلوبة</h4>
+           ${itemsHtml}
+           ${extrasHtml}
+         `;
+
+         document.getElementById('orderDetailModal').style.display = 'flex';
+
+      } catch (e) {
+         alert("تعذر تحميل تفاصيل الطلب");
+      }
+    }
+
+    function closeOrderDetailModal() {
+      document.getElementById('orderDetailModal').style.display = 'none';
+    }
+
+    // === Global Toast Helper ===
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast show ${type}`;
+      setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
+  </script>
+</body>
+</html>
