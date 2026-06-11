@@ -476,6 +476,12 @@
           <option value="sent">تم الإرسال</option>
         </select>
       </div>
+      <div class="filter-item" id="mallFilterContainer" style="display:none;">
+        <label>المعرض:</label>
+        <select id="mallFilter" onchange="applyAllFilters()">
+          <option value="all">جميع المعارض</option>
+        </select>
+      </div>
       <button class="btn-apply" onclick="loadOrders()">تطبيق الفلاتر</button>
     </div>
 
@@ -534,13 +540,35 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     let currentUser = null;
+    let userRole = 'user';
+    let userManagedOutlets = [];
+    let userMall = '';
     let cachedOrders = [];
+    
+    async function fetchUserProfile(user) {
+      if (!user) return;
+      try {
+        let { data: profile, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        if (error) {
+          const fallback = await supabaseClient.from('profiles').select('*').eq('email', user.email).single();
+          profile = fallback.data;
+        }
+        if (profile) {
+          userRole = profile.role || 'user';
+          userManagedOutlets = profile.managed_outlets || [];
+          userMall = profile.mall || '';
+        }
+      } catch(err) {
+        console.error("Error loading profile:", err);
+      }
+    }
 
     // Check Auth Status on Load
     (async () => {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session?.user) {
         currentUser = session.user;
+        await fetchUserProfile(currentUser);
         document.getElementById('filtersBar').style.display = 'flex';
         loadOrders();
       } else {
@@ -548,14 +576,18 @@
       }
 
       // Listen for changes
-      supabaseClient.auth.onAuthStateChange((event, newSession) => {
+      supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
         if (event === 'SIGNED_IN' && newSession?.user) {
           currentUser = newSession.user;
+          await fetchUserProfile(currentUser);
           document.getElementById('filtersBar').style.display = 'flex';
           document.getElementById('authStatus').innerHTML = '';
           loadOrders();
         } else if (event === 'SIGNED_OUT') {
           currentUser = null;
+          userRole = 'user';
+          userManagedOutlets = [];
+          userMall = '';
           showAuthError();
         }
       });
@@ -600,30 +632,36 @@
 
         cachedOrders = data || [];
         
-        let filtered = cachedOrders;
-        if (statusFilter !== 'all') {
-            filtered = filtered.filter(o => {
-                const s = String(o.status).toLowerCase();
-                if (statusFilter === 'pending') return s === 'pending' || s.includes('انتظار');
-                if (statusFilter === 'sent') return s === 'sent' || s.includes('إرسال');
-                return true;
-            });
+        // Populate mall filter dropdown dynamically for admin / manager
+        if (userRole === 'admin' || userRole === 'maintenance_admin' || userRole === 'manager') {
+            const mallSelect = document.getElementById('mallFilter');
+            const mallContainer = document.getElementById('mallFilterContainer');
+            
+            if (mallSelect && mallContainer) {
+                let mallsList = [];
+                if (userRole === 'manager') {
+                    mallsList = userManagedOutlets;
+                } else {
+                    mallsList = [...new Set(cachedOrders.map(o => o.mall).filter(Boolean))].sort();
+                }
+                
+                const currentVal = mallSelect.value || 'all';
+                mallSelect.innerHTML = '<option value="all">جميع المعارض</option>' + 
+                    mallsList.map(m => `<option value="${m}">${m}</option>`).join('');
+                
+                if (mallsList.includes(currentVal) || currentVal === 'all') {
+                    mallSelect.value = currentVal;
+                } else {
+                    mallSelect.value = 'all';
+                }
+                mallContainer.style.display = 'flex';
+            }
+        } else {
+            const mallContainer = document.getElementById('mallFilterContainer');
+            if (mallContainer) mallContainer.style.display = 'none';
         }
 
-        const searchTerm = document.getElementById('productSearch').value.trim().toLowerCase();
-        if (searchTerm) {
-          filtered = filtered.filter(order => {
-            const items = Array.isArray(order.items) ? order.items : [];
-            return items.some(item => {
-              const nameMatch = (item.name || '').toLowerCase().includes(searchTerm);
-              const codeMatch = (item.code || '').toLowerCase().includes(searchTerm);
-              const aliasMatch = (item.alias || '').toLowerCase().includes(searchTerm);
-              return nameMatch || codeMatch || aliasMatch;
-            });
-          });
-        }
-
-        renderOrders(filtered, searchTerm);
+        applyAllFilters();
 
       } catch (err) {
         console.error("Error loading orders:", err);
@@ -841,8 +879,14 @@
 
       const statusFilter = document.getElementById('statusFilter').value;
       const searchTerm = document.getElementById('productSearch').value.trim().toLowerCase();
+      const mallFilter = document.getElementById('mallFilter') ? document.getElementById('mallFilter').value : 'all';
 
       let filtered = cachedOrders;
+
+      // Filter by Mall if admin or manager
+      if (mallFilter !== 'all') {
+        filtered = filtered.filter(o => o.mall === mallFilter);
+      }
 
       if (statusFilter !== 'all') {
         filtered = filtered.filter(o => {

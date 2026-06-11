@@ -1443,7 +1443,13 @@
             editingOrderId = editId;
             try {
               const { data, error } = await supabaseClient.from('orders').select('*').eq('id', editId).single();
-              if (data && (!user || data.user_id === user.id) && data.status !== 'sent') {
+              const isAuthorizedToEdit = !user || 
+                data.user_id === user.id || 
+                userRole === 'admin' || 
+                userRole === 'maintenance_admin' || 
+                (userRole === 'manager' && userManagedOutlets.includes(data.mall));
+              
+              if (data && isAuthorizedToEdit && data.status !== 'sent') {
                 cart = {};
                 (data.items || []).forEach(item => { cart[item.code] = item; });
                 
