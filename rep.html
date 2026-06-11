@@ -890,6 +890,8 @@
                 style="display:none; background:#8e44ad;">📥 تقرير الاكثر مبيعا-فئات</button>
             <button class="btn-excel" id="btnTopCategoryDetailedExcel" onclick="exportTopCategoryDetailedExcel()"
                 style="display:none; background:#6c5ce7;">📥 تقرير الاكثر مبيعا-فئات تفصيلي</button>
+            <button class="btn-excel" id="btnQuiltPriceExcel" onclick="exportQuiltPriceExcel()"
+                style="display:none; background:#d35400;">📥 تقرير لحافات فل/كينغ (فئات سعرية)</button>
             <button class="btn-pdf" id="btnPdf" onclick="exportPDF()" disabled>📄 تصدير PDF</button>
             <button class="btn-excel" id="btnFullStockExcel" onclick="exportFullStockExcel()" style="background:#2980b9;">📦 استخراج الستوك بالكامل</button>
             <button class="btn-reset" onclick="resetFilters()">🔄 إعادة تعيين</button>
@@ -2037,11 +2039,13 @@
                 document.getElementById('btnTopExcel').style.display = 'inline-block';
                 document.getElementById('btnTopCategoryExcel').style.display = 'inline-block';
                 document.getElementById('btnTopCategoryDetailedExcel').style.display = 'inline-block';
+                document.getElementById('btnQuiltPriceExcel').style.display = 'inline-block';
                 document.getElementById('btnAnalysis').style.display = 'inline-block';
             } else {
                 document.getElementById('btnTopExcel').style.display = 'none';
                 document.getElementById('btnTopCategoryExcel').style.display = 'none';
                 document.getElementById('btnTopCategoryDetailedExcel').style.display = 'none';
+                document.getElementById('btnQuiltPriceExcel').style.display = 'none';
                 document.getElementById('btnAnalysis').style.display = 'none';
             }
 
@@ -2691,6 +2695,151 @@
 
                 } catch (err) {
                     console.error('Export Top Category error:', err);
+                    alert('خطأ في تصدير التقرير: ' + err.message);
+                }
+                hideLoading();
+            }, 100);
+        }
+
+        function exportQuiltPriceExcel() {
+            if (!CURRENT_RESULTS.length) return;
+
+            showLoading('جاري تصدير تقرير اللحافات حسب الفئة السعرية...');
+
+            setTimeout(() => {
+                try {
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+
+                    const brackets = [
+                        '001-199', '200-299', '300-399', '400-499', '500-599',
+                        '600-699', '700-799', '800-899', '900-999', '1000+'
+                    ];
+
+                    function getPriceBracket(price) {
+                        if (price >= 1 && price <= 199) return '001-199';
+                        if (price >= 200 && price <= 299) return '200-299';
+                        if (price >= 300 && price <= 399) return '300-399';
+                        if (price >= 400 && price <= 499) return '400-499';
+                        if (price >= 500 && price <= 599) return '500-599';
+                        if (price >= 600 && price <= 699) return '600-699';
+                        if (price >= 700 && price <= 799) return '700-799';
+                        if (price >= 800 && price <= 899) return '800-899';
+                        if (price >= 900 && price <= 999) return '900-999';
+                        if (price >= 1000) return '1000+';
+                        return null;
+                    }
+
+                    function generateRowsForCategory(catMatchList) {
+                        const rows = [];
+                        let rowIdx = 1;
+
+                        const storeFilterOptions = Array.from(document.getElementById('storeFilter').selectedOptions).map(opt => opt.value);
+                        const isAllStores = storeFilterOptions.includes('all') || storeFilterOptions.length === 0;
+
+                        const catProducts = [];
+                        for (const [pid, prod] of Object.entries(PRODUCTS)) {
+                            if (prod.hasKitCounterpart) continue;
+                            const prodAlias = prod.alias || '';
+                            const mappedCat = CATEGORY_MAP[prodAlias] || CATEGORY_MAP[pid] || prod.category;
+
+                            if (catMatchList.includes(mappedCat)) {
+                                let st = 0;
+                                if (!isAllStores) {
+                                    storeFilterOptions.forEach(sId => {
+                                        if (sId !== 'all') st += prod.stock[sId] || 0;
+                                    });
+                                } else {
+                                    if (prod.stock) {
+                                        st = prod.stock.total || 0;
+                                    }
+                                }
+
+                                const resultItem = CURRENT_RESULTS.find(r => r.item_id === pid || (prodAlias && r.alias === prodAlias));
+                                const qty = resultItem ? resultItem.qty : 0;
+                                const amount = resultItem ? resultItem.amount : 0;
+
+                                catProducts.push({
+                                    item_id: pid,
+                                    name: prod.name || '',
+                                    alias: prodAlias,
+                                    price: prod.price || 0,
+                                    stock: st,
+                                    qty: qty,
+                                    amount: amount
+                                });
+                            }
+                        }
+
+                        brackets.forEach(bracket => {
+                            const bracketProds = catProducts.filter(p => getPriceBracket(p.price) === bracket);
+                            if (bracketProds.length === 0) return;
+
+                            let groupStock = 0;
+                            let groupQty = 0;
+                            let groupAmount = 0;
+                            bracketProds.forEach(p => {
+                                groupStock += p.stock;
+                                groupQty += p.qty;
+                                groupAmount += p.amount;
+                            });
+                            const avgSellingPrice = groupQty > 0 ? (groupAmount / groupQty) : 0;
+
+                            rows.push({
+                                '#': '',
+                                'ITEMCODE': '---',
+                                'Item name': 'الفئة السعرية: ' + bracket,
+                                'Item_Alias': 'إجمالي المجموعة',
+                                'Stock': groupStock,
+                                'MRP': '',
+                                'Selling P': parseFloat(avgSellingPrice.toFixed(2)),
+                                'SALES QTY': groupQty,
+                                'SALES AMOUNT': groupAmount
+                            });
+
+                            bracketProds.sort((a, b) => b.stock - a.stock);
+
+                            bracketProds.forEach(p => {
+                                const sellingPrice = p.qty > 0 ? (p.amount / p.qty) : 0;
+                                rows.push({
+                                    '#': rowIdx++,
+                                    'ITEMCODE': p.item_id,
+                                    'Item name': p.name,
+                                    'Item_Alias': p.alias,
+                                    'Stock': p.stock,
+                                    'MRP': p.price,
+                                    'Selling P': parseFloat(sellingPrice.toFixed(2)),
+                                    'SALES QTY': p.qty,
+                                    'SALES AMOUNT': p.amount
+                                });
+                            });
+
+                            rows.push({
+                                '#': '', 'ITEMCODE': '', 'Item name': '', 'Item_Alias': '',
+                                'Stock': '', 'MRP': '', 'Selling P': '', 'SALES QTY': '', 'SALES AMOUNT': ''
+                            });
+                        });
+
+                        return rows;
+                    }
+
+                    const wb = XLSX.utils.book_new();
+
+                    const fullRows = generateRowsForCategory(['لحافات فل']);
+                    const ws1 = XLSX.utils.json_to_sheet(fullRows);
+                    ws1['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws1, 'لحافات فل');
+
+                    const kingRows = generateRowsForCategory(['لحافات كينغ', 'لحافات كينج']);
+                    const ws2 = XLSX.utils.json_to_sheet(kingRows);
+                    ws2['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 45 }, { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+                    XLSX.utils.book_append_sheet(wb, ws2, 'لحافات كينغ');
+
+                    const fileName = `REP_Quilts_Price_Brackets_${dateFrom}_${dateTo}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+
+                } catch (err) {
+                    console.error('Export Quilts Price Brackets error:', err);
                     alert('خطأ في تصدير التقرير: ' + err.message);
                 }
                 hideLoading();
@@ -3369,6 +3518,7 @@
             document.getElementById('btnTopExcel').style.display = 'none';
             document.getElementById('btnTopCategoryExcel').style.display = 'none';
             document.getElementById('btnTopCategoryDetailedExcel').style.display = 'none';
+            document.getElementById('btnQuiltPriceExcel').style.display = 'none';
             document.getElementById('btnAnalysis').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('emptyState').querySelector('p').textContent = 'اختر الفلاتر واضغط "بحث" لعرض النتائج';
