@@ -1119,30 +1119,7 @@
                     if (pid.startsWith('KIT-')) {
                         const basePid = pid.substring(4);
                         const baseProd = PRODUCTS[basePid];
-                        const kitProd = PRODUCTS[pid];
                         if (baseProd) {
-                            const mergedStock = {};
-                            if (baseProd.stock) {
-                                for (const [storeId, qty] of Object.entries(baseProd.stock)) {
-                                    if (storeId !== 'total') {
-                                        mergedStock[storeId] = (mergedStock[storeId] || 0) + qty;
-                                    }
-                                }
-                            }
-                            if (kitProd.stock) {
-                                for (const [storeId, qty] of Object.entries(kitProd.stock)) {
-                                    if (storeId !== 'total') {
-                                        mergedStock[storeId] = (mergedStock[storeId] || 0) + qty;
-                                    }
-                                }
-                            }
-                            let total = 0;
-                            for (const qty of Object.values(mergedStock)) {
-                                total += qty;
-                            }
-                            mergedStock.total = total;
-                            baseProd.stock = mergedStock;
-                            kitProd.stock = { ...mergedStock };
                             baseProd.hasKitCounterpart = true;
                         }
                     }
@@ -1503,6 +1480,14 @@
                     for (const m of requiredMonths) {
                         const records = await loadSalesMonth(m);
                         allRecords = allRecords.concat(records);
+                    }
+
+                    // Redirect base product sales to KIT counterparts if they exist in catalog
+                    for (const r of allRecords) {
+                        const kitPid = 'KIT-' + r.i;
+                        if (PRODUCTS[kitPid]) {
+                            r.i = kitPid;
+                        }
                     }
 
                     // 2. Filter by date range
