@@ -1310,28 +1310,71 @@
       }
     }
 
-    function processFileList(files) {
+    // Helper function to convert file to WebP client-side
+    function convertToWebP(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((blob) => {
+            if (!blob) reject(new Error('Canvas is empty'));
+            const cleanName = file.name.replace(/\.[^/.]+$/, "");
+            resolve(new File([blob], cleanName + ".webp", { type: 'image/webp' }));
+          }, 'image/webp', 0.85); // 0.85 quality
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    async function processFileList(files) {
       const isManual = !uploadTargetCode;
+      
+      const btn = document.getElementById('btnSubmitUpload');
+      btn.disabled = true;
+      btn.textContent = 'جاري تحويل الصور إلى WebP... ⏳';
+
+      let convertedFiles = [];
+      try {
+         for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type === 'image/webp') {
+               convertedFiles.push(file);
+            } else {
+               const webpFile = await convertToWebP(file);
+               convertedFiles.push(webpFile);
+            }
+         }
+      } catch (err) {
+         showToast('❌ فشل تحويل صيغة الصور', 'error');
+         btn.disabled = false;
+         btn.textContent = isManual ? 'بدء الرفع والحفظ بالسيرفر' : 'بدء الرفع والحفظ بالسيرفر';
+         return;
+      }
 
       if (!isManual) {
-         const file = files[0];
+         const file = convertedFiles[0];
          selectedUploadFile = file;
          selectedUploadFiles = [];
          
          const reader = new FileReader();
          reader.onload = function(e) {
             document.getElementById('uploadPreviewImage').src = e.target.result;
-            document.getElementById('uploadFileName').textContent = file.name;
+            document.getElementById('uploadFileName').textContent = file.name + ' (WebP)';
             document.getElementById('uploadPreviewContainer').style.display = 'block';
             document.getElementById('multiUploadPreviewContainer').style.display = 'none';
          };
          reader.readAsDataURL(file);
          
-         document.getElementById('btnSubmitUpload').disabled = false;
-         document.getElementById('btnSubmitUpload').textContent = 'بدء الرفع والحفظ بالسيرفر';
+         btn.disabled = false;
+         btn.textContent = 'بدء الرفع والحفظ بالسيرفر';
          
       } else {
-         selectedUploadFiles = Array.from(files);
+         selectedUploadFiles = convertedFiles;
          selectedUploadFile = null;
          
          if (selectedUploadFiles.length === 1) {
@@ -1347,7 +1390,7 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                document.getElementById('uploadPreviewImage').src = e.target.result;
-               document.getElementById('uploadFileName').textContent = file.name;
+               document.getElementById('uploadFileName').textContent = file.name + ' (WebP)';
                document.getElementById('uploadPreviewContainer').style.display = 'block';
                document.getElementById('multiUploadPreviewContainer').style.display = 'none';
                updateUploadSubmitButtonState();
@@ -1363,8 +1406,8 @@
             const grid = document.getElementById('multiUploadGrid');
             grid.innerHTML = '';
             
-            document.getElementById('btnSubmitUpload').disabled = false;
-            document.getElementById('btnSubmitUpload').textContent = `رفع ${selectedUploadFiles.length} صور الآن 🚀`;
+            btn.disabled = false;
+            btn.textContent = `رفع ${selectedUploadFiles.length} صور الآن 🚀`;
             
             selectedUploadFiles.forEach((file, index) => {
                const cleanName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
