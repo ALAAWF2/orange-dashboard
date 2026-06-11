@@ -1326,6 +1326,12 @@
               userMall = profile?.mall ?? "";
               userRole = profile?.role ?? "";
               userManagedOutlets = profile?.managed_outlets ?? [];
+              
+              // Admin/Maintenance Admin Bypass
+              if (userRole === 'admin' || userRole === 'maintenance_admin') {
+                if (!userWarehouse) userWarehouse = 'Warehouse';
+                if (!userMall) userMall = 'إجمالي المستودعات';
+              }
             }
           } catch (fetchErr) {
             console.error("Exception during profile fetch:", fetchErr);
@@ -1390,6 +1396,10 @@
             `;
             document.getElementById('galleryNameBanner').style.display = 'block';
             document.getElementById('userInfo').textContent = `مرحباً بك خيارات مدير المنطقة`;
+          } else if (userRole === 'admin' || userRole === 'maintenance_admin') {
+            document.getElementById('userInfo').textContent = `مرحباً بك (مسؤول النظام)`;
+            document.getElementById('galleryNameText').textContent = userMall;
+            document.getElementById('galleryNameBanner').style.display = 'block';
           } else {
             document.getElementById('userInfo').textContent = `مرحباً بك في معرض ${userMall}`;
             document.getElementById('galleryNameText').textContent = userMall;
@@ -1402,6 +1412,26 @@
           await loadSalesByOutlet();
           mergeKitData();
           rebuildDataForWarehouse(userWarehouse);
+
+          // Populate admin outlets dropdown dynamically after loading catalog
+          if (userRole === 'admin' || userRole === 'maintenance_admin') {
+            const allMalls = [...new Set(window.products.flatMap(p => Object.keys(p.branches || {})))]
+              .filter(b => b.toLowerCase() !== 'warehouse' && !b.toLowerCase().includes('riyadh') && !b.toLowerCase().includes('مستودع') && b !== '00-GIFTS' && b !== 'PLATFORMS' && b !== 'Transit')
+              .sort();
+            
+            userManagedOutlets = ['إجمالي المستودعات', ...allMalls];
+            
+            let optionsHtml = userManagedOutlets.map(outlet => 
+              `<option value="${outlet}" ${outlet === userMall ? 'selected' : ''}>${outlet}</option>`
+            ).join('');
+            
+            document.getElementById('galleryNameBanner').innerHTML = `
+              <span>اختر المعرض (مسؤول): </span>
+              <select id="managerOutletSelect" onchange="changeManagerOutlet(this.value)" style="padding:5px; border-radius:5px; background:white; color:#333; font-weight:bold; border:1px solid #ccc; outline:none; cursor:pointer;">
+                ${optionsHtml}
+              </select>
+            `;
+          }
 
           populateFilters();
           await loadFirstSeen();
