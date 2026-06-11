@@ -2799,8 +2799,19 @@
 
                             bracketProds.sort((a, b) => b.stock - a.stock);
 
+                            let hiddenCount = 0;
+                            let hiddenStock = 0;
+                            let hiddenQty = 0;
+                            let hiddenAmount = 0;
+
                             bracketProds.forEach(p => {
-                                if (p.stock < 200) return;
+                                if (p.stock < 200) {
+                                    hiddenCount++;
+                                    hiddenStock += p.stock;
+                                    hiddenQty += p.qty;
+                                    hiddenAmount += p.amount;
+                                    return;
+                                }
                                 const sellingPrice = p.qty > 0 ? (p.amount / p.qty) : 0;
                                 rows.push({
                                     '#': rowIdx++,
@@ -2814,6 +2825,21 @@
                                     'SALES AMOUNT': p.amount
                                 });
                             });
+
+                            if (hiddenCount > 0) {
+                                const hiddenAvgPrice = hiddenQty > 0 ? (hiddenAmount / hiddenQty) : 0;
+                                rows.push({
+                                    '#': '',
+                                    'ITEMCODE': '---',
+                                    'Item name': 'منتجات اقل من 200 ستوك',
+                                    'Item_Alias': 'إجمالي المستبعد',
+                                    'Stock': hiddenStock,
+                                    'MRP': '',
+                                    'Selling P': parseFloat(hiddenAvgPrice.toFixed(2)),
+                                    'SALES QTY': hiddenQty,
+                                    'SALES AMOUNT': hiddenAmount
+                                });
+                            }
 
                             rows.push({
                                 '#': '', 'ITEMCODE': '', 'Item name': '', 'Item_Alias': '',
