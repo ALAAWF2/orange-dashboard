@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>طلباتي السابقة</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial; background: #fdf6f0; padding: 20px; }
+    h1 { text-align: center; color: #e67e22; font-size: 28px; margin-bottom: 20px; }
+    #filters { text-align: center; margin-bottom: 30px; }
+    #ordersList { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .order {
+      background: white;
+      border: 1px solid #eee;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .order:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    .order h3 {
+      color: #e67e22;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    .order p {
+      margin: 6px 0;
+      color: #555;
+    }
+    input[type="date"] {
+      padding: 6px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin: 0 5px;
+    }
+    button {
+      padding: 8px 16px;
+      background: #e67e22;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #d35400;
+    }
+    #modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #modalContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    
+}
+    #modalContent h2 { color: #e67e22; margin-top: 0; }
+    .modal-footer { text-align: center; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: right; }
+    th { background: #f8f8f8; color: #333; }
+  </style>
+</head>
+<body>
+  <h1>الطلبيات السابقة للمعرض</h1>
+  <div style="text-align: center; margin-bottom: 20px;">
+    <a href="index.html">
+      <button>الرجوع إلى جدول البضاعة</button>
+    </a>
+  </div>
+  <div id="filters">
+    <label>من: <input type="date" id="fromDate"></label>
+    <label>إلى: <input type="date" id="toDate"></label>
+    <button onclick="loadOrders()">تطبيق الفلتر</button>
+  </div>
+  <div id="ordersList">جارٍ التحميل...</div>
+
+  <div id="modal">
+    <div id="modalContent"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDBhsMvDPwECDlFNYNkmFXDVq4nWrEejJc",
+      authDomain: "orders-fb3bf.firebaseapp.com",
+      projectId: "orders-fb3bf",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let currentUser = null;
+
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        currentUser = user;
+        loadOrders();
+      } else {
+        document.getElementById('ordersList').innerHTML = '<p style="color:red; text-align:center">يرجى تسجيل الدخول أولاً</p>';
+      }
+    });
+
+    async function loadOrders() {
+      const container = document.getElementById('ordersList');
+      container.innerHTML = '';
+
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+
+      try {
+        let query = db.collection("orders").where("userId", "==", currentUser.uid);
+        if (fromDate) query = query.where("timestamp", ">=", new Date(fromDate));
+        if (toDate) {
+          const to = new Date(toDate);
+          to.setHours(23,59,59,999);
+          query = query.where("timestamp", "<=", to);
+        }
+        query = query.orderBy("timestamp", "desc");
+        const snapshot = await query.get();
+        if (snapshot.empty) return container.innerHTML = '<p style="text-align:center">لا توجد طلبيات ضمن الفترة المحددة</p>';
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const date = data.timestamp?.toDate().toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) ?? "—";
+          const card = document.createElement('div');
+          card.className = 'order';
+          card.innerHTML = `
+            <h3>طلبية بتاريخ ${date}</h3>
+            <p>المعرض: <strong>${data.mall}</strong></p>
+            <p>المستودع: <strong>${data.warehouse}</strong></p>
+            <p>مستلزمات إضافية؟ <strong>${data.hasExtras ? 'نعم' : 'لا'}</strong></p>
+            <button onclick='showDetails(${JSON.stringify(data.orders)}, "${data.mall}", "${data.warehouse}", "${date}")'>عرض التفاصيل</button>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<p style="color:red; text-align:center">حدث خطأ أثناء تحميل الطلبيات</p>';
+      }
+    }
+
+    function showDetails(orders, mall, warehouse, date) {
+      const modal = document.getElementById('modal');
+      const modalContent = document.getElementById('modalContent');
+      let html = `
+        <h2>تفاصيل الطلبية</h2>
+        <p><strong>المعرض:</strong> ${mall}</p>
+        <p><strong>المستودع:</strong> ${warehouse}</p>
+        <p><strong>التاريخ:</strong> ${date}</p>
+        <table><thead><tr><th>الكمية</th><th>Alias</th><th>الاسم</th><th>الكود</th></tr></thead><tbody>
+      `;
+      orders.forEach(item => {
+        html += `<tr><td>${item.qty}</td><td>${item.alias ?? ''}</td><td>${item.name}</td><td>${item.code}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      html += '<div class="modal-footer" style="position: sticky; bottom: 0; background: white; padding-top: 10px; border-top: 1px solid #eee;"><button onclick="closeModal()">إغلاق</button></div>';
+      modalContent.innerHTML = html;
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

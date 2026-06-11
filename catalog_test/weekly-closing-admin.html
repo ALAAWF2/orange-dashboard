@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة إدارة وتدقيق التقفيلات الأسبوعية</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-app: #f1f5f9;
+      --bg-surface: #ffffff;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-soft: #eff6ff;
+      --secondary: #0f172a;
+      --accent: #f97316;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --danger: #ef4444;       
+      --warning: #f59e0b;
+      --success: #10b981;      
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --font-family: 'Tajawal', system-ui, sans-serif;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-brand .logo-icon {
+      background: var(--secondary);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transform: rotate(-5deg);
+    }
+    .nav-brand h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--secondary);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      font-family: var(--font-family);
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-outline:hover { border-color: var(--text-muted); background: #f8fafc; }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { opacity: 0.9; transform: translateY(-2px); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { opacity: 0.9; transform: translateY(-2px); }
+
+    /* Layout */
+    .app-main {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 0.5rem;
+    }
+    .dashboard-greeting h2 { font-size: 1.8rem; font-weight: 800; }
+    .dashboard-greeting p { color: var(--text-muted); font-size: 1rem; margin-top: 4px; }
+
+    /* Stats Grid */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .stat-value { font-size: 2rem; font-weight: 900; color: var(--secondary); line-height: 1; margin-bottom: 0.5rem; }
+    .stat-title { font-size: 0.9rem; color: var(--text-muted); font-weight: 700; }
+    
+    .stat-value.new-color { color: var(--warning); }
+    .stat-value.waiting-color { color: var(--primary); }
+    .stat-value.resolved-color { color: var(--success); }
+
+    /* Filters */
+    .filters-container {
+      background: var(--bg-surface);
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+    }
+    .filters-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      flex: 1;
+      min-width: 180px;
+    }
+    .filter-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--secondary);
+      font-weight: 700;
+      font-size: 0.9em;
+    }
+    select, input[type="date"], input[type="text"] {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: var(--transition);
+      background: #f8fafc;
+    }
+    select:focus, input[type="date"]:focus, input[type="text"]:focus {
+      border-color: var(--primary);
+      outline: none;
+      background: white;
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    /* Table */
+    .table-responsive {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+    }
+    th, td {
+      padding: 1rem 1.2rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95em;
+    }
+    th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-weight: 800;
+      font-size: 0.85em;
+      letter-spacing: 0.5px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: #f8fafc; }
+
+    /* Badges */
+    .status-badge {
+      padding: 0.4rem 0.8rem;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    
+    .status-new { background: #fffbeb; color: #b45309; }
+    .status-new::before { background: var(--warning); }
+    
+    .status-approved { background: #ecfdf5; color: #065f46; }
+    .status-approved::before { background: var(--success); }
+    
+    .status-rejected { background: #fef2f2; color: #991b1b; }
+    .status-rejected::before { background: var(--danger); }
+
+    /* Auth Screens */
+    .auth-overlay {
+      position: fixed; inset: 0; background: var(--bg-app); display: flex;
+      flex-direction: column; align-items: center; justify-content: center; z-index: 2000;
+    }
+    .auth-card {
+      background: white; padding: 3rem; border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); text-align: center; max-width: 400px; width: 90%;
+      border: 1px solid var(--border-color);
+    }
+    .auth-card .logo {
+      width: 60px; height: 60px; background: var(--secondary); color: white; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem;
+    }
+    .auth-card h2 { font-size: 1.8rem; font-weight: 900; margin-bottom: 0.5rem; }
+    .auth-card p { color: var(--text-muted); margin-bottom: 2rem; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: white; padding: 2rem; border-radius: var(--radius-md);
+      width: 95%; max-width: 1250px; max-height: 90vh; display: flex; flex-direction: column;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+    }
+    .modal-header h3 { color: var(--secondary); font-size: 1.3em; font-weight: 800; }
+    .modal-close {
+      background: var(--bg-app); border: none; width: 36px; height: 36px; border-radius: 50%;
+      font-size: 20px; color: var(--text-muted); cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: #fee2e2; color: var(--danger); }
+    .modal-body { flex: 1; overflow-y: auto; padding: 10px; }
+    .modal-footer {
+      margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Modal Inner Excel Style */
+    .modal-report-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .modal-report-details div { font-weight: 700; font-size: 0.95em; }
+    .modal-report-details strong { color: var(--primary); }
+
+    .modal-excel-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 0.85em;
+    }
+    .modal-excel-table th, .modal-excel-table td {
+      border: 1px solid #cbd5e1;
+      padding: 8px;
+    }
+    .modal-excel-table th { background: #f1f5f9; font-weight: 800; }
+    .modal-excel-table .day-col { font-weight: 800; background: #f8fafc; }
+    
+    .modal-summary-section {
+      background: #fffdf9;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .modal-summary-section h4 { color: var(--accent); margin-bottom: 10px; }
+    .modal-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+    .modal-summary-item { font-weight: 700; }
+
+    /* Approval Controls */
+    .approval-controls {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      width: 100%;
+    }
+    .approval-controls label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+    }
+    .approval-controls textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      min-height: 60px;
+      margin-bottom: 12px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--secondary); color: white; padding: 1rem 2rem; border-radius: 99px;
+      font-weight: 700; box-shadow: var(--shadow-lg); z-index: 9999;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--danger); }
+    .toast.success { background: var(--success); }
+
+    /* Loading overlay */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(255, 255, 255, 0.85); z-index: 9999;
+      display: none; justify-content: center; align-items: center; flex-direction: column; gap: 15px;
+    }
+    .spinner {
+      width: 50px; height: 50px; border: 5px solid var(--primary-soft);
+      border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite linear;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body id="appBody" style="visibility:hidden;">
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="overlay">
+    <div class="spinner"></div>
+    <p id="loadingText">جاري تحميل البيانات وتوثيق الصلاحيات...</p>
+  </div>
+
+  <!-- App Header -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <h1>الإدارة المالية - تقفيلات المعارض</h1>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html" class="btn btn-outline">العودة للبضاعة</a>
+      <a href="weekly-closing.html" class="btn btn-outline">صفحة التقفيل للمعرض</a>
+      <button class="btn btn-primary" onclick="logout()" style="background:var(--danger)">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="dashboard-header">
+      <div class="dashboard-greeting">
+        <h2>نظرة عامة على التقفيلات</h2>
+        <p>مراجعة واعتماد وتصدير التقارير الأسبوعية للمعارض</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-value" id="totalCount">0</div>
+        <div class="stat-title">إجمالي التقارير</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value new-color" id="newCount">0</div>
+        <div class="stat-title">بانتظار الاعتماد</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value resolved-color" id="approvedCount">0</div>
+        <div class="stat-title">تمت الموافقة والاعتماد</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="rejectedCount" style="color:var(--danger);">0</div>
+        <div class="stat-title">مرفوضة وتحتاج تعديل</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-container">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>المعرض</label>
+          <select id="mallFilter" onchange="loadReports()">
+            <option value="all">الكل</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>الأسبوع</label>
+          <select id="weekFilter" onchange="loadReports()">
+            <option value="all">الكل</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>الحالة</label>
+          <select id="statusFilter" onchange="loadReports()">
+            <option value="all">الكل</option>
+            <option value="جديد">بانتظار الاعتماد</option>
+            <option value="مقبول">مقبول ومعتمد</option>
+            <option value="مرفوض">مرفوض للتعديل</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>المعرض</th>
+            <th>رقم الأسبوع</th>
+            <th>تاريخ البداية</th>
+            <th>تاريخ النهاية</th>
+            <th>إجمالي المبيعات</th>
+            <th>صافي النقد للايداع</th>
+            <th>الإيداعات الفعلية</th>
+            <th>الرصيد المرحل</th>
+            <th>تاريخ التقديم</th>
+            <th>الحالة</th>
+            <th>خيارات</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Rows will be injected here -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Report Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">تقرير تقفيلة الأسبوع</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="detailBody">
+        <!-- Inside modal report details -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="exportReportToExcel()">تصدير كملف Excel الأصلي</button>
+        <button class="btn btn-primary" onclick="closeModal()">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Supabase Logic -->
+  <script>
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allReports = [];
+    let currentReport = null;
+    let currentUser = null;
+
+    // Run Auth Check
+    (async () => {
+      showOverlay("جاري التحقق من الصلاحيات...");
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (!session?.user) {
+        showAuthScreen('🔒 تسجيل الدخول المالي', 'يرجى تسجيل الدخول للوصول للوحة المالية.');
+        return;
+      }
+
+      currentUser = session.user;
+
+      // Check role
+      let userRole = 'user';
+      try {
+        const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', currentUser.id).single();
+        if (profile) userRole = profile.role;
+      } catch (err) {}
+
+      if (['admin', 'finance_admin'].includes(userRole)) {
+        document.getElementById('appBody').style.visibility = 'visible';
+        await initDashboard();
+      } else {
+        await supabaseClient.auth.signOut();
+        showAuthScreen('⛔ غير مصرح بالدخول', 'عذراً، هذا الحساب لا يملك صلاحية إدارة الحسابات المالية.', true);
+      }
+    })();
+
+    // Show Login Box
+    function showAuthScreen(title, subTitle, isError = false) {
+      hideOverlay();
+      document.getElementById('appBody').style.visibility = 'visible';
+      document.body.innerHTML = `
+        <!-- Loading Overlay recreated -->
+        <div id="loadingOverlay" class="overlay" style="display: none;">
+          <div class="spinner"></div>
+          <p id="loadingText">جاري العمل...</p>
+        </div>
+
+        <div class="auth-overlay">
+          <div class="auth-card">
+            <div class="logo" style="background:${isError ? 'var(--danger)' : 'var(--secondary)'}"></div>
+            <h2 style="color:${isError ? 'var(--danger)' : 'var(--secondary)'}">${title}</h2>
+            <p>${subTitle}</p>
+            <div id="loginBox" style="text-align:right; margin-top:20px;">
+              <label style="display:block; margin-bottom:4px; font-weight:700; font-size:0.9em; color:var(--text-muted)">البريد الإلكتروني للإدارة</label>
+              <input id="emailInput" type="email" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:12px;" placeholder="admin@domain.com">
+              
+              <label style="display:block; margin-bottom:4px; font-weight:700; font-size:0.9em; color:var(--text-muted)">كلمة المرور</label>
+              <input id="passwordInput" type="password" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:16px;" placeholder="••••••••">
+              
+              <button onclick="confirmLogin()" class="btn btn-primary" style="width:100%; padding:12px;">تأكيد الدخول</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function confirmLogin() {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+      if (!email || !password) return;
+      
+      showOverlay("جاري تسجيل الدخول...");
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) { 
+        alert('فشل الدخول: ' + error.message); 
+        hideOverlay();
+      } else { 
+        location.reload(); 
+      }
+    }
+
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      location.reload();
+    }
+
+    // Init Dashboard
+    async function initDashboard() {
+      hideOverlay();
+      // Load dropdown lists
+      await loadFiltersLists();
+      await loadReports();
+    }
+
+    // Load filter dropdown values
+    async function loadFiltersLists() {
+      // Load unique malls and weeks from weekly_closings table
+      const { data, error } = await supabaseClient
+        .from('weekly_closings')
+        .select('mall, week_number');
+
+      if (error) {
+        console.error("Filter list error:", error);
+        return;
+      }
+
+      const uniqueMalls = [...new Set(data.map(r => r.mall).filter(Boolean))].sort();
+      const uniqueWeeks = [...new Set(data.map(r => r.week_number).filter(Boolean))].sort((a,b) => a - b);
+
+      const mallSel = document.getElementById('mallFilter');
+      uniqueMalls.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        mallSel.appendChild(opt);
+      });
+
+      const weekSel = document.getElementById('weekFilter');
+      uniqueWeeks.forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w;
+        opt.textContent = `الأسبوع ${w}`;
+        weekSel.appendChild(opt);
+      });
+    }
+
+    // Load Reports
+    async function loadReports() {
+      showOverlay("جاري جلب التقارير...");
+      const mall = document.getElementById('mallFilter').value;
+      const week = document.getElementById('weekFilter').value;
+      const status = document.getElementById('statusFilter').value;
+
+      let query = supabaseClient.from('weekly_closings').select('*');
+
+      if (mall !== 'all') query = query.eq('mall', mall);
+      if (week !== 'all') query = query.eq('week_number', parseInt(week));
+      if (status !== 'all') query = query.eq('status', status);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        showToast("فشل تحميل التقارير: " + error.message, "error");
+        hideOverlay();
+        return;
+      }
+
+      allReports = data || [];
+      renderTable();
+      updateStats();
+      hideOverlay();
+    }
+
+    // Render Table
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = "";
+
+      if (allReports.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:40px; color:#aaa; font-size:1.1em;">لا توجد تقارير تقفيلات حالياً</td></tr>';
+        return;
+      }
+
+      allReports.forEach(r => {
+        const dateStr = new Date(r.created_at).toLocaleDateString('ar-SA');
+        
+        let badgeClass = "status-new";
+        if (r.status === 'مقبول') badgeClass = "status-approved";
+        if (r.status === 'مرفوض') badgeClass = "status-rejected";
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight:bold;">${r.mall}</td>
+          <td>${r.week_number}</td>
+          <td>${r.start_date}</td>
+          <td>${r.end_date}</td>
+          <td style="color:var(--primary-hover); font-weight:700;">${r.total_sales.toFixed(2)}</td>
+          <td>${r.total_cash_to_deposit.toFixed(2)}</td>
+          <td>${r.total_deposits.toFixed(2)}</td>
+          <td style="font-weight:700; color:${r.carried_balance < 0 ? 'var(--danger)' : 'var(--success)'}">${r.carried_balance.toFixed(2)}</td>
+          <td>${dateStr}</td>
+          <td><span class="status-badge ${badgeClass}">${r.status}</span></td>
+          <td>
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:0.8em;" onclick="viewDetail('${r.id}')">مراجعة التفاصيل</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Update stats counters
+    function updateStats() {
+      document.getElementById('totalCount').textContent = allReports.length;
+      document.getElementById('newCount').textContent = allReports.filter(r => r.status === 'جديد').length;
+      document.getElementById('approvedCount').textContent = allReports.filter(r => r.status === 'مقبول').length;
+      document.getElementById('rejectedCount').textContent = allReports.filter(r => r.status === 'مرفوض').length;
+    }
+
+    // View Details Modal
+    function viewDetail(id) {
+      currentReport = allReports.find(r => r.id === id);
+      if (!currentReport) return;
+
+      const modal = document.getElementById('detailModal');
+      document.getElementById('modalTitle').textContent = `تقفيلة أسبوع ${currentReport.week_number} - معرض ${currentReport.mall}`;
+
+      const dateStr = new Date(currentReport.created_at).toLocaleString('ar-SA');
+      let statusHtml = "";
+      if (currentReport.status === 'جديد') statusHtml = `<span style="color:var(--warning)">جديد (بانتظار المراجعة)</span>`;
+      else if (currentReport.status === 'مقبول') statusHtml = `<span style="color:var(--success)">مقبول ومعتمد</span>`;
+      else statusHtml = `<span style="color:var(--danger)">مرفوض للتعديل</span>`;
+
+      let bodyHtml = `
+        <div class="modal-report-details">
+          <div>المعرض: <strong>${currentReport.mall}</strong></div>
+          <div>رقم الأسبوع: <strong>${currentReport.week_number}</strong></div>
+          <div>التاريخ: <strong>من ${currentReport.start_date} إلى ${currentReport.end_date}</strong></div>
+          <div>تاريخ التقديم: <strong>${dateStr}</strong></div>
+          <div>حالة التقرير: <strong>${statusHtml}</strong></div>
+          <div>مقدم التقرير: <strong>${currentReport.user_email}</strong></div>
+        </div>
+
+        <table class="modal-excel-table">
+          <thead>
+            <tr style="background:#cbd5e1;">
+              <th>اليوم</th>
+              <th>التاريخ</th>
+              <th>إجمالي المبيعات</th>
+              <th>كروت (عدد)</th>
+              <th>كروت (قيمة)</th>
+              <th>نقدي</th>
+              <th>تمارا مبيعات</th>
+              <th>تمارا مرتجعات</th>
+              <th>تابي مبيعات</th>
+              <th>تابي مرتجعات</th>
+              <th>صافي النقد للايداع</th>
+              <th>العهدة</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      const days = currentReport.daily_records || [];
+      days.forEach(d => {
+        bodyHtml += `
+          <tr>
+            <td class="day-col">${d.day_name}</td>
+            <td>${d.date}</td>
+            <td style="font-weight:700; background:#fffaf5;">${d.sales_value.toFixed(2)}</td>
+            <td>${d.bank_net_count}</td>
+            <td>${d.bank_net_value.toFixed(2)}</td>
+            <td>${d.cash_sales.toFixed(2)}</td>
+            <td>${d.tamara_sales.toFixed(2)}</td>
+            <td>${d.tamara_returns.toFixed(2)}</td>
+            <td>${d.tabby_sales.toFixed(2)}</td>
+            <td>${d.tabby_returns.toFixed(2)}</td>
+            <td style="font-weight:700;">${d.cash_to_deposit.toFixed(2)}</td>
+            <td>${d.petty_cash.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+
+      // Sums row
+      bodyHtml += `
+            <tr style="background:#f1f5f9; font-weight:bold;">
+              <td colspan="2">الإجمالي</td>
+              <td>${currentReport.total_sales.toFixed(2)}</td>
+              <td>${currentReport.total_bank_card_count}</td>
+              <td>${currentReport.total_bank_card_value.toFixed(2)}</td>
+              <td>${currentReport.total_cash_sales.toFixed(2)}</td>
+              <td>${currentReport.total_tamara_sales.toFixed(2)}</td>
+              <td>${currentReport.total_tamara_returns.toFixed(2)}</td>
+              <td>${currentReport.total_tabby_sales.toFixed(2)}</td>
+              <td>${currentReport.total_tabby_returns.toFixed(2)}</td>
+              <td>${currentReport.total_cash_to_deposit.toFixed(2)}</td>
+              <td>${currentReport.total_petty_cash.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Summary section -->
+        <div class="modal-summary-section">
+          <h4>خلاصة التسوية النقدية</h4>
+          <div class="modal-summary-grid">
+            <div class="modal-summary-item">الرصيد السابق: <strong style="color:var(--secondary);">${currentReport.previous_balance.toFixed(2)} ريال</strong></div>
+            <div class="modal-summary-item">إجمالي المصاريف: <strong style="color:var(--danger);">${currentReport.total_expenses.toFixed(2)} ريال</strong></div>
+            <div class="modal-summary-item">صافي النقد المطلوب إيداعه: <strong style="color:var(--primary-hover);">${currentReport.net_cash_required.toFixed(2)} ريال</strong></div>
+            <div class="modal-summary-item">إجمالي الإيداعات الفعلية: <strong style="color:var(--secondary);">${currentReport.total_deposits.toFixed(2)} ريال</strong></div>
+            <div class="modal-summary-item">الرصيد المرحل للأسبوع القادم: <strong style="color:var(--success);">${currentReport.carried_balance.toFixed(2)} ريال</strong></div>
+          </div>
+        </div>
+      `;
+
+      // Approval Form (only for new or editable reports)
+      bodyHtml += `
+        <div class="approval-controls">
+          <label for="financeNotes">ملاحظات وقرار الإدارة المالية:</label>
+          <textarea id="financeNotes" placeholder="اكتب ملاحظاتك للمدير هنا في حال الرفض أو القبول...">${currentReport.finance_reply || ''}</textarea>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-success" onclick="updateReportStatus('مقبول')">اعتماد وقبول التقفيلة</button>
+            <button class="btn btn-danger" onclick="updateReportStatus('مرفوض')">رفض وإعادة للتعديل</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('detailBody').innerHTML = bodyHtml;
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    // Update report status
+    async function updateReportStatus(status) {
+      if (!currentReport) return;
+      const reply = document.getElementById('financeNotes').value;
+
+      showOverlay("جاري تحديث حالة التقرير...");
+
+      try {
+        const { error } = await supabaseClient
+          .from('weekly_closings')
+          .update({
+            status: status,
+            finance_reply: reply,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentReport.id);
+
+        if (error) throw error;
+
+        showToast(`تم ${status === 'مقبول' ? 'اعتماد وقبول' : 'رفض'} التقرير بنجاح`, "success");
+        closeModal();
+        await loadReports();
+      } catch (err) {
+        showToast("خطأ في تحديث البيانات: " + err.message, "error");
+      } finally {
+        hideOverlay();
+      }
+    }
+
+    // Export report to Excel in original layout using ExcelJS
+    async function exportReportToExcel() {
+      if (!currentReport) return;
+
+      showOverlay("جاري إنشاء وتصدير ملف Excel...");
+
+      try {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('تقرير المبيعات الاسبوعي', {
+          views: [{ rtl: true }] // Ensure Right-to-Left sheet view
+        });
+
+        // Enable grid lines
+        sheet.views[0].showGridLines = true;
+
+        // Colors
+        const primaryColor = 'FFE67E22';
+        const primarySoft = 'FFFFF3E6';
+        const grayHeader = 'FFF1F5F9';
+        const textDark = 'FF2C3E50';
+
+        // Column widths
+        sheet.columns = [
+          { width: 14 }, // A: اليوم
+          { width: 14 }, // B: التاريخ
+          { width: 3 },  // C: space
+          { width: 16 }, // D: قيمة المبيعات
+          { width: 3 },  // E: space
+          { width: 10 }, // F: بنكية عدد
+          { width: 15 }, // G: بنكية قيمة
+          { width: 22 }, // H: نقدية بالصافي
+          { width: 15 }, // I: تمارا مبيعات
+          { width: 15 }, // J: تمارا مرتجعات
+          { width: 15 }, // K: تابي مبيعات
+          { width: 15 }, // L: تابي مرتجعات
+          { width: 20 }, // M: صافي النقد للايداع
+          { width: 15 }, // N: مبلغ العهدة
+          { width: 22 }, // O: توقيع المدير
+          { width: 22 }  // P: توقيع البائع
+        ];
+
+        // 1. Header Details (Rows 1-5)
+        sheet.mergeCells('B2:C2');
+        sheet.getCell('B2').value = 'المعرض :';
+        sheet.getCell('B2').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('B2').alignment = { horizontal: 'left' };
+
+        sheet.mergeCells('D2:G2');
+        sheet.getCell('D2').value = currentReport.mall;
+        sheet.getCell('D2').font = { bold: true, name: 'Tajawal', size: 11, color: { argb: 'FFE67E22' } };
+        sheet.getCell('D2').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('I2:K2');
+        sheet.getCell('I2').value = 'من تاريخ :';
+        sheet.getCell('I2').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('I2').alignment = { horizontal: 'left' };
+
+        sheet.mergeCells('L2:N2');
+        sheet.getCell('L2').value = new Date(currentReport.start_date);
+        sheet.getCell('L2').font = { name: 'Tajawal', size: 11 };
+        sheet.getCell('L2').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('B4:C4');
+        sheet.getCell('B4').value = 'الأسبوع :';
+        sheet.getCell('B4').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('B4').alignment = { horizontal: 'left' };
+
+        sheet.mergeCells('D4:G4');
+        sheet.getCell('D4').value = currentReport.week_number;
+        sheet.getCell('D4').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('D4').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('I4:K4');
+        sheet.getCell('I4').value = 'الى تاريخ :';
+        sheet.getCell('I4').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('I4').alignment = { horizontal: 'left' };
+
+        sheet.mergeCells('L4:N4');
+        sheet.getCell('L4').value = new Date(currentReport.end_date);
+        sheet.getCell('L4').font = { name: 'Tajawal', size: 11 };
+        sheet.getCell('L4').alignment = { horizontal: 'center' };
+
+        // 2. Title Row 6
+        sheet.mergeCells('A6:P6');
+        sheet.getCell('A6').value = 'اجمالي المبيعات الأسبوعية';
+        sheet.getCell('A6').font = { bold: true, name: 'Tajawal', size: 16, color: { argb: 'FFFFFFFF' } };
+        sheet.getCell('A6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE67E22' } };
+        sheet.getCell('A6').alignment = { horizontal: 'center', vertical: 'middle' };
+        sheet.getRow(6).height = 35;
+
+        // Empty row
+        sheet.getRow(7).height = 15;
+
+        // 3. Main Table Headers (Row 8, 9, 10)
+        // Set headers values
+        sheet.mergeCells('A8:A10'); sheet.getCell('A8').value = 'اليوم';
+        sheet.mergeCells('B8:B10'); sheet.getCell('B8').value = 'التاريخ';
+        sheet.mergeCells('D8:D10'); sheet.getCell('D8').value = 'قيمة المبيعات';
+        sheet.mergeCells('F8:G8');  sheet.getCell('F8').value = 'المبيعات البنكية بالصافي';
+        sheet.getCell('F9').value = 'العدد';
+        sheet.getCell('G9').value = 'القيمة';
+        sheet.mergeCells('F9:F10');
+        sheet.mergeCells('G9:G10');
+
+        sheet.mergeCells('H8:H10'); sheet.getCell('H8').value = 'المبيعات النقدية بالصافي';
+
+        sheet.mergeCells('I8:J8');  sheet.getCell('I8').value = 'تمارا';
+        sheet.getCell('I9').value = '1';
+        sheet.getCell('J9').value = '2';
+        sheet.getCell('I10').value = 'مبيعات تمارا';
+        sheet.getCell('J10').value = 'مرتجعات تمارا';
+
+        sheet.mergeCells('K8:L8');  sheet.getCell('K8').value = 'تابي';
+        sheet.getCell('K9').value = '3';
+        sheet.getCell('L9').value = '4';
+        sheet.getCell('K10').value = 'مبيعات تابي';
+        sheet.getCell('L10').value = 'مرتجعات تابي';
+
+        sheet.mergeCells('M8:M10'); sheet.getCell('M8').value = 'صافي النقد للايداع';
+        sheet.mergeCells('N8:N10'); sheet.getCell('N8').value = 'مبلغ العهدة';
+        sheet.mergeCells('O8:O10'); sheet.getCell('O8').value = 'اسم وتوقيع المدير';
+        sheet.mergeCells('P8:P10'); sheet.getCell('P8').value = 'اسم وتوقيع البائع';
+
+        // Style header cells
+        const headerCells = [
+          'A8', 'B8', 'D8', 'F8', 'H8', 'I8', 'K8', 'M8', 'N8', 'O8', 'P8',
+          'F9', 'G9', 'I9', 'J9', 'K9', 'L9',
+          'I10', 'J10', 'K10', 'L10'
+        ];
+
+        headerCells.forEach(cellId => {
+          const cell = sheet.getCell(cellId);
+          cell.font = { bold: true, name: 'Tajawal', size: 9 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+
+        sheet.getRow(8).height = 25;
+        sheet.getRow(9).height = 20;
+        sheet.getRow(10).height = 25;
+
+        // 4. Data Rows (Rows 11 to 17)
+        const days = currentReport.daily_records || [];
+        days.forEach((d, idx) => {
+          const rowNum = 11 + idx;
+          sheet.getCell(`A${rowNum}`).value = d.day_name;
+          sheet.getCell(`B${rowNum}`).value = new Date(d.date);
+          sheet.getCell(`D${rowNum}`).value = d.sales_value;
+          sheet.getCell(`F${rowNum}`).value = d.bank_net_count;
+          sheet.getCell(`G${rowNum}`).value = d.bank_net_value;
+          sheet.getCell(`H${rowNum}`).value = d.cash_sales;
+          sheet.getCell(`I${rowNum}`).value = d.tamara_sales;
+          sheet.getCell(`J${rowNum}`).value = d.tamara_returns;
+          sheet.getCell(`K${rowNum}`).value = d.tabby_sales;
+          sheet.getCell(`L${rowNum}`).value = d.tabby_returns;
+          sheet.getCell(`M${rowNum}`).value = d.cash_to_deposit;
+          sheet.getCell(`N${rowNum}`).value = d.petty_cash;
+
+          sheet.getRow(rowNum).height = 25;
+
+          // Formatting and styling
+          const cols = ['A', 'B', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
+          cols.forEach(col => {
+            const cell = sheet.getCell(`${col}${rowNum}`);
+            cell.font = { name: 'Tajawal', size: 10 };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+
+            // Number formats
+            if (['D', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'].includes(col)) {
+              cell.numFmt = '#,##0.00';
+            }
+          });
+
+          // Highlight total sales column
+          sheet.getCell(`D${rowNum}`).font = { bold: true, name: 'Tajawal', size: 10 };
+          sheet.getCell(`D${rowNum}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3E6' } };
+        });
+
+        // 5. Totals Row (Row 18)
+        sheet.mergeCells('A18:B18');
+        sheet.getCell('A18').value = 'الإجمالي';
+        sheet.getCell('D18').value = currentReport.total_sales;
+        sheet.getCell('F18').value = currentReport.total_bank_card_count;
+        sheet.getCell('G18').value = currentReport.total_bank_card_value;
+        sheet.getCell('H18').value = currentReport.total_cash_sales;
+        sheet.getCell('I18').value = currentReport.total_tamara_sales;
+        sheet.getCell('J18').value = currentReport.total_tamara_returns;
+        sheet.getCell('K18').value = currentReport.total_tabby_sales;
+        sheet.getCell('L18').value = currentReport.total_tabby_returns;
+        sheet.getCell('M18').value = currentReport.total_cash_to_deposit;
+        sheet.getCell('N18').value = currentReport.total_petty_cash;
+
+        sheet.getRow(18).height = 28;
+
+        const colsTotal = ['A', 'B', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
+        colsTotal.forEach(col => {
+          const cell = sheet.getCell(`${col}18`);
+          cell.font = { bold: true, name: 'Tajawal', size: 10 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'double' },
+            right: { style: 'thin' }
+          };
+          if (['D', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'].includes(col)) {
+            cell.numFmt = '#,##0.00';
+          }
+        });
+
+        // 6. Net Tamara & Tabby Rows (Rows 19-21)
+        sheet.mergeCells('I19:J19');
+        sheet.getCell('I19').value = 'صافي مبيعات تمارا';
+        sheet.getCell('I19').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('I19').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('K19:L19');
+        sheet.getCell('K19').value = 'صافي مبيعات تابي';
+        sheet.getCell('K19').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('K19').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('I20:J20');
+        sheet.getCell('I20').value = currentReport.total_tamara_sales - currentReport.total_tamara_returns;
+        sheet.getCell('I20').font = { bold: true, name: 'Tajawal', size: 11, color: { argb: 'FFD35400' } };
+        sheet.getCell('I20').alignment = { horizontal: 'center' };
+        sheet.getCell('I20').numFmt = '#,##0.00';
+
+        sheet.mergeCells('K20:L20');
+        sheet.getCell('K20').value = currentReport.total_tabby_sales - currentReport.total_tabby_returns;
+        sheet.getCell('K20').font = { bold: true, name: 'Tajawal', size: 11, color: { argb: 'FFD35400' } };
+        sheet.getCell('K20').alignment = { horizontal: 'center' };
+        sheet.getCell('K20').numFmt = '#,##0.00';
+
+        // 7. Bottom Summary layout
+        sheet.mergeCells('A22:D22');
+        sheet.getCell('A22').value = 'الرصيد من الأسبوع السابق';
+        sheet.getCell('A22').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('A22').alignment = { horizontal: 'left' };
+        sheet.getCell('F22').value = currentReport.previous_balance;
+        sheet.getCell('F22').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('F22').numFmt = '#,##0.00';
+        sheet.getCell('F22').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('A24:D24');
+        sheet.getCell('A24').value = 'اجمالي المصاريف';
+        sheet.getCell('A24').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('A24').alignment = { horizontal: 'left' };
+        sheet.getCell('F24').value = currentReport.total_expenses;
+        sheet.getCell('F24').font = { bold: true, name: 'Tajawal', size: 11, color: { argb: 'FFC0392B' } };
+        sheet.getCell('F24').numFmt = '#,##0.00';
+        sheet.getCell('F24').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('A26:D26');
+        sheet.getCell('A26').value = 'صافي النقد الواجب ايداعه بالبنك';
+        sheet.getCell('A26').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('A26').alignment = { horizontal: 'left' };
+        sheet.getCell('F26').value = currentReport.net_cash_required;
+        sheet.getCell('F26').font = { bold: true, name: 'Tajawal', size: 11, color: { argb: 'FFE67E22' } };
+        sheet.getCell('F26').numFmt = '#,##0.00';
+        sheet.getCell('F26').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('A28:D28');
+        sheet.getCell('A28').value = 'اجمالي الايداعات';
+        sheet.getCell('A28').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('A28').alignment = { horizontal: 'left' };
+        sheet.getCell('F28').value = currentReport.total_deposits;
+        sheet.getCell('F28').font = { bold: true, name: 'Tajawal', size: 11 };
+        sheet.getCell('F28').numFmt = '#,##0.00';
+        sheet.getCell('F28').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('A30:D30');
+        sheet.getCell('A30').value = 'الرصيد المرحل للأسبوع القادم';
+        sheet.getCell('A30').font = { bold: true, name: 'Tajawal', size: 10 };
+        sheet.getCell('A30').alignment = { horizontal: 'left' };
+        sheet.getCell('F30').value = currentReport.carried_balance;
+        sheet.getCell('F30').font = { bold: true, name: 'Tajawal', size: 11, color: { argb: 'FF27AE60' } };
+        sheet.getCell('F30').numFmt = '#,##0.00';
+        sheet.getCell('F30').alignment = { horizontal: 'center' };
+
+        // Borders and heights for summary section
+        const sumRows = [22, 24, 26, 28, 30];
+        sumRows.forEach(row => {
+          sheet.getRow(row).height = 24;
+          sheet.getCell(`F${row}`).border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+          sheet.getCell(`F${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        });
+
+        // 8. Signatures Labels (Columns I-P)
+        sheet.mergeCells('I22:K22');
+        sheet.getCell('I22').value = 'اسم و توقيع مدير المعرض';
+        sheet.getCell('I22').font = { bold: true, name: 'Tajawal', size: 9 };
+        sheet.getCell('I22').alignment = { horizontal: 'center' };
+
+        // Audit Trail information
+        sheet.mergeCells('I23:K23');
+        sheet.getCell('I23').value = `${currentReport.user_email}\n(معتمد إلكترونياً)`;
+        sheet.getCell('I23').font = { name: 'Tajawal', size: 8, color: { argb: 'FF7F8C8D' } };
+        sheet.getCell('I23').alignment = { horizontal: 'center', wrapText: true };
+
+        sheet.mergeCells('I25:K25');
+        sheet.getCell('I25').value = 'اسم و توقيع البائع';
+        sheet.getCell('I25').font = { bold: true, name: 'Tajawal', size: 9 };
+        sheet.getCell('I25').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('I28:K28');
+        sheet.getCell('I28').value = 'التاريخ';
+        sheet.getCell('I28').font = { bold: true, name: 'Tajawal', size: 9 };
+        sheet.getCell('I28').alignment = { horizontal: 'center' };
+
+        sheet.mergeCells('I29:K29');
+        sheet.getCell('I29').value = new Date(currentReport.created_at).toLocaleDateString('ar-SA') + ' ' + new Date(currentReport.created_at).toLocaleTimeString('ar-SA');
+        sheet.getCell('I29').font = { name: 'Tajawal', size: 8, color: { argb: 'FF7F8C8D' } };
+        sheet.getCell('I29').alignment = { horizontal: 'center' };
+
+        // Save
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `تقفيلة_الأسبوع_${currentReport.week_number}_معرض_${currentReport.mall}.xlsx`);
+        showToast("تم تصدير ملف Excel بنجاح", "success");
+
+      } catch (err) {
+        console.error("Excel generation error:", err);
+        showToast("خطأ أثناء تصدير Excel: " + err.message, "error");
+      } finally {
+        hideOverlay();
+      }
+    }
+
+    // UI helpers
+    function showToast(message, type = "") {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = "toast show " + type;
+      setTimeout(() => {
+        toast.className = "toast";
+      }, 4000);
+    }
+
+    function showOverlay(text) {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        const textEl = document.getElementById('loadingText');
+        if (textEl) textEl.textContent = text;
+        overlay.style.display = "flex";
+      }
+    }
+
+    function hideOverlay() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        overlay.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>

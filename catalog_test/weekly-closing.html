@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تقفيلة المبيعات الأسبوعية</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #e67e22;
+      --primary-dark: #d35400;
+      --primary-soft: #fff3e6;
+      --bg-color: #fcf8f2;
+      --card-bg: #ffffff;
+      --text-main: #2c3e50;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --border-radius: 12px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+      --font-family: 'Tajawal', sans-serif;
+      --success: #27ae60;
+      --danger: #e74c3c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Navbar Style */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 15px 25px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .navbar-brand h1 {
+      font-size: 1.4rem;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .navbar-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      font-family: var(--font-family);
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      background: #f8fafc;
+      border-color: var(--text-muted);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #219a52;
+      transform: translateY(-2px);
+    }
+
+    /* Info Section */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .info-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    .info-card h3 {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .info-card p {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .select-week {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-family: var(--font-family);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-main);
+      background: #f8fafc;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .select-week:focus {
+      border-color: var(--primary);
+    }
+
+    /* Main Card / Table Area */
+    .main-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      border-bottom: 2px solid var(--primary-soft);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-header h2 {
+      font-size: 1.3rem;
+      color: var(--text-main);
+      font-weight: 800;
+    }
+
+    /* Table CSS */
+    .table-responsive {
+      overflow-x: auto;
+      margin-bottom: 25px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      min-width: 1100px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      color: var(--text-main);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .header-group {
+      background-color: var(--primary-soft);
+      color: var(--primary-dark);
+    }
+
+    .day-col {
+      font-weight: 800;
+      background: #f8f9fa;
+      color: var(--text-main);
+      width: 80px;
+    }
+
+    .date-col {
+      color: var(--text-muted);
+      width: 100px;
+      font-size: 0.85rem;
+    }
+
+    /* Inputs inside table */
+    input[type="number"] {
+      width: 100%;
+      padding: 8px 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-family: var(--font-family);
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-align: center;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button, 
+    input[type="number"]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--primary);
+      background-color: var(--primary-soft);
+    }
+
+    .calculated-cell {
+      font-weight: 800;
+      background-color: #fdfefe;
+      color: var(--text-main);
+    }
+
+    .calculated-cell.total-sales-val {
+      color: var(--primary-dark);
+      background-color: #fffaf5;
+    }
+
+    .total-row {
+      background-color: #f1f5f9;
+      font-weight: 800;
+    }
+
+    .total-row td {
+      padding: 12px 10px;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      border-top: 2px solid var(--text-main);
+    }
+
+    /* Summary Grid */
+    .summary-section {
+      background: #fdfefe;
+      border: 1.5px solid var(--primary-soft);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+
+    .summary-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin-bottom: 15px;
+      border-bottom: 1px dashed var(--primary-soft);
+      padding-bottom: 8px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .summary-item label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .summary-item input {
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: var(--font-family);
+      font-weight: 800;
+      font-size: 1.05rem;
+      text-align: center;
+      background-color: white;
+    }
+
+    .summary-item .readonly-val {
+      background-color: #f8fafc;
+      color: var(--text-main);
+    }
+
+    .summary-item .readonly-val.required-deposit {
+      color: var(--primary-dark);
+      background-color: var(--primary-soft);
+    }
+
+    .summary-item .readonly-val.carried-balance-val {
+      color: var(--success);
+      background-color: #f0fdf4;
+    }
+
+    /* Declaration and Submission */
+    .declaration-box {
+      background-color: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .declaration-box input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 3px;
+      cursor: pointer;
+    }
+
+    .declaration-box label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 30px;
+      font-weight: 700;
+      box-shadow: var(--shadow-md);
+      z-index: 10000;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success {
+      background: var(--success);
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
+    /* Loading Screen overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.85);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid var(--primary-soft);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .overlay p {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary-dark);
+    }
+
+    /* Status notification banner */
+    .status-banner {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      display: none;
+    }
+    .status-banner.draft {
+      background-color: #fef3c7;
+      color: #d97706;
+      border: 1px solid #f59e0b;
+      display: block;
+    }
+    .status-banner.rejected {
+      background-color: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #ef4444;
+      display: block;
+    }
+    .status-banner.approved {
+      background-color: #dcfce7;
+      color: #15803d;
+      border: 1px solid #22c55e;
+      display: block;
+    }
+    .status-banner.pending {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #38bdf8;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="overlay">
+    <div class="spinner"></div>
+    <p id="loadingText">جاري تحميل البيانات وتوثيق الجلسة...</p>
+  </div>
+
+  <div class="container">
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="navbar-brand">
+        <h1>نظام التقفيلات الأسبوعية</h1>
+      </div>
+      <div class="navbar-actions">
+        <a href="index.html" class="btn btn-outline">العودة للبضاعة</a>
+        <a href="weekly-closing-admin.html" id="adminPanelLink" class="btn btn-outline" style="display:none; border-color:var(--primary); color:var(--primary);">لوحة تحكم المالية</a>
+      </div>
+    </header>
+
+    <!-- Banner for report status -->
+    <div id="statusBanner" class="status-banner"></div>
+
+    <!-- Info Cards -->
+    <section class="info-grid">
+      <div class="info-card">
+        <h3>المعرض</h3>
+        <p id="userMallText">جاري التحميل...</p>
+      </div>
+      <div class="info-card">
+        <h3>مدير المعرض</h3>
+        <p id="userEmailText">جاري التحميل...</p>
+      </div>
+      <div class="info-card">
+        <h3>الأسبوع المالي</h3>
+        <select id="weekSelect" class="select-week" onchange="onWeekChange()">
+          <!-- Options will be loaded from JSON -->
+        </select>
+      </div>
+    </section>
+
+    <!-- Main Entry Form -->
+    <main class="main-card">
+      <div class="card-header">
+        <h2>نموذج تقرير المبيعات التفصيلي</h2>
+        <span id="dateRangeText" style="font-weight:700; color:var(--text-muted);"></span>
+      </div>
+
+      <!-- Excel Table layout -->
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="3" class="day-col">اليوم</th>
+              <th rowspan="3" class="date-col">التاريخ</th>
+              <th rowspan="3" class="header-group">قيمة المبيعات</th>
+              <th colspan="2" class="header-group">المبيعات البنكية بالصافي</th>
+              <th rowspan="3" class="header-group">المبيعات النقدية بالصافي</th>
+              <th colspan="2" class="header-group">تمارا</th>
+              <th colspan="2" class="header-group">تابي</th>
+              <th rowspan="3" class="header-group">صافي النقد للايداع</th>
+              <th rowspan="3" class="header-group">مبلغ العهدة</th>
+            </tr>
+            <tr>
+              <th rowspan="2">العدد</th>
+              <th rowspan="2">القيمة</th>
+              <th>1</th>
+              <th>2</th>
+              <th>3</th>
+              <th>4</th>
+            </tr>
+            <tr>
+              <th>مبيعات</th>
+              <th>مرتجعات</th>
+              <th>مبيعات</th>
+              <th>مرتجعات</th>
+            </tr>
+          </thead>
+          <tbody id="daysTableBody">
+            <!-- Days will be generated by JS -->
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="2">الإجمالي</td>
+              <td id="total_sales" class="calculated-cell total-sales-val">0.00</td>
+              <td id="total_bank_card_count">0</td>
+              <td id="total_bank_card_value">0.00</td>
+              <td id="total_cash_sales">0.00</td>
+              <td id="total_tamara_sales">0.00</td>
+              <td id="total_tamara_returns">0.00</td>
+              <td id="total_tabby_sales">0.00</td>
+              <td id="total_tabby_returns">0.00</td>
+              <td id="total_cash_to_deposit" class="calculated-cell">0.00</td>
+              <td id="total_petty_cash">0.00</td>
+            </tr>
+            <!-- Summary rows underneath totals matching layout -->
+            <tr style="background:#f8fafc; font-weight:bold;">
+              <td colspan="2" style="text-align:left;">صافي مبيعات تمارا:</td>
+              <td colspan="2" id="net_tamara_sales" style="color:var(--primary-dark);">0.00</td>
+              <td colspan="2" style="text-align:left;">صافي مبيعات تابي:</td>
+              <td colspan="2" id="net_tabby_sales" style="color:var(--primary-dark);">0.00</td>
+              <td colspan="4"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Financial Calculation Summary Form -->
+      <section class="summary-section">
+        <div class="summary-title">خلاصة التسوية النقدية والأرصدة</div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <label for="previous_balance_input">الرصيد من الأسبوع السابق</label>
+            <input type="number" step="0.01" id="previous_balance_input" oninput="calculateSummaryTotals()" placeholder="0.00">
+          </div>
+          <div class="summary-item">
+            <label for="total_expenses_input">إجمالي المصاريف</label>
+            <input type="number" step="0.01" id="total_expenses_input" oninput="calculateSummaryTotals()" placeholder="0.00">
+          </div>
+          <div class="summary-item">
+            <label>صافي النقد الواجب إيداعه بالبنك</label>
+            <input type="text" id="net_cash_required_val" class="readonly-val required-deposit" readonly value="0.00">
+          </div>
+          <div class="summary-item">
+            <label for="total_deposits_input">إجمالي الإيداعات الفعلية</label>
+            <input type="number" step="0.01" id="total_deposits_input" oninput="calculateSummaryTotals()" placeholder="0.00">
+          </div>
+          <div class="summary-item">
+            <label>الرصيد المرحل للأسبوع القادم</label>
+            <input type="text" id="carried_balance_val" class="readonly-val carried-balance-val" readonly value="0.00">
+          </div>
+        </div>
+      </section>
+
+      <!-- Declaration and Sign-off -->
+      <div class="declaration-box">
+        <input type="checkbox" id="declarationCheckbox" onchange="toggleSubmitBtn()">
+        <label for="declarationCheckbox" id="declarationLabel">
+          أقر أنا بصفة مدير المعرض بصحة واكتمال البيانات والعمليات المالية الواردة في هذا التقرير الأسبوعي وأتحمل المسؤولية عنها إلكترونياً.
+        </label>
+      </div>
+
+      <!-- Submission Actions -->
+      <div class="form-actions">
+        <button id="saveDraftBtn" class="btn btn-outline" onclick="saveDraftLocal(true)">حفظ كمسودة مؤقتة</button>
+        <button id="submitBtn" class="btn btn-success" onclick="submitClosing()" disabled>إرسال واعتماد التقفيلة</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Main logic JS -->
+  <script>
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let userMall = "";
+    let userRole = "user";
+    const weekMap = [
+      { "from": "2026-01-01", "to": "2026-01-03", "week": 0 },
+      { "from": "2026-01-04", "to": "2026-01-10", "week": 1 },
+      { "from": "2026-01-11", "to": "2026-01-17", "week": 2 },
+      { "from": "2026-01-18", "to": "2026-01-24", "week": 3 },
+      { "from": "2026-01-25", "to": "2026-01-31", "week": 4 },
+      { "from": "2026-02-01", "to": "2026-02-07", "week": 5 },
+      { "from": "2026-02-08", "to": "2026-02-14", "week": 6 },
+      { "from": "2026-02-15", "to": "2026-02-21", "week": 7 },
+      { "from": "2026-02-22", "to": "2026-02-28", "week": 8 },
+      { "from": "2026-03-01", "to": "2026-03-07", "week": 9 },
+      { "from": "2026-03-08", "to": "2026-03-14", "week": 10 },
+      { "from": "2026-03-15", "to": "2026-03-21", "week": 11 },
+      { "from": "2026-03-22", "to": "2026-03-28", "week": 12 },
+      { "from": "2026-03-29", "to": "2026-04-04", "week": 13 },
+      { "from": "2026-04-05", "to": "2026-04-11", "week": 14 },
+      { "from": "2026-04-12", "to": "2026-04-18", "week": 15 },
+      { "from": "2026-04-19", "to": "2026-04-25", "week": 16 },
+      { "from": "2026-04-26", "to": "2026-05-02", "week": 17 },
+      { "from": "2026-05-03", "to": "2026-05-09", "week": 18 },
+      { "from": "2026-05-10", "to": "2026-05-16", "week": 19 },
+      { "from": "2026-05-17", "to": "2026-05-23", "week": 20 },
+      { "from": "2026-05-24", "to": "2026-05-30", "week": 21 },
+      { "from": "2026-05-31", "to": "2026-06-06", "week": 22 },
+      { "from": "2026-06-07", "to": "2026-06-13", "week": 23 },
+      { "from": "2026-06-14", "to": "2026-06-20", "week": 24 },
+      { "from": "2026-06-21", "to": "2026-06-27", "week": 25 },
+      { "from": "2026-06-28", "to": "2026-07-04", "week": 26 },
+      { "from": "2026-07-05", "to": "2026-07-11", "week": 27 },
+      { "from": "2026-07-12", "to": "2026-07-18", "week": 28 },
+      { "from": "2026-07-19", "to": "2026-07-25", "week": 29 },
+      { "from": "2026-07-26", "to": "2026-08-01", "week": 30 },
+      { "from": "2026-08-02", "to": "2026-08-08", "week": 31 },
+      { "from": "2026-08-09", "to": "2026-08-15", "week": 32 },
+      { "from": "2026-08-16", "to": "2026-08-22", "week": 33 },
+      { "from": "2026-08-23", "to": "2026-08-29", "week": 34 },
+      { "from": "2026-08-30", "to": "2026-09-05", "week": 35 },
+      { "from": "2026-09-06", "to": "2026-09-12", "week": 36 },
+      { "from": "2026-09-13", "to": "2026-09-19", "week": 37 },
+      { "from": "2026-09-20", "to": "2026-09-26", "week": 38 },
+      { "from": "2026-09-27", "to": "2026-10-03", "week": 39 },
+      { "from": "2026-10-04", "to": "2026-10-10", "week": 40 },
+      { "from": "2026-10-11", "to": "2026-10-17", "week": 41 },
+      { "from": "2026-10-18", "to": "2026-10-24", "week": 42 },
+      { "from": "2026-10-25", "to": "2026-10-31", "week": 43 },
+      { "from": "2026-11-01", "to": "2026-11-07", "week": 44 },
+      { "from": "2026-11-08", "to": "2026-11-14", "week": 45 },
+      { "from": "2026-11-15", "to": "2026-11-21", "week": 46 },
+      { "from": "2026-11-22", "to": "2026-11-28", "week": 47 },
+      { "from": "2026-11-29", "to": "2026-12-05", "week": 48 },
+      { "from": "2026-12-06", "to": "2026-12-12", "week": 49 },
+      { "from": "2026-12-13", "to": "2026-12-19", "week": 50 },
+      { "from": "2026-12-20", "to": "2026-12-26", "week": 51 },
+      { "from": "2026-12-27", "to": "2027-01-02", "week": 52 }
+    ];
+    let currentWeekData = null;
+    let existingReportId = null;
+    let isLocked = false;
+
+    const daysOfWeek = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await checkAuth();
+      } catch (err) {
+        showToast("فشل التحقق من الجلسة: " + err.message, "error");
+        hideOverlay();
+      }
+    });
+
+    // Check Auth State
+    async function checkAuth() {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+
+      const session = data?.session;
+      if (!session?.user) {
+        // Redirect to login
+        showToast("يرجى تسجيل الدخول أولاً في الصفحة الرئيسية", "error");
+        setTimeout(() => location.href = "index.html", 2000);
+        return;
+      }
+
+      currentUser = session.user;
+
+      // Fetch Profile info
+      const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('mall, role')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (profileError) {
+        console.error("Profile fetch error:", profileError.message);
+      }
+
+      userMall = profile?.mall || "";
+      userRole = profile?.role || "user";
+
+      document.getElementById('userEmailText').textContent = currentUser.email;
+      document.getElementById('userMallText').textContent = userMall || "لم يحدد بعد";
+
+      if (['admin', 'finance_admin', 'maintenance_admin'].includes(userRole)) {
+        document.getElementById('adminPanelLink').style.display = 'inline-flex';
+      }
+
+      // If user has admin/finance role and userMall is empty, show a dropdown list of malls
+      if (!userMall && ['admin', 'finance_admin', 'manager'].includes(userRole)) {
+        try {
+          const { data: profilesData, error: err } = await supabaseClient
+            .from('profiles')
+            .select('mall')
+            .not('mall', 'is', null);
+          if (!err && profilesData) {
+            const uniqueMalls = [...new Set(profilesData.map(p => p.mall).filter(Boolean))].sort();
+            
+            const selectEl = document.createElement('select');
+            selectEl.id = 'mallSelectForAdmin';
+            selectEl.className = 'select-week';
+            selectEl.style.marginTop = '5px';
+            selectEl.innerHTML = '<option value="">-- اختر المعرض للتجربة والاختبار --</option>';
+            uniqueMalls.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m;
+              opt.textContent = m;
+              selectEl.appendChild(opt);
+            });
+            selectEl.onchange = async () => {
+              userMall = selectEl.value;
+              if (userMall) {
+                await onWeekChange();
+              }
+            };
+            const mallContainer = document.getElementById('userMallText');
+            mallContainer.innerHTML = "";
+            mallContainer.appendChild(selectEl);
+          }
+        } catch (e) {
+          console.error("Error loading malls list:", e);
+        }
+      }
+
+      // Load Week Map
+      await loadWeekMap();
+    }
+
+    // Load week map (inlined to prevent CORS issues)
+    async function loadWeekMap() {
+      populateWeekDropdown();
+    }
+
+    // Populate drop down and auto-select active week
+    function populateWeekDropdown() {
+      const select = document.getElementById('weekSelect');
+      select.innerHTML = "";
+
+      // Today's date ISO format
+      const today = new Date().toISOString().split('T')[0];
+      let selectedIndex = 0;
+
+      weekMap.forEach((w, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `الأسبوع ${w.week} (${w.from} إلى ${w.to})`;
+        select.appendChild(opt);
+
+        // Auto-select week enclosing today
+        if (today >= w.from && today <= w.to) {
+          selectedIndex = idx;
+        }
+      });
+
+      select.selectedIndex = selectedIndex;
+      onWeekChange();
+    }
+
+    // Handle dropdown selection change
+    async function onWeekChange() {
+      showOverlay("جاري تحميل التقرير للأسبوع المختار...");
+      
+      const select = document.getElementById('weekSelect');
+      const idx = select.value;
+      currentWeekData = weekMap[idx];
+
+      // Update date range label
+      document.getElementById('dateRangeText').textContent = `من ${currentWeekData.from} إلى ${currentWeekData.to}`;
+
+      // Reset Form fields
+      existingReportId = null;
+      isLocked = false;
+      document.getElementById('declarationCheckbox').checked = false;
+      document.getElementById('statusBanner').className = "status-banner";
+      document.getElementById('statusBanner').style.display = "none";
+
+      // 1. Generate empty days row in Table
+      generateDaysTable(currentWeekData.from);
+
+      // 2. Fetch existing report from DB
+      await fetchExistingReport();
+
+      // 3. If no report in DB, try to pre-populate previous balance and load draft if any
+      if (!existingReportId) {
+        await prePopulatePreviousBalance();
+        loadDraftLocal();
+      }
+
+      calculateTableTotals();
+      toggleSubmitBtn();
+      hideOverlay();
+    }
+
+    // Generate table rows for 7 days
+    function generateDaysTable(startDateStr) {
+      const tbody = document.getElementById('daysTableBody');
+      tbody.innerHTML = "";
+
+      const start = new Date(startDateStr);
+
+      for (let i = 0; i < 7; i++) {
+        const current = new Date(start);
+        current.setDate(start.getDate() + i);
+        const curStr = current.toISOString().split('T')[0];
+        const dayName = daysOfWeek[current.getDay()];
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="day-col">${dayName}</td>
+          <td class="date-col">${curStr}</td>
+          <td class="calculated-cell total-sales-val" id="sales_${i}">0.00</td>
+          <td><input type="number" id="card_count_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0"></td>
+          <td><input type="number" step="0.01" id="card_value_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+          <td><input type="number" step="0.01" id="cash_sales_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+          <td><input type="number" step="0.01" id="tamara_sales_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+          <td><input type="number" step="0.01" id="tamara_returns_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+          <td><input type="number" step="0.01" id="tabby_sales_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+          <td><input type="number" step="0.01" id="tabby_returns_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+          <td class="calculated-cell" id="cash_deposit_${i}">0.00</td>
+          <td><input type="number" step="0.01" id="petty_cash_${i}" class="data-input" oninput="onTableCellInput(${i})" min="0" placeholder="0.00"></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Fetch existing report from Database
+    async function fetchExistingReport() {
+      if (!currentUser || !userMall) return;
+
+      const { data, error } = await supabaseClient
+        .from('weekly_closings')
+        .select('*')
+        .eq('mall', userMall)
+        .eq('week_number', currentWeekData.week)
+        .eq('start_date', currentWeekData.from)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching weekly closing:", error.message);
+        showToast("خطأ أثناء جلب تقارير قاعدة البيانات", "error");
+        return;
+      }
+
+      if (data) {
+        existingReportId = data.id;
+        
+        // Populate inputs
+        document.getElementById('previous_balance_input').value = data.previous_balance || "";
+        document.getElementById('total_expenses_input').value = data.total_expenses || "";
+        document.getElementById('total_deposits_input').value = data.total_deposits || "";
+
+        // Fill table rows
+        const records = data.daily_records || [];
+        records.forEach((rec, idx) => {
+          if (idx < 7) {
+            document.getElementById(`card_count_${idx}`).value = rec.bank_net_count || "";
+            document.getElementById(`card_value_${idx}`).value = rec.bank_net_value || "";
+            document.getElementById(`cash_sales_${idx}`).value = rec.cash_sales || "";
+            document.getElementById(`tamara_sales_${idx}`).value = rec.tamara_sales || "";
+            document.getElementById(`tamara_returns_${idx}`).value = rec.tamara_returns || "";
+            document.getElementById(`tabby_sales_${idx}`).value = rec.tabby_sales || "";
+            document.getElementById(`tabby_returns_${idx}`).value = rec.tabby_returns || "";
+            document.getElementById(`petty_cash_${idx}`).value = rec.petty_cash || "";
+          }
+        });
+
+        // Set Banner Status
+        const banner = document.getElementById('statusBanner');
+        banner.style.display = "block";
+        
+        if (data.status === 'مقبول') {
+          banner.className = "status-banner approved";
+          banner.innerHTML = `تم اعتماد هذه التقفيلة والموافقة عليها من قبل الإدارة المالية. (مغلق للتعديل)`;
+          lockForm(true);
+        } else if (data.status === 'مرفوض') {
+          banner.className = "status-banner rejected";
+          banner.innerHTML = `تم رفض هذه التقفيلة من قبل المالية. <strong>سبب الرفض:</strong> ${data.finance_reply || "لم يذكر"}. يرجى التعديل وإعادة الإرسال.`;
+          lockForm(false);
+        } else {
+          banner.className = "status-banner pending";
+          banner.innerHTML = `تم إرسال هذه التقفيلة وهي قيد المراجعة حالياً من قبل المالية. (مغلق للتعديل)`;
+          lockForm(true);
+        }
+      } else {
+        lockForm(false);
+      }
+    }
+
+    // Fetch previous week carried balance from DB
+    async function prePopulatePreviousBalance() {
+      if (!userMall) return;
+
+      const prevWeekNum = currentWeekData.week - 1;
+      
+      const { data, error } = await supabaseClient
+        .from('weekly_closings')
+        .select('carried_balance')
+        .eq('mall', userMall)
+        .eq('week_number', prevWeekNum)
+        .eq('status', 'مقبول')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching previous balance:", error.message);
+        return;
+      }
+
+      if (data) {
+        document.getElementById('previous_balance_input').value = data.carried_balance || 0;
+        showToast("تم جلب الرصيد المرحل تلقائياً من الأسبوع السابق", "success");
+      } else {
+        document.getElementById('previous_balance_input').value = "";
+      }
+    }
+
+    // Save and Lock form
+    function lockForm(lock) {
+      isLocked = lock;
+      const inputs = document.querySelectorAll('.main-card input');
+      inputs.forEach(el => {
+        el.disabled = lock;
+      });
+
+      document.getElementById('saveDraftBtn').disabled = lock;
+      document.getElementById('submitBtn').disabled = lock || !document.getElementById('declarationCheckbox').checked;
+
+      // Update Label
+      const decLabel = document.getElementById('declarationLabel');
+      if (lock) {
+        decLabel.style.color = "var(--text-muted)";
+      } else {
+        decLabel.style.color = "var(--text-main)";
+      }
+    }
+
+    // Table calculations
+    function onTableCellInput(idx) {
+      calculateRow(idx);
+      calculateTableTotals();
+    }
+
+    function calculateRow(idx) {
+      const cardVal = Number(document.getElementById(`card_value_${idx}`).value) || 0;
+      const cashVal = Number(document.getElementById(`cash_sales_${idx}`).value) || 0;
+      const tamaraSales = Number(document.getElementById(`tamara_sales_${idx}`).value) || 0;
+      const tamaraRet = Number(document.getElementById(`tamara_returns_${idx}`).value) || 0;
+      const tabbySales = Number(document.getElementById(`tabby_sales_${idx}`).value) || 0;
+      const tabbyRet = Number(document.getElementById(`tabby_returns_${idx}`).value) || 0;
+
+      // Formula: Value = cardVal + cashVal + tamaraSales + tabbySales - tamaraRet - tabbyRet
+      const totalSales = cardVal + cashVal + tamaraSales + tabbySales - tamaraRet - tabbyRet;
+      document.getElementById(`sales_${idx}`).textContent = totalSales.toFixed(2);
+
+      // Cash to Deposit = cashVal
+      document.getElementById(`cash_deposit_${idx}`).textContent = cashVal.toFixed(2);
+    }
+
+    function calculateTableTotals() {
+      let grandTotalSales = 0;
+      let grandCardCount = 0;
+      let grandCardVal = 0;
+      let grandCashVal = 0;
+      let grandTamaraSales = 0;
+      let grandTamaraRet = 0;
+      let grandTabbySales = 0;
+      let grandTabbyRet = 0;
+      let grandCashDeposit = 0;
+      let grandPettyCash = 0;
+
+      for (let i = 0; i < 7; i++) {
+        calculateRow(i); // Update row totals first
+
+        grandTotalSales += Number(document.getElementById(`sales_${i}`).textContent) || 0;
+        grandCardCount += Number(document.getElementById(`card_count_${i}`).value) || 0;
+        grandCardVal += Number(document.getElementById(`card_value_${i}`).value) || 0;
+        grandCashVal += Number(document.getElementById(`cash_sales_${i}`).value) || 0;
+        grandTamaraSales += Number(document.getElementById(`tamara_sales_${i}`).value) || 0;
+        grandTamaraRet += Number(document.getElementById(`tamara_returns_${i}`).value) || 0;
+        grandTabbySales += Number(document.getElementById(`tabby_sales_${i}`).value) || 0;
+        grandTabbyRet += Number(document.getElementById(`tabby_returns_${i}`).value) || 0;
+        grandCashDeposit += Number(document.getElementById(`cash_deposit_${i}`).textContent) || 0;
+        grandPettyCash += Number(document.getElementById(`petty_cash_${i}`).value) || 0;
+      }
+
+      document.getElementById('total_sales').textContent = grandTotalSales.toFixed(2);
+      document.getElementById('total_bank_card_count').textContent = grandCardCount;
+      document.getElementById('total_bank_card_value').textContent = grandCardVal.toFixed(2);
+      document.getElementById('total_cash_sales').textContent = grandCashVal.toFixed(2);
+      document.getElementById('total_tamara_sales').textContent = grandTamaraSales.toFixed(2);
+      document.getElementById('total_tamara_returns').textContent = grandTamaraRet.toFixed(2);
+      document.getElementById('total_tabby_sales').textContent = grandTabbySales.toFixed(2);
+      document.getElementById('total_tabby_returns').textContent = grandTabbyRet.toFixed(2);
+      document.getElementById('total_cash_to_deposit').textContent = grandCashDeposit.toFixed(2);
+      document.getElementById('total_petty_cash').textContent = grandPettyCash.toFixed(2);
+
+      // Tamara Net
+      document.getElementById('net_tamara_sales').textContent = (grandTamaraSales - grandTamaraRet).toFixed(2);
+      // Tabby Net
+      document.getElementById('net_tabby_sales').textContent = (grandTabbySales - grandTabbyRet).toFixed(2);
+
+      calculateSummaryTotals();
+    }
+
+    function calculateSummaryTotals() {
+      const prevBal = Number(document.getElementById('previous_balance_input').value) || 0;
+      const expenses = Number(document.getElementById('total_expenses_input').value) || 0;
+      const cashDepositTotal = Number(document.getElementById('total_cash_to_deposit').textContent) || 0;
+      const deposits = Number(document.getElementById('total_deposits_input').value) || 0;
+
+      // Net Cash Required = prevBal - expenses + cashDepositTotal
+      const required = prevBal - expenses + cashDepositTotal;
+      document.getElementById('net_cash_required_val').value = required.toFixed(2);
+
+      // Carried balance = required - deposits
+      const carried = required - deposits;
+      document.getElementById('carried_balance_val').value = carried.toFixed(2);
+    }
+
+    // Toggle Submit Button
+    function toggleSubmitBtn() {
+      if (isLocked) return;
+      const checked = document.getElementById('declarationCheckbox').checked;
+      document.getElementById('submitBtn').disabled = !checked;
+    }
+
+    // Save Draft in localStorage
+    function saveDraftLocal(showSuccessToast = false) {
+      if (isLocked || !currentWeekData) return;
+
+      const draft = {
+        previous_balance: document.getElementById('previous_balance_input').value,
+        total_expenses: document.getElementById('total_expenses_input').value,
+        total_deposits: document.getElementById('total_deposits_input').value,
+        days: []
+      };
+
+      for (let i = 0; i < 7; i++) {
+        draft.days.push({
+          card_count: document.getElementById(`card_count_${i}`).value,
+          card_value: document.getElementById(`card_value_${i}`).value,
+          cash_sales: document.getElementById(`cash_sales_${i}`).value,
+          tamara_sales: document.getElementById(`tamara_sales_${i}`).value,
+          tamara_returns: document.getElementById(`tamara_returns_${i}`).value,
+          tabby_sales: document.getElementById(`tabby_sales_${i}`).value,
+          tabby_returns: document.getElementById(`tabby_returns_${i}`).value,
+          petty_cash: document.getElementById(`petty_cash_${i}`).value
+        });
+      }
+
+      const key = `draft_${userMall}_${currentWeekData.week}`;
+      localStorage.setItem(key, JSON.stringify(draft));
+      
+      if (showSuccessToast) {
+        showToast("تم حفظ التقفيلة كمسودة محلياً بنجاح", "success");
+      }
+    }
+
+    // Load Draft from localStorage
+    function loadDraftLocal() {
+      if (!currentWeekData) return;
+      const key = `draft_${userMall}_${currentWeekData.week}`;
+      const saved = localStorage.getItem(key);
+      if (!saved) return;
+
+      try {
+        const draft = JSON.parse(saved);
+        
+        if (draft.previous_balance !== undefined) document.getElementById('previous_balance_input').value = draft.previous_balance;
+        if (draft.total_expenses !== undefined) document.getElementById('total_expenses_input').value = draft.total_expenses;
+        if (draft.total_deposits !== undefined) document.getElementById('total_deposits_input').value = draft.total_deposits;
+
+        const days = draft.days || [];
+        days.forEach((day, i) => {
+          if (i < 7) {
+            document.getElementById(`card_count_${i}`).value = day.card_count || "";
+            document.getElementById(`card_value_${i}`).value = day.card_value || "";
+            document.getElementById(`cash_sales_${i}`).value = day.cash_sales || "";
+            document.getElementById(`tamara_sales_${i}`).value = day.tamara_sales || "";
+            document.getElementById(`tamara_returns_${i}`).value = day.tamara_returns || "";
+            document.getElementById(`tabby_sales_${i}`).value = day.tabby_sales || "";
+            document.getElementById(`tabby_returns_${i}`).value = day.tabby_returns || "";
+            document.getElementById(`petty_cash_${i}`).value = day.petty_cash || "";
+          }
+        });
+
+        // Banner status
+        const banner = document.getElementById('statusBanner');
+        banner.style.display = "block";
+        banner.className = "status-banner draft";
+        banner.innerHTML = `تم تحميل التقفيلة من المسودة المحفوظة في المتصفح. لا تنسَ إرسالها واعتمادها للمالية.`;
+
+        showToast("تم استعادة المسودة بنجاح", "success");
+      } catch (err) {
+        console.error("Failed to parse draft:", err);
+      }
+    }
+
+    // Submit closing report to Supabase
+    async function submitClosing() {
+      if (isLocked) return;
+
+      // Validations
+      if (!currentUser) return showToast("يرجى تسجيل الدخول أولاً", "error");
+      if (!userMall) return showToast("لم يتم العثور على اسم المعرض الخاص بك", "error");
+
+      const agree = document.getElementById('declarationCheckbox').checked;
+      if (!agree) return showToast("يرجى تأكيد الإقرار بصحة البيانات", "error");
+
+      showOverlay("جاري إرسال واعتماد التقفيلة إلكترونياً...");
+
+      try {
+        // Build daily records payload
+        const dailyRecords = [];
+        const start = new Date(currentWeekData.from);
+
+        for (let i = 0; i < 7; i++) {
+          const current = new Date(start);
+          current.setDate(start.getDate() + i);
+          const curStr = current.toISOString().split('T')[0];
+          const dayName = daysOfWeek[current.getDay()];
+
+          dailyRecords.push({
+            day_name: dayName,
+            date: curStr,
+            sales_value: Number(document.getElementById(`sales_${i}`).textContent) || 0,
+            bank_net_count: Number(document.getElementById(`card_count_${i}`).value) || 0,
+            bank_net_value: Number(document.getElementById(`card_value_${i}`).value) || 0,
+            cash_sales: Number(document.getElementById(`cash_sales_${i}`).value) || 0,
+            tamara_sales: Number(document.getElementById(`tamara_sales_${i}`).value) || 0,
+            tamara_returns: Number(document.getElementById(`tamara_returns_${i}`).value) || 0,
+            tabby_sales: Number(document.getElementById(`tabby_sales_${i}`).value) || 0,
+            tabby_returns: Number(document.getElementById(`tabby_returns_${i}`).value) || 0,
+            cash_to_deposit: Number(document.getElementById(`cash_deposit_${i}`).textContent) || 0,
+            petty_cash: Number(document.getElementById(`petty_cash_${i}`).value) || 0
+          });
+        }
+
+        // Build main payload
+        const payload = {
+          user_id: currentUser.id,
+          user_email: currentUser.email,
+          mall: userMall,
+          week_number: currentWeekData.week,
+          start_date: currentWeekData.from,
+          end_date: currentWeekData.to,
+          previous_balance: Number(document.getElementById('previous_balance_input').value) || 0,
+          total_sales: Number(document.getElementById('total_sales').textContent) || 0,
+          total_bank_card_count: Number(document.getElementById('total_bank_card_count').textContent) || 0,
+          total_bank_card_value: Number(document.getElementById('total_bank_card_value').textContent) || 0,
+          total_cash_sales: Number(document.getElementById('total_cash_sales').textContent) || 0,
+          total_tamara_sales: Number(document.getElementById('total_tamara_sales').textContent) || 0,
+          total_tamara_returns: Number(document.getElementById('total_tamara_returns').textContent) || 0,
+          total_tabby_sales: Number(document.getElementById('total_tabby_sales').textContent) || 0,
+          total_tabby_returns: Number(document.getElementById('total_tabby_returns').textContent) || 0,
+          total_cash_to_deposit: Number(document.getElementById('total_cash_to_deposit').textContent) || 0,
+          total_petty_cash: Number(document.getElementById('total_petty_cash').textContent) || 0,
+          total_expenses: Number(document.getElementById('total_expenses_input').value) || 0,
+          net_cash_required: Number(document.getElementById('net_cash_required_val').value) || 0,
+          total_deposits: Number(document.getElementById('total_deposits_input').value) || 0,
+          carried_balance: Number(document.getElementById('carried_balance_val').value) || 0,
+          daily_records: dailyRecords,
+          status: 'جديد',
+          updated_at: new Date().toISOString()
+        };
+
+        let result;
+        if (existingReportId) {
+          // Update
+          result = await supabaseClient
+            .from('weekly_closings')
+            .update(payload)
+            .eq('id', existingReportId);
+        } else {
+          // Insert
+          result = await supabaseClient
+            .from('weekly_closings')
+            .insert(payload);
+        }
+
+        if (result.error) throw result.error;
+
+        // Clear local storage draft
+        const key = `draft_${userMall}_${currentWeekData.week}`;
+        localStorage.removeItem(key);
+
+        showToast("تم إرسال واعتماد التقفيلة بنجاح", "success");
+        
+        // Reload week to lock it
+        await onWeekChange();
+
+      } catch (err) {
+        console.error("Error submitting report:", err);
+        showToast("فشل إرسال التقفيلة: " + err.message, "error");
+      } finally {
+        hideOverlay();
+      }
+    }
+
+    // UI helper functions
+    function showToast(message, type = "") {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = "toast show " + type;
+      setTimeout(() => {
+        toast.className = "toast";
+      }, 4000);
+    }
+
+    function showOverlay(text) {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        const textEl = document.getElementById('loadingText');
+        if (textEl) textEl.textContent = text;
+        overlay.style.display = "flex";
+      }
+    }
+
+    function hideOverlay() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        overlay.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>

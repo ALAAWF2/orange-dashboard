@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>البحث عبر المعارض</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Load products from local JSON -->
+  <script>
+    async function loadLocalCatalog() {
+      try {
+        const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
+        if (!productsRes.ok) throw new Error("Failed to load products.json");
+        window.data = await productsRes.json();
+
+        // Filter out disabled items (from itemsfornotshow.xlsx)
+        const blockedAliases = ["489901","489902","489903","489904","489905","489906","489907","489908","489909","489910","489911","489912","489913","489914","489915","489916","489917","489918"];
+        window.data = window.data.filter(p => !blockedAliases.includes(String(p.alias)) && !blockedAliases.includes(String(p.code)));
+
+        console.log("✅ products.json loaded:", window.data.length);
+      } catch (e) {
+        console.error("❌ Catalog load failed:", e);
+        window.data = [];
+        document.getElementById('statusMessage').textContent = 'تعذر تحميل بيانات المنتجات.';
+        document.getElementById('statusMessage').classList.remove('hidden');
+        document.getElementById('statusMessage').style.color = '#c0392b';
+      }
+    }
+
+    // Start loading immediately
+    loadLocalCatalog();
+  </script>
+
+
+  <style>
+    body {
+      font-family: 'Tajawal', Arial, sans-serif;
+      background-color: #fff8f0;
+      margin: 0;
+      padding: 0;
+      color: #2c3e50;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #f2994a, #f2c94c);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    header h1 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 0 20px 40px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .actions a {
+      color: #e67e22;
+      text-decoration: none;
+      font-weight: 600;
+      background: rgba(230, 126, 34, 0.12);
+      padding: 10px 14px;
+      border-radius: 8px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .actions a:hover {
+      background: #e67e22;
+      color: #fff;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 16px;
+      border: 1px solid #f2a365;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #e67e22;
+      box-shadow: 0 4px 12px rgba(230, 126, 34, 0.25);
+    }
+
+    .status,
+    .outlet-info {
+      margin-bottom: 15px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(230, 126, 34, 0.08);
+      border: 1px solid rgba(230, 126, 34, 0.2);
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    thead {
+      background: #f2994a;
+      color: #fff;
+    }
+
+    thead th {
+      padding: 14px;
+      font-size: 15px;
+    }
+
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid #f2f2f2;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fff8f0;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loader {
+      text-align: center;
+      padding: 40px 0;
+      font-weight: 600;
+      color: #e67e22;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      color: #999;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>البحث عن مخزون المعارض الأخرى</h1>
+    <p>اكتب اسم المنتج أو كوده أو الـ Alias لمعرفة الكميات المتاحة في المعارض الأخرى.</p>
+  </header>
+
+  <main>
+    <div class="actions">
+      <div class="search-box">
+        <input id="searchInput" type="text" placeholder="ابحث بالاسم، الكود أو الـ Alias" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+      </div>
+      <a href="index.html">⟵ العودة إلى الصفحة الرئيسية</a>
+    </div>
+
+    <div id="outletInfo" class="outlet-info hidden"></div>
+    <div id="statusMessage" class="status hidden"></div>
+    <div id="loader" class="loader">جاري التحقق من حالة تسجيل الدخول...</div>
+
+    <table id="resultsTable" class="hidden">
+      <thead>
+        <tr>
+          <th>اسم المنتج</th>
+          <th>الكود</th>
+          <th>Alias</th>
+          <th>المعرض</th>
+          <th>الكمية المتوفرة</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </main>
+
+
+
+  <script>
+    // ===== Supabase =====
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+    });
+
+    // ===== DOM refs =====
+    const searchInput = document.getElementById('searchInput');
+    const resultsBody = document.getElementById('resultsBody');
+    const resultsTable = document.getElementById('resultsTable');
+    const statusMessage = document.getElementById('statusMessage');
+    const outletInfo = document.getElementById('outletInfo');
+    const loader = document.getElementById('loader');
+
+    let currentOutletName = '';
+    let userChecked = false;
+
+    // ===== Helpers =====
+    function normalize(v) { return (v || '').toString().trim().toLowerCase(); }
+
+    function toggleStatus(message = '', type = 'info') {
+      if (!message) {
+        statusMessage.classList.add('hidden');
+        statusMessage.textContent = '';
+        statusMessage.style.color = '';
+        return;
+      }
+      statusMessage.textContent = message;
+      statusMessage.classList.remove('hidden');
+      statusMessage.style.color = (type === 'error') ? '#c0392b' : '#e67e22';
+    }
+
+    // ===== Rendering (Lazy) =====
+    function renderResults(query = '') {
+      const src = window.data || [];
+      const q = normalize(query);
+
+      if (!q || q.length < 4) {
+        resultsBody.innerHTML = '';
+        resultsTable.classList.add('hidden');
+        toggleStatus('اكتب 4 أحرف على الأقل من الاسم أو الكود أو الـ alias');
+        return;
+      }
+
+      const rows = [];
+
+      src.forEach(product => {
+        const matches =
+          normalize(product.name).includes(q) ||
+          normalize(product.code) === q ||
+          normalize(product.alias).includes(q);
+
+        if (!matches) return;
+
+        const branches = Object.entries(product.branches || {});
+        branches.forEach(([branchName, quantity]) => {
+          const normalizedBranch = normalize(branchName);
+          const normalizedOutlet = normalize(currentOutletName);
+          const qty = Number(quantity) || 0;
+
+          if (qty <= 0) return;
+          if (normalizedOutlet && normalizedBranch === normalizedOutlet) return;
+
+          rows.push(`
+            <tr>
+              <td>${product.name}</td>
+              <td>${product.code || ''}</td>
+              <td>${product.alias || ''}</td>
+              <td>${branchName}</td>
+              <td>${qty}</td>
+            </tr>
+          `);
+        });
+      });
+
+      resultsBody.innerHTML = rows.join('');
+
+      if (rows.length === 0) {
+        resultsTable.classList.add('hidden');
+        toggleStatus('لا توجد نتائج مطابقة. جرّب كلمة أخرى.');
+      } else {
+        resultsTable.classList.remove('hidden');
+        toggleStatus('');
+      }
+    }
+
+    // ديباونس للبحث
+    let typingTimer;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => renderResults(e.target.value), 250);
+    });
+
+    // ===== Auth flow =====
+    function handleUnauthenticated() {
+      // Don't disable completely, just keep readonly
+      searchInput.setAttribute('readonly', 'true');
+      resultsTable.classList.add('hidden');
+      toggleStatus('الرجاء تسجيل الدخول للوصول إلى البحث عبر المعارض. سيتم توجيهك تلقائياً خلال لحظات...', 'error');
+      outletInfo.classList.add('hidden');
+      outletInfo.textContent = '';
+      setTimeout(() => { window.location.href = 'index.html'; }, 4000);
+    }
+
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      loader.classList.add('hidden');
+      userChecked = true;
+
+      const user = session?.user ?? null;
+      if (!user) {
+        handleUnauthenticated();
+        return;
+      }
+
+      // 1. First, unlock the search now that we have a user
+      searchInput.removeAttribute('readonly');
+      toggleStatus('اكتب على الأقل 4 أحرف للبحث في مخزون المعارض الأخرى.');
+
+      // 2. Then, try to fetch the profile for outlet info
+      try {
+        let profile = null;
+        const { data: byId, error: errId } = await supabaseClient
+          .from('profiles').select('*').eq('id', user.id).single();
+
+        if (!errId && byId) {
+          profile = byId;
+        } else {
+          const { data: byEmail } = await supabaseClient
+            .from('profiles').select('*').eq('email', user.email).single();
+          profile = byEmail;
+        }
+
+        currentOutletName = profile?.mall || profile?.branch || profile?.outlet || profile?.warehouse || '';
+
+        if (currentOutletName) {
+          outletInfo.textContent = `المعرض الحالي: ${currentOutletName}`;
+          outletInfo.classList.remove('hidden');
+        } else {
+          outletInfo.textContent = 'لم يتم العثور على اسم المعرض في ملف المستخدم.';
+          outletInfo.classList.remove('hidden');
+        }
+
+      } catch (error) {
+        console.warn('تنبيه: تعذر جلب بيانات الملف الشخصي (سيظل البحث يعمل):', error);
+      }
+
+      // Trigger initial search if already typed
+      renderResults(searchInput.value);
+    });
+
+    // رسالة طوارئ لو تعطل الـ Supabase تماماً
+    setTimeout(() => {
+      if (!userChecked) {
+        loader.textContent = 'تحذير: يبدو أن التحقق من الهوية متعثر. جرب تحديث الصفحة أو المتابعة إذا ظهر مربع البحث.';
+        // Fallback: unlock if we suspect a timeout
+        // searchInput.removeAttribute('readonly'); 
+      }
+    }, 6000);
+  </script>
+</body>
+
+</html>

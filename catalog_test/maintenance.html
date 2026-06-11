@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>بوابة طلبات الصيانة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>console.log = function() {}; console.info = function() {};</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-app: #f1f5f9;
+      --bg-surface: #ffffff;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-soft: #eff6ff;
+      --secondary: #0f172a;
+      --accent: #f97316;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --border-color: #e2e8f0;
+      
+      --danger: #ef4444;       
+      --warning: #f59e0b;
+      --yellow: #eab308;
+      --success: #10b981;      
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --font-family: 'Tajawal', system-ui, sans-serif;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+    
+    /* Top Navbar */
+    .navbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-brand .logo-icon {
+      background: var(--secondary);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transform: rotate(-5deg);
+      transition: var(--transition);
+    }
+    .nav-brand:hover .logo-icon { transform: rotate(0deg) scale(1.05); }
+    .nav-brand h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--secondary);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn {
+      font-family: var(--font-family);
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      border-color: var(--text-muted);
+      background: #f8fafc;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    /* Main App Layout */
+    .app-main {
+      max-width: 1300px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    /* Dashboard Search/Stats Area */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 1.5rem;
+    }
+    .dashboard-greeting h2 {
+      font-size: 1.8rem;
+      font-weight: 800;
+    }
+    .dashboard-greeting p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-top: 4px;
+    }
+    
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .stat-value { font-size: 2rem; font-weight: 900; color: var(--secondary); line-height: 1; margin-bottom: 0.5rem; }
+    .stat-label { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+    
+    /* Tickets Area */
+    .tickets-container {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .tickets-toolbar {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fdfdfd;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .search-input {
+      background: var(--bg-app);
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      border-radius: 99px;
+      font-family: inherit;
+      width: 250px;
+    }
+    .search-input:focus {
+      outline: none; border-color: var(--primary);
+    }
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--bg-app);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: var(--bg-surface);
+      color: var(--secondary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .ticket-row {
+      display: flex;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      position: relative;
+      background: #ffffff;
+      transition: var(--transition);
+      gap: 1rem;
+    }
+    .ticket-row:last-child { border-bottom: none; }
+    .ticket-row:hover { background: #fafafa; }
+    
+    .ticket-indicator {
+      width: 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .bg-danger { background: var(--danger); }
+    .bg-warning { background: var(--warning); }
+    .bg-yellow { background: var(--yellow); }
+    .bg-success { background: var(--success); }
+
+    .ticket-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .ticket-header-area {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .ticket-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--secondary);
+      margin-bottom: 6px;
+    }
+    .ticket-meta-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.3rem 0.8rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+    .status-new { background: #fee2e2; color: #991b1b; }
+    .status-in-progress { background: #e0e7ff; color: #3730a3; }
+    .status-resolved { background: #d1fae5; color: #065f46; }
+    
+    .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; opacity: 0.8; }
+    .status-new .dot { background: #ef4444; }
+    .status-in-progress .dot { background: #4f46e5; }
+    .status-resolved .dot { background: #10b981; }
+
+    .ticket-desc {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      line-height: 1.6;
+      background: var(--bg-app);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      margin-top: 0.5rem;
+      border: 1px solid var(--border-color);
+    }
+    
+    .ticket-admin-reply {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-right: 3px solid var(--primary);
+      padding: 1.2rem;
+      border-radius: var(--radius-sm);
+      margin-top: 1rem;
+    }
+    .reply-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+      font-weight: 800; color: var(--primary-hover); font-size: 0.9rem;
+    }
+    .reply-header .avatar {
+      background: white; padding: 4px; border-radius: 50%; box-shadow: var(--shadow-sm); display: flex;
+    }
+    .reply-body { font-size: 0.95rem; color: var(--text-main); line-height: 1.6; }
+
+    .card-images { display: flex; gap: 10px; margin-top: 1rem; flex-wrap: wrap; }
+    .card-images img {
+      width: 70px; height: 70px; object-fit: cover; border-radius: var(--radius-sm);
+      cursor: pointer; border: 1px solid var(--border-color); transition: var(--transition);
+    }
+    .card-images img:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
+
+    /* Create Request Form (Right Sidebar) */
+    .create-form-widget {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      padding: 1.8rem;
+      position: sticky;
+      top: 100px;
+      box-shadow: var(--shadow-lg);
+    }
+    .create-form-widget::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(to right, var(--primary), var(--accent));
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+    .create-form-widget h3 {
+      font-size: 1.4rem; font-weight: 900; margin-bottom: 1.5rem; color: var(--secondary);
+    }
+    
+    .form-group { margin-bottom: 1.2rem; }
+    .form-label {
+      display: block; font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--secondary);
+    }
+    .form-control {
+      width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); font-family: inherit; font-size: 0.95rem;
+      background: #f8fafc; transition: var(--transition);
+    }
+    .form-control:focus {
+      background: white; border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+    textarea.form-control { min-height: 100px; resize: vertical; }
+    
+    .upload-zone {
+      border: 2px dashed #cbd5e1; border-radius: var(--radius-sm);
+      padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: var(--transition);
+      background: #f8fafc;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--primary); background: var(--primary-soft);
+    }
+    .upload-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.7; }
+    .upload-zone p { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+    
+    .image-previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .image-preview {
+      position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden;
+    }
+    .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .image-preview .remove-img {
+      position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white;
+      border: none; width: 20px; height: 20px; border-radius: 50%; font-size: 10px; cursor: pointer;
+    }
+
+    .btn-submit {
+      width: 100%; padding: 1rem; background: var(--secondary); color: white;
+      border: none; border-radius: var(--radius-sm); font-weight: 800; font-size: 1rem;
+      cursor: pointer; margin-top: 1rem; transition: var(--transition);
+    }
+    .btn-submit:hover { background: black; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+    /* Auth State */
+    .auth-overlay {
+      position: fixed; inset: 0; background: var(--bg-app); display: flex;
+      flex-direction: column; align-items: center; justify-content: center; z-index: 200;
+    }
+    .auth-card {
+      background: white; padding: 3rem; border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); text-align: center; max-width: 400px; width: 90%;
+      border: 1px solid var(--border-color);
+    }
+    .auth-card .logo {
+      width: 60px; height: 60px; background: var(--secondary); color: white; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem;
+    }
+    .auth-card h2 { font-size: 1.8rem; font-weight: 900; margin-bottom: 0.5rem; }
+    .auth-card p { color: var(--text-muted); margin-bottom: 2rem; }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: white; padding: 2.5rem; border-radius: var(--radius-md);
+      width: 90%; max-width: 400px; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--secondary); color: white; padding: 1rem 2rem; border-radius: 99px;
+      font-weight: 700; box-shadow: var(--shadow-lg); z-index: 9999;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--danger); }
+    .toast.success { background: var(--success); }
+
+    /* Empty States */
+    .empty-state {
+      text-align: center; padding: 4rem 2rem; background: #fdfdfd;
+    }
+    .empty-state .icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-state p { font-weight: 700; color: var(--text-muted); font-size: 1.1rem; }
+
+    @media (max-width: 950px) {
+      .app-main { grid-template-columns: 1fr; }
+      .create-form-widget { position: static; margin-bottom: 2rem; order: -1; }
+      .stats-row { grid-template-columns: 1fr; gap: 0.8rem; }
+    }
+    @media (max-width: 600px) {
+      .navbar { padding: 1rem; }
+      .ticket-row { flex-direction: column; }
+      .ticket-indicator { display: none; }
+      .ticket-row { border-right: 4px solid var(--border-color); }
+      .ticket-row[data-priority="عالية جداً"] { border-right-color: var(--danger); }
+      .ticket-row[data-priority="عالية"] { border-right-color: var(--warning); }
+      .ticket-row[data-priority="متوسطة"] { border-right-color: var(--yellow); }
+      .ticket-row[data-priority="عادية"] { border-right-color: var(--success); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="logo-icon">🔧</div>
+      <h1>بوابة الصيانة</h1>
+    </div>
+    <div class="nav-actions">
+      <div id="userMallDisplay" style="font-weight:700; font-size:0.9rem; color:var(--text-muted);"></div>
+      <a href="index.html" class="btn btn-outline" title="العودة للمخزون">📦</a>
+      <button id="loginBtn" class="btn btn-primary" onclick="login()">تسجيل الدخول</button>
+    </div>
+  </header>
+
+  <!-- Needs Auth State -->
+  <div id="authRequired" class="auth-overlay">
+    <div class="auth-card">
+      <div class="logo">🔒</div>
+      <h2>مرحباً بك</h2>
+      <p>يرجى تسجيل الدخول للوصول إلى نظام الصيانة الخاص بالمعارض.</p>
+      <button class="btn-submit" onclick="login()">تسجيل الدخول</button>
+    </div>
+  </div>
+
+  <!-- Main App View -->
+  <main id="mainContent" class="app-main" style="display:none;">
+    
+    <div class="main-feed">
+      <div class="dashboard-header">
+        <div class="dashboard-greeting">
+          <h2>نظرة عامة على الطلبات</h2>
+          <p>تابع حالة بلاغات الصيانة والمهام المفتوحة.</p>
+        </div>
+      </div>
+      
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">إجمالي الطلبات</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statPending" style="color: var(--primary);">0</div>
+          <div class="stat-label">قيد المعالجة & جديد</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statResolved" style="color: var(--success);">0</div>
+          <div class="stat-label">طلبات منجزة</div>
+        </div>
+      </div>
+
+      <!-- Tickets List Area -->
+      <div class="tickets-container">
+        <div class="tickets-toolbar">
+          <div class="tabs">
+            <button class="tab active" onclick="filterRequests('all', this)">جميع الطلبات</button>
+            <button class="tab" onclick="filterRequests('جديد', this)">جديد</button>
+            <button class="tab" onclick="filterRequests('قيد المعالجة', this)">قيد المعالجة</button>
+            <button class="tab" onclick="filterRequests('تم الحل', this)">منجزة</button>
+          </div>
+          <input type="text" id="searchTickets" class="search-input" placeholder="ابحث عن طلب..." onkeyup="searchTickets()">
+        </div>
+        
+        <div id="requestsList">
+          <!-- Tickets load here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Form -->
+    <aside>
+      <div class="create-form-widget">
+        <h3>إنشاء بلاغ جديد</h3>
+        
+        <div class="form-group">
+          <label class="form-label">عنوان المشكلة المحورية</label>
+          <input type="text" class="form-control" id="reqTitle" placeholder="مثال: تعطل في نظام التبريد المركز...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">تفاصيل البلاغ</label>
+          <textarea class="form-control" id="reqDescription" placeholder="يرجى كتابة كافة التفاصيل والأعراض الملاحظة بدقة..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">مستوى الأهمية / الطوارئ</label>
+          <select class="form-control" id="reqPriority">
+            <option value="عادية" selected>عادية (خلال أسبوع)</option>
+            <option value="متوسطة">متوسطة (خلال 3 أيام)</option>
+            <option value="عالية">عالية (بأسرع وقت)</option>
+            <option value="عالية جداً">طوارئ (فوري)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">مرفقات مساندة</label>
+          <div class="upload-zone" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <div class="icon">📸</div>
+            <p>انقر هنا أو اسحب الصور للرفع</p>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)">
+          <div class="image-previews" id="imagePreviews"></div>
+        </div>
+
+        <button class="btn-submit" id="submitBtn" onclick="submitRequest()">تقديم البلاغ عبر النظام</button>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Modals -->
+  <div class="modal-backdrop" id="loginModal">
+    <div class="modal-content">
+      <h3 style="margin-bottom:1.5rem;font-weight:900;text-align:center;">الوصول للنظام</h3>
+      <div class="form-group">
+        <label class="form-label">البريد الإلكتروني</label>
+        <input id="emailInput" type="email" class="form-control" placeholder="name@company.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور</label>
+        <input id="passwordInput" type="password" class="form-control" placeholder="••••••••">
+      </div>
+      <button class="btn-submit" onclick="confirmLogin()">تسجيل الدخول</button>
+      <button class="btn-outline" style="width:100%;margin-top:10px;justify-content:center;" onclick="closeLoginModal()">إلغاء الأمر</button>
+    </div>
+  </div>
+
+  <!-- Image Viewer -->
+  <div class="modal-backdrop" id="imageViewer" onclick="this.style.display='none'">
+    <img id="viewerImage" src="" alt="معاينة" style="max-width:90vw; max-height:90vh; border-radius:12px; transform:scale(1); transition:var(--transition);">
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+    // === Supabase Setup (same as index.html) ===
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
+      }
+    });
+
+    let currentUser = null;
+    let userMall = "";
+    let allRequests = [];
+    let currentFilter = 'all';
+    let selectedFiles = [];
+
+    // === Auth Logic ===
+    async function handleAuthUser(user) {
+      currentUser = user;
+
+      const loginBtn = document.getElementById('loginBtn');
+      const authReq = document.getElementById('authRequired');
+      const mainContent = document.getElementById('mainContent');
+      const mallDisplay = document.getElementById('userMallDisplay');
+
+      if (user) {
+        loginBtn.textContent = '🚪 تسجيل الخروج';
+
+        // Fetch profile
+        let profile = null;
+        let userRole = 'user';
+        let userManagedOutlets = [];
+        try {
+          let res = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+          if (res.error) {
+            res = await supabaseClient.from('profiles').select('*').eq('email', user.email).single();
+          }
+          profile = res.data || {};
+          userRole = profile.role || 'user';
+          userManagedOutlets = profile.managed_outlets || [];
+        } catch(e) {}
+
+        window.currentUserRole = userRole;
+        window.userManagedOutlets = userManagedOutlets;
+
+        if (userRole === 'manager' && userManagedOutlets.length > 0) {
+          userMall = userManagedOutlets[0]; // Default to first
+          
+          let optionsHtml = userManagedOutlets.map(outlet => 
+            `<option value="${outlet}" ${outlet === userMall ? 'selected' : ''}>${outlet}</option>`
+          ).join('');
+          
+          mallDisplay.innerHTML = `
+            <span>اختر المعرض: </span>
+            <select id="managerOutletSelect" onchange="changeManagerOutlet(this.value)" style="padding:5px; border-radius:5px; background:white; color:#333; font-weight:bold; border:1px solid #ccc; outline:none; cursor:pointer;">
+              ${optionsHtml}
+            </select>
+          `;
+        } else {
+          userMall = profile?.mall || '';
+          mallDisplay.textContent = userMall ? `المعرض: ${userMall}` : '';
+        }
+
+        authReq.style.display = 'none';
+        mainContent.style.display = 'block';
+        loadRequests();
+      } else {
+        loginBtn.textContent = '🔑 تسجيل الدخول';
+        authReq.style.display = 'block';
+        mainContent.style.display = 'none';
+        mallDisplay.textContent = '';
+      }
+    }
+
+    function changeManagerOutlet(newOutlet) {
+      if (!newOutlet) return;
+      userMall = newOutlet;
+      console.log("Manager switched outlet to:", newOutlet);
+      loadRequests();
+    }
+
+    // Init auth
+    (async () => {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        await handleAuthUser(session?.user || null);
+
+        supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
+          if (event === 'INITIAL_SESSION') return;
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            await handleAuthUser(newSession?.user || null);
+          }
+        });
+      } catch(e) {
+        console.error("Auth init error:", e);
+      }
+    })();
+
+    async function login() {
+      if (currentUser) {
+        await supabaseClient.auth.signOut();
+        localStorage.removeItem('savedEmail');
+        localStorage.removeItem('savedPassword');
+      } else {
+        document.getElementById('loginModal').style.display = 'flex';
+        const se = localStorage.getItem('savedEmail');
+        const sp = localStorage.getItem('savedPassword');
+        if (se) document.getElementById('emailInput').value = se;
+        if (sp) document.getElementById('passwordInput').value = sp;
+      }
+    }
+
+    function closeLoginModal() { document.getElementById('loginModal').style.display = 'none'; }
+
+    async function confirmLogin() {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+      if (email && password) {
+        localStorage.setItem('savedEmail', email);
+        localStorage.setItem('savedPassword', password);
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+          showToast('فشل الدخول: ' + error.message, 'error');
+        } else {
+          closeLoginModal();
+        }
+      } else {
+        showToast('يرجى إدخال البريد وكلمة المرور', 'error');
+      }
+    }
+
+    // === Image Upload ===
+    const uploadArea = document.getElementById('uploadArea');
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+      const maxFiles = 5;
+      for (let i = 0; i < files.length; i++) {
+        if (selectedFiles.length >= maxFiles) {
+          showToast(`الحد الأقصى ${maxFiles} صور`, 'error');
+          break;
+        }
+        if (files[i].type.startsWith('image/')) {
+          selectedFiles.push(files[i]);
+        }
+      }
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      const container = document.getElementById('imagePreviews');
+      container.innerHTML = selectedFiles.map((file, idx) => {
+        const url = URL.createObjectURL(file);
+        return `
+          <div class="image-preview">
+            <img src="${url}" alt="صورة ${idx + 1}">
+            <button class="remove-img" onclick="removeImage(${idx})">✕</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function removeImage(idx) {
+      selectedFiles.splice(idx, 1);
+      renderPreviews();
+    }
+
+    // === Submit Request ===
+    async function submitRequest() {
+      const title = document.getElementById('reqTitle').value.trim();
+      const description = document.getElementById('reqDescription').value.trim();
+      const priority = document.getElementById('reqPriority').value;
+      const status = 'جديد';
+
+      if (!title) {
+        showToast('يرجى إدخال عنوان المشكلة', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> جاري الإرسال...';
+
+      try {
+        // Helper function to convert file to WebP
+        const convertToWebP = (file) => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              canvas.toBlob((blob) => {
+                if (!blob) reject(new Error('Canvas is empty'));
+                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' }));
+              }, 'image/webp', 0.8); // 0.8 quality
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+          });
+        };
+
+        // Upload images
+        let imageUrls = [];
+        for (const file of selectedFiles) {
+          try {
+            const webpFile = await convertToWebP(file);
+            const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.webp`;
+
+            const { error: uploadError } = await supabaseClient.storage
+              .from('maintenance-images')
+              .upload(fileName, webpFile);
+
+            if (!uploadError) {
+              const { data: urlData } = supabaseClient.storage
+                .from('maintenance-images')
+                .getPublicUrl(fileName);
+              imageUrls.push(urlData.publicUrl);
+            }
+          } catch(err) {
+            console.error('Image conversion/upload error:', err);
+          }
+        }
+
+        // Insert request
+        const { error } = await supabaseClient
+          .from('maintenance_requests')
+          .insert({
+            user_id: currentUser.id,
+            user_email: currentUser.email,
+            mall: userMall || 'غير محدد',
+            title: title,
+            description: description,
+            status: status,
+            priority: priority,
+            images: imageUrls
+          });
+
+        if (error) throw error;
+
+        showToast('تم إرسال طلب الصيانة بنجاح ✅', 'success');
+
+        // Reset form
+        document.getElementById('reqTitle').value = '';
+        document.getElementById('reqDescription').value = '';
+        document.getElementById('reqPriority').value = 'عادية';
+        selectedFiles = [];
+        renderPreviews();
+        loadRequests();
+
+      } catch(e) {
+        showToast('حدث خطأ: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '📤 إرسال الطلب';
+      }
+    }
+
+    // === Load Requests ===
+    async function loadRequests() {
+      try {
+        let query = supabaseClient
+          .from('maintenance_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (userMall) {
+          query = query.eq('mall', userMall);
+        } else if (currentUser) {
+          query = query.eq('user_id', currentUser.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+        allRequests = data || [];
+        renderRequests();
+      } catch(e) {
+        document.getElementById('requestsList').innerHTML =
+          '<div class="empty-state"><div class="icon">⚠️</div><p>حدث خطأ في تحميل الطلبات</p></div>';
+      }
+    }
+
+    function filterRequests(filter, chipEl) {
+      currentFilter = filter;
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      if (chipEl) chipEl.classList.add('active');
+      renderRequests();
+    }
+
+    function renderRequests() {
+      const container = document.getElementById('requestsList');
+      let filtered = allRequests;
+
+      if (currentFilter !== 'all') {
+        filtered = allRequests.filter(r => r.status === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>${currentFilter === 'all' ? 'لا توجد طلبات صيانة حالياً' : 'لا توجد طلبات بهذه الحالة'}</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(req => {
+        const statusClass = req.status === 'جديد' ? 'status-new' :
+                           req.status === 'قيد المعالجة' ? 'status-in-progress' : 'status-resolved';
+
+        const date = new Date(req.created_at).toLocaleDateString('ar-SA', {
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+
+        const imagesHtml = (req.images && req.images.length > 0)
+          ? `<div class="card-images">${req.images.map(url =>
+              `<img src="${url}" onclick="viewImage('${url}')" alt="صورة">`
+            ).join('')}</div>`
+          : '';
+
+        
+        return `
+          <div class="ticket-row" data-priority="${escapeHtml(req.priority || 'عادية')}">
+            <div class="ticket-indicator ${
+              req.priority === 'عالية جداً' ? 'bg-danger' : 
+              req.priority === 'عالية' ? 'bg-warning' : 
+              req.priority === 'متوسطة' ? 'bg-yellow' : 'bg-success'
+            }"></div>
+            
+            <div class="ticket-main">
+              <div class="ticket-header-area">
+                <h3 class="ticket-title">${escapeHtml(req.title)}</h3>
+                <span class="status-pill ${statusClass}">
+                  <span class="dot"></span>
+                  ${req.status}
+                </span>
+              </div>
+              
+              <div class="ticket-meta-info">
+                <div class="meta-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  ${escapeHtml(req.mall)}
+                </div>
+                <div class="meta-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  ${date}
+                </div>
+                <div class="meta-tag priority-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                  ${req.priority || 'عادية'}
+                </div>
+              </div>
+
+              ${req.description ? `<div class="ticket-desc">${escapeHtml(req.description)}</div>` : ''}
+              ${imagesHtml}
+            </div>
+
+            ${req.admin_reply ? `
+              <div class="ticket-admin-reply">
+                <div class="reply-header">
+                  <div class="avatar">👨‍🔧</div>
+                  <span>رد الإدارة</span>
+                </div>
+                <div class="reply-body">${escapeHtml(req.admin_reply)}</div>
+                ${(req.admin_images && req.admin_images.length > 0) ? `
+                  <div class="card-images admin-reply-images">
+                    ${req.admin_images.map(url => `<img src="${url}" onclick="viewImage('${url}')" alt="مرفق الإدارة">`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function viewImage(url) {
+      document.getElementById('viewerImage').src = url;
+      document.getElementById('imageViewer').style.display = 'flex';
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // === Toast ===
+    function showToast(msg, type = '') {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast show ' + type;
+      setTimeout(() => { toast.className = 'toast'; }, 3500);
+    }
+  </script>
+
+  <script>
+    // Overriding loadRequests slightly to update stats
+    const oldRender = renderRequests;
+    renderRequests = function() {
+      // search filter
+      const searchQ = document.getElementById('searchTickets')?.value?.toLowerCase() || '';
+      
+      const container = document.getElementById('requestsList');
+      let filtered = allRequests || [];
+
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(r => r.status === currentFilter);
+      }
+      
+      if (searchQ) {
+        filtered = filtered.filter(r => (r.title && r.title.toLowerCase().includes(searchQ)) || (r.description && r.description.toLowerCase().includes(searchQ)));
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>${currentFilter === 'all' && !searchQ ? 'لا توجد طلبات صيانة حالياً' : 'لا توجد طلبات مطابقة'}</p>
+          </div>`;
+      } else {
+        // Redefine rendering behavior directly
+        container.innerHTML = filtered.map(req => {
+          const statusClass = req.status === 'جديد' ? 'status-new' :
+                             req.status === 'قيد المعالجة' ? 'status-in-progress' : 'status-resolved';
+
+          const date = new Date(req.created_at).toLocaleDateString('ar-SA', {
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+          });
+
+          const imagesHtml = (req.images && req.images.length > 0)
+            ? `<div class="card-images">${req.images.map(url =>
+                `<img src="${url}" onclick="viewImage('${url}')" alt="صورة">`
+              ).join('')}</div>`
+            : '';
+            
+                  
+        return `
+          <div class="ticket-row" data-priority="${escapeHtml(req.priority || 'عادية')}">
+            <div class="ticket-indicator ${
+              req.priority === 'عالية جداً' ? 'bg-danger' : 
+              req.priority === 'عالية' ? 'bg-warning' : 
+              req.priority === 'متوسطة' ? 'bg-yellow' : 'bg-success'
+            }"></div>
+            
+            <div class="ticket-main">
+              <div class="ticket-header-area">
+                <h3 class="ticket-title">${escapeHtml(req.title)}</h3>
+                <span class="status-pill ${statusClass}">
+                  <span class="dot"></span>
+                  ${req.status}
+                </span>
+              </div>
+              
+              <div class="ticket-meta-info">
+                <div class="meta-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  ${escapeHtml(req.mall)}
+                </div>
+                <div class="meta-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  ${date}
+                </div>
+                <div class="meta-tag priority-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                  ${req.priority || 'عادية'}
+                </div>
+              </div>
+
+              ${req.description ? `<div class="ticket-desc">${escapeHtml(req.description)}</div>` : ''}
+              ${imagesHtml}
+            </div>
+
+            ${req.admin_reply ? `
+              <div class="ticket-admin-reply">
+                <div class="reply-header">
+                  <div class="avatar">👨‍🔧</div>
+                  <span>رد الإدارة</span>
+                </div>
+                <div class="reply-body">${escapeHtml(req.admin_reply)}</div>
+                ${(req.admin_images && req.admin_images.length > 0) ? `
+                  <div class="card-images admin-reply-images">
+                    ${req.admin_images.map(url => `<img src="${url}" onclick="viewImage('${url}')" alt="مرفق الإدارة">`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+        }).join('');
+      }
+
+      // Update stats based on allRequests
+      if(allRequests) {
+        document.getElementById('statTotal').innerText = allRequests.length;
+        document.getElementById('statPending').innerText = allRequests.filter(r => r.status === 'جديد' || r.status === 'قيد المعالجة').length;
+        document.getElementById('statResolved').innerText = allRequests.filter(r => r.status === 'تم الحل').length;
+      }
+    };
+    
+    function searchTickets() {
+      renderRequests();
+    }
+  </script>
+</body>
+</html>
