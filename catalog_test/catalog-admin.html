@@ -535,7 +535,7 @@
     <!-- TAB 3: Images -->
     <div id="tabImages" class="tab-content">
       <div class="controls-container">
-        <div class="controls-row">
+        <div class="controls-row" style="align-items:flex-end;">
           <div class="control-group" style="flex:2;">
             <label>بحث بالاسم أو الكود</label>
             <input type="text" id="imagesSearch" placeholder="ابحث عن منتج مفقود الصورة..." oninput="renderMissingImagesTable()">
@@ -545,6 +545,11 @@
             <select id="imagesCategoryFilter" onchange="renderMissingImagesTable()">
               <option value="all">كل التصنيفات</option>
             </select>
+          </div>
+          <div class="control-group">
+            <button onclick="openManualImageUploadModal()" class="btn btn-primary" style="height:44px; display:flex; align-items:center; gap:8px;">
+              📤 رفع صورة لمنتج يدوي
+            </button>
           </div>
         </div>
       </div>
@@ -703,12 +708,18 @@
   <div class="modal-overlay" id="uploadModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>🖼️ رفع صورة للمنتج</h3>
+        <h3 id="uploadModalTitle">🖼️ رفع صورة للمنتج</h3>
         <button class="modal-close" onclick="closeUploadModal()">×</button>
       </div>
       <div style="margin-bottom:15px;">
-        <p><strong>كود المنتج:</strong> <span id="uploadProductCode"></span></p>
-        <p><strong>اسم المنتج:</strong> <span id="uploadProductName" style="color:var(--text-muted)"></span></p>
+        <div id="uploadProductDetailsContainer">
+          <p><strong>كود المنتج:</strong> <span id="uploadProductCode"></span></p>
+          <p><strong>اسم المنتج:</strong> <span id="uploadProductName" style="color:var(--text-muted)"></span></p>
+        </div>
+        <div id="uploadManualCodeContainer" style="display:none; text-align:right;">
+          <label style="display:block; margin-bottom:4px; font-weight:bold;">أدخل كود المنتج (كود البضاعة):</label>
+          <input type="text" id="uploadManualCodeInput" placeholder="مثال: 990000210" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit; box-sizing:border-box;" oninput="onManualCodeInput()">
+        </div>
       </div>
       
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -1176,7 +1187,7 @@
            <td style="max-width:350px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}</td>
            <td><span class="btn" style="background:#f1f3f5; color:#7f8c8d; padding:4px 8px; pointer-events:none; font-size:0.85em;">${p.category}</span></td>
            <td style="text-align:center;">
-             <button onclick="openUploadModal('${p.code}', '${p.name.replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding:6px 12px; font-size:0.85rem;">
+             <button onclick="openUploadModal('${p.code}', '${p.name.replace(/'/g, "\\'")}', '${p.alias || ''}')" class="btn btn-primary" style="padding:6px 12px; font-size:0.85rem;">
                📤 رفع صورة
              </button>
            </td>
@@ -1187,12 +1198,19 @@
 
     // Image Upload Logic
     let uploadTargetCode = "";
+    let uploadTargetAlias = "";
     let selectedUploadFile = null;
 
-    function openUploadModal(code, name) {
+    function openUploadModal(code, name, alias = "") {
       uploadTargetCode = code;
+      uploadTargetAlias = alias;
+      
+      document.getElementById('uploadProductDetailsContainer').style.display = 'block';
+      document.getElementById('uploadManualCodeContainer').style.display = 'none';
+      
       document.getElementById('uploadProductCode').textContent = code;
       document.getElementById('uploadProductName').textContent = name;
+      document.getElementById('uploadModalTitle').textContent = '🖼️ رفع صورة للمنتج';
       
       // Reset uploader inputs
       selectedUploadFile = null;
@@ -1200,6 +1218,41 @@
       document.getElementById('uploadPreviewContainer').style.display = 'none';
       
       document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function openManualImageUploadModal() {
+      uploadTargetCode = "";
+      uploadTargetAlias = "";
+      
+      document.getElementById('uploadProductDetailsContainer').style.display = 'none';
+      document.getElementById('uploadManualCodeContainer').style.display = 'block';
+      document.getElementById('uploadManualCodeInput').value = '';
+      document.getElementById('uploadModalTitle').textContent = '📤 رفع صورة للمنتج يدوياً';
+      
+      // Reset uploader inputs
+      selectedUploadFile = null;
+      document.getElementById('btnSubmitUpload').disabled = true;
+      document.getElementById('uploadPreviewContainer').style.display = 'none';
+      
+      document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function onManualCodeInput() {
+      updateUploadSubmitButtonState();
+    }
+
+    function updateUploadSubmitButtonState() {
+      const isManual = document.getElementById('uploadManualCodeContainer').style.display !== 'none';
+      let targetCode = uploadTargetCode;
+      if (isManual) {
+        targetCode = document.getElementById('uploadManualCodeInput').value.trim();
+      }
+      const btn = document.getElementById('btnSubmitUpload');
+      if (selectedUploadFile && targetCode) {
+        btn.disabled = false;
+      } else {
+        btn.disabled = true;
+      }
     }
 
     function closeUploadModal() {
@@ -1251,14 +1304,38 @@
     }
 
     async function submitImageUpload() {
-      if (!selectedUploadFile || !uploadTargetCode || !userSessionToken) return;
+      if (!selectedUploadFile || !userSessionToken) return;
+
+      const isManual = document.getElementById('uploadManualCodeContainer').style.display !== 'none';
+      let targetCode = uploadTargetCode;
+      let targetAlias = uploadTargetAlias;
+
+      if (isManual) {
+        const typedVal = document.getElementById('uploadManualCodeInput').value.trim();
+        if (!typedVal) return;
+
+        // Try to resolve targetCode and targetAlias from productsList
+        const foundProd = productsList.find(p => String(p.code) === typedVal || (p.alias && String(p.alias).toLowerCase() === typedVal.toLowerCase()));
+        if (foundProd) {
+          targetCode = foundProd.code;
+          targetAlias = foundProd.alias || "";
+        } else {
+          targetCode = typedVal;
+          targetAlias = "";
+        }
+      }
+
+      if (!targetCode) return;
 
       const btn = document.getElementById('btnSubmitUpload');
       btn.disabled = true;
       btn.textContent = 'جاري رفع الملف وحفظه...';
 
       const formData = new FormData();
-      formData.append('code', uploadTargetCode);
+      formData.append('code', targetCode);
+      if (targetAlias) {
+         formData.append('alias', targetAlias);
+      }
       formData.append('image', selectedUploadFile);
 
       try {
