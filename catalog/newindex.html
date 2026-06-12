@@ -1510,23 +1510,8 @@
           console.warn("Failed to load promo prices from Supabase:", promoDbErr);
         }
 
-        // Load prepopulated batch print items from Supabase
-        try {
-          const { data: batchData, error: batchErr } = await supabaseClient
-            .from('catalog_batch_print_items')
-            .select('*');
-          if (!batchErr && batchData) {
-            batchPrintItems = [];
-            batchData.forEach(item => {
-              const itemCode = String(item.item_code).trim();
-              const qty = Number(item.qty) || 1;
-              addManualBarcodeItem(itemCode, null, null, undefined, qty);
-            });
-            console.log("✅ Prepopulated batch print items loaded from Supabase:", batchPrintItems.length);
-          }
-        } catch (batchDbErr) {
-          console.warn("Failed to load batch print items from Supabase:", batchDbErr);
-        }
+        batchPrintItems = [];
+
 
       } catch (e) {
         console.error("❌ Catalog load failed:", e);
@@ -3023,6 +3008,31 @@
       renderBatchPrintList();
     }
 
+    async function loadSavedBatchList() {
+      try {
+        const { data: batchData, error: batchErr } = await supabaseClient
+          .from('catalog_batch_print_items')
+          .select('*');
+        if (batchErr) throw batchErr;
+        if (batchData && batchData.length > 0) {
+          batchPrintItems = [];
+          batchData.forEach(item => {
+            const itemCode = String(item.item_code).trim();
+            const qty = Number(item.qty) || 1;
+            addManualBarcodeItem(itemCode, null, null, undefined, qty);
+          });
+          renderBatchPrintList();
+          showSuccessModal('تم تحميل القائمة المحفوظة بنجاح');
+        } else {
+          showSuccessModal('لا توجد منتجات محفوظة في قاعدة البيانات');
+        }
+      } catch (err) {
+        console.error("Failed to load batch print items:", err);
+        alert("حدث خطأ أثناء تحميل القائمة المحفوظة");
+      }
+    }
+
+
     function addManualBarcodeItem(code, name, alias, price, qty) {
       qty = parseInt(qty);
       if (isNaN(qty) || qty <= 0) qty = 1;
@@ -3352,11 +3362,14 @@
         <button onclick="confirmBatchPrint()"
           style="background:#27ae60; color:white; padding:12px; font-size: 16px; font-weight: bold; border:none; border-radius:5px; flex:2; cursor:pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">طباعة
           الكل 🖨️</button>
+        <button onclick="loadSavedBatchList()"
+          style="background:#3498db; color:white; padding:12px; border:none; border-radius:5px; flex:1.5; cursor:pointer; font-weight: bold;">تحميل المحفوظة 📥</button>
         <button onclick="clearBatchPrintList()"
           style="background:#f39c12; color:white; padding:12px; border:none; border-radius:5px; flex:1; cursor:pointer;">مسح
           القائمة</button>
         <button onclick="closePrintBarcodeModal()"
           style="background:#e74c3c; color:white; padding:12px; border:none; border-radius:5px; flex:1; cursor:pointer;">إغلاق</button>
+
       </div>
     </div>
   </div>
