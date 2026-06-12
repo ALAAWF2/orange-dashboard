@@ -10,12 +10,12 @@ from pathlib import Path
 # =========================
 # CONFIG
 # =========================
-MAPPING_FILE = Path("C:/Users/ALAA-ORANGE/Desktop/catalog/mapping.xlsx")
-TABLE5_SHEET = "Table5"
-TABLE6_SHEET = "Table6"
-OUTPUT_PRODUCTS = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog_test/products.json")
-OUTPUT_FIRST_SEEN = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog_test/first_seen.json")
-OUTPUT_SALES_BY_OUTLET = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog_test/sales_by_outlet.json")
+MAPPING_FILE = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/dynamic/mapping.xlsx")
+TABLE5_SHEET = "Sheet1"
+# TABLE6_SHEET = "Table6" # Disabled in new setup
+OUTPUT_PRODUCTS = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/products.json")
+OUTPUT_FIRST_SEEN = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/first_seen.json")
+OUTPUT_SALES_BY_OUTLET = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/sales_by_outlet.json")
 
 TIMEOUT = 120
 BASE_URL = "https://orangepax.operations.eu.dynamics.com/data"
@@ -23,7 +23,7 @@ WAREHOUSE_NAMES = {"warehouse", "warehouse riyadh"}
 
 DAYS_BACK = 7
 
-CATEGORY_FILE = Path("C:/Users/ALAA-ORANGE/Desktop/catalog/create js/category2026.xlsx")
+CATEGORY_FILE = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/FACT/category2026.xlsx")
 IMAGES_DIR = Path("C:/Users/ALAA-ORANGE/Desktop/catalog/images")
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif")
 
@@ -191,8 +191,11 @@ def main():
     token = get_access_token()
 
     print("Loading mappings...")
-    df_table5 = load_mapping(TABLE5_SHEET, ["store number", "outlet"])
-    df_table6 = load_mapping(TABLE6_SHEET, ["alias", "english name", "Item code"])
+    try:
+        df_table5 = load_mapping(TABLE5_SHEET, ["store number", "outlet"])
+    except Exception as e:
+        print(f"WARNING: Could not load store mapping (Sheet1): {e}")
+        df_table5 = pd.DataFrame(columns=["store number", "outlet"])
 
     print("Loading Category Rules...")
     category_rules = load_category_rules()
@@ -205,7 +208,7 @@ def main():
     # =====================
     df_onhand_raw = fetch_all(
         token,
-        f"{BASE_URL}/WarehousesOnHandV2?$select=ItemNumber,InventoryWarehouseId,ProductName,OnHandQuantity",
+        f"{BASE_URL}/WarehousesOnHandV2?$select=ItemNumber,InventoryWarehouseId,ProductName,TotalAvailableQuantity",
         "ONHAND"
     )
 
@@ -248,31 +251,12 @@ def main():
     df_items_raw["ItemNumber"] = df_items_raw["ItemNumber"].astype(str).str.strip()
     df_items_raw["OldItem"] = df_items_raw["OldItem"].astype(str).str.strip().replace("nan", "")
 
-    # Unified Mapping: alias + Item code + dynamic code
-    def get_map(col):
-        if col not in df_table6.columns: return pd.DataFrame()
-        cols = [col]
-        if "english name" in df_table6.columns:
-            cols.append("english name")
-        
-        d = df_table6[cols].copy()
-        d.rename(columns={col: "key"}, inplace=True)
-        d["key"] = d["key"].astype(str).str.strip().replace("nan", "")
-        
-        if "english name" not in d.columns:
-             d["english name"] = ""
-             
-        return d[d["key"] != ""]
-
-    df_map = pd.concat([get_map("alias"), get_map("Item code"), get_map("dynamic code")])
-    df_map = df_map.drop_duplicates("key")
-
+    # MAPPING DISABLED PER USER REQUEST
     df_items = (
         df_items_raw
         .sort_values("SalesPriceDate", ascending=False)
         .drop_duplicates("ItemNumber")
         .merge(df_barcode, left_on="ItemNumber", right_on="itemId", how="left")
-        .merge(df_map, left_on="OldItem", right_on="key", how="left")
     )
 
     # =====================
@@ -369,14 +353,10 @@ def main():
             continue
 
         name_ar = r["description"] if pd.notna(r["description"]) else ""
-        name_en = r["english name"] if pd.notna(r["english name"]) else ""
+        name_en = "" # r["english name"] -- Removed per user request
         name = " - ".join(x for x in [name_ar, name_en] if x) or r.get("ProductSearchName", "")
 
-        gf = r.get("Item code")
-        try:
-            gf = str(int(float(gf))) if pd.notna(gf) else ""
-        except:
-            gf = str(gf) if pd.notna(gf) else ""
+        gf = "" # r.get("Item code") -- Removed per user request
 
         branches = {}
         total_stock = 0
@@ -384,7 +364,7 @@ def main():
         if item_number in onhand_grouped.groups:
             for _, s in onhand_grouped.get_group(item_number).iterrows():
                 o = s["Outlet"]
-                q = int(s["OnHandQuantity"])
+                q = int(s["TotalAvailableQuantity"])
                 branches[o] = branches.get(o, 0) + q
                 if o.lower() in WAREHOUSE_NAMES:
                     total_stock += q
