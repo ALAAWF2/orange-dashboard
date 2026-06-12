@@ -2610,16 +2610,8 @@ const EMPLOYEES = [
         "name": "محمد ارشد",
         "startDate": "2024-05-27",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -2629,7 +2621,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1402-C;1402-E"
     },
     {
         "employeeId": "4170-إبراهيم بودشا",
