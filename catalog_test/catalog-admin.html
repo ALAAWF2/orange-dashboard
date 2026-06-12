@@ -456,6 +456,7 @@
       <button class="tab-btn" onclick="switchTab('tabSync')">⏳ تحديث الكاتالوج الفوري</button>
       <button class="tab-btn" onclick="switchTab('tabImages')">🖼️ المنتجات بدون صور</button>
       <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
+      <button class="tab-btn" onclick="switchTab('tabPromoBarcodes')">🏷️ إدارة العروض والباركود</button>
       <button class="tab-btn" onclick="switchTab('tabUsers')">👥 إدارة الحسابات</button>
     </div>
 
@@ -631,6 +632,83 @@
             <tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل الحسابات...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- TAB 6: Promo Prices & Batch Print Barcodes -->
+    <div id="tabPromoBarcodes" class="tab-content">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <!-- Column 1: Promo Prices -->
+        <div>
+          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; gap: 8px;">🏷️ الأسعار الترويجية الخاصة (Promo Prices)</h3>
+          <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem;">
+            <div class="controls-row" style="align-items: flex-end;">
+              <div class="control-group">
+                <label>كود المنتج / الباركود</label>
+                <input type="text" id="addPromoCode" placeholder="مثال: 440114 أو 100030424">
+              </div>
+              <div class="control-group">
+                <label>السعر الجديد (ريال)</label>
+                <input type="text" id="addPromoPrice" placeholder="مثال: 249">
+              </div>
+              <div>
+                <button onclick="savePromoPrice()" class="btn btn-primary" style="height: 40px; padding: 0 1.5rem;">حفظ / تعديل</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>كود المنتج</th>
+                  <th>السعر الترويجي</th>
+                  <th>آخر تحديث</th>
+                  <th style="width: 80px; text-align: center;">إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="promoPricesTableBody">
+                <tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Column 2: Batch Print Barcodes -->
+        <div>
+          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; gap: 8px;">🖨️ قائمة طباعة الباركود الافتراضية</h3>
+          <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem;">
+            <div class="controls-row" style="align-items: flex-end;">
+              <div class="control-group">
+                <label>كود المنتج / الباركود</label>
+                <input type="text" id="addBatchCode" placeholder="مثال: 440114 أو 100030424">
+              </div>
+              <div class="control-group">
+                <label>الكمية الافتراضية</label>
+                <input type="text" id="addBatchQty" placeholder="مثال: 1">
+              </div>
+              <div>
+                <button onclick="saveBatchItem()" class="btn btn-primary" style="height: 40px; padding: 0 1.5rem;">حفظ / تعديل</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>كود المنتج</th>
+                  <th>الكمية</th>
+                  <th>آخر تحديث</th>
+                  <th style="width: 80px; text-align: center;">إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="batchItemsTableBody">
+                <tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -950,6 +1028,8 @@
          renderMissingImagesTable();
       } else if (tabId === 'tabOrders') {
          loadSupabaseOrders();
+      } else if (tabId === 'tabPromoBarcodes') {
+         loadPromoPricesAndBatchItems();
       } else if (tabId === 'tabUsers') {
          loadSupabaseUsers();
       }
@@ -1911,6 +1991,190 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'حفظ التعديلات';
+      }
+    }
+
+    // === TAB: Promo Prices & Batch Print Barcodes Logic ===
+    let promoPricesDb = [];
+    let batchItemsDb = [];
+
+    async function loadPromoPricesAndBatchItems() {
+      const pTbody = document.getElementById('promoPricesTableBody');
+      const bTbody = document.getElementById('batchItemsTableBody');
+      pTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
+      bTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
+
+      try {
+        const { data: promoData, error: promoErr } = await supabaseClient
+          .from('catalog_promo_prices')
+          .select('*')
+          .order('updated_at', { ascending: false });
+
+        if (promoErr) throw promoErr;
+        promoPricesDb = promoData || [];
+
+        const { data: batchData, error: batchErr } = await supabaseClient
+          .from('catalog_batch_print_items')
+          .select('*')
+          .order('updated_at', { ascending: false });
+
+        if (batchErr) throw batchErr;
+        batchItemsDb = batchData || [];
+
+        renderPromoPricesTable();
+        renderBatchItemsTable();
+      } catch (err) {
+        showToast('❌ فشل تحميل بيانات العروض والباركود: ' + err.message, 'error');
+        pTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger)">فشل التحميل</td></tr>';
+        bTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger)">فشل التحميل</td></tr>';
+      }
+    }
+
+    function renderPromoPricesTable() {
+      const tbody = document.getElementById('promoPricesTableBody');
+      tbody.innerHTML = '';
+
+      if (promoPricesDb.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد أسعار ترويجية مضافة حالياً</td></tr>';
+        return;
+      }
+
+      promoPricesDb.forEach(item => {
+        const tr = document.createElement('tr');
+        const updatedDate = new Date(item.updated_at).toLocaleString('ar-EG');
+        tr.innerHTML = `
+          <td style="font-weight:bold;">${item.item_code}</td>
+          <td style="color: var(--primary); font-weight: bold;">${item.price} ريال</td>
+          <td style="font-size:0.85em; color:var(--text-muted);">${updatedDate}</td>
+          <td style="text-align:center;">
+            <button onclick="deletePromoPrice('${item.item_code}')" class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;">🗑️ حذف</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderBatchItemsTable() {
+      const tbody = document.getElementById('batchItemsTableBody');
+      tbody.innerHTML = '';
+
+      if (batchItemsDb.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد عناصر باركود مجهزة مسبقاً</td></tr>';
+        return;
+      }
+
+      batchItemsDb.forEach(item => {
+        const tr = document.createElement('tr');
+        const updatedDate = new Date(item.updated_at).toLocaleString('ar-EG');
+        tr.innerHTML = `
+          <td style="font-weight:bold;">${item.item_code}</td>
+          <td style="font-weight:bold;">${item.qty}</td>
+          <td style="font-size:0.85em; color:var(--text-muted);">${updatedDate}</td>
+          <td style="text-align:center;">
+            <button onclick="deleteBatchItem('${item.item_code}')" class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;">🗑️ حذف</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function savePromoPrice() {
+      const code = document.getElementById('addPromoCode').value.trim();
+      const priceVal = document.getElementById('addPromoPrice').value.trim();
+      
+      if (!code || !priceVal) {
+        showToast('⚠️ يرجى إدخال كود المنتج والسعر الترويجي', 'error');
+        return;
+      }
+
+      const price = parseFloat(priceVal);
+      if (isNaN(price) || price <= 0) {
+        showToast('⚠️ يرجى إدخال سعر ترويجي صالح', 'error');
+        return;
+      }
+
+      showToast('جاري الحفظ في قاعدة البيانات...');
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_promo_prices')
+          .upsert({ item_code: code, price: price, updated_at: new Date().toISOString() });
+
+        if (error) throw error;
+
+        showToast('✅ تم حفظ السعر الترويجي بنجاح!', 'success');
+        document.getElementById('addPromoCode').value = '';
+        document.getElementById('addPromoPrice').value = '';
+        await loadPromoPricesAndBatchItems();
+      } catch (err) {
+        showToast('❌ فشل الحفظ: ' + err.message, 'error');
+      }
+    }
+
+    async function deletePromoPrice(code) {
+      if (!confirm(`هل أنت متأكد من حذف السعر الترويجي للمنتج ${code}؟`)) return;
+      showToast('جاري الحذف...');
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_promo_prices')
+          .delete()
+          .eq('item_code', code);
+
+        if (error) throw error;
+
+        showToast('✅ تم حذف السعر الترويجي بنجاح!', 'success');
+        await loadPromoPricesAndBatchItems();
+      } catch (err) {
+        showToast('❌ فشل الحذف: ' + err.message, 'error');
+      }
+    }
+
+    async function saveBatchItem() {
+      const code = document.getElementById('addBatchCode').value.trim();
+      const qtyVal = document.getElementById('addBatchQty').value.trim();
+      
+      if (!code || !qtyVal) {
+        showToast('⚠️ يرجى إدخال كود المنتج والكمية الافتراضية', 'error');
+        return;
+      }
+
+      const qty = parseInt(qtyVal);
+      if (isNaN(qty) || qty <= 0) {
+        showToast('⚠️ يرجى إدخال كمية صالحة', 'error');
+        return;
+      }
+
+      showToast('جاري الحفظ في قاعدة البيانات...');
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_batch_print_items')
+          .upsert({ item_code: code, qty: qty, updated_at: new Date().toISOString() });
+
+        if (error) throw error;
+
+        showToast('✅ تم حفظ عنصر الباركود بنجاح!', 'success');
+        document.getElementById('addBatchCode').value = '';
+        document.getElementById('addBatchQty').value = '';
+        await loadPromoPricesAndBatchItems();
+      } catch (err) {
+        showToast('❌ فشل الحفظ: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteBatchItem(code) {
+      if (!confirm(`هل أنت متأكد من حذف الباركود المجهز للمنتج ${code}؟`)) return;
+      showToast('جاري الحذف...');
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_batch_print_items')
+          .delete()
+          .eq('item_code', code);
+
+        if (error) throw error;
+
+        showToast('✅ تم حذف عنصر الباركود بنجاح!', 'success');
+        await loadPromoPricesAndBatchItems();
+      } catch (err) {
+        showToast('❌ فشل الحذف: ' + err.message, 'error');
       }
     }
 
