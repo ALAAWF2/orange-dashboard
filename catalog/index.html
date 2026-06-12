@@ -660,7 +660,10 @@
   <div id="galleryNameBanner"><span>المعرض الحالي:</span> <span id="galleryNameText"></span></div>
 
   <!-- Notices & Header -->
-  <div class="top-notice">سيتم تحديث جدول البضاعة يومياً الساعة 3 و 8 و 9 و 10 و 11 مساءً</div>
+  <div class="top-notice">
+    <div>سيتم تحديث جدول البضاعة يومياً الساعة 3 و 8 و 9 و 10 و 11 مساءً</div>
+    <div style="font-size: 0.85em; opacity: 0.9; margin-top: 4px; direction: ltr;" id="lastUpdated">Last Updated: Loading...</div>
+  </div>
 
   <header class="sticky-header">
     <div class="header-content">
@@ -955,6 +958,37 @@
           }
         } catch (blockedErr) {
           console.warn("تعذر جلب قائمة الحجب من السيرفر المحلي:", blockedErr);
+        }
+
+        // Fetch last updated timestamp
+        try {
+          const updateRes = await fetch("last_updated.json?_=" + Date.now(), { cache: "no-store" });
+          if (updateRes.ok) {
+            const updateData = await updateRes.json();
+            if (updateData.last_updated) {
+              const dt = new Date(updateData.last_updated);
+              const dateStr = dt.toLocaleString('en-US', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+              }).replace(',', '');
+              const el = document.getElementById("lastUpdated");
+              if (el) {
+                el.textContent = `Last Updated: ${dateStr}`;
+                el.dataset.iso = updateData.last_updated;
+              }
+            } else {
+              const el = document.getElementById("lastUpdated");
+              if (el) el.textContent = `Last Updated: Not Available`;
+            }
+          } else {
+            const el = document.getElementById("lastUpdated");
+            if (el) el.textContent = `Last Updated: Not Available`;
+          }
+        } catch (updateErr) {
+          console.warn("تعذر جلب ملف آخر تحديث:", updateErr);
+          const el = document.getElementById("lastUpdated");
+          if (el) el.textContent = `Last Updated: Not Available`;
         }
 
         const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
@@ -1435,11 +1469,13 @@
             document.getElementById('userInfo').textContent = `مرحباً بك خيارات مدير المنطقة`;
           } else if (userRole === 'admin' || userRole === 'maintenance_admin') {
             document.getElementById('userInfo').textContent = `مرحباً بك (مسؤول النظام)`;
-            document.getElementById('galleryNameText').textContent = userMall;
+            const galleryText = document.getElementById('galleryNameText');
+            if (galleryText) galleryText.textContent = userMall;
             document.getElementById('galleryNameBanner').style.display = 'block';
           } else {
             document.getElementById('userInfo').textContent = `مرحباً بك في معرض ${userMall}`;
-            document.getElementById('galleryNameText').textContent = userMall;
+            const galleryText = document.getElementById('galleryNameText');
+            if (galleryText) galleryText.textContent = userMall;
             document.getElementById('galleryNameBanner').style.display = 'block';
           }
 

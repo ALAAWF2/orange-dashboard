@@ -16,6 +16,7 @@ TABLE5_SHEET = "Sheet1"
 OUTPUT_PRODUCTS = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/products.json")
 OUTPUT_FIRST_SEEN = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/first_seen.json")
 OUTPUT_SALES_BY_OUTLET = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/sales_by_outlet.json")
+OUTPUT_LAST_UPDATED = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/last_updated.json")
 
 TIMEOUT = 120
 BASE_URL = "https://orangepax.operations.eu.dynamics.com/data"
@@ -396,6 +397,11 @@ def main():
     OUTPUT_PRODUCTS.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
     OUTPUT_FIRST_SEEN.write_text(json.dumps(first_seen, ensure_ascii=False, indent=2), encoding="utf-8")
     OUTPUT_SALES_BY_OUTLET.write_text(json.dumps(sales_by_outlet, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Write last updated timestamp
+    last_updated_time = datetime.now(timezone.utc).isoformat()
+    last_updated_data = {"last_updated": last_updated_time}
+    OUTPUT_LAST_UPDATED.write_text(json.dumps(last_updated_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("DONE")
 
