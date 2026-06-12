@@ -4164,7 +4164,7 @@ const EMPLOYEES = [
         "name": "نوال خضر",
         "startDate": "2025-06-18",
         "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall و 1008-48 - Jeddah Park",
+        "showroom": "1004-07-Arab Mall",
         "showroomDetails": [
             {
                 "name": "1004-07-Arab Mall",
@@ -4173,17 +4173,9 @@ const EMPLOYEES = [
                     "1004-C",
                     "1004-E"
                 ]
-            },
-            {
-                "name": "1008-48 - Jeddah Park",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1008-C",
-                    "1008-E"
-                ]
             }
         ],
-        "addressBooks": "1004-C;1004-E;1008-C;1008-E"
+        "addressBooks": "1004-C;1004-E"
     },
     {
         "employeeId": "4577-رنيم اليزيدي",
@@ -7190,7 +7182,7 @@ const EMPLOYEES = [
         "employeeId": "4974-يارا احمد الذبياني",
         "personnelNumber": "4974",
         "name": "يارا احمد الذبياني",
-        "startDate": "2026-06-09",
+        "startDate": "2026-06-10",
         "manager": "المنطقة الشمالية",
         "showroom": "1501-24-Yanbu Dana Mall",
         "showroomDetails": [
@@ -7204,6 +7196,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1501-C;1501-E"
+    },
+    {
+        "employeeId": "4975-لمياء الزهراني",
+        "personnelNumber": "4975",
+        "name": "لمياء الزهراني",
+        "startDate": "2026-06-10",
+        "manager": "محمدكلو",
+        "showroom": "1107-38-Al_Riyadh Park",
+        "showroomDetails": [
+            {
+                "name": "1107-38-Al_Riyadh Park",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1107-C",
+                    "1107-E"
+                ]
+            }
+        ],
+        "addressBooks": "1107-C;1107-E"
     }
 ];
 
