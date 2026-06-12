@@ -229,6 +229,12 @@ def main():
         .astype(str)
         .str.strip()
     )
+    df_onhand["Outlet"] = df_onhand["Outlet"].replace({
+        "WH01": "Warehouse",
+        "WH02": "warehouse riyadh",
+        "wh01": "Warehouse",
+        "wh02": "warehouse riyadh"
+    })
 
     # =====================
     # BARCODE
@@ -305,6 +311,12 @@ def main():
         .astype(str)
         .str.strip()
     )
+    df_sales["Outlet"] = df_sales["Outlet"].replace({
+        "WH01": "Warehouse",
+        "WH02": "warehouse riyadh",
+        "wh01": "Warehouse",
+        "wh02": "warehouse riyadh"
+    })
 
     # =====================
     # AGGREGATE SALES
