@@ -2349,7 +2349,125 @@
     }
 
     // --- Barcode Printing Logic (Batch Mode) ---
-    let batchPrintItems = [];
+    const promoPrices = {
+      // 249 SAR Promo Group (Codes & Aliases)
+      "100030424": 249, "270113": 249,
+      "100030425": 249, "270107": 249,
+      "100030426": 249, "270102": 249,
+      "100030427": 249, "270112": 249,
+      "100030428": 249, "270108": 249,
+      "100030429": 249, "270103": 249,
+      "100030430": 249, "270111": 249,
+      "100030431": 249, "270109": 249,
+      "100030432": 249, "270104": 249,
+      "100030433": 249, "270110": 249,
+      "100030434": 249, "270106": 249,
+      "100030435": 249, "270114": 249,
+      "100030436": 249, "270105": 249,
+      "100030437": 249, "270101": 249,
+      "100030315": 249, "20022": 249,
+      "100030316": 249, "20023": 249,
+      "100030317": 249, "20021": 249,
+      "100030389": 249, "20024": 249,
+      "100030390": 249, "20025": 249,
+      "100030391": 249, "20026": 249,
+
+      // 109 SAR Promo Group (Codes & Aliases)
+      "100040062": 109, "1136": 109,
+      "100040067": 109, "1154": 109,
+      "100040081": 109, "1173": 109,
+      "100040083": 109, "100701": 109,
+      "100040084": 109, "100702": 109,
+      "100040085": 109, "100703": 109,
+      "100040086": 109, "100706": 109,
+      "100040087": 109, "100704": 109,
+      "100040088": 109, "100707": 109,
+      "100040089": 109, "100709": 109,
+      "100040090": 109, "100705": 109,
+      "100040091": 109, "100714": 109,
+      "100040092": 109, "100713": 109,
+      "100040093": 109, "100710": 109,
+      "100040094": 109, "100712": 109,
+      "100040095": 109, "100708": 109,
+      "100040096": 109, "100711": 109,
+
+      // 599 / 699 SAR Promo Group (Codes & Aliases)
+      "KIT-100010830": 599, "4489423": 599,
+      "KIT-100010831": 599, "4489425": 599,
+      "KIT-100010832": 599, "4489426": 599,
+      "KIT-100010834": 599, "4489429": 599,
+      "KIT-100010836": 599, "4489432": 599,
+      "KIT-100010829": 699, "4489824": 699,
+      "KIT-100010819": 599, "4489814": 599,
+      "KIT-100010822": 599, "4489817": 599,
+      "KIT-100010821": 599, "4489816": 599,
+      "KIT-100010820": 599, "4489815": 599,
+      "KIT-100010818": 599, "4489813": 599
+    };
+
+    let batchPrintItems = [
+      // 249 SAR group (20 products)
+      { code: "100030424", name: "طقم لحاف فل | 4 قطع BOTANCAL LILAC (11-110)", alias: "270113", price: 249, qty: 1 },
+      { code: "100030425", name: "طقم لحاف فل | 4 قطع SPRING ROSE PINK (10-74)", alias: "270107", price: 249, qty: 1 },
+      { code: "100030426", name: "طقم لحاف فل | 4 قطع STRIPE LIGHT GREY (10-89)", alias: "270102", price: 249, qty: 1 },
+      { code: "100030427", name: "طقم لحاف فل | 4 قطع PASTEL BLOOM (11-95)", alias: "270112", price: 249, qty: 1 },
+      { code: "100030428", name: "طقم لحاف فل | 4 قطع BUTTERFLY FLORAL (11-72)", alias: "270108", price: 249, qty: 1 },
+      { code: "100030429", name: "طقم لحاف فل | 4 قطع STRIPE BEIGE (10-89)", alias: "270103", price: 249, qty: 1 },
+      { code: "100030430", name: "طقم لحاف فل | 4 قطع LINE ART FLORAL (11-92)", alias: "270111", price: 249, qty: 1 },
+      { code: "100030431", name: "طقم لحاف فل | 4 قطع LINKED BUCKLE PATTERN (11-83)", alias: "270109", price: 249, qty: 1 },
+      { code: "100030432", name: "طقم لحاف فل | 4 قطع COLORFUL FLORAL (11-78)", alias: "270104", price: 249, qty: 1 },
+      { code: "100030433", name: "طقم لحاف فل | 4 قطع GREY CHEVORN (11-86)", alias: "270110", price: 249, qty: 1 },
+      { code: "100030434", name: "طقم لحاف فل | 4 قطع VINTAGE ROSE (10-57)", alias: "270106", price: 249, qty: 1 },
+      { code: "100030435", name: "طقم لحاف فل | 4 قطع CORAL TWIG BLOOMS (11-112)", alias: "270114", price: 249, qty: 1 },
+      { code: "100030436", name: "طقم لحاف فل | 4 قطع STRIPE BEIGE GREY (11-108)", alias: "270105", price: 249, qty: 1 },
+      { code: "100030437", name: "طقم لحاف فل | 4 قطع SPRING BLUSH (10-78)", alias: "270101", price: 249, qty: 1 },
+      { code: "100030315", name: "طقم لحاف فل | 1 ق COOLING GRAY - COMFORTER FULL COOLING GRAY 1PCS", alias: "20022", price: 249, qty: 1 },
+      { code: "100030316", name: "طقم لحاف فل | 1 ق COOLING NAVY - COMFORTER FULL COOLING NAVY 1PCS", alias: "20023", price: 249, qty: 1 },
+      { code: "100030317", name: "طقم لحاف فل | 1 ق COOLING WHITE - COMFORTER FULL COOLING WHITE 1PCS", alias: "20021", price: 249, qty: 1 },
+      { code: "100030389", name: "طقم لحاف فل | COOLING CAPPUTCINO - COMFORTER FULL COOLING CAPPUTCINO", alias: "20024", price: 249, qty: 1 },
+      { code: "100030390", name: "طقم لحاف فل | COOLING DARK GREY - COMFORTER FULL COOLING DARK GREY", alias: "20025", price: 249, qty: 1 },
+      { code: "100030391", name: "طقم لحاف فل | COOLING PURPLE - COMFORTER FULL COOLING PURPLE", alias: "20026", price: 249, qty: 1 },
+
+      // 109 SAR group (17 products)
+      { code: "100040062", name: "طقم لحاف توين | 2 ق RED SOLID - COMFORTER TWIN SOLID RED 2PCS", alias: "1136", price: 109, qty: 1 },
+      { code: "100040067", name: "طقم لحاف توين | 8 ق CRUSHED VELVET - (SPECIAL OFFER) COMFORTER TWIN CRUSHED VELVET 8PCS", alias: "1154", price: 109, qty: 1 },
+      { code: "100040081", name: "طقم لحاف توين | 4 قطع RAINA BLUSH/GOLD - COMFORTER TWIN RAINA BLUSH GOLD 4PCS", alias: "1173", price: 109, qty: 1 },
+      { code: "100040083", name: "طقم لحاف توين | 4 قطع DINOSAUR - COMFORTER TWIN DINOSAUR 4PCS", alias: "100701", price: 109, qty: 1 },
+      { code: "100040084", name: "طقم لحاف توين | 4 قطع VEHICLES - COMFORTER TWIN VEHICLES 4PCS", alias: "100702", price: 109, qty: 1 },
+      { code: "100040085", name: "طقم لحاف توين | 4 قطع MULTI CARS - COMFORTER TWIN MULTI CARS 4PCS", alias: "100703", price: 109, qty: 1 },
+      { code: "100040086", name: "طقم لحاف توين | 4 قطع BALLET GIRLS - COMFORTER TWIN BALLET GIRLS 4PCS", alias: "100706", price: 109, qty: 1 },
+      { code: "100040087", name: "طقم لحاف توين | 4 قطع COSMIC PLANETS - COMFORTER TWIN COSMIC PLANETS 4PCS", alias: "100704", price: 109, qty: 1 },
+      { code: "100040088", name: "طقم لحاف توين | 4 قطع RAINBOW - COMFORTER TWIN RAINBOW 4PCS", alias: "100707", price: 109, qty: 1 },
+      { code: "100040089", name: "طقم لحاف توين | 4 قطع COLORFUL FLOWERS - COMFORTER TWIN COLORFUL FLOWERS 4PCS", alias: "100709", price: 109, qty: 1 },
+      { code: "100040090", name: "طقم لحاف توين | 4 قطع SPORTS BALLS", alias: "100705", price: 109, qty: 1 },
+      { code: "100040091", name: "طقم لحاف توين | 4 قطع STRIPE GRAY", alias: "100714", price: 109, qty: 1 },
+      { code: "100040092", name: "طقم لحاف توين | 4 قطع PRINCESS PINK", alias: "100713", price: 109, qty: 1 },
+      { code: "100040093", name: "طقم لحاف توين | 4 قطع UNICORN WHITE", alias: "100710", price: 109, qty: 1 },
+      { code: "100040094", name: "طقم لحاف توين | 4 قطع ANIMALS LOVELY", alias: "100712", price: 109, qty: 1 },
+      { code: "100040095", name: "طقم لحاف توين | 4 قطع UNICORN SPLENDID", alias: "100708", price: 109, qty: 1 },
+      { code: "100040096", name: "طقم لحاف توين | 4 قطع AUTOMOBILES COOL", alias: "100711", price: 109, qty: 1 },
+
+      // 599 / 699 SAR group (11 products)
+      { code: "KIT-100010830", name: "طقم لحاف كينغ | 8 قطع Hydrangea Camomile", alias: "4489423", price: 599, qty: 1 },
+      { code: "KIT-100010831", name: "طقم لحاف كينغ | 8 قطع Port Tile Cloud", alias: "4489425", price: 599, qty: 1 },
+      { code: "KIT-100010832", name: "طقم لحاف كينغ | 8 قطع Orbit Grey", alias: "4489426", price: 599, qty: 1 },
+      { code: "KIT-100010834", name: "طقم لحاف كينغ | 8 قطع Orbit Taupe", alias: "4489429", price: 599, qty: 1 },
+      { code: "KIT-100010836", name: "طقم لحاف كينغ | 8 قطع Onion Geo Yellow", alias: "4489432", price: 599, qty: 1 },
+      { code: "KIT-100010829", name: "طقم لحاف كينغ | 11 قطعة PERRYN ANTIQUE WHITE", alias: "4489824", price: 699, qty: 1 },
+      { code: "KIT-100010819", name: "طقم لحاف كينغ | 11 قطعة LANGLEY SILVER", alias: "4489814", price: 599, qty: 1 },
+      { code: "KIT-100010822", name: "طقم لحاف كينغ | 11 قطعة PORTER KHAKI", alias: "4489817", price: 599, qty: 1 },
+      { code: "KIT-100010821", name: "طقم لحاف كينغ | 11 قطعة PORTER IVORY", alias: "4489816", price: 599, qty: 1 },
+      { code: "KIT-100010820", name: "طقم لحاف كينغ | 11 قطعة PORTER WHITE", alias: "4489815", price: 599, qty: 1 },
+      { code: "KIT-100010818", name: "طقم لحاف كينغ | 11 قطعة LANGLEY GOLD", alias: "4489813", price: 599, qty: 1 }
+    ];
+
+    function getPromoPrice(code, alias) {
+      const c = String(code).trim();
+      const a = alias ? String(alias).trim() : "";
+      if (promoPrices[c] !== undefined) return promoPrices[c];
+      if (a && promoPrices[a] !== undefined) return promoPrices[a];
+      return null;
+    }
 
     function printItemBarcode(code, name, alias, price) {
       // Add a single item to the batch silently
@@ -2368,6 +2486,13 @@
       if (isNaN(qty) || qty <= 0) qty = 1;
 
       const searchKeyword = String(code).trim().toLowerCase();
+
+      // Override price if this is a special promo item
+      const overridePrice = getPromoPrice(code, alias);
+      if (overridePrice !== null) {
+        price = overridePrice;
+      }
+
       const existing = batchPrintItems.find(item =>
         String(item.code).trim().toLowerCase() === searchKeyword ||
         (item.alias && String(item.alias).trim().toLowerCase() === searchKeyword)
@@ -2375,6 +2500,10 @@
 
       if (existing) {
         existing.qty += qty;
+        const existingOverride = getPromoPrice(existing.code, existing.alias);
+        if (existingOverride !== null) {
+          existing.price = existingOverride;
+        }
       } else {
         // If name and price are not provided, try to find them in the data
         if (!name || typeof price === 'undefined') {
@@ -2405,6 +2534,13 @@
             price = price || 0;
           }
         }
+
+        // Double check special promo price override after resolving from DB
+        const finalOverride = getPromoPrice(code, alias);
+        if (finalOverride !== null) {
+          price = finalOverride;
+        }
+
         batchPrintItems.push({ code, name, alias, price, qty });
       }
     }
