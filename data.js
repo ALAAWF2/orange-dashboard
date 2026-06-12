@@ -205,7 +205,7 @@ const EMPLOYEES = [
         "name": "محمود محمد خير محجوب",
         "startDate": "2017-02-15",
         "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar و 1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1203-55- Jabl Omar و 1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
             {
                 "name": "1203-55- Jabl Omar",
@@ -213,14 +213,6 @@ const EMPLOYEES = [
                 "codes": [
                     "1203-C",
                     "1203-E"
-                ]
-            },
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
                 ]
             },
             {
@@ -232,7 +224,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1203-C;1203-E;1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1203-C;1203-E;1402-C;1402-E"
     },
     {
         "employeeId": "0198-معتصم اسماعيل العامر",
@@ -576,16 +568,8 @@ const EMPLOYEES = [
         "name": "اشرف محمد المحمود",
         "startDate": "2020-03-01",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah و 1501-24-Yanbu Dana Mall",
+        "showroom": "1402-26-Al-Noor Mall Madinah و 1501-24-Yanbu Dana Mall",
         "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -603,7 +587,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E;1501-C;1501-E"
+        "addressBooks": "1402-C;1402-E;1501-C;1501-E"
     },
     {
         "employeeId": "0966-ادريس شافي بانقاسيري",
@@ -3874,16 +3858,8 @@ const EMPLOYEES = [
         "name": "بدريه الجهني",
         "startDate": "2025-04-13",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -3893,7 +3869,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1402-C;1402-E"
     },
     {
         "employeeId": "4557-رهف منصوري",
