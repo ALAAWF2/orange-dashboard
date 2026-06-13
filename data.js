@@ -1612,18 +1612,18 @@ const EMPLOYEES = [
         "name": "محمد رافسال فينجاسير",
         "startDate": "2022-10-30",
         "manager": "عبدالله السرداح",
-        "showroom": "1109-40-Hayat Mall Riyad",
+        "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
-                "name": "1109-40-Hayat Mall Riyad",
+                "name": "1105-30-Tala Mall Riyadh",
                 "manager": "عبدالله السرداح",
                 "codes": [
-                    "1109-C",
-                    "1109-E"
+                    "1105-C",
+                    "1105-E"
                 ]
             }
         ],
-        "addressBooks": "1109-C;1109-E"
+        "addressBooks": "1105-C;1105-E"
     },
     {
         "employeeId": "3375-محمد شافي ناصر",
