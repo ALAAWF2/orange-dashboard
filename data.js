@@ -7169,7 +7169,7 @@ const EMPLOYEES = [
         "employeeId": "4975-لمياء الزهراني",
         "personnelNumber": "4975",
         "name": "لمياء الزهراني",
-        "startDate": "2026-06-10",
+        "startDate": "2026-06-11",
         "manager": "محمدكلو",
         "showroom": "1107-38-Al_Riyadh Park",
         "showroomDetails": [
