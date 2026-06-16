@@ -1918,117 +1918,7 @@
             missedDetailsModalObj.show();
         }
 
-        // ...
-
-        function openProductDetails(itemId, name, category, totalQty, totalAmt) {
-            // 1. Setup Modal Header
-            document.getElementById('prodModalName').textContent = name;
-            document.getElementById('prodModalId').textContent = `${itemId} | ${category}`;
-
-            // Find in catalog for image and alias
-            const catItem = inqCatalog.find(p => String(p.code) === String(itemId) || (p.alias && String(p.alias) === String(itemId)));
-            
-            // Populate Sidebar Info
-            document.getElementById('pmDetailCode').textContent = itemId;
-            document.getElementById('pmDetailAlias').textContent = (catItem && catItem.alias) ? catItem.alias : '-';
-            document.getElementById('pmDetailCategory').textContent = category;
-            document.getElementById('pmDetailPrice').textContent = catItem ? (catItem.price || 0).toLocaleString() : '-';
-            document.getElementById('pmDetailStock').textContent = catItem ? (catItem.stock || 0).toLocaleString() : '-';
-
-            // Populate Image
-            const imgContainer = document.getElementById('pmImageContainer');
-            if (imgContainer) {
-                const imagePath = catItem ? catItem.image_path : '';
-                const alias = catItem ? catItem.alias : '';
-                
-                const mainUrl = imagePath 
-                    ? `https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/${imagePath}` 
-                    : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/${(alias && alias.trim()) ? alias : itemId}.jpg`;
-                    
-                const fallbackUrl = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/${(alias && alias.trim()) ? alias : itemId}.jpg`;
-
-                imgContainer.innerHTML = `<img src="${mainUrl}" 
-                    class="img-fluid rounded" 
-                    style="max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer;" 
-                    data-fallback="false"
-                    onclick="openInqFullscreenImage('${mainUrl}', '${fallbackUrl}')"
-                    onerror="if(this.dataset.fallback !== 'true' && '${imagePath || ''}' !== '') { this.dataset.fallback = 'true'; this.src = '${fallbackUrl}'; } else { this.src = 'catalog/noimage.png'; this.onerror = null; }" 
-                    alt="صورة المنتج">`;
-            }
-
-            // ... (Existing History Logic) ...
-
-            // 2. Shortened Logic for brevity in replacement (keeping history generation same)
-            // Check if backend provided history (Future Proofing)
-            let history = [];
-            if (activeStoreData.product_daily_history && activeStoreData.product_daily_history[itemId]) {
-                history = activeStoreData.product_daily_history[itemId];
-            } else {
-                // Generate Mock Data for now
-                if (!mockHistoryCache[itemId]) {
-                    mockHistoryCache[itemId] = generateMockHistory(totalQty, totalAmt);
-                }
-                history = mockHistoryCache[itemId];
-            }
-
-            // 3. Calculate KPIs (Same as before)
-            history.sort((a, b) => new Date(a.date) - new Date(b.date));
-            const sortedByVal = [...history].sort((a, b) => b.amount - a.amount);
-            const best = sortedByVal[0] || { date: '-', amount: 0 };
-            const worst = sortedByVal[sortedByVal.length - 1] || { date: '-', amount: 0 };
-            const zeroDays = history.filter(d => d.qty === 0).length;
-
-            document.getElementById('pmBestDay').textContent = best.date;
-            document.getElementById('pmBestDayVal').textContent = Math.round(best.amount).toLocaleString() + ' SR';
-            document.getElementById('pmWorstDay').textContent = worst.date !== '-' ? worst.date : '-';
-            document.getElementById('pmWorstDayVal').textContent = worst.amount > 0 ? Math.round(worst.amount).toLocaleString() + ' SR' : '0 SR';
-            document.getElementById('pmZeroDays').textContent = zeroDays + ' يوم';
-
-            // 4. Trend Analysis
-            const trend = calculateTrend(history);
-            const alerts = detectAlerts(history);
-            renderTrendUI(trend, alerts);
-
-            // 5. Render Chart
-            renderProductChart(history);
-
-            // 6. Related Products (Market Basket)
-            const relatedList = document.getElementById('modalRelatedItems');
-            relatedList.innerHTML = '';
-
-            const basketData = activeStoreData.market_basket || [];
-            // Find pairs containing this item
-            const related = basketData.filter(p => p.item_a_id == itemId || p.item_b_id == itemId);
-
-            if (related.length === 0) {
-                relatedList.innerHTML = '<li class="list-group-item text-muted text-center small">لا توجد بيانات ربط لهذا المنتج</li>';
-            } else {
-                // Sort by frequency
-                related.sort((a, b) => b.frequency - a.frequency);
-
-                // Show Top 5
-                related.slice(0, 5).forEach(p => {
-                    const isA = (p.item_a_id == itemId);
-                    const otherId = isA ? p.item_b_id : p.item_a_id;
-                    const otherName = isA ? p.item_b_name : p.item_a_name;
-
-                    let html = `
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="fw-bold">${otherName}</span>
-                                <small class="text-muted ms-2">${otherId}</small>
-                            </div>
-                            <span class="badge bg-primary rounded-pill">${p.frequency} مرة</span>
-                        </li>
-                    `;
-                    relatedList.innerHTML += html;
-                });
-            }
-
-            // Show Modal
-            if (!productModalObj) productModalObj = new bootstrap.Modal(document.getElementById('productModal'));
-            productModalObj.show();
-        }
+        // Duplicate openProductDetails removed. Correct one is defined below under PRODUCT DETAILS LOGIC.
 
         function handleSearch() {
             const query = document.getElementById('productSearchInput').value.toLowerCase().trim();
@@ -2528,6 +2418,37 @@
             // 1. Setup Modal Header
             document.getElementById('prodModalName').textContent = name;
             document.getElementById('prodModalId').textContent = `${itemId} | ${category}`;
+
+            // Find in catalog for image and alias
+            const catItem = inqCatalog.find(p => String(p.code) === String(itemId) || (p.alias && String(p.alias) === String(itemId)));
+            
+            // Populate Sidebar Info
+            document.getElementById('pmDetailCode').textContent = itemId;
+            document.getElementById('pmDetailAlias').textContent = (catItem && catItem.alias) ? catItem.alias : '-';
+            document.getElementById('pmDetailCategory').textContent = category;
+            document.getElementById('pmDetailPrice').textContent = catItem ? (catItem.price || 0).toLocaleString() : '-';
+            document.getElementById('pmDetailStock').textContent = catItem ? (catItem.stock || 0).toLocaleString() : '-';
+
+            // Populate Image
+            const imgContainer = document.getElementById('pmImageContainer');
+            if (imgContainer) {
+                const imagePath = catItem ? catItem.image_path : '';
+                const alias = catItem ? catItem.alias : '';
+                
+                const mainUrl = imagePath 
+                    ? `https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/${imagePath}` 
+                    : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/${(alias && alias.trim()) ? alias : itemId}.jpg`;
+                    
+                const fallbackUrl = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/${(alias && alias.trim()) ? alias : itemId}.jpg`;
+
+                imgContainer.innerHTML = `<img src="${mainUrl}" 
+                    class="img-fluid rounded" 
+                    style="max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer;" 
+                    data-fallback="false"
+                    onclick="openInqFullscreenImage('${mainUrl}', '${fallbackUrl}')"
+                    onerror="if(this.dataset.fallback !== 'true' && '${imagePath || ''}' !== '') { this.dataset.fallback = 'true'; this.src = '${fallbackUrl}'; } else { this.src = 'catalog/noimage.png'; this.onerror = null; }" 
+                    alt="صورة المنتج">`;
+            }
 
             // 2. Get History
             let history = [];

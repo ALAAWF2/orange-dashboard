@@ -546,6 +546,22 @@
                 width: 100% !important;
             }
         }
+
+        /* AI Chat Custom Styles */
+        .bg-light-orange {
+            background-color: rgba(254, 121, 0, 0.08) !important;
+            border: 1px solid rgba(254, 121, 0, 0.15) !important;
+        }
+        .btn-outline-orange-premium {
+            border: 1px solid var(--orange) !important;
+            color: var(--orange) !important;
+            background-color: transparent !important;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-orange-premium:hover {
+            background-color: var(--orange) !important;
+            color: white !important;
+        }
     </style>
 </head>
 
@@ -599,6 +615,10 @@
                     <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="dispatch-tab" data-bs-toggle="tab" data-bs-target="#dispatch-content" type="button" role="tab">
                         <i class="fa-solid fa-paper-plane"></i>
                         <span class="nav-text">إرسال تقارير الفروع</span>
+                    </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="ai-chat-tab" data-bs-toggle="tab" data-bs-target="#ai-chat-content" type="button" role="tab">
+                        <i class="fa-solid fa-robot"></i>
+                        <span class="nav-text">المساعد الذكي (AI Chat) 🤖</span>
                     </button>
                 </div>
             </div>
@@ -1291,6 +1311,91 @@
                         <div class="text-center py-5 text-muted col-12">
                             <div class="spinner-border text-orange mb-2" role="status"></div>
                             <div class="fw-bold">جاري تحميل قائمة المعارض وإيميلاتها...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 10: Secure AI Database Analyst Chat -->
+            <div class="tab-pane fade" id="ai-chat-content" role="tabpanel">
+                <div class="row g-4">
+                    <!-- Right/Main Column: Chat Area -->
+                    <div class="col-lg-6">
+                        <div class="glass-card d-flex flex-column" style="min-height: 600px; max-height: 750px;">
+                            <div class="border-bottom pb-3 mb-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-robot me-2"></i> المساعد الذكي لقاعدة البيانات (AI Analyst)</h4>
+                                    <p class="text-muted small mb-0">اطرح أي سؤال حول مبيعات معارض Orange، الزوار، الأهداف أو أداء الموظفين.</p>
+                                </div>
+                                <button class="btn btn-sm btn-outline-orange-premium px-2 py-1" onclick="clearAiChat()"><i class="fa-solid fa-trash-can"></i> مسح المحادثة</button>
+                            </div>
+                            
+                            <!-- Chat Messages Window -->
+                            <div class="flex-grow-1 overflow-y-auto px-2 mb-3 d-flex flex-column gap-3" id="aiChatWindow" style="height: 400px; scroll-behavior: smooth;">
+                                <!-- System Intro Message -->
+                                <div class="d-flex align-items-start gap-2 bg-light p-3 rounded" style="max-width: 90%; border-right: 4px solid var(--orange); margin-left: auto;">
+                                    <div class="bg-orange text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                        <i class="fa-solid fa-robot"></i>
+                                    </div>
+                                    <div>
+                                        <span class="fw-bold d-block text-orange small mb-1">المساعد الذكي (AI)</span>
+                                        <p class="mb-0 small text-dark" style="line-height: 1.6;">
+                                            أهلاً بك يا علاء! أنا مساعدك الذكي ومحلل بيانات فروع ومبيعات **Orange Bed & Bath**. 
+                                            <br>لقد تم ربطي مباشرة بقاعدة البيانات وصلاحياتي **للقراءة فقط (Read-Only)** لأضمن أقصى درجات الأمان. 
+                                            يمكنك سؤالي عن أي إحصائيات أو تحليلات، مثل:
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Suggestion Chips -->
+                            <div class="mb-2">
+                                <span class="text-muted small d-block mb-2"><i class="fa-solid fa-lightbulb text-warning me-1"></i> اقتراحات سريعة للتحليل:</span>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-xs btn-outline-orange-premium py-1 px-2 small text-nowrap" style="font-size: 0.8rem;" onclick="sendAiSuggestion('كم عدد المعارض في النظام؟')">كم عدد المعارض؟</button>
+                                    <button class="btn btn-xs btn-outline-orange-premium py-1 px-2 small text-nowrap" style="font-size: 0.8rem;" onclick="sendAiSuggestion('ما هي مبيعات فروع جدة لشهر مايو 2026؟')">مبيعات جدة (مايو 2026)</button>
+                                    <button class="btn btn-xs btn-outline-orange-premium py-1 px-2 small text-nowrap" style="font-size: 0.8rem;" onclick="sendAiSuggestion('أعلى 5 موظفين تحقيقاً للمستهدف في شهر مايو 2026؟')">أعلى 5 موظفين تحقيقاً للتارجت</button>
+                                    <button class="btn btn-xs btn-outline-orange-premium py-1 px-2 small text-nowrap" style="font-size: 0.8rem;" onclick="sendAiSuggestion('مقارنة بين إجمالي الزوار وإجمالي المبيعات ليوم أمس')">الزوار والمبيعات أمس</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Input Box -->
+                            <form id="aiChatForm" onsubmit="submitAiChatMessage(event)" class="d-flex gap-2">
+                                <input type="text" id="aiChatMessageInput" class="form-control form-control-dark" placeholder="اكتب سؤالك هنا... مثال: ما هي أعلى 5 فروع مبيعاً هذا الشهر؟" autocomplete="off" required>
+                                <button type="submit" class="btn btn-orange-premium px-4" id="btnSendAi"><i class="fa-solid fa-paper-plane"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Left/Visualizer Column: SQL & Query Results -->
+                    <div class="col-lg-6">
+                        <div class="glass-card d-flex flex-column h-100" style="min-height: 600px;">
+                            <div class="border-bottom pb-3 mb-3">
+                                <h4 class="fw-bold mb-1"><i class="fa-solid fa-code text-muted me-2"></i> مستكشف البيانات والاستعلامات (Explorer)</h4>
+                                <p class="text-muted small mb-0">يعرض هذا القسم كود SQL المستنتج من سؤالك ونتائج البيانات المستخرجة مباشرة.</p>
+                            </div>
+                            
+                            <!-- SQL Output Container -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-dark small"><i class="fa-solid fa-terminal me-1"></i> استعلام SQL المولد:</span>
+                                    <button class="btn btn-xs btn-outline-secondary py-0 px-2 small" id="btnCopyGeneratedSql" onclick="copyGeneratedSql()" style="font-size: 0.75rem; display: none;"><i class="fa-solid fa-copy me-1"></i> نسخ الكود</button>
+                                </div>
+                                <div class="bg-dark text-white rounded p-3 font-monospace position-relative" style="font-size: 0.82rem; min-height: 80px; overflow-x: auto;" id="aiSqlOutput">
+                                    <span class="text-secondary">-- بانتظار استعلام SQL...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Data Table Output Container -->
+                            <div class="flex-grow-1 d-flex flex-column">
+                                <span class="fw-bold text-dark small mb-2"><i class="fa-solid fa-table me-1"></i> جدول النتائج:</span>
+                                <div class="table-responsive border rounded flex-grow-1 bg-white" style="max-height: 380px; overflow-y: auto;" id="aiTableOutput">
+                                    <div class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-table-list fs-3 mb-2 d-block"></i>
+                                        <div class="small">بانتظار نتائج الاستعلام...</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4704,6 +4809,247 @@
                 console.error(e);
                 alert("تعذر تصدير المستهدفات: " + e.message);
             }
+        }
+
+        // ==========================================
+        // AI Chat Assistant Logic
+        // ==========================================
+        let aiChatHistory = [];
+        let lastGeneratedSql = "";
+
+        function clearAiChat() {
+            if (confirm("هل أنت متأكد من مسح تاريخ المحادثة؟")) {
+                aiChatHistory = [];
+                const chatWindow = document.getElementById('aiChatWindow');
+                chatWindow.innerHTML = `
+                    <!-- System Intro Message -->
+                    <div class="d-flex align-items-start gap-2 bg-light p-3 rounded" style="max-width: 90%; border-right: 4px solid var(--orange); margin-left: auto;">
+                        <div class="bg-orange text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div>
+                            <span class="fw-bold d-block text-orange small mb-1">المساعد الذكي (AI)</span>
+                            <p class="mb-0 small text-dark" style="line-height: 1.6;">
+                                أهلاً بك يا علاء! أنا مساعدك الذكي ومحلل بيانات فروع ومبيعات **Orange Bed & Bath**. 
+                                <br>لقد تم ربطي مباشرة بقاعدة البيانات وصلاحياتي **للقراءة فقط (Read-Only)** لأضمن أقصى درجات الأمان. 
+                                يمكنك سؤالي عن أي إحصائيات أو تحليلات، مثل:
+                            </p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('aiSqlOutput').innerHTML = '<span class="text-secondary">-- بانتظار استعلام SQL...</span>';
+                document.getElementById('btnCopyGeneratedSql').style.display = 'none';
+                document.getElementById('aiTableOutput').innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-table-list fs-3 mb-2 d-block"></i>
+                        <div class="small">بانتظار نتائج الاستعلام...</div>
+                    </div>
+                `;
+                lastGeneratedSql = "";
+            }
+        }
+
+        function sendAiSuggestion(textVal) {
+            document.getElementById('aiChatMessageInput').value = textVal;
+            submitAiChatMessage();
+        }
+
+        async function submitAiChatMessage(event) {
+            if (event) event.preventDefault();
+            
+            const msgInput = document.getElementById('aiChatMessageInput');
+            const message = msgInput.value.trim();
+            if (!message) return;
+            
+            msgInput.value = "";
+            
+            // Append User Message to UI
+            appendAiChatMessage("user", message);
+            
+            // Disable Send Button & Show Loader
+            const btnSend = document.getElementById('btnSendAi');
+            const originalBtnHtml = btnSend.innerHTML;
+            btnSend.disabled = true;
+            btnSend.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            
+            // Append Loader Message to AI Chat
+            const loaderId = appendAiChatLoader();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: aiChatHistory
+                    })
+                });
+                
+                // Remove Loader bubble
+                removeAiChatLoader(loaderId);
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(errorText || "فشل الاتصال بخادم الذكاء الاصطناعي");
+                }
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    appendAiChatMessage("assistant", `حدث خطأ: ${data.error}`);
+                    return;
+                }
+                
+                // Append AI Answer to UI
+                appendAiChatMessage("assistant", data.answer);
+                
+                // Update History
+                aiChatHistory.push({"role": "user", "content": message});
+                aiChatHistory.push({"role": "assistant", "content": data.answer});
+                if (aiChatHistory.length > 20) {
+                    aiChatHistory = aiChatHistory.slice(-20);
+                }
+                
+                // Update Explorer Panel if SQL was executed
+                if (data.sql) {
+                    lastGeneratedSql = data.sql;
+                    document.getElementById('aiSqlOutput').innerHTML = `<pre class="mb-0 text-white" style="white-space: pre-wrap; font-family: monospace;">${escapeHtml(data.sql)}</pre>`;
+                    document.getElementById('btnCopyGeneratedSql').style.display = 'block';
+                    
+                    renderAiTable(data.data);
+                } else {
+                    document.getElementById('aiSqlOutput').innerHTML = '<span class="text-secondary">-- لم يتم تشغيل أي استعلام SQL (رد مباشر)</span>';
+                    document.getElementById('btnCopyGeneratedSql').style.display = 'none';
+                    document.getElementById('aiTableOutput').innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-info-circle fs-3 mb-2 d-block"></i>
+                            <div class="small">الرد الأخير لم يستلزم الاستعلام من قاعدة البيانات.</div>
+                        </div>
+                    `;
+                }
+                
+            } catch (err) {
+                removeAiChatLoader(loaderId);
+                appendAiChatMessage("assistant", `عذراً، فشل الاتصال بالخادم: ${err.message}`);
+                console.error(err);
+            } finally {
+                btnSend.disabled = false;
+                btnSend.innerHTML = originalBtnHtml;
+            }
+        }
+
+        function appendAiChatMessage(role, content) {
+            const chatWindow = document.getElementById('aiChatWindow');
+            const isUser = (role === 'user');
+            
+            const messageHtml = `
+                <div class="d-flex align-items-start gap-2 ${isUser ? 'bg-light-orange' : 'bg-light'} p-3 rounded" style="max-width: 90%; ${isUser ? 'border-right: 4px solid #fe7900; margin-left: auto;' : 'border-left: 4px solid #64748b; margin-right: auto;'}">
+                    <div class="${isUser ? 'bg-orange' : 'bg-secondary'} text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
+                        <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'}"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <span class="fw-bold d-block ${isUser ? 'text-orange' : 'text-secondary'} small mb-1">${isUser ? 'أنت (علاء)' : 'المساعد الذكي'}</span>
+                        <p class="mb-0 small text-dark" style="line-height: 1.6; white-space: pre-wrap;">${content}</p>
+                    </div>
+                </div>
+            `;
+            
+            chatWindow.insertAdjacentHTML('beforeend', messageHtml);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function appendAiChatLoader() {
+            const chatWindow = document.getElementById('aiChatWindow');
+            const loaderId = 'ai-loader-' + Date.now();
+            
+            const loaderHtml = `
+                <div id="${loaderId}" class="d-flex align-items-start gap-2 bg-light p-3 rounded" style="max-width: 90%; border-left: 4px solid #64748b; margin-right: auto;">
+                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="w-100">
+                        <span class="fw-bold d-block text-secondary small mb-1">المساعد الذكي</span>
+                        <div class="d-flex align-items-center gap-2 py-1">
+                            <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+                            <span class="small text-muted">جاري تحليل الطلب والبحث في قاعدة البيانات...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatWindow.insertAdjacentHTML('beforeend', loaderHtml);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return loaderId;
+        }
+
+        function removeAiChatLoader(id) {
+            const loaderEl = document.getElementById(id);
+            if (loaderEl) loaderEl.remove();
+        }
+
+        function renderAiTable(dataList) {
+            const tableOutput = document.getElementById('aiTableOutput');
+            if (!dataList || dataList.length === 0) {
+                tableOutput.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-triangle-exclamation fs-3 mb-2 d-block text-warning"></i>
+                        <div class="small">الاستعلام لم يُرجع أي صفوف من البيانات.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const headers = Object.keys(dataList[0]);
+            
+            let html = `
+                <table class="table table-sm table-bordered text-center align-middle text-dark mb-0 small" style="background: #ffffff;">
+                    <thead class="table-light">
+                        <tr>
+                            ${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${dataList.map(row => `
+                            <tr>
+                                ${headers.map(h => {
+                                    let val = row[h];
+                                    if (val === null || val === undefined) val = '-';
+                                    else if (typeof val === 'number' && !Number.isInteger(val)) val = val.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                                    else if (typeof val === 'number') val = val.toLocaleString();
+                                    return `<td>${escapeHtml(String(val))}</td>`;
+                                }).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            tableOutput.innerHTML = html;
+        }
+
+        function copyGeneratedSql() {
+            if (!lastGeneratedSql) return;
+            navigator.clipboard.writeText(lastGeneratedSql).then(() => {
+                const btn = document.getElementById('btnCopyGeneratedSql');
+                const origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check text-success"></i> تم النسخ!';
+                setTimeout(() => { btn.innerHTML = origHtml; }, 2000);
+            }).catch(err => {
+                alert("تعذر نسخ النص: " + err);
+            });
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>
