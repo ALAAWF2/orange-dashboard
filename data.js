@@ -297,16 +297,8 @@ const EMPLOYEES = [
         "name": "فيصل كوتارتودي (بابو",
         "startDate": "2017-08-20",
         "manager": "محمدكلو",
-        "showroom": "1104-29-Al Nakheel Mall Riyadh و 1107-38-Al_Riyadh Park",
+        "showroom": "1107-38-Al_Riyadh Park",
         "showroomDetails": [
-            {
-                "name": "1104-29-Al Nakheel Mall Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1104-C",
-                    "1104-E"
-                ]
-            },
             {
                 "name": "1107-38-Al_Riyadh Park",
                 "manager": "محمدكلو",
@@ -316,7 +308,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1104-C;1104-E;1107-C;1107-E"
+        "addressBooks": "1107-C;1107-E"
     },
     {
         "employeeId": "0284-محمد عدنان محمد بشير",

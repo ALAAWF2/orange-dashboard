@@ -1636,7 +1636,41 @@
 
         // Fetch D365 Portal data.js status
         function syncD365Portal() {
-            window.location.reload();
+            const tbody = document.getElementById('employeesTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-4"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحديث المزامنة والبيانات...</td></tr>';
+            }
+
+            return new Promise((resolve) => {
+                const oldScript = document.querySelector('script[src*="data.js"]');
+                if (oldScript) {
+                    oldScript.remove();
+                }
+
+                const newScript = document.createElement('script');
+                newScript.src = 'data.js?t=' + Date.now();
+                newScript.onload = () => {
+                    const kpiTotal = document.getElementById('kpiTotalEmployees');
+                    if (kpiTotal && typeof EMPLOYEES !== "undefined") {
+                        kpiTotal.textContent = EMPLOYEES.length;
+                    }
+
+                    renderEmployeesTable();
+
+                    if (activeEmp) {
+                        populateEmpManageModal(activeEmp.personnelNumber);
+                    }
+                    resolve();
+                };
+                newScript.onerror = () => {
+                    console.error("Failed to reload data.js");
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-danger py-4">فشل تحديث البيانات. يرجى إعادة المحاولة.</td></tr>';
+                    }
+                    resolve();
+                };
+                document.body.appendChild(newScript);
+            });
         }
 
         // On Load
@@ -2231,7 +2265,7 @@
             });
         }
 
-        function openEmpManageModal(personnelNum) {
+        function populateEmpManageModal(personnelNum) {
             activeEmp = EMPLOYEES.find(e => e.personnelNumber === personnelNum);
             if (!activeEmp) return;
 
@@ -2268,7 +2302,10 @@
             } else {
                 removeList.innerHTML = '<div class="text-muted text-center small">غير مربوط بأي فروع حالياً.</div>';
             }
+        }
 
+        function openEmpManageModal(personnelNum) {
+            populateEmpManageModal(personnelNum);
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('empManageModal'));
             modal.show();
@@ -2289,7 +2326,7 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ تمت إزالة الموظف من المعرض بنجاح! يتم الآن إعادة تحميل الصفحة تلقائياً لتحديث المزامنة.");
+                    alert("✅ تمت إزالة الموظف من المعرض بنجاح!");
                     syncD365Portal();
                 } else {
                     const err = await res.json();
@@ -2328,7 +2365,7 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ تم نقل الموظف بنجاح! يتم الآن إعادة تحميل المزامنة.");
+                    alert("✅ تم نقل الموظف بنجاح!");
                     syncD365Portal();
                 } else {
                     const err = await res.json();
@@ -2359,7 +2396,7 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ تم ربط الموظف بالمعرض الإضافي بنجاح! إعادة التحميل المباشر للمزامنة.");
+                    alert("✅ تم ربط الموظف بالمعرض الإضافي بنجاح!");
                     syncD365Portal();
                 } else {
                     const err = await res.json();
