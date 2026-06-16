@@ -1163,21 +1163,58 @@
 
             <!-- Tab 5: Background Pipeline Sync Logs -->
             <div class="tab-pane fade" id="pipeline-content" role="tabpanel">
-                <div class="glass-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-                        <div>
-                            <h4 class="fw-bold mb-1"><i class="fa-solid fa-code text-orange me-2"></i> حالة السيرفر وملفات المزامنة (15-Minute Pipeline)</h4>
-                            <p class="text-muted small mb-0">راقب حالة تشغيل السكربتات التلقائية ودورة رفع البيانات على مستودع GitHub مباشرة من السيرفر.</p>
-                        </div>
-                        <button class="btn btn-orange-premium btn-sm" onclick="loadPipelineLogs()"><i class="fa-solid fa-sync"></i> تحديث السجل</button>
-                    </div>
+                <div class="row g-4">
+                    <div class="col-lg-7 col-xl-8">
+                        <div class="glass-card h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1"><i class="fa-solid fa-terminal text-orange me-2"></i> حالة السيرفر وملفات المزامنة (15-Minute Pipeline)</h4>
+                                    <p class="text-muted small mb-0">راقب حالة تشغيل السكربتات التلقائية ودورة رفع البيانات على مستودع GitHub مباشرة من السيرفر.</p>
+                                </div>
+                                <button class="btn btn-orange-premium btn-sm" onclick="loadPipelineLogs()"><i class="fa-solid fa-sync"></i> تحديث السجل</button>
+                            </div>
 
-                    <div class="terminal-header">
-                        <span><i class="fa-solid fa-circle text-danger me-1"></i> <i class="fa-solid fa-circle text-warning me-1"></i> <i class="fa-solid fa-circle text-success me-1"></i> update_15m_log.txt - Live Console</span>
-                        <span id="logTimestamp">الوقت الحالي: ...</span>
+                            <div class="terminal-header">
+                                <span><i class="fa-solid fa-circle text-danger me-1"></i> <i class="fa-solid fa-circle text-warning me-1"></i> <i class="fa-solid fa-circle text-success me-1"></i> update_15m_log.txt - Live Console</span>
+                                <span id="logTimestamp">الوقت الحالي: ...</span>
+                            </div>
+                            <div class="terminal-container" id="terminalLogs">
+                                [System Info] Loading terminal log file...
+                            </div>
+                        </div>
                     </div>
-                    <div class="terminal-container" id="terminalLogs">
-                        [System Info] Loading terminal log file...
+                    
+                    <div class="col-lg-5 col-xl-4">
+                        <div class="glass-card h-100" style="border-top: 4px solid var(--orange);">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-battery-quarter me-2"></i> بطاريات أجهزة الزوار (SensMax)</h4>
+                                    <p class="text-muted small mb-0">مراقبة حالة البطارية لحساسات حركة الزوار في الفروع.</p>
+                                </div>
+                                <button class="btn btn-outline-orange-premium btn-sm" onclick="loadSensmaxBattery()"><i class="fa-solid fa-sync"></i></button>
+                            </div>
+                            
+                            <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                                <table class="table table-hover table-striped align-middle text-center mb-0" style="font-size: 0.85rem;">
+                                    <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th class="text-start">المعرض</th>
+                                            <th>الرقم التسلسلي</th>
+                                            <th>حالة البطارية</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sensmaxBatteryBody">
+                                        <tr>
+                                            <td colspan="3" class="text-center py-4 text-muted">جاري تحميل البيانات...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-muted small mt-3 d-flex justify-content-between">
+                                <span>💡 <b>1</b> = ممتازة (Battery OK)</span>
+                                <span>🚨 <b>0</b> = بحاجة لتبديل (Low/External)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1697,6 +1734,7 @@
             runLiveAuditing();
             loadAuditLogs();
             loadPipelineLogs();
+            loadSensmaxBattery();
             loadUsersData(); // Load Alaa user management data
             loadShowroomsData(); // Load Alaa store assignments mapping
             loadOffersData(); // Load Dynamics offers data
@@ -2832,6 +2870,59 @@
                 terminal.scrollTop = terminal.scrollHeight;
             } catch (e) {
                 terminal.innerHTML = `<span style="color: #da3637;">Failed to read pipeline logs: ${e.message}</span>`;
+            }
+        }
+
+        async function loadSensmaxBattery() {
+            const tbody = document.getElementById('sensmaxBatteryBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل حالة البطاريات...</td></tr>';
+            
+            try {
+                const res = await fetch('sensmax_battery.json?t=' + Date.now());
+                if (!res.ok) throw new Error("لم يتم العثور على ملف البطاريات");
+                const data = await res.json();
+                
+                tbody.innerHTML = '';
+                
+                // Convert object to array for sorting
+                const sensors = Object.entries(data).map(([serial, info]) => ({
+                    serial,
+                    ...info
+                }));
+                
+                if (sensors.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد بيانات بطاريات متاحة.</td></tr>';
+                    return;
+                }
+                
+                // Sort so that low battery (battery === 0) is at the top
+                sensors.sort((a, b) => a.battery - b.battery);
+                
+                sensors.forEach(s => {
+                    const tr = document.createElement('tr');
+                    
+                    let batteryBadge = '';
+                    if (s.battery === 0) {
+                        batteryBadge = '<span class="badge bg-danger rounded-pill px-2 py-1"><i class="fa-solid fa-battery-empty me-1"></i> ضعيفة / بحاجة لتبديل</span>';
+                        tr.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'; // Highlight low battery rows
+                    } else if (s.battery === 1) {
+                        batteryBadge = '<span class="badge bg-success rounded-pill px-2 py-1"><i class="fa-solid fa-battery-full me-1"></i> ممتازة</span>';
+                    } else {
+                        batteryBadge = `<span class="badge bg-secondary rounded-pill px-2 py-1">غير معروف (${s.battery})</span>`;
+                    }
+                    
+                    tr.innerHTML = `
+                        <td class="text-start fw-bold">${s.mall_name}</td>
+                        <td class="font-monospace">${s.serial}</td>
+                        <td>${batteryBadge}</td>
+                    `;
+                    // Add hover tooltip with date checked
+                    tr.title = `آخر فحص: ${s.last_checked || '—'} (بيانات يوم: ${s.date || '—'})`;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">فشل تحميل حالة البطاريات: ${e.message}</td></tr>`;
             }
         }
 
