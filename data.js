@@ -270,8 +270,16 @@ const EMPLOYEES = [
         "name": "فهد كوتي",
         "startDate": "2017-08-30",
         "manager": "المنطقة الشمالية",
-        "showroom": "2301-44-Al-Jouf Center",
+        "showroom": "1501-24-Yanbu Dana Mall و 2301-44-Al-Jouf Center",
         "showroomDetails": [
+            {
+                "name": "1501-24-Yanbu Dana Mall",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1501-C",
+                    "1501-E"
+                ]
+            },
             {
                 "name": "2301-44-Al-Jouf Center",
                 "manager": "المنطقة الشمالية",
@@ -281,7 +289,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "2301-C;2301-E"
+        "addressBooks": "1501-C;1501-E;2301-C;2301-E"
     },
     {
         "employeeId": "0263-فيصل كوتارتودي (بابو",
@@ -7183,6 +7191,82 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1107-C;1107-E"
+    },
+    {
+        "employeeId": "4976-ابرار صالح",
+        "personnelNumber": "4976",
+        "name": "ابرار صالح",
+        "startDate": "2026-06-14",
+        "manager": "المنطقة الغربية",
+        "showroom": "1010-54-THE VILLAGE",
+        "showroomDetails": [
+            {
+                "name": "1010-54-THE VILLAGE",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1010-C",
+                    "1010-E"
+                ]
+            }
+        ],
+        "addressBooks": "1010-C;1010-E"
+    },
+    {
+        "employeeId": "4978-فاطمة مبارك",
+        "personnelNumber": "4978",
+        "name": "فاطمة مبارك",
+        "startDate": "2026-06-14",
+        "manager": "عبيدة السباعي",
+        "showroom": "1001-04-Andalos Mall",
+        "showroomDetails": [
+            {
+                "name": "1001-04-Andalos Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1001-C",
+                    "1001-E"
+                ]
+            }
+        ],
+        "addressBooks": "1001-C;1001-E"
+    },
+    {
+        "employeeId": "4977-اصايل عابد",
+        "personnelNumber": "4977",
+        "name": "اصايل عابد",
+        "startDate": "2026-06-14",
+        "manager": "المنطقة الغربية",
+        "showroom": "1006-13-Al-Yasmin Mall",
+        "showroomDetails": [
+            {
+                "name": "1006-13-Al-Yasmin Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1006-C",
+                    "1006-E"
+                ]
+            }
+        ],
+        "addressBooks": "1006-C;1006-E"
+    },
+    {
+        "employeeId": "4979-ساره ابراهيم",
+        "personnelNumber": "4979",
+        "name": "ساره ابراهيم",
+        "startDate": "2026-06-14",
+        "manager": "المنطقة الغربية",
+        "showroom": "1008-48 - Jeddah Park",
+        "showroomDetails": [
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
+            }
+        ],
+        "addressBooks": "1008-C;1008-E"
     }
 ];
 
