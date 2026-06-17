@@ -7245,7 +7245,7 @@ const EMPLOYEES = [
         "employeeId": "4979-ساره ابراهيم",
         "personnelNumber": "4979",
         "name": "ساره ابراهيم",
-        "startDate": "2026-06-14",
+        "startDate": "2026-06-15",
         "manager": "المنطقة الغربية",
         "showroom": "1008-48 - Jeddah Park",
         "showroomDetails": [
@@ -7259,6 +7259,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1008-C;1008-E"
+    },
+    {
+        "employeeId": "4980-ريمه فقيه",
+        "personnelNumber": "4980",
+        "name": "ريمه فقيه",
+        "startDate": "2026-06-15",
+        "manager": "المنطقة الغربية",
+        "showroom": "1011-56- Aziz Mall 2",
+        "showroomDetails": [
+            {
+                "name": "1011-56- Aziz Mall 2",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1011-C",
+                    "1011-E"
+                ]
+            }
+        ],
+        "addressBooks": "1011-C;1011-E"
     }
 ];
 
