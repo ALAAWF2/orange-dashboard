@@ -230,10 +230,20 @@
             chatBody.scrollTop = chatBody.scrollHeight;
 
             try {
+                // Resolve API Base dynamically
+                let API_BASE = window.location.origin;
+                if (!API_BASE || API_BASE.startsWith('file://') || API_BASE.includes('github.io')) {
+                    API_BASE = sessionStorage.getItem('serverIp') || localStorage.getItem('serverIp') || "http://127.0.0.1:5000";
+                }
+                if (API_BASE.endsWith('/')) API_BASE = API_BASE.slice(0, -1);
+
                 // Call Python Server
-                const response = await fetch('http://127.0.0.1:5000/ask', {
+                const response = await fetch(`${API_BASE}/ask`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify({ question: question })
                 });
 
