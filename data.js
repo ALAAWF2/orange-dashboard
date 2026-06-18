@@ -1154,25 +1154,6 @@ const EMPLOYEES = [
         "addressBooks": "1113-C;1113-E"
     },
     {
-        "employeeId": "2743-محمد ايرشاد كوناكاتي",
-        "personnelNumber": "2743",
-        "name": "محمد ايرشاد كوناكاتي",
-        "startDate": "2021-11-01",
-        "manager": "محمدكلو",
-        "showroom": "1111-46-Khaleej Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1111-46-Khaleej Mall Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1111-C",
-                    "1111-E"
-                ]
-            }
-        ],
-        "addressBooks": "1111-C;1111-E"
-    },
-    {
         "employeeId": "2744-عبدالباري كابوكونان",
         "personnelNumber": "2744",
         "name": "عبدالباري كابوكونان",
@@ -6662,25 +6643,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1113-C;1113-E"
-    },
-    {
-        "employeeId": "4945-غاده ابراهيم",
-        "personnelNumber": "4945",
-        "name": "غاده ابراهيم",
-        "startDate": "2026-04-19",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
-        "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            }
-        ],
-        "addressBooks": "1114-C;1114-E"
     },
     {
         "employeeId": "4948-ليان تركي",
