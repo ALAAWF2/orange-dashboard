@@ -50,6 +50,7 @@
             flex: 1;
             padding: 20px;
             overflow-y: auto;
+            overflow-x: hidden;
             background-color: #f9f9f9;
         }
 
@@ -57,6 +58,7 @@
             margin-bottom: 15px;
             display: flex;
             align-items: flex-start;
+            width: 100%;
         }
 
         .message.user {
@@ -66,10 +68,13 @@
         .message-content {
             padding: 12px 18px;
             border-radius: 15px;
-            max-width: 80%;
+            max-width: 85%;
             position: relative;
-            line-height: 1.5;
-            font-size: 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            word-wrap: break-word;
+            word-break: break-word;
+            min-width: 0; /* Prevents table or long content from stretching the flex item */
         }
 
         .user .message-content {
@@ -225,6 +230,40 @@
         const chatBody = document.getElementById('chatBody');
         const loading = document.getElementById('loading');
 
+        function parseMarkdown(text) {
+            if (!text) return "";
+            // Escape HTML tags to prevent XSS
+            let html = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+                
+            // Bold (**text**)
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Inline/Newline numbered lists (e.g. " 1. ", " 2. ", "\n1. ") -> convert to new lines with bold numbering
+            html = html.replace(/(?:\s+|(?=<br>)|^)(\d+)\.\s+/g, '<br><strong>$1.</strong> ');
+            
+            // Headings (###, ##, #)
+            html = html.replace(/###\s+(.*?)(?=\n|<br>|$)/g, '<h6 class="fw-bold mt-3 mb-2 text-primary">$1</h6>');
+            html = html.replace(/##\s+(.*?)(?=\n|<br>|$)/g, '<h5 class="fw-bold mt-3 mb-2 text-primary">$1</h5>');
+            html = html.replace(/#\s+(.*?)(?=\n|<br>|$)/g, '<h4 class="fw-bold mt-3 mb-2 text-primary">$1</h4>');
+            
+            // Bullet points (at the start of a line)
+            html = html.replace(/^\s*[-*]\s+(.*?)$/gm, '• $1');
+            
+            // Newlines
+            html = html.replace(/\n/g, '<br>');
+            
+            // Clean up multiple consecutive <br> tags
+            html = html.replace(/(<br>\s*){3,}/g, '<br><br>');
+            
+            // Clean up leading <br> tags
+            html = html.replace(/^(<br>\s*)+/g, '');
+            
+            return html;
+        }
+
         async function sendMessage(e) {
             e.preventDefault();
             const input = document.getElementById('userInput');
@@ -266,11 +305,11 @@
                 } else {
                     // Check if response is conversational or data-table
                     if (data.sql_result && Array.isArray(data.sql_result)) {
-                        let msg = data.answer + "<br>";
+                        let msg = parseMarkdown(data.answer) + "<br>";
                         msg += createTable(data.columns, data.sql_result);
                         appendMessage(msg, 'bot');
                     } else {
-                        appendMessage(data.answer, 'bot');
+                        appendMessage(parseMarkdown(data.answer), 'bot');
                     }
                 }
 
@@ -294,18 +333,51 @@
         }
 
         function createTable(columns, rows) {
-            if (!rows || rows.length === 0) return "<small>لا توجد بيانات.</small>";
+            if (!rows || rows.length === 0) return "<small class='text-muted d-block mt-2'>لا توجد بيانات.</small>";
 
-            let html = '<table class="bot-table"><thead><tr>';
-            columns.forEach(col => html += `<th>${col}</th>`);
+            let html = '<div class="table-responsive mt-3 rounded shadow-sm border" style="max-height: 350px; overflow: auto;"><table class="bot-table table table-sm table-striped mb-0"><thead><tr class="table-light">';
+            columns.forEach(col => {
+                let displayCol = col;
+                if (col === 'store_id') displayCol = 'رمز الفرع';
+                else if (col === 'store_name') displayCol = 'اسم المعرض';
+                else if (col === 'sales') displayCol = 'المبيعات';
+                else if (col === 'targets') displayCol = 'المستهدف';
+                else if (col === 'visitors') displayCol = 'الزوار';
+                else if (col === 'transactions') displayCol = 'الفواتير';
+                else if (col === 'items') displayCol = 'القطع';
+                else if (col === 'manager') displayCol = 'المدير المسؤول';
+                else if (col === 'city') displayCol = 'المدينة';
+                else if (col === 'target_achievement_percent') displayCol = 'تحقيق المستهدف %';
+                else if (col === 'conversion_rate_percent') displayCol = 'نسبة التحويل %';
+                else if (col === 'average_ticket') displayCol = 'متوسط الفاتورة';
+                else if (col === 'average_items_per_trans') displayCol = 'معدل قطع/فاتورة';
+                else if (col === 'employee_name') displayCol = 'اسم الموظف';
+                else if (col === 'employee_id') displayCol = 'رقم الموظف';
+                else if (col === 'date') displayCol = 'التاريخ';
+                else if (col === 'max_ticket') displayCol = 'أكبر فاتورة';
+                
+                html += `<th>${displayCol}</th>`;
+            });
             html += '</tr></thead><tbody>';
 
             rows.forEach(row => {
                 html += '<tr>';
-                row.forEach(cell => html += `<td>${cell}</td>`);
+                row.forEach(cell => {
+                    let val = cell;
+                    if (val === null || val === undefined) {
+                        val = '-';
+                    } else if (typeof val === 'number') {
+                        if (!Number.isInteger(val)) {
+                            val = val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        } else {
+                            val = val.toLocaleString('en-US');
+                        }
+                    }
+                    html += `<td>${val}</td>`;
+                });
                 html += '</tr>';
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             return html;
         }
     </script>
