@@ -212,6 +212,16 @@
     </div>
 
     <script>
+        // Check authentication and authorization
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        } else if (currentUser.role !== 'Admin' && currentUser.name !== 'Sales Manager' && currentUser.name !== 'علاء') {
+            alert('عذراً، لا تملك صلاحية للوصول لهذه الصفحة. هذه الصفحة مخصصة لـ Sales Manager والمسؤول فقط.');
+            window.location.href = 'index.html';
+        }
+
+        const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
         const chatBody = document.getElementById('chatBody');
         const loading = document.getElementById('loading');
 
@@ -242,6 +252,7 @@
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
+                        'Authorization': authHeader,
                         'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({ question: question })
