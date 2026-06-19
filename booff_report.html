@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقرير المقارن العام (BooFF) | ORANGE</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #fe7900;
+            --primary-orange-light: #fff4ec;
+            --primary-orange-dark: #d35400;
+            --dark-gray: #2d3436;
+            --light-bg: #f8f9fa;
+            --card-radius: 12px;
+            --font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: #f1f3f6;
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+            border-bottom: 3px solid var(--primary-orange);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .brand-orange {
+            color: var(--primary-orange);
+            font-weight: 800;
+        }
+
+        .card {
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #eef2f5;
+        }
+
+        .showroom-card {
+            margin-bottom: 24px;
+            overflow: hidden;
+            border-top: 4px solid var(--primary-orange);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .showroom-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+
+        .showroom-header {
+            background-color: white;
+            border-bottom: 1px solid #eef2f5;
+            padding: 16px 20px;
+        }
+
+        .showroom-title {
+            color: var(--primary-orange-dark);
+            font-weight: 700;
+            font-size: 1.15rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-comparison {
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+
+        .table-comparison th {
+            background-color: #fafbfc;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle;
+            color: #555;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table-comparison td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 8px 6px;
+        }
+
+        .table-comparison tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+
+        .table-comparison td.metric-label {
+            font-weight: 700;
+            text-align: right;
+            background-color: #f1f3f6;
+            color: var(--dark-gray);
+            width: 120px;
+        }
+
+        .table-comparison td.total-cell {
+            font-weight: 700;
+            background-color: #fffaf5;
+            color: var(--primary-orange-dark);
+        }
+
+        .year-stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .year-stat-box {
+            background-color: white;
+            border: 1px solid #eaedf0;
+            border-radius: 8px;
+            padding: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .year-stat-box:hover {
+            background-color: var(--primary-orange-light);
+        }
+
+        .year-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #dee2e6;
+            padding-bottom: 4px;
+        }
+
+        .year-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            background-color: var(--dark-gray);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .year-badge.y26 {
+            background-color: var(--primary-orange);
+        }
+
+        .growth-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .growth-positive {
+            color: #27ae60;
+        }
+
+        .growth-negative {
+            color: #c0392b;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            margin-bottom: 4px;
+        }
+
+        .stat-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--dark-gray);
+        }
+
+        .sticky-col {
+            position: sticky;
+            right: 0;
+            z-index: 2;
+        }
+
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--primary-orange-light);
+            border-bottom-color: var(--primary-orange);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark mb-4 sticky-top">
+        <div class="container-fluid d-flex justify-content-between align-items-center px-4">
+            <div class="d-flex align-items-center gap-3">
+                <a href="index.html" class="btn btn-outline-light btn-sm d-flex align-items-center gap-2 px-3">
+                    <i class="bi bi-arrow-right"></i>
+                    <span>الرئيسية</span>
+                </a>
+                <span class="navbar-brand mb-0 h1 fs-5">
+                    <span class="brand-orange">ORANGE</span> التقرير المقارن العام (2023 - 2026)
+                </span>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <select id="managerSelect" class="form-select form-select-sm" style="width: 220px;" onchange="changeManager()">
+                    <option value="">اختر مدير المنطقة / التقرير...</option>
+                </select>
+                <button onclick="exportToExcel()" class="btn btn-success btn-sm fw-bold text-white d-flex align-items-center gap-1">
+                    <i class="bi bi-file-earmark-excel"></i>
+                    <span>تصدير Excel</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <div id="loader" class="loader-container">
+            <span class="loader"></span>
+            <p class="mt-3 text-muted fw-bold">جاري تحميل بيانات التقرير...</p>
+        </div>
+
+        <div id="noDataMessage" class="alert alert-warning text-center fw-bold" style="display: none;">
+            يرجى تحديد مدير المنطقة من القائمة العلوية لعرض البيانات.
+        </div>
+
+        <div id="showroomsContainer"></div>
+    </div>
+
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script>
+        let reportData = [];
+        const labelMap = {
+            'visitors-23': 'الزوار 2023',
+            'sales-23': 'المبيعات 2023',
+            'visitors-24': 'الزوار 2024',
+            'sales-24': 'المبيعات 2024',
+            'visitors-25': 'الزوار 2025',
+            'sales-25': 'المبيعات 2025',
+            'visitors-26': 'الزوار 2026',
+            'sales-26': 'المبيعات 2026'
+        };
+
+        const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+        });
+
+        async function fetchData() {
+            try {
+                const response = await fetch('data/booff_data.json');
+                reportData = await response.json();
+                populateManagerSelect();
+                document.getElementById('loader').style.display = 'none';
+                
+                if (reportData.length > 0) {
+                    const managerSelect = document.getElementById('managerSelect');
+                    managerSelect.selectedIndex = 1;
+                    changeManager();
+                } else {
+                    document.getElementById('noDataMessage').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('loader').innerHTML = `
+                    <div class="alert alert-danger text-center fw-bold w-50">
+                        فشل تحميل البيانات. يرجى التأكد من تشغيل ملف المعالجة parse_booff.py وتوليد ملف البيانات.
+                    </div>
+                `;
+            }
+        }
+
+        function populateManagerSelect() {
+            const managerSelect = document.getElementById('managerSelect');
+            reportData.forEach((item, index) => {
+                const option = document.createElement('option');
+                option.value = item.manager;
+                option.textContent = item.manager;
+                managerSelect.appendChild(option);
+            });
+        }
+
+        function changeManager() {
+            const managerSelect = document.getElementById('managerSelect');
+            const selectedManager = managerSelect.value;
+            const container = document.getElementById('showroomsContainer');
+            const noData = document.getElementById('noDataMessage');
+
+            container.innerHTML = '';
+
+            if (!selectedManager) {
+                noData.style.display = 'block';
+                return;
+            }
+            noData.style.display = 'none';
+
+            const managerData = reportData.find(item => item.manager === selectedManager);
+            if (managerData && managerData.showrooms) {
+                managerData.showrooms.forEach(showroom => {
+                    const showroomEl = createShowroomCard(showroom);
+                    container.appendChild(showroomEl);
+                });
+            }
+        }
+
+        function createShowroomCard(showroom) {
+            const card = document.createElement('div');
+            card.className = 'card showroom-card';
+
+            const header = document.createElement('div');
+            header.className = 'showroom-header';
+            header.innerHTML = `
+                <h5 class="showroom-title">
+                    <i class="bi bi-shop text-primary"></i>
+                    <span>${showroom.name}</span>
+                </h5>
+            `;
+            card.appendChild(header);
+
+            const body = document.createElement('div');
+            body.className = 'card-body p-4';
+
+            const row = document.createElement('div');
+            row.className = 'row g-4';
+
+            const tableCol = document.createElement('div');
+            tableCol.className = 'col-lg-9';
+
+            const tableResponsive = document.createElement('div');
+            tableResponsive.className = 'table-responsive shadow-sm border rounded';
+
+            const table = document.createElement('table');
+            table.className = 'table table-bordered table-striped table-hover table-comparison mb-0 align-middle';
+
+            let theadHtml = `
+                <thead>
+                    <tr>
+                        <th class="sticky-col">السنة / المؤشر</th>
+            `;
+            monthNames.forEach(m => {
+                theadHtml += `<th>${m}</th>`;
+            });
+            theadHtml += `
+                        <th>المجموع</th>
+                    </tr>
+                </thead>
+            `;
+
+            let tbodyHtml = '<tbody>';
+            const metricKeys = [
+                'visitors-23', 'sales-23',
+                'visitors-24', 'sales-24',
+                'visitors-25', 'sales-25',
+                'visitors-26', 'sales-26'
+            ];
+
+            metricKeys.forEach(key => {
+                const metricData = showroom.metrics[key];
+                if (metricData) {
+                    const displayName = labelMap[key] || key;
+                    const isSales = key.includes('sales');
+                    
+                    tbodyHtml += `
+                        <tr>
+                            <td class="metric-label sticky-col">${displayName}</td>
+                    `;
+                    
+                    metricData.months.forEach(val => {
+                        if (val === null || val === undefined) {
+                            tbodyHtml += '<td>-</td>';
+                        } else {
+                            tbodyHtml += `<td>${Math.round(val).toLocaleString()}</td>`;
+                        }
+                    });
+
+                    if (metricData.total === null || metricData.total === undefined) {
+                        tbodyHtml += '<td class="total-cell">-</td>';
+                    } else {
+                        tbodyHtml += `<td class="total-cell">${Math.round(metricData.total).toLocaleString()}</td>`;
+                    }
+                    
+                    tbodyHtml += '</tr>';
+                }
+            });
+            tbodyHtml += '</tbody>';
+
+            table.innerHTML = theadHtml + tbodyHtml;
+            tableResponsive.appendChild(table);
+            tableCol.appendChild(tableResponsive);
+
+            const statsCol = document.createElement('div');
+            statsCol.className = 'col-lg-3';
+
+            const statsContainer = document.createElement('div');
+            statsContainer.className = 'year-stats-container';
+
+            const yearsConfig = [
+                {
+                    year: '2023',
+                    badgeClass: 'y23',
+                    avgVisitorsKey: 'معدل الزوار-23',
+                    avgSalesKey: 'المعدل الشهري-2023',
+                    custValKey: 'قيمة العميل-23',
+                    growthKey: null
+                },
+                {
+                    year: '2024',
+                    badgeClass: 'y24',
+                    avgVisitorsKey: 'معدل الزوار-24',
+                    avgSalesKey: 'المعدل الشهري-2024',
+                    custValKey: 'قيمة العميل-24',
+                    growthKey: 'النمو 2024'
+                },
+                {
+                    year: '2025',
+                    badgeClass: 'y25',
+                    avgVisitorsKey: 'معدل الزوار-25',
+                    avgSalesKey: 'المعدل الشهري-2025',
+                    custValKey: 'قيمة العميل-25',
+                    growthKey: 'النمو 2025'
+                },
+                {
+                    year: '2026',
+                    badgeClass: 'y26',
+                    avgVisitorsKey: 'معدل الزوار 2026',
+                    avgSalesKey: 'المعدل الشهري 2026',
+                    custValKey: 'قيمة العميل-26',
+                    growthKey: 'النمو 2026'
+                }
+            ];
+
+            yearsConfig.forEach(cfg => {
+                const avgVis = showroom.stats[cfg.avgVisitorsKey];
+                const avgSales = showroom.stats[cfg.avgSalesKey];
+                const custVal = showroom.stats[cfg.custValKey];
+                const growth = cfg.growthKey ? showroom.stats[cfg.growthKey] : null;
+
+                let growthHtml = '';
+                if (growth !== null && growth !== undefined) {
+                    const pct = growth * 100;
+                    const sign = pct >= 0 ? '+' : '';
+                    const colorClass = pct >= 0 ? 'growth-positive' : 'growth-negative';
+                    const icon = pct >= 0 ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow';
+                    growthHtml = `
+                        <span class="growth-badge ${colorClass}">
+                            <i class="bi ${icon} small"></i>
+                            ${sign}${pct.toFixed(2)}%
+                        </span>
+                    `;
+                }
+
+                const statBox = document.createElement('div');
+                statBox.className = 'year-stat-box shadow-xs';
+                statBox.innerHTML = `
+                    <div class="year-header">
+                        <span class="year-badge ${cfg.badgeClass === 'y26' ? 'y26' : ''}">${cfg.year}</span>
+                        ${growthHtml}
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">معدل الزوار الشهري:</span>
+                        <span class="stat-value">${avgVis !== null && avgVis !== undefined ? Math.round(avgVis).toLocaleString() : '-'}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">متوسط المبيعات شهرياً:</span>
+                        <span class="stat-value">${avgSales !== null && avgSales !== undefined ? Math.round(avgSales).toLocaleString() : '-'}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">قيمة العميل (السلة):</span>
+                        <span class="stat-value">${custVal !== null && custVal !== undefined ? custVal.toFixed(2) : '-'}</span>
+                    </div>
+                `;
+                statsContainer.appendChild(statBox);
+            });
+
+            statsCol.appendChild(statsContainer);
+
+            row.appendChild(tableCol);
+            row.appendChild(statsCol);
+            body.appendChild(row);
+            card.appendChild(body);
+
+            return card;
+        }
+
+        function exportToExcel() {
+            const managerSelect = document.getElementById('managerSelect');
+            const selectedManager = managerSelect.value;
+            if (!selectedManager) {
+                alert('يرجى اختيار مدير المنطقة للتصدير');
+                return;
+            }
+
+            const managerData = reportData.find(item => item.manager === selectedManager);
+            if (!managerData || !managerData.showrooms) return;
+
+            const wb = XLSX.utils.book_new();
+
+            managerData.showrooms.forEach(showroom => {
+                const sheetRows = [];
+                
+                const headerRow = ['السنة / المؤشر'];
+                monthNames.forEach(m => headerRow.push(m));
+                headerRow.push('المجموع');
+                headerRow.push('');
+                headerRow.push('المؤشرات السنوية');
+                headerRow.push('القيمة');
+                sheetRows.push(headerRow);
+
+                const metricKeys = [
+                    'visitors-23', 'sales-23',
+                    'visitors-24', 'sales-24',
+                    'visitors-25', 'sales-25',
+                    'visitors-26', 'sales-26'
+                ];
+
+                const statKeys = [
+                    { label: 'معدل الزوار 2023', key: 'معدل الزوار-23' },
+                    { label: 'المعدل الشهري للمبيعات 2023', key: 'المعدل الشهري-2023' },
+                    { label: 'قيمة العميل 2023', key: 'قيمة العميل-23' },
+                    { label: 'معدل الزوار 2024', key: 'معدل الزوار-24' },
+                    { label: 'المعدل الشهري للمبيعات 2024', key: 'المعدل الشهري-2024' },
+                    { label: 'قيمة العميل 2024', key: 'قيمة العميل-24' },
+                    { label: 'نسبة نمو مبيعات 2024', key: 'النمو 2024', isPct: true },
+                    { label: 'معدل الزوار 2025', key: 'معدل الزوار-25' },
+                    { label: 'المعدل الشهري للمبيعات 2025', key: 'المعدل الشهري-2025' },
+                    { label: 'قيمة العميل 2025', key: 'قيمة العميل-25' },
+                    { label: 'نسبة نمو مبيعات 2025', key: 'النمو 2025', isPct: true },
+                    { label: 'معدل الزوار 2026', key: 'معدل الزوار 2026' },
+                    { label: 'المعدل الشهري للمبيعات 2026', key: 'المعدل الشهري 2026' },
+                    { label: 'قيمة العميل 2026', key: 'قيمة العميل-26' },
+                    { label: 'نسبة نمو مبيعات 2026', key: 'النمو 2026', isPct: true }
+                ];
+
+                const maxRows = Math.max(metricKeys.length, statKeys.length);
+
+                for (let r = 0; r < maxRows; r++) {
+                    const rowData = [];
+                    
+                    if (r < metricKeys.length) {
+                        const key = metricKeys[r];
+                        const displayName = labelMap[key] || key;
+                        const metricData = showroom.metrics[key];
+                        
+                        rowData.push(displayName);
+                        if (metricData) {
+                            metricData.months.forEach(val => {
+                                rowData.push(val !== null ? Math.round(val) : '');
+                            });
+                            rowData.push(metricData.total !== null ? Math.round(metricData.total) : '');
+                        } else {
+                            for (let m = 0; m <= 12; m++) rowData.push('');
+                        }
+                    } else {
+                        for (let m = 0; m <= 13; m++) rowData.push('');
+                    }
+
+                    rowData.push(''); // Spacer
+
+                    if (r < statKeys.length) {
+                        const sCfg = statKeys[r];
+                        rowData.push(sCfg.label);
+                        const val = showroom.stats[sCfg.key];
+                        if (val !== null && val !== undefined) {
+                            if (sCfg.isPct) {
+                                rowData.push(`${(val * 100).toFixed(2)}%`);
+                            } else {
+                                rowData.push(val % 1 === 0 ? val : Number(val.toFixed(2)));
+                            }
+                        } else {
+                            rowData.push('');
+                        }
+                    } else {
+                        rowData.push('');
+                        rowData.push('');
+                    }
+
+                    sheetRows.push(rowData);
+                }
+
+                const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+                
+                const colWidths = [
+                    { wch: 18 }, // A
+                    ...Array(12).fill({ wch: 10 }), // months
+                    { wch: 15 }, // TOTAL
+                    { wch: 4 }, // Spacer
+                    { wch: 30 }, // Stats Label
+                    { wch: 15 } // Stats Value
+                ];
+                ws['!cols'] = colWidths;
+
+                let safeSheetName = showroom.name.replace(/[*?:\[\]\/]/g, '').substring(0, 31);
+                XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+            });
+
+            XLSX.writeFile(wb, `${selectedManager}_تقرير_مقارن.xlsx`);
+        }
+    </script>
+</body>
+</html>
