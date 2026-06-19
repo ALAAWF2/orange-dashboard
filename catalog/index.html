@@ -204,12 +204,12 @@
       box-shadow: var(--shadow-sm);
     }
     
-    .btn-primary { background: var(--primary); }
-    .btn-success { background: var(--accent); }
-    .btn-info { background: #3498db; }
-    .btn-purple { background: #8e44ad; }
-    .btn-gray { background: #7f8c8d; }
-    .btn-danger { background: var(--danger); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--accent); color: white; }
+    .btn-info { background: #3498db; color: white; }
+    .btn-purple { background: #8e44ad; color: white; }
+    .btn-gray { background: #7f8c8d; color: white; }
+    .btn-danger { background: var(--danger); color: white; }
     .btn-outline { 
       background: transparent !important; 
       color: var(--text-main) !important; 
@@ -541,6 +541,7 @@
 
     /* Modal inputs & buttons */
     .modal-content input[type="text"],
+    .modal-content input[type="email"],
     .modal-content input[type="password"],
     .modal-content input[type="number"] {
       width: 100%;
@@ -938,8 +939,14 @@
     const FIRST_SEEN_URL = "first_seen.json";
     const NEW_WINDOW_DAYS = 14;
     let FIRST_SEEN = {};
+    
+    let catalogLoaded = false;
+    let extrasLoaded = false;
+    let salesByOutletLoaded = false;
+    let firstSeenLoaded = false;
 
     async function loadFirstSeen() {
+      if (firstSeenLoaded && Object.keys(FIRST_SEEN).length > 0) return;
       try {
         const res = await fetch(FIRST_SEEN_URL + "?_=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("HTTP " + res.status);
@@ -963,6 +970,10 @@
 
   <script>
     async function loadLocalCatalog() {
+      if (catalogLoaded && window.products && window.products.length > 0) {
+        console.log("⚡ Using already loaded products catalog (in-memory)");
+        return;
+      }
       try {
         let blockedAliases = [];
         
@@ -1035,6 +1046,7 @@
         }
 
         batchPrintItems = [];
+        catalogLoaded = true;
 
 
       } catch (e) {
@@ -1044,11 +1056,13 @@
     }
 
     async function loadExtras() {
+      if (extrasLoaded && window.EXTRAS_LIST && window.EXTRAS_LIST.length > 0) return;
       try {
         const res = await fetch("extras.json?_=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to load extras.json");
         window.EXTRAS_LIST = await res.json();
         console.log("✅ extras.json loaded:", window.EXTRAS_LIST.length);
+        extrasLoaded = true;
       } catch (e) {
         console.error("❌ Extras load failed:", e);
         window.EXTRAS_LIST = [];
@@ -1098,11 +1112,13 @@
   <!-- ✅ (جديد) تحميل مبيعات المعارض -->
   <script>
     async function loadSalesByOutlet() {
+      if (salesByOutletLoaded && window.SALES_BY_OUTLET && Object.keys(window.SALES_BY_OUTLET).length > 0) return;
       try {
         const r = await fetch("sales_by_outlet.json?_=" + Date.now(), { cache: "no-store" });
         if (!r.ok) throw new Error("Failed to load sales_by_outlet.json");
         window.SALES_BY_OUTLET = await r.json();
         console.log("✅ sales_by_outlet.json loaded");
+        salesByOutletLoaded = true;
       } catch (e) {
         console.error("❌ sales_by_outlet.json load failed:", e);
         window.SALES_BY_OUTLET = {};
@@ -1414,6 +1430,13 @@
         const guestExportBtn = document.getElementById('exportGuestBtn');
         if (guestExportBtn) guestExportBtn.style.display = 'none';
 
+        const myOrdersBtn = document.getElementById('myOrdersBtn');
+        const customProductBtn = document.getElementById('customProductBtn');
+        const printBarcodeBtn = document.getElementById('printBarcodeBtn');
+        if (myOrdersBtn) myOrdersBtn.style.display = user ? 'inline-flex' : 'none';
+        if (customProductBtn) customProductBtn.style.display = user ? 'inline-block' : 'none';
+        if (printBarcodeBtn) printBarcodeBtn.style.display = user ? 'inline-block' : 'none';
+
         if (user) {
           console.log("Fetching profile for user ID:", user.id);
           try {
@@ -1711,6 +1734,9 @@
            _activeAuthHandling = false;
         } else {
            await handleAuthUser(null);
+           // Show login modal automatically if no session
+           document.getElementById('loginModal').style.display = 'flex';
+           loadSavedCredentials();
         }
         _authReady = true;
 
@@ -1741,12 +1767,18 @@
       }
     })();
 
+    let lastActivityTime = 0;
     function resetLogoutTimer() {
+      const now = Date.now();
+      if (now - lastActivityTime < 30000) return; // Limit reset rate to once every 30 seconds
+      lastActivityTime = now;
+
       clearTimeout(logoutTimer);
       logoutTimer = setTimeout(async () => {
         if (currentUser) {
           alert("تم تسجيل الخروج تلقائيًا بعد 8 ساعات من عدم التفاعل.");
           await supabaseClient.auth.signOut();
+          location.reload();
         }
       }, 8 * 60 * 60 * 1000);
     }
@@ -1754,9 +1786,24 @@
 
     async function login() {
       if (currentUser) {
-        await supabaseClient.auth.signOut();
-        localStorage.removeItem('savedEmail');
-        localStorage.removeItem('savedPassword');
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) spinner.classList.add('active');
+        try {
+          await supabaseClient.auth.signOut();
+        } catch (err) {
+          console.warn("SignOut error, forcing clear", err);
+        }
+        
+        // Force clear all Supabase auth storage tokens to guarantee clean logout
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+            localStorage.removeItem(key);
+            i--;
+          }
+        }
+        
+        location.reload();
       } else {
         document.getElementById('loginModal').style.display = 'flex';
         loadSavedCredentials();
@@ -1767,13 +1814,34 @@
       const email = document.getElementById('emailInput').value;
       const password = document.getElementById('passwordInput').value;
       if (email && password) {
-        localStorage.setItem('savedEmail', email);
-        localStorage.setItem('savedPassword', password);
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) {
-          showToast("فشل الدخول: " + error.message, "error");
-        } else {
-          closeLoginModal();
+        const loginSubmitBtn = document.querySelector('#loginModal .btn-primary');
+        const originalText = loginSubmitBtn ? loginSubmitBtn.textContent : 'دخول';
+        if (loginSubmitBtn) {
+          loginSubmitBtn.disabled = true;
+          loginSubmitBtn.textContent = 'جاري الدخول...';
+        }
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) spinner.classList.add('active');
+
+        try {
+          localStorage.setItem('savedEmail', email);
+          localStorage.setItem('savedPassword', password);
+          const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) {
+            showToast("فشل الدخول: " + error.message, "error");
+          } else {
+            closeLoginModal();
+            location.reload();
+          }
+        } catch (err) {
+          console.error("Login exception:", err);
+          showToast("حدث خطأ غير متوقع أثناء تسجيل الدخول", "error");
+        } finally {
+          if (loginSubmitBtn) {
+            loginSubmitBtn.disabled = false;
+            loginSubmitBtn.textContent = originalText;
+          }
+          if (spinner) spinner.classList.remove('active');
         }
       } else {
         showToast("يرجى إدخال البريد وكلمة المرور", "warning");
@@ -2918,19 +2986,13 @@
   </div>
 
   <!-- نافذة تسجيل الدخول -->
-  <div id="loginModal"
-    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
-    <div
-      style="background:white; padding:20px; border-radius:10px; width:300px; text-align:center; box-shadow: 0 0 15px rgba(0,0,0,0.3);">
-      <h3 style="color:#e67e22;">تسجيل الدخول</h3>
-      <input id="emailInput" type="email" placeholder="البريد الإلكتروني"
-        style="width:90%; padding:8px; margin:8px 0; border:1px solid #ccc; border-radius:5px;"><br>
-      <input id="passwordInput" type="password" placeholder="كلمة المرور"
-        style="width:90%; padding:8px; margin:8px 0; border:1px solid #ccc; border-radius:5px;"><br>
-      <button onclick="confirmLogin()"
-        class="btn-primary">دخول</button>
-      <button onclick="closeLoginModal()"
-        style="background:gray; color:white; padding:8px 16px; border:none; border-radius:5px; margin-top:5px; display:block; margin:5px auto 0;">إلغاء</button>
+  <div id="loginModal" class="modal-overlay" style="z-index: 11000;">
+    <div class="modal-content" style="max-width: 380px; text-align: center;">
+      <h3 style="color: var(--primary); margin-bottom: 20px;">تسجيل الدخول</h3>
+      <input id="emailInput" type="email" placeholder="البريد الإلكتروني" style="width: 100%;">
+      <input id="passwordInput" type="password" placeholder="كلمة المرور" style="width: 100%;">
+      <button onclick="confirmLogin()" class="btn-primary" style="margin-top: 15px;">دخول</button>
+      <button onclick="closeLoginModal()" class="btn-outline" style="margin-top: 10px;">إلغاء</button>
     </div>
   </div>
 </body>
