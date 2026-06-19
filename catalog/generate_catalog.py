@@ -3,6 +3,7 @@ import json
 import requests
 import pandas as pd
 import msal
+from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,6 +21,14 @@ OUTPUT_LAST_UPDATED = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedas
 
 TIMEOUT = 120
 BASE_URL = "https://orangepax.operations.eu.dynamics.com/data"
+
+# Database Configuration
+DB_USER = "postgres"
+DB_PASS = "panzer123"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+DB_NAME = "showroom_sales"
+CONN_STR = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 WAREHOUSE_NAMES = {"warehouse", "warehouse riyadh"}
 
 DAYS_BACK = 7
@@ -267,20 +276,28 @@ def main():
     )
 
     # =====================
-    # SALES (SERVER FILTER: DATE + QTY)
+    # SALES (LOCAL DATABASE FETCH)
     # =====================
-    print("Calculating date filter...")
-    cutoff_utc = (
-        datetime.now(timezone.utc) - timedelta(days=DAYS_BACK)
-    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    print("Fetching sales from local database...")
+    cutoff_date = (datetime.now() - timedelta(days=DAYS_BACK)).date()
 
-    sales_url = (
-        f"{BASE_URL}/RetailTransactionSalesLines"
-        f"?$select=OperatingUnitNumber,TransactionDate,TransactionStatus,UnitQuantity,ItemId"
-        f"&$filter=TransactionDate ge {cutoff_utc} and UnitQuantity lt 0"
-    )
+    engine = create_engine(CONN_STR)
+    query = text("""
+        SELECT store_number, item_date, quantity, item_id, transaction_status
+        FROM dynamic_sales_items
+        WHERE item_date >= :cutoff
+    """)
 
-    df_sales_raw = fetch_all(token, sales_url, "SALES")
+    with engine.connect() as conn:
+        df_sales_raw = pd.read_sql(query, conn, params={"cutoff": cutoff_date})
+
+    df_sales_raw = df_sales_raw.rename(columns={
+        "store_number": "OperatingUnitNumber",
+        "item_date": "TransactionDate",
+        "quantity": "UnitQuantity",
+        "item_id": "ItemId",
+        "transaction_status": "TransactionStatus"
+    })
 
     # =====================
     # SALES FILTER (PANDAS: STATUS)
