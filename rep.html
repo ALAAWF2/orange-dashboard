@@ -2842,7 +2842,105 @@
                         return rows;
                     }
 
+                    function getSummaryData(sheetType) {
+                        const storeFilterOptions = Array.from(document.getElementById('storeFilter').selectedOptions).map(opt => opt.value);
+                        const isAllStores = storeFilterOptions.includes('all') || storeFilterOptions.length === 0;
+
+                        const catProducts = [];
+                        for (const [pid, prod] of Object.entries(PRODUCTS)) {
+                            if (prod.hasKitCounterpart) continue;
+                            const prodAlias = prod.alias || '';
+                            const catName = prod.category || '';
+
+                            let isMatch = false;
+                            if (sheetType === 'full') {
+                                isMatch = catName === 'لحافات فل';
+                            } else if (sheetType === 'king') {
+                                isMatch = catName === 'لحافات كينغ' || catName === 'لحافات كينج';
+                            }
+
+                            if (isMatch) {
+                                let st = 0;
+                                if (!isAllStores) {
+                                    storeFilterOptions.forEach(sId => {
+                                        if (sId !== 'all') st += prod.stock[sId] || 0;
+                                    });
+                                } else {
+                                    if (prod.stock) {
+                                        st = prod.stock.total || 0;
+                                    }
+                                }
+
+                                const resultItem = CURRENT_RESULTS.find(r => r.item_id === pid || (prodAlias && r.alias === prodAlias));
+                                const qty = resultItem ? resultItem.qty : 0;
+                                const amount = resultItem ? resultItem.amount : 0;
+
+                                catProducts.push({
+                                    price: prod.price || 0,
+                                    stock: st,
+                                    qty: qty,
+                                    amount: amount
+                                });
+                            }
+                        }
+
+                        return brackets.map(bracket => {
+                            const bracketProds = catProducts.filter(p => getPriceBracket(p.price) === bracket);
+                            let stock = 0, qty = 0, amount = 0;
+                            bracketProds.forEach(p => {
+                                stock += p.stock;
+                                qty += p.qty;
+                                amount += p.amount;
+                            });
+                            return { bracket, stock, qty, amount };
+                        });
+                    }
+
                     const wb = XLSX.utils.book_new();
+
+                    // Generate Summary sheet
+                    const fullSummary = getSummaryData('full');
+                    const kingSummary = getSummaryData('king');
+
+                    const summaryRows = [];
+                    // Title for Full
+                    summaryRows.push(['ملخص لحافات فل']);
+                    summaryRows.push(['الفئة السعرية', 'إجمالي الستوك', 'الكمية المباعة', 'قيمة المبيعات']);
+                    fullSummary.forEach(s => {
+                        summaryRows.push([s.bracket, s.stock, s.qty, s.amount]);
+                    });
+                    // Total for Full
+                    const totalFullStock = fullSummary.reduce((sum, s) => sum + s.stock, 0);
+                    const totalFullQty = fullSummary.reduce((sum, s) => sum + s.qty, 0);
+                    const totalFullAmount = fullSummary.reduce((sum, s) => sum + s.amount, 0);
+                    summaryRows.push(['الإجمالي العام', totalFullStock, totalFullQty, totalFullAmount]);
+
+                    // Space
+                    summaryRows.push([]);
+                    summaryRows.push([]);
+
+                    // Title for King
+                    summaryRows.push(['ملخص لحافات كينغ']);
+                    summaryRows.push(['الفئة السعرية', 'إجمالي الستوك', 'الكمية المباعة', 'قيمة المبيعات']);
+                    kingSummary.forEach(s => {
+                        summaryRows.push([s.bracket, s.stock, s.qty, s.amount]);
+                    });
+                    // Total for King
+                    const totalKingStock = kingSummary.reduce((sum, s) => sum + s.stock, 0);
+                    const totalKingQty = kingSummary.reduce((sum, s) => sum + s.qty, 0);
+                    const totalKingAmount = kingSummary.reduce((sum, s) => sum + s.amount, 0);
+                    summaryRows.push(['الإجمالي العام', totalKingStock, totalKingQty, totalKingAmount]);
+
+                    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+                    wsSummary['!cols'] = [{ wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
+                    
+                    // Merges for titles
+                    wsSummary['!merges'] = [
+                        { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+                        { s: { r: 15, c: 0 }, e: { r: 15, c: 3 } }
+                    ];
+
+                    XLSX.utils.book_append_sheet(wb, wsSummary, 'ملخص الفئات السعرية');
 
                     const fullRows = generateRowsForCategory('full');
                     const ws1 = XLSX.utils.json_to_sheet(fullRows);
