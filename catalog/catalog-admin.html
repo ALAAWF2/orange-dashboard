@@ -673,27 +673,46 @@
             <input type="text" id="mediaSearch" placeholder="ابحث باسم الملف أو كود الصنف..." oninput="onMediaSearchInput()">
           </div>
           <div class="control-group">
-            <button onclick="loadMediaLibrary('', true)" class="btn btn-outline" style="height:44px;"><i class="fa-solid fa-rotate"></i> تحديث القائمة</button>
+            <button onclick="loadMediaLibrary('', 1, true)" class="btn btn-outline" style="height:44px;"><i class="fa-solid fa-rotate"></i> تحديث القائمة</button>
           </div>
         </div>
       </div>
 
-      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 80px;">الصورة</th>
-              <th>اسم الملف</th>
-              <th>المنتج المرتبط</th>
-              <th>الحجم</th>
-              <th>تاريخ التعديل</th>
-              <th style="width: 150px; text-align: center;">إجراء</th>
-            </tr>
-          </thead>
-          <tbody id="mediaTableBody">
-            <tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل مكتبة الصور...</td></tr>
-          </tbody>
-        </table>
+      <!-- Placeholder until search or show all is triggered -->
+      <div id="mediaPlaceholder" style="text-align:center; padding: 40px 20px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; margin-top:15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <i class="fa-regular fa-image" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 15px; display: block;"></i>
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; color: var(--secondary);">مكتبة صور الكاتالوج</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 450px; margin: 0 auto 20px auto; line-height: 1.6;">
+          اكتب اسم الصورة أو كود الصنف في مربع البحث للبدء، أو انقر على الزر أدناه لتصفح كافة الصور المرفوعة.
+        </p>
+        <button onclick="triggerShowAllMedia()" class="btn btn-primary" style="margin: 0 auto; display: flex; align-items: center; gap: 8px; justify-content: center;"><i class="fa-solid fa-images"></i> عرض كافة الصور</button>
+      </div>
+
+      <div id="mediaTableContainer" style="display: none; margin-top: 15px;">
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 80px;">الصورة</th>
+                <th>اسم الملف</th>
+                <th>المنتج المرتبط</th>
+                <th>الحجم</th>
+                <th>تاريخ التعديل</th>
+                <th style="width: 150px; text-align: center;">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="mediaTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="mediaPagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+          <button id="mediaPrevBtn" onclick="changeMediaPage(-1)" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-chevron-right"></i> السابق</button>
+          <span id="mediaPageIndicator" style="font-weight: bold; font-size: 0.9rem; color: var(--secondary);">صفحة 1 من 1</span>
+          <button id="mediaNextBtn" onclick="changeMediaPage(1)" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">التالي <i class="fa-solid fa-chevron-left"></i></button>
+        </div>
       </div>
     </div>
 
@@ -1309,7 +1328,7 @@
       } else if (tabId === 'tabUsers') {
          loadSupabaseUsers();
       } else if (tabId === 'tabMediaLibrary') {
-         loadMediaLibrary();
+         resetMediaLibraryTab();
       } else if (tabId === 'tabAuditLogs') {
          loadAuditLogs();
       }
@@ -2721,29 +2740,70 @@
     // === TAB 7: Media Library Logic ===
     let mediaList = [];
     let mediaSearchTimeout = null;
+    let mediaCurrentPage = 1;
+    let mediaLimit = 20;
+    let mediaTotalCount = 0;
+    let mediaCurrentSearch = '';
+
+    function resetMediaLibraryTab() {
+      document.getElementById('mediaSearch').value = '';
+      document.getElementById('mediaPlaceholder').style.display = 'block';
+      document.getElementById('mediaTableContainer').style.display = 'none';
+      mediaList = [];
+      mediaCurrentPage = 1;
+      mediaTotalCount = 0;
+      mediaCurrentSearch = '';
+    }
+
     function onMediaSearchInput() {
       clearTimeout(mediaSearchTimeout);
       mediaSearchTimeout = setTimeout(() => {
         const searchVal = document.getElementById('mediaSearch').value.trim();
-        loadMediaLibrary(searchVal);
+        mediaCurrentSearch = searchVal;
+        mediaCurrentPage = 1; // reset page on search
+        if (searchVal.length > 0) {
+          loadMediaLibrary(searchVal, 1);
+        } else {
+          // If search is cleared, show placeholder again
+          resetMediaLibraryTab();
+        }
       }, 400); // 400ms debounce
     }
 
-    async function loadMediaLibrary(search = '', force = false) {
+    function triggerShowAllMedia() {
+      document.getElementById('mediaSearch').value = '';
+      mediaCurrentSearch = '';
+      mediaCurrentPage = 1;
+      loadMediaLibrary('', 1);
+    }
+
+    async function loadMediaLibrary(search = '', page = 1, force = false) {
       if (!userSessionToken) return;
+      
+      mediaCurrentSearch = search;
+      mediaCurrentPage = page;
+
+      // Hide placeholder and show table container
+      document.getElementById('mediaPlaceholder').style.display = 'none';
+      document.getElementById('mediaTableContainer').style.display = 'block';
+
       const tbody = document.getElementById('mediaTableBody');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل مكتبة الصور...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل مكتبة الصور... ⏳</td></tr>';
       
       try {
-        const url = `/api/catalog/images?search=${encodeURIComponent(search)}&limit=100${force ? '&force_refresh=true' : ''}`;
+        const url = `/api/catalog/images?search=${encodeURIComponent(search)}&page=${page}&limit=${mediaLimit}${force ? '&force_refresh=true' : ''}`;
         const res = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${userSessionToken}`
           }
         });
         if (res.ok) {
-          mediaList = await res.json();
-          renderMediaLibrary(search); // Pass search just in case
+          const data = await res.json();
+          mediaList = data.images || [];
+          mediaTotalCount = data.total || 0;
+          
+          renderMediaLibrary();
+          renderMediaPagination();
         } else {
           const err = await res.json();
           tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger)">❌ فشل تحميل الصور: ${err.error || 'خطأ غير معروف'}</td></tr>`;
@@ -2753,19 +2813,16 @@
       }
     }
 
-    function renderMediaLibrary(search = '') {
+    function renderMediaLibrary() {
       const tbody = document.getElementById('mediaTableBody');
       tbody.innerHTML = '';
       
-      // Since API already filtered on backend, filtered = mediaList
-      const filtered = mediaList;
-      
-      if (filtered.length === 0) {
+      if (mediaList.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد صور مطابقة للبحث</td></tr>';
         return;
       }
       
-      filtered.forEach(m => {
+      mediaList.forEach(m => {
         const cleanName = m.filename.substring(0, m.filename.lastIndexOf('.')) || m.filename;
         const foundProd = productsList.find(p => String(p.code) === cleanName || (p.alias && String(p.alias).toLowerCase() === cleanName.toLowerCase()));
         
@@ -2793,6 +2850,25 @@
       });
     }
 
+    function renderMediaPagination() {
+      const totalPages = Math.ceil(mediaTotalCount / mediaLimit) || 1;
+      document.getElementById('mediaPageIndicator').textContent = `صفحة ${mediaCurrentPage} من ${totalPages} (إجمالي: ${mediaTotalCount})`;
+      
+      const prevBtn = document.getElementById('mediaPrevBtn');
+      const nextBtn = document.getElementById('mediaNextBtn');
+      
+      prevBtn.disabled = mediaCurrentPage <= 1;
+      nextBtn.disabled = mediaCurrentPage >= totalPages;
+    }
+
+    function changeMediaPage(direction) {
+      const totalPages = Math.ceil(mediaTotalCount / mediaLimit) || 1;
+      const targetPage = mediaCurrentPage + direction;
+      if (targetPage >= 1 && targetPage <= totalPages) {
+        loadMediaLibrary(mediaCurrentSearch, targetPage);
+      }
+    }
+
     async function deleteMediaImage(filename) {
       if (!confirm(`هل أنت متأكد من حذف صورة المنتج (${filename}) نهائياً من السيرفر؟`)) return;
       if (!userSessionToken) return;
@@ -2807,7 +2883,7 @@
         });
         if (res.ok) {
           showToast('✅ تم حذف الصورة بنجاح!', 'success');
-          await loadMediaLibrary();
+          await loadMediaLibrary(mediaCurrentSearch, mediaCurrentPage);
         } else {
           const err = await res.json();
           showToast('❌ فشل الحذف: ' + (err.error || 'خطأ غير معروف'), 'error');
@@ -3113,9 +3189,13 @@
         // Match product info
         const foundProd = productsList.find(p => String(p.code) === item.number || (p.alias && String(p.alias).toLowerCase() === item.number.toLowerCase()));
         let prodText = '— (غير موجود بالكاتالوج)';
+        let hasImg = false;
         if (foundProd) {
           prodText = `${foundProd.code} - ${foundProd.name}`;
+          hasImg = foundProd.image_path && foundProd.image_path.trim() !== '';
         }
+        
+        const imageExists = item.image_exists || hasImg;
         
         // Determine status style
         let badgeStyle = 'background:#fee2e2; color:#ef4444;'; // error/red
@@ -3133,13 +3213,27 @@
         
         const tempImgUrl = item.new_file ? '/temp_images/' + item.new_file : 'noimage.png';
         
+        let statusBadge = '';
+        if (foundProd) {
+          if (imageExists) {
+            statusBadge = `<span class="badge" style="background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; display:inline-block; margin-top:4px;">🔄 استبدال صورة مسبقة</span>`;
+          } else {
+            statusBadge = `<span class="badge" style="background:#d1fae5; color:#059669; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; display:inline-block; margin-top:4px;">✨ صورة جديدة</span>`;
+          }
+        } else {
+          statusBadge = `<span class="badge" style="background:#f3f4f6; color:#6b7280; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; display:inline-block; margin-top:4px;">⚠️ كود غير مطابق</span>`;
+        }
+        
         tr.innerHTML = `
           <td><img src="${tempImgUrl}" class="product-thumb" onerror="this.src='noimage.png'" style="width:60px; height:60px;"></td>
           <td style="word-break:break-all; font-size: 0.85em;" title="${item.original}">${item.original}</td>
           <td>
             <input type="text" class="ocr-code-input" data-index="${index}" value="${item.number}" style="width:100%; padding:5px; border:1px solid var(--border-color); border-radius:6px; font-family:inherit; text-align:center; font-weight:bold; box-sizing:border-box;" oninput="onOCRCodeFieldChange(${index})">
           </td>
-          <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="ocr-prod-match-${index}" title="${prodText}">${prodText}</td>
+          <td style="max-width:200px;" id="ocr-prod-match-${index}" title="${prodText}">
+            <div>${prodText}</div>
+            <div id="ocr-prod-status-${index}">${statusBadge}</div>
+          </td>
           <td>
             <span class="btn" style="${badgeStyle} padding:4px 8px; pointer-events:none; font-size:0.8em; font-weight:bold;">${badgeText}</span>
           </td>
@@ -3163,10 +3257,21 @@
       if (matchTd) {
         const foundProd = productsList.find(p => String(p.code) === val || (p.alias && String(p.alias).toLowerCase() === val.toLowerCase()));
         if (foundProd) {
-          matchTd.textContent = `${foundProd.code} - ${foundProd.name}`;
+          const hasImg = foundProd.image_path && foundProd.image_path.trim() !== '';
+          const statusBadge = hasImg 
+            ? `<span class="badge" style="background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; display:inline-block; margin-top:4px;">🔄 استبدال صورة مسبقة</span>`
+            : `<span class="badge" style="background:#d1fae5; color:#059669; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; display:inline-block; margin-top:4px;">✨ صورة جديدة</span>`;
+            
+          matchTd.innerHTML = `
+            <div>${foundProd.code} - ${foundProd.name}</div>
+            <div id="ocr-prod-status-${index}">${statusBadge}</div>
+          `;
           matchTd.title = `${foundProd.code} - ${foundProd.name}`;
         } else {
-          matchTd.textContent = '— (غير موجود بالكاتالوج)';
+          matchTd.innerHTML = `
+            <div>— (غير موجود بالكاتالوج)</div>
+            <div id="ocr-prod-status-${index}"><span class="badge" style="background:#f3f4f6; color:#6b7280; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold; display:inline-block; margin-top:4px;">⚠️ كود غير مطابق</span></div>
+          `;
           matchTd.title = '— (غير موجود بالكاتالوج)';
         }
       }
