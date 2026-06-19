@@ -427,12 +427,12 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true, 
         tableRows.push(totalsRowBuilder);
 
         // Dynamic Headers
-        let col1Header = `الأمس (Yesterday) - ${yestStrFinal}`;
-        let col2Header = `الشهر الحالي (MTD) - ${monthStartStr} إلى ${yestStrFinal}`;
+        let col1Header = `الأمس (Yesterday) - \u200e${yestStrFinal}\u200e`;
+        let col2Header = `الشهر الحالي (MTD) - \u200e${monthStartStr}\u200e إلى \u200e${yestStrFinal}\u200e`;
 
         if (isPrevMode) {
             col1Header = "---";
-            col2Header = `الشهر السابق (Previous Month) - ${prevMonthStartStr} إلى ${prevMonthEndStr}`;
+            col2Header = `الشهر السابق (Previous Month) - \u200e${prevMonthStartStr}\u200e إلى \u200e${prevMonthEndStr}\u200e`;
         }
 
         doc.autoTable({
