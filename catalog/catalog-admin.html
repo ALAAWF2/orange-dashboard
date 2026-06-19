@@ -673,7 +673,7 @@
             <input type="text" id="mediaSearch" placeholder="ابحث باسم الملف أو كود الصنف..." oninput="onMediaSearchInput()">
           </div>
           <div class="control-group">
-            <button onclick="loadMediaLibrary()" class="btn btn-outline" style="height:44px;"><i class="fa-solid fa-rotate"></i> تحديث القائمة</button>
+            <button onclick="loadMediaLibrary('', true)" class="btn btn-outline" style="height:44px;"><i class="fa-solid fa-rotate"></i> تحديث القائمة</button>
           </div>
         </div>
       </div>
@@ -2729,13 +2729,13 @@
       }, 400); // 400ms debounce
     }
 
-    async function loadMediaLibrary(search = '') {
+    async function loadMediaLibrary(search = '', force = false) {
       if (!userSessionToken) return;
       const tbody = document.getElementById('mediaTableBody');
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل مكتبة الصور...</td></tr>';
       
       try {
-        const url = `/api/catalog/images?search=${encodeURIComponent(search)}&limit=100`;
+        const url = `/api/catalog/images?search=${encodeURIComponent(search)}&limit=100${force ? '&force_refresh=true' : ''}`;
         const res = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${userSessionToken}`
@@ -2780,7 +2780,7 @@
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><img src="${imgUrl}" class="product-thumb" onerror="this.src='noimage.png'"></td>
+          <td><img src="${imgUrl}" class="product-thumb" loading="lazy" onerror="this.src='noimage.png'"></td>
           <td style="font-weight:bold;">${m.filename}</td>
           <td style="max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${prodText}">${prodText}</td>
           <td>${sizeKB}</td>
