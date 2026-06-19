@@ -291,7 +291,7 @@
     
     .badge-new {
       position: absolute;
-      top: 12px;
+      top: 55px;
       right: 12px;
       background: var(--accent);
       color: white;
@@ -301,6 +301,36 @@
       font-weight: bold;
       z-index: 2;
       box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+    }
+    
+    .fav-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #eee;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      z-index: 10;
+      transition: var(--transition);
+      font-size: 1.4em;
+      line-height: 1;
+      color: #ccc;
+    }
+    .fav-btn:hover {
+      transform: scale(1.1);
+      border-color: #f1c40f;
+      color: #f1c40f;
+    }
+    .fav-btn.active {
+      color: #f1c40f;
+      border-color: #f1c40f;
     }
     
     .print-icon-btn {
@@ -738,6 +768,12 @@
       <label class="styled-checkbox-label">
         <input type="checkbox" id="newOnly" onchange="renderProducts()">
         <span>✨ عرض الجديد فقط</span>
+      </label>
+
+      <!-- Favorites Only Checkbox -->
+      <label class="styled-checkbox-label" id="favOnlyLabel" style="display:none;">
+        <input type="checkbox" id="favOnly" onchange="renderProducts()">
+        <span>⭐ المفضلة فقط</span>
       </label>
     </div>
 
@@ -1335,6 +1371,7 @@
     let isGuestMode = false;
     let cart = {};
     let selectedExtras = {}; // Moved up to be accessible
+    let favorites = new Set();
     let editingOrderId = null; // Track order being edited
     let promoPrices = {};
     let batchPrintItems = [];
@@ -1436,6 +1473,9 @@
         if (myOrdersBtn) myOrdersBtn.style.display = user ? 'inline-flex' : 'none';
         if (customProductBtn) customProductBtn.style.display = user ? 'inline-block' : 'none';
         if (printBarcodeBtn) printBarcodeBtn.style.display = user ? 'inline-block' : 'none';
+
+        const favOnlyLabel = document.getElementById('favOnlyLabel');
+        if (favOnlyLabel) favOnlyLabel.style.display = user ? 'flex' : 'none';
 
         if (user) {
           console.log("Fetching profile for user ID:", user.id);
@@ -1572,6 +1612,23 @@
           await loadExtras();
           await loadSalesByOutlet();
           mergeKitData();
+          
+          // Load favorites from Supabase
+          try {
+            const { data: favData, error: favErr } = await supabaseClient
+              .from('catalog_favorites')
+              .select('product_code');
+            if (!favErr && favData) {
+              favorites = new Set(favData.map(f => String(f.product_code)));
+              console.log("✅ Favorites loaded:", favorites.size);
+            } else {
+              favorites = new Set();
+            }
+          } catch (favFetchErr) {
+            console.warn("Failed to load favorites:", favFetchErr);
+            favorites = new Set();
+          }
+
           rebuildDataForWarehouse(userWarehouse);
 
           // Populate admin outlets dropdown dynamically after loading catalog
@@ -1646,6 +1703,9 @@
           userWarehouse = "";
           userMall = "";
           window.data = [];
+          favorites = new Set();
+          const favOnlyChk = document.getElementById('favOnly');
+          if (favOnlyChk) favOnlyChk.checked = false;
           document.getElementById('userInfo').textContent = '';
           document.getElementById('galleryNameText').textContent = '';
           document.getElementById('galleryNameBanner').style.display = 'none';
@@ -2107,6 +2167,58 @@
     // I will add a call to it in the next step or assume user refreshes. 
     // Actually, I should insert the call inside existing auth listener.
 
+    async function toggleFavorite(code) {
+      if (!currentUser) {
+        showToast("يرجى تسجيل الدخول أولاً لتعديل المفضلة", "warning");
+        return;
+      }
+      const codeStr = String(code);
+      const isFav = favorites.has(codeStr);
+      
+      // Update UI state instantly (optimistic update)
+      if (isFav) {
+        favorites.delete(codeStr);
+      } else {
+        favorites.add(codeStr);
+      }
+      updateFavoriteStarsUI(codeStr);
+      
+      // Update DB
+      try {
+        if (isFav) {
+          const { error } = await supabaseClient
+            .from('catalog_favorites')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('product_code', codeStr);
+          if (error) throw error;
+        } else {
+          const { error } = await supabaseClient
+            .from('catalog_favorites')
+            .insert([{ user_id: currentUser.id, product_code: codeStr }]);
+          if (error) throw error;
+        }
+      } catch (err) {
+        console.error("Failed to update favorite in DB:", err);
+        showToast("فشل تحديث المفضلة في السيرفر", "error");
+        // Revert UI state on failure
+        if (isFav) {
+          favorites.add(codeStr);
+        } else {
+          favorites.delete(codeStr);
+        }
+        updateFavoriteStarsUI(codeStr);
+      }
+    }
+
+    function updateFavoriteStarsUI(code) {
+      const isFav = favorites.has(String(code));
+      document.querySelectorAll(`.fav-btn[data-code="${code}"]`).forEach(btn => {
+        btn.innerHTML = isFav ? '★' : '☆';
+        btn.classList.toggle('active', isFav);
+      });
+    }
+
     function renderProducts() {
       console.log("Render start", {
         user: currentUser?.email,
@@ -2130,6 +2242,7 @@
       const searchInputVal = document.getElementById('searchInput')?.value || '';
       const searchTerm = (searchBarVal || searchInputVal).trim().toLowerCase();
       const newOnly = document.getElementById('newOnly')?.checked;
+      const favOnly = document.getElementById('favOnly')?.checked;
 
       // Guest Mode Filter
       const whFilter = document.getElementById('warehouseFilter');
@@ -2169,7 +2282,8 @@
           || String(d.code).toLowerCase().includes(searchTerm)
           || String(d.name).toLowerCase().includes(searchTerm)) &&
         filterByPrice(d.price, priceRange) &&
-        (!newOnly || isNewArrival(d.code))
+        (!newOnly || isNewArrival(d.code)) &&
+        (!favOnly || favorites.has(String(d.code)))
       );
 
       console.log("Filtered products:", filteredProducts.length);
@@ -2246,6 +2360,7 @@
         <div class="product-image-container" onclick="showProductDetails('${d.code}')">
           <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', parseFloat('${d.price}'||0))" title="طباعة الباركود">🖨️</button>
           ${isNewArrival(d.code) ? '<div class="badge-new">✨ جديد</div>' : ''}
+          <button class="fav-btn ${favorites.has(String(d.code)) ? 'active' : ''}" data-code="${d.code}" onclick="event.stopPropagation(); toggleFavorite('${d.code}')" title="أضف للمفضلة">${favorites.has(String(d.code)) ? '★' : '☆'}</button>
           <img
             loading="lazy"
             src="${d.image_path ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + d.image_path : 'https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/' + ((d.alias && String(d.alias).trim() !== '') ? d.alias : d.code) + '.jpg'}"
