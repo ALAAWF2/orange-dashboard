@@ -926,6 +926,20 @@
                     </div>
                 </div>
 
+                <!-- System Settings: Target End Date Extension -->
+                <div class="glass-card mb-4 border-start border-4 border-primary">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-calendar-days text-primary me-2"></i> تمديد تاريخ نهاية مستهدف الشهر الحالي</h5>
+                            <p class="text-muted small mb-0">يمكنك تحديد تاريخ نهاية مخصص للمستهدف (مثل تمديد تارجت يونيو إلى 2026-07-04). اترك الحقل فارغاً للاعتماد على نهاية الشهر الطبيعية.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2" style="direction: rtl;">
+                            <input type="date" id="targetEndDateInput" class="form-control form-control-dark" style="width: 180px;">
+                            <button class="btn btn-primary btn-sm px-3" onclick="saveTargetEndDate()">حفظ التاريخ 💾</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="glass-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -2905,9 +2919,39 @@
                         sw.checked = allowEdit;
                         lbl.textContent = allowEdit ? "مسموح بالتعديل ✅" : "مغلق ومحمي 🔒";
                     }
+                    
+                    const targetEndDate = settings.target_end_date || '';
+                    const dateInput = document.getElementById('targetEndDateInput');
+                    if (dateInput) {
+                        dateInput.value = targetEndDate;
+                    }
                 }
             } catch (e) {
                 console.error("Failed to load system settings:", e);
+            }
+        }
+
+        async function saveTargetEndDate() {
+            const inputVal = document.getElementById('targetEndDateInput').value;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/save_setting`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ key: 'target_end_date', value: inputVal })
+                });
+                
+                if (res.ok) {
+                    alert("✅ تم حفظ تاريخ نهاية المستهدف بنجاح!");
+                    loadSystemSettings(); // Refresh settings
+                } else {
+                    const err = await res.json();
+                    alert("❌ فشل حفظ التاريخ: " + (err.error || "خطأ غير معروف"));
+                }
+            } catch (e) {
+                alert("❌ خطأ اتصال: " + e.message);
             }
         }
 
