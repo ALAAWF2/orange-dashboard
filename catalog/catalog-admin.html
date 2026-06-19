@@ -477,6 +477,8 @@
       <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
       <button class="tab-btn" onclick="switchTab('tabPromoBarcodes')">🏷️ إدارة العروض والباركود</button>
       <button class="tab-btn" onclick="switchTab('tabUsers')">👥 إدارة الحسابات</button>
+      <button class="tab-btn" onclick="switchTab('tabMediaLibrary')">🖼️ مكتبة الصور المرفوعة</button>
+      <button class="tab-btn" onclick="switchTab('tabAuditLogs')">📋 سجل الأنشطة والأمان</button>
     </div>
 
     <!-- TAB 1: Blocked items -->
@@ -566,9 +568,12 @@
               <option value="all">كل التصنيفات</option>
             </select>
           </div>
-          <div class="control-group">
+          <div class="control-group" style="display:flex; gap:10px;">
             <button onclick="openManualImageUploadModal()" class="btn btn-primary" style="height:44px; display:flex; align-items:center; gap:8px;">
               📤 رفع صورة لمنتج يدوي
+            </button>
+            <button onclick="openOCRImageUploadModal()" class="btn btn-outline" style="height:44px; border-color: var(--primary); color: var(--primary); display:flex; align-items:center; gap:8px;">
+              <i class="fa-solid fa-magnifying-glass" style="margin-left: 5px;"></i> رفع وقراءة بالباركود (OCR)
             </button>
           </div>
         </div>
@@ -627,10 +632,15 @@
     <!-- TAB 5: Users management -->
     <div id="tabUsers" class="tab-content">
       <div class="controls-container">
-        <div class="controls-row">
+        <div class="controls-row" style="align-items: flex-end;">
           <div class="control-group" style="flex:2;">
             <label>بحث بالبريد الإلكتروني أو الاسم</label>
             <input type="text" id="usersSearch" placeholder="ابحث عن مستخدم بالبريد أو الاسم..." oninput="renderUsersTable()">
+          </div>
+          <div class="control-group">
+            <button onclick="openUserCreateModal()" class="btn btn-primary" style="height:44px; display:flex; align-items:center; gap:8px;">
+              ➕ إضافة حساب مستخدم جديد
+            </button>
           </div>
         </div>
       </div>
@@ -649,6 +659,70 @@
           </thead>
           <tbody id="usersTableBody">
             <tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل الحسابات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 7: Media Library -->
+    <div id="tabMediaLibrary" class="tab-content">
+      <div class="controls-container">
+        <div class="controls-row" style="align-items: flex-end;">
+          <div class="control-group" style="flex:2;">
+            <label>بحث باسم الصورة أو كود المنتج</label>
+            <input type="text" id="mediaSearch" placeholder="ابحث باسم الملف أو كود الصنف..." oninput="onMediaSearchInput()">
+          </div>
+          <div class="control-group">
+            <button onclick="loadMediaLibrary()" class="btn btn-outline" style="height:44px;"><i class="fa-solid fa-rotate"></i> تحديث القائمة</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">الصورة</th>
+              <th>اسم الملف</th>
+              <th>المنتج المرتبط</th>
+              <th>الحجم</th>
+              <th>تاريخ التعديل</th>
+              <th style="width: 150px; text-align: center;">إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="mediaTableBody">
+            <tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل مكتبة الصور...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 8: Audit Logs -->
+    <div id="tabAuditLogs" class="tab-content">
+      <div class="controls-container">
+        <div class="controls-row" style="align-items: flex-end;">
+          <div class="control-group" style="flex:2;">
+            <label>بحث بالبريد أو نوع العملية</label>
+            <input type="text" id="auditSearch" placeholder="ابحث بالبريد الإلكتروني، نوع العملية، أو التفاصيل..." oninput="renderAuditLogs()">
+          </div>
+          <div class="control-group">
+            <button onclick="loadAuditLogs()" class="btn btn-outline" style="height:44px;"><i class="fa-solid fa-rotate"></i> تحديث السجل</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 180px;">التاريخ والوقت</th>
+              <th style="width: 250px;">البريد الإلكتروني</th>
+              <th style="width: 180px;">العملية</th>
+              <th>التفاصيل والبيانات</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody">
+            <tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل سجل الأنشطة...</td></tr>
           </tbody>
         </table>
       </div>
@@ -807,6 +881,127 @@
       <div style="display:flex; gap:10px;">
         <button id="btnSubmitUserEdit" onclick="submitUserEdit()" class="btn btn-primary" style="flex:1;">حفظ التعديلات</button>
         <button onclick="closeUserEditModal()" class="btn btn-outline" style="flex:1;">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Create Modal -->
+  <div class="modal-overlay" id="userCreateModal">
+    <div class="modal-content" style="max-width: 500px; width: 90%;">
+      <div class="modal-header">
+        <h3>👥 إضافة حساب مستخدم جديد</h3>
+        <button class="modal-close" onclick="closeUserCreateModal()">×</button>
+      </div>
+      
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">البريد الإلكتروني <span style="color:var(--danger)">*</span></label>
+        <input type="email" id="createUserEmail" placeholder="user@orangebedbath.com" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+      </div>
+
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">كلمة المرور <span style="color:var(--danger)">*</span></label>
+        <input type="password" id="createUserPassword" placeholder="••••••••" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+      </div>
+
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">الاسم المعروض</label>
+        <input type="text" id="createUserDisplayName" placeholder="مثال: معرض الردسي" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+      </div>
+
+      <div style="margin-bottom:15px; text-align:right;">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">الدور (Role)</label>
+        <select id="createUserRole" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;" onchange="onCreateUserRoleChange()">
+          <option value="user">مستخدم عادي (معرض) - user</option>
+          <option value="manager">مدير منطقة (عدة معارض) - manager</option>
+          <option value="admin">مدير كلي (أدمن) - admin</option>
+          <option value="maintenance_admin">مدير صيانة - maintenance_admin</option>
+        </select>
+      </div>
+
+      <!-- Default Mall drop-down -->
+      <div style="margin-bottom:15px; text-align:right;" id="createUserMallContainer">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">المعرض الافتراضي (Mall)</label>
+        <select id="createUserMall" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+          <!-- Injected dynamically -->
+        </select>
+      </div>
+
+      <!-- Default Warehouse drop-down -->
+      <div style="margin-bottom:15px; text-align:right;" id="createUserWarehouseContainer">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">المستودع الافتراضي (Warehouse)</label>
+        <select id="createUserWarehouse" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit;">
+          <option value="">لا يوجد</option>
+          <option value="Warehouse">مستودع جدة (Warehouse)</option>
+          <option value="warehouse riyadh">مستودع الرياض (warehouse riyadh)</option>
+          <option value="TOTAL_WAREHOUSES">إجمالي المستودعات</option>
+        </select>
+      </div>
+
+      <!-- Managed outlets (shown only for manager role) -->
+      <div style="margin-bottom:15px; text-align:right; display:none;" id="createUserManagedContainer">
+        <label style="display:block; margin-bottom:4px; font-weight:bold;">المعارض المدارة (Managed Outlets)</label>
+        <div id="createUserManagedList" style="border:1px solid var(--border-color); border-radius:8px; padding:10px; max-height:150px; overflow-y:auto; background: #fafafa; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Checkboxes injected dynamically -->
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top: 15px;">
+        <button id="btnSubmitUserCreate" onclick="submitUserCreate()" class="btn btn-primary" style="flex:1;">إنشاء الحساب</button>
+        <button onclick="closeUserCreateModal()" class="btn btn-outline" style="flex:1;">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OCR Upload & Review Modal -->
+  <div class="modal-overlay" id="ocrModal">
+    <div class="modal-content" style="max-width:850px; width:95%; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="modal-header">
+        <h3>🔍 رفع الصور وقراءتها بالباركود (OCR)</h3>
+        <button class="modal-close" onclick="closeOCRModal()">×</button>
+      </div>
+      
+      <div class="modal-body" style="flex:1; overflow-y:auto; padding-right:5px; display:flex; flex-direction:column; gap:15px;">
+        <div style="text-align:right;">
+          <p style="font-size:0.95rem; color:var(--text-muted); margin-bottom:10px;">
+            اسحب وأفلت الصور غير المسماة هنا (والتي تحتوي على الباركود أو الملصق مطبوعاً بداخلها). سيقوم السيرفر بقراءتها تلقائياً، تحويلها لـ WebP، ومقارنتها بالمنتجات الحالية.
+          </p>
+        </div>
+        
+        <div class="drop-zone" id="ocrDropZone" onclick="document.getElementById('ocrFileInput').click()">
+          <p id="ocrDropZonePrompt">اسحب وأفلت ملفات الصور الخام هنا أو انقر للاختيار</p>
+          <span>الصيغ المدعومة: PNG, JPG, JPEG, WEBP, BMP, TIFF</span>
+          <input type="file" id="ocrFileInput" accept="image/*" style="display:none;" multiple onchange="handleOCRFileSelect(event)">
+        </div>
+        
+        <!-- Uploading progress -->
+        <div id="ocrProgressContainer" style="display:none; text-align:center; padding:10px; background:var(--primary-soft); border-radius:8px;">
+          <p style="font-weight:bold; color:var(--primary);" id="ocrProgressText">جاري معالجة الصور بالذكاء الاصطناعي... ⏳</p>
+        </div>
+
+        <!-- Processed items table review -->
+        <div id="ocrReviewContainer" style="display:none; border:1px solid var(--border-color); border-radius:8px; padding:12px; background:#fafafa;">
+          <h4 style="font-size:0.95rem; font-weight:800; color:var(--secondary); margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:5px; text-align:right;">📋 مراجعة وتعميد الأكواد المكتشفة</h4>
+          <table style="width:100%; font-size:0.85rem; border-collapse:collapse; min-width:100%;">
+            <thead>
+              <tr style="background:#f1f3f5;">
+                <th style="padding:6px; text-align:right; width:90px;">الصورة المعالجة</th>
+                <th style="padding:6px; text-align:right;">اسم الملف الأصلي</th>
+                <th style="padding:6px; text-align:right;">الكود المكتشف (قابل للتعديل)</th>
+                <th style="padding:6px; text-align:right;">المنتج المطابق</th>
+                <th style="padding:6px; text-align:right; width:100px;">الحالة والدقة</th>
+                <th style="padding:6px; text-align:center; width:80px;">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="ocrReviewTableBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div style="display:flex; gap:10px; margin-top:15px; border-top:1px solid var(--border-color); padding-top:15px;">
+        <button id="btnSaveOCRAll" onclick="saveOCRApprovedAll()" class="btn btn-primary" style="flex:1; justify-content:center; height:44px;" disabled>💾 تعميد ونقل الصور المعتمدة للمشروع</button>
+        <button onclick="closeOCRModal()" class="btn btn-outline" style="flex:1; justify-content:center; height:44px;">إلغاء</button>
       </div>
     </div>
   </div>
@@ -1113,6 +1308,10 @@
          loadPromoPricesAndBatchItems();
       } else if (tabId === 'tabUsers') {
          loadSupabaseUsers();
+      } else if (tabId === 'tabMediaLibrary') {
+         loadMediaLibrary();
+      } else if (tabId === 'tabAuditLogs') {
+         loadAuditLogs();
       }
     }
 
@@ -2219,6 +2418,7 @@
         if (error) throw error;
 
         showToast('✅ تم الحذف الجماعي بنجاح!', 'success');
+        writeAuditLog('حذف جماعي ' + (mode === 'promo' ? 'للأسعار الترويجية' : 'للباركود'), `حذف ${selectedCodes.length} عناصر: ${selectedCodes.join(', ')}`);
         await loadPromoPricesAndBatchItems();
       } catch (err) {
         showToast('❌ فشل الحذف الجماعي: ' + err.message, 'error');
@@ -2249,6 +2449,7 @@
         if (error) throw error;
 
         showToast('✅ تم حفظ السعر الترويجي بنجاح!', 'success');
+        writeAuditLog('تحديث سعر ترويجي', `تحديث كود المنتج: ${code}، السعر الجديد: ${price} ريال`);
         document.getElementById('addPromoCode').value = '';
         document.getElementById('addPromoPrice').value = '';
         await loadPromoPricesAndBatchItems();
@@ -2269,6 +2470,7 @@
         if (error) throw error;
 
         showToast('✅ تم حذف السعر الترويجي بنجاح!', 'success');
+        writeAuditLog('حذف سعر ترويجي', `حذف السعر الترويجي لكود المنتج: ${code}`);
         await loadPromoPricesAndBatchItems();
       } catch (err) {
         showToast('❌ فشل الحذف: ' + err.message, 'error');
@@ -2299,6 +2501,7 @@
         if (error) throw error;
 
         showToast('✅ تم حفظ عنصر الباركود بنجاح!', 'success');
+        writeAuditLog('إضافة باركود للطباعة', `إضافة كود المنتج: ${code}، الكمية: ${qty}`);
         document.getElementById('addBatchCode').value = '';
         document.getElementById('addBatchQty').value = '';
         await loadPromoPricesAndBatchItems();
@@ -2319,6 +2522,7 @@
         if (error) throw error;
 
         showToast('✅ تم حذف عنصر الباركود بنجاح!', 'success');
+        writeAuditLog('حذف باركود للطباعة', `حذف الباركود المجهز لكود المنتج: ${code}`);
         await loadPromoPricesAndBatchItems();
       } catch (err) {
         showToast('❌ فشل الحذف: ' + err.message, 'error');
@@ -2489,6 +2693,7 @@
         if (error) throw error;
 
         showToast(`✅ تم حفظ ${rows.length} عنصر بنجاح!`, 'success');
+        writeAuditLog('إضافة جماعية ' + (bulkMode === 'promo' ? 'للأسعار الترويجية' : 'للباركود'), `إضافة وتحديث عدد ${rows.length} عناصر`);
         closeBulkModal();
         await loadPromoPricesAndBatchItems();
       } catch (err) {
@@ -2496,6 +2701,532 @@
       } finally {
         btn.disabled = false;
         btn.textContent = '💾 حفظ الكل';
+      }
+    }
+
+    // === Audit Logging Client Helper ===
+    async function writeAuditLog(actionType, details) {
+      if (!currentUser) return;
+      try {
+        await supabaseClient.from('catalog_audit_logs').insert({
+          user_email: currentUser.email,
+          action_type: actionType,
+          details: details
+        });
+      } catch (err) {
+        console.error("Failed to write audit log:", err);
+      }
+    }
+
+    // === TAB 7: Media Library Logic ===
+    let mediaList = [];
+    let mediaSearchTimeout = null;
+    function onMediaSearchInput() {
+      clearTimeout(mediaSearchTimeout);
+      mediaSearchTimeout = setTimeout(() => {
+        const searchVal = document.getElementById('mediaSearch').value.trim();
+        loadMediaLibrary(searchVal);
+      }, 400); // 400ms debounce
+    }
+
+    async function loadMediaLibrary(search = '') {
+      if (!userSessionToken) return;
+      const tbody = document.getElementById('mediaTableBody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">جاري تحميل مكتبة الصور...</td></tr>';
+      
+      try {
+        const url = `/api/catalog/images?search=${encodeURIComponent(search)}&limit=100`;
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${userSessionToken}`
+          }
+        });
+        if (res.ok) {
+          mediaList = await res.json();
+          renderMediaLibrary(search); // Pass search just in case
+        } else {
+          const err = await res.json();
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger)">❌ فشل تحميل الصور: ${err.error || 'خطأ غير معروف'}</td></tr>`;
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger)">❌ خطأ في الاتصال بالسيرفر</td></tr>';
+      }
+    }
+
+    function renderMediaLibrary(search = '') {
+      const tbody = document.getElementById('mediaTableBody');
+      tbody.innerHTML = '';
+      
+      // Since API already filtered on backend, filtered = mediaList
+      const filtered = mediaList;
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد صور مطابقة للبحث</td></tr>';
+        return;
+      }
+      
+      filtered.forEach(m => {
+        const cleanName = m.filename.substring(0, m.filename.lastIndexOf('.')) || m.filename;
+        const foundProd = productsList.find(p => String(p.code) === cleanName || (p.alias && String(p.alias).toLowerCase() === cleanName.toLowerCase()));
+        
+        let prodText = '—';
+        if (foundProd) {
+          prodText = `${foundProd.code} - ${foundProd.name}`;
+        }
+        
+        const sizeKB = (m.size / 1024).toFixed(1) + ' KB';
+        const modifiedDate = new Date(m.mtime).toLocaleString('ar-EG');
+        const imgUrl = '/images/' + m.filename;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><img src="${imgUrl}" class="product-thumb" onerror="this.src='noimage.png'"></td>
+          <td style="font-weight:bold;">${m.filename}</td>
+          <td style="max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${prodText}">${prodText}</td>
+          <td>${sizeKB}</td>
+          <td style="font-size:0.85em; color:var(--text-muted);">${modifiedDate}</td>
+          <td style="text-align:center;">
+            <button onclick="deleteMediaImage('${m.filename}')" class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;">🗑️ حذف الصورة</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteMediaImage(filename) {
+      if (!confirm(`هل أنت متأكد من حذف صورة المنتج (${filename}) نهائياً من السيرفر؟`)) return;
+      if (!userSessionToken) return;
+      
+      showToast('جاري حذف الصورة...');
+      try {
+        const res = await fetch(`/api/catalog/images/${encodeURIComponent(filename)}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${userSessionToken}`
+          }
+        });
+        if (res.ok) {
+          showToast('✅ تم حذف الصورة بنجاح!', 'success');
+          await loadMediaLibrary();
+        } else {
+          const err = await res.json();
+          showToast('❌ فشل الحذف: ' + (err.error || 'خطأ غير معروف'), 'error');
+        }
+      } catch (e) {
+        showToast('❌ خطأ في الاتصال بالخادم', 'error');
+      }
+    }
+
+    // === User Creation Logic ===
+    function openUserCreateModal() {
+      // Gather branches from products list dynamically
+      const branches = [...new Set(productsList.flatMap(p => Object.keys(p.branches || {})))].filter(b => b.toLowerCase() !== 'warehouse' && !b.toLowerCase().includes('riyadh') && !b.toLowerCase().includes('مستودع')).sort();
+      
+      // Populate default mall drop-down
+      const mallSelect = document.getElementById('createUserMall');
+      mallSelect.innerHTML = '<option value="">لا يوجد</option>' + 
+        branches.map(b => `<option value="${b}">${b}</option>`).join('');
+      
+      // Populate managed outlets list (checkboxes)
+      const managedListDiv = document.getElementById('createUserManagedList');
+      managedListDiv.innerHTML = branches.map(b => `
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:0.9em; cursor:pointer;">
+          <input type="checkbox" name="createManagedOutletCheckbox" value="${b}">
+          <span>${b}</span>
+        </label>
+      `).join('');
+
+      document.getElementById('createUserEmail').value = '';
+      document.getElementById('createUserPassword').value = '';
+      document.getElementById('createUserDisplayName').value = '';
+      document.getElementById('createUserRole').value = 'user';
+      
+      onCreateUserRoleChange();
+      document.getElementById('userCreateModal').style.display = 'flex';
+    }
+
+    function closeUserCreateModal() {
+      document.getElementById('userCreateModal').style.display = 'none';
+    }
+
+    function onCreateUserRoleChange() {
+      const role = document.getElementById('createUserRole').value;
+      const mallContainer = document.getElementById('createUserMallContainer');
+      const warehouseContainer = document.getElementById('createUserWarehouseContainer');
+      const managedContainer = document.getElementById('createUserManagedContainer');
+
+      if (role === 'manager') {
+        mallContainer.style.display = 'none';
+        warehouseContainer.style.display = 'none';
+        managedContainer.style.display = 'block';
+      } else {
+        mallContainer.style.display = 'block';
+        warehouseContainer.style.display = 'block';
+        managedContainer.style.display = 'none';
+      }
+    }
+
+    async function submitUserCreate() {
+      if (!userSessionToken) return;
+      const email = document.getElementById('createUserEmail').value.trim();
+      const password = document.getElementById('createUserPassword').value.trim();
+      const displayName = document.getElementById('createUserDisplayName').value.trim();
+      const role = document.getElementById('createUserRole').value;
+      
+      if (!email || !password) {
+        showToast('⚠️ يرجى إدخال البريد الإلكتروني وكلمة المرور', 'error');
+        return;
+      }
+
+      let mall = '';
+      let warehouse = '';
+      let managed_outlets = [];
+
+      if (role === 'manager') {
+        const checkboxes = document.querySelectorAll('input[name="createManagedOutletCheckbox"]:checked');
+        managed_outlets = [...checkboxes].map(cb => cb.value);
+      } else {
+        mall = document.getElementById('createUserMall').value;
+        warehouse = document.getElementById('createUserWarehouse').value;
+      }
+
+      const btn = document.getElementById('btnSubmitUserCreate');
+      btn.disabled = true;
+      btn.textContent = 'جاري إنشاء الحساب...';
+
+      try {
+        const response = await fetch('/api/catalog/admin/users/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userSessionToken}`
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            display_name: displayName,
+            role,
+            mall,
+            warehouse,
+            managed_outlets
+          })
+        });
+
+        if (response.ok) {
+          showToast('✅ تم إنشاء الحساب بنجاح!', 'success');
+          closeUserCreateModal();
+          await loadSupabaseUsers();
+        } else {
+          const err = await response.json();
+          showToast(`❌ فشل إنشاء الحساب: ${err.error || 'خطأ غير معروف'}`, 'error');
+        }
+      } catch (e) {
+        showToast('❌ خطأ في الاتصال بالشبكة', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'إنشاء الحساب';
+      }
+    }
+
+    // === TAB 8: Audit Logs Logic ===
+    let auditLogsList = [];
+    async function loadAuditLogs() {
+      if (!userSessionToken) return;
+      const tbody = document.getElementById('auditTableBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل سجل الأنشطة والأمان...</td></tr>';
+      
+      try {
+        const { data, error } = await supabaseClient
+          .from('catalog_audit_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (error) throw error;
+        
+        auditLogsList = data || [];
+        renderAuditLogs();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger)">❌ فشل تحميل السجل: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderAuditLogs() {
+      const search = document.getElementById('auditSearch').value.trim().toLowerCase();
+      const tbody = document.getElementById('auditTableBody');
+      tbody.innerHTML = '';
+      
+      const filtered = auditLogsList.filter(l => {
+        return !search || 
+          (l.user_email && l.user_email.toLowerCase().includes(search)) ||
+          (l.action_type && l.action_type.toLowerCase().includes(search)) ||
+          (l.details && l.details.toLowerCase().includes(search));
+      });
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد حركات مطابقة للبحث</td></tr>';
+        return;
+      }
+      
+      filtered.forEach(l => {
+        const dateStr = new Date(l.created_at).toLocaleString('ar-EG');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-size:0.85em; color:var(--text-muted);">${dateStr}</td>
+          <td style="font-weight:bold; color:var(--secondary);">${l.user_email}</td>
+          <td><span class="btn" style="background:#fff7ed; color:var(--primary); padding:4px 8px; pointer-events:none; font-size:0.85em; font-weight:bold;">${l.action_type}</span></td>
+          <td style="font-size:0.95em;">${l.details || '—'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // === OCR Image Naming Workflow Logic ===
+    let ocrProcessedItems = [];
+    let ocrSelectedFiles = [];
+
+    function openOCRImageUploadModal() {
+      ocrProcessedItems = [];
+      ocrSelectedFiles = [];
+      document.getElementById('ocrReviewContainer').style.display = 'none';
+      document.getElementById('ocrProgressContainer').style.display = 'none';
+      document.getElementById('btnSaveOCRAll').disabled = true;
+      document.getElementById('ocrDropZonePrompt').textContent = 'اسحب وأفلت ملفات الصور الخام هنا أو انقر للاختيار';
+      document.getElementById('ocrModal').style.display = 'flex';
+    }
+
+    function closeOCRModal() {
+      document.getElementById('ocrModal').style.display = 'none';
+    }
+
+    // Drag and drop events for OCR
+    setTimeout(() => {
+      const ocrDropZone = document.getElementById('ocrDropZone');
+      if (ocrDropZone) {
+        ['dragenter', 'dragover'].forEach(name => {
+          ocrDropZone.addEventListener(name, (e) => {
+             e.preventDefault();
+             ocrDropZone.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+          ocrDropZone.addEventListener(name, (e) => {
+             e.preventDefault();
+             ocrDropZone.classList.remove('dragover');
+          });
+        });
+        ocrDropZone.addEventListener('drop', (e) => {
+           const files = e.dataTransfer.files;
+           if (files.length > 0) {
+              uploadAndProcessOCR(files);
+           }
+        });
+      }
+    }, 1000);
+
+    function handleOCRFileSelect(e) {
+      const files = e.target.files;
+      if (files.length > 0) {
+         uploadAndProcessOCR(files);
+      }
+    }
+
+    async function uploadAndProcessOCR(files) {
+      if (!userSessionToken) return;
+      
+      const progressContainer = document.getElementById('ocrProgressContainer');
+      const progressText = document.getElementById('ocrProgressText');
+      const reviewContainer = document.getElementById('ocrReviewContainer');
+      const saveBtn = document.getElementById('btnSaveOCRAll');
+      
+      progressContainer.style.display = 'block';
+      reviewContainer.style.display = 'none';
+      saveBtn.disabled = true;
+      
+      progressText.textContent = `جاري رفع عدد ${files.length} صور خام إلى السيرفر... 📤`;
+      
+      try {
+        // Step 1: Upload raw files to /api/catalog/ocr/upload
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+          formData.append('image', files[i]);
+        }
+        
+        const uploadRes = await fetch('/api/catalog/ocr/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${userSessionToken}`
+          },
+          body: formData
+        });
+        
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json();
+          throw new Error(err.error || 'فشل رفع الصور');
+        }
+        
+        const uploadData = await uploadRes.json();
+        progressText.textContent = `تم الرفع بنجاح! جاري تشغيل سكريبت الذكاء الاصطناعي (OCR) وقراءة ملصقات الصور... 🔍⏳`;
+        
+        // Step 2: Run processing
+        const processRes = await fetch('/api/catalog/ocr/process', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${userSessionToken}`
+          }
+        });
+        
+        if (!processRes.ok) {
+          const err = await processRes.json();
+          throw new Error(err.error || 'فشل معالجة الصور بالـ OCR');
+        }
+        
+        const processData = await processRes.json();
+        ocrProcessedItems = processData.results || [];
+        
+        progressContainer.style.display = 'none';
+        reviewContainer.style.display = 'block';
+        saveBtn.disabled = ocrProcessedItems.length === 0;
+        
+        renderOCRReviewTable();
+        showToast(`✅ اكتملت قراءة الصور: تم التعرف على ${ocrProcessedItems.length} صور`, 'success');
+        
+      } catch (err) {
+        console.error(err);
+        progressContainer.style.display = 'none';
+        showToast(`❌ خطأ في معالجة الصور: ${err.message}`, 'error');
+      }
+    }
+
+    function renderOCRReviewTable() {
+      const tbody = document.getElementById('ocrReviewTableBody');
+      tbody.innerHTML = '';
+      
+      if (ocrProcessedItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">لم يتم قراءة أي صور</td></tr>';
+        return;
+      }
+      
+      ocrProcessedItems.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        
+        // Match product info
+        const foundProd = productsList.find(p => String(p.code) === item.number || (p.alias && String(p.alias).toLowerCase() === item.number.toLowerCase()));
+        let prodText = '— (غير موجود بالكاتالوج)';
+        if (foundProd) {
+          prodText = `${foundProd.code} - ${foundProd.name}`;
+        }
+        
+        // Determine status style
+        let badgeStyle = 'background:#fee2e2; color:#ef4444;'; // error/red
+        let badgeText = '❌ لم يُقرأ';
+        if (item.status === 'OK') {
+          badgeStyle = 'background:#d1fae5; color:#059669;'; // green
+          badgeText = `✅ ${Math.round(parseFloat(item.confidence) * 100)}%`;
+        } else if (item.status === 'LOW_CONFIDENCE') {
+          badgeStyle = 'background:#fef3c7; color:#d97706;'; // orange
+          badgeText = `⚠ ${Math.round(parseFloat(item.confidence) * 100)}%`;
+        } else if (item.status === 'BAD_FORMAT') {
+          badgeStyle = 'background:#f3e8ff; color:#7c3aed;'; // purple
+          badgeText = `❓ كود غريب`;
+        }
+        
+        const tempImgUrl = item.new_file ? '/temp_images/' + item.new_file : 'noimage.png';
+        
+        tr.innerHTML = `
+          <td><img src="${tempImgUrl}" class="product-thumb" onerror="this.src='noimage.png'" style="width:60px; height:60px;"></td>
+          <td style="word-break:break-all; font-size: 0.85em;" title="${item.original}">${item.original}</td>
+          <td>
+            <input type="text" class="ocr-code-input" data-index="${index}" value="${item.number}" style="width:100%; padding:5px; border:1px solid var(--border-color); border-radius:6px; font-family:inherit; text-align:center; font-weight:bold; box-sizing:border-box;" oninput="onOCRCodeFieldChange(${index})">
+          </td>
+          <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="ocr-prod-match-${index}" title="${prodText}">${prodText}</td>
+          <td>
+            <span class="btn" style="${badgeStyle} padding:4px 8px; pointer-events:none; font-size:0.8em; font-weight:bold;">${badgeText}</span>
+          </td>
+          <td style="text-align:center;">
+            <button onclick="removeOCRItemFromList(${index})" class="btn btn-outline" style="padding:4px 8px; font-size:0.8rem; border-color:var(--danger); color:var(--danger);"><i class="fa-solid fa-trash-can"></i> استبعاد</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function onOCRCodeFieldChange(index) {
+      const input = document.querySelector(`.ocr-code-input[data-index="${index}"]`);
+      const val = input ? input.value.trim() : "";
+      
+      // Update in our processed list
+      ocrProcessedItems[index].number = val;
+      
+      // Update matching product text in UI
+      const matchTd = document.getElementById(`ocr-prod-match-${index}`);
+      if (matchTd) {
+        const foundProd = productsList.find(p => String(p.code) === val || (p.alias && String(p.alias).toLowerCase() === val.toLowerCase()));
+        if (foundProd) {
+          matchTd.textContent = `${foundProd.code} - ${foundProd.name}`;
+          matchTd.title = `${foundProd.code} - ${foundProd.name}`;
+        } else {
+          matchTd.textContent = '— (غير موجود بالكاتالوج)';
+          matchTd.title = '— (غير موجود بالكاتالوج)';
+        }
+      }
+    }
+
+    function removeOCRItemFromList(index) {
+      ocrProcessedItems.splice(index, 1);
+      renderOCRReviewTable();
+      document.getElementById('btnSaveOCRAll').disabled = ocrProcessedItems.length === 0;
+    }
+
+    async function saveOCRApprovedAll() {
+      if (!userSessionToken || ocrProcessedItems.length === 0) return;
+      
+      // Validate inputs
+      const itemsToApprove = ocrProcessedItems.map((item, index) => {
+        const input = document.querySelector(`.ocr-code-input[data-index="${index}"]`);
+        const finalCode = input ? input.value.trim() : item.number;
+        return {
+          original: item.original,
+          temp_file: item.new_file,
+          code: finalCode
+        };
+      }).filter(item => item.temp_file && item.code);
+      
+      if (itemsToApprove.length === 0) {
+        showToast('⚠️ لا توجد صور تحتوي على أكواد منتجات لاعتمادها', 'error');
+        return;
+      }
+      
+      const saveBtn = document.getElementById('btnSaveOCRAll');
+      saveBtn.disabled = true;
+      saveBtn.textContent = '⏳ جاري الحفظ والاعتماد...';
+      
+      try {
+        const res = await fetch('/api/catalog/ocr/approve', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userSessionToken}`
+          },
+          body: JSON.stringify({ items: itemsToApprove })
+        });
+        
+        if (res.ok) {
+          const resData = await res.json();
+          showToast(`✅ تم تعميد وحفظ عدد ${resData.approved_count} صور بنجاح!`, 'success');
+          closeOCRModal();
+          await initializeCatalogAdmin(); // Reload images stats and lists
+          switchTab('tabImages');
+        } else {
+          const err = await res.json();
+          showToast(`❌ فشل الاعتماد: ${err.error || 'خطأ غير معروف'}`, 'error');
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 تعميد ونقل الصور المعتمدة للمشروع';
+        }
+      } catch (e) {
+        showToast('❌ خطأ في الاتصال بالشبكة', 'error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 تعميد ونقل الصور المعتمدة للمشروع';
       }
     }
 
