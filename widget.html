@@ -850,6 +850,31 @@
             return currentUser.hide_visitors === true;
         }
 
+        function getRemainingDays(metadataEndDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (metadataEndDate) {
+                const parts = metadataEndDate.split('-');
+                if (parts.length === 3) {
+                    const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    customEnd.setHours(0, 0, 0, 0);
+                    if (today <= customEnd) {
+                        const diffTime = customEnd.getTime() - today.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        return Math.max(1, diffDays);
+                    }
+                }
+            }
+            let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            let todayDate = today.getDate();
+            if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+                if (todayDate <= 19) lastDayOfMonth = 19;
+                else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
+            }
+            let remainingDays = lastDayOfMonth - todayDate + 1;
+            return Math.max(1, remainingDays);
+        }
+
         // Date Helpers
         function getTodayStr() {
             const today = new Date();
@@ -1163,7 +1188,7 @@
                 const sales = periodSales[storeId] || 0;
                 const mtdSales = getMonthToDateSales(storeId, toDate);
                 const remainingTarget = Math.max(0, monthlyTarget - mtdSales);
-                const remainingDays = Math.max(1, daysInMonth - currentDay + 1);
+                const remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
                 const dynamicDailyTarget = remainingTarget / remainingDays;
                 const dailyPercent = dynamicDailyTarget > 0 ? (sales / dynamicDailyTarget) * 100 : null;
 
@@ -1561,7 +1586,7 @@
 
                     // Dynamic daily target
                     const remainingTarget = Math.max(0, monthlyTarget - mtdSales);
-                    const remainingDays = Math.max(1, daysInMonth - currentDay + 1);
+                    const remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
                     const dynamicDailyTarget = remainingTarget / remainingDays;
 
                     // Percentages

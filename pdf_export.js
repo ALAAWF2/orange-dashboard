@@ -14,6 +14,31 @@ function shouldHideVisitorsGlobal() {
     return currentUser.hide_visitors === true;
 }
 
+function getRemainingDays(metadataEndDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (metadataEndDate) {
+        const parts = metadataEndDate.split('-');
+        if (parts.length === 3) {
+            const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            customEnd.setHours(0, 0, 0, 0);
+            if (today <= customEnd) {
+                const diffTime = customEnd.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                return Math.max(1, diffDays);
+            }
+        }
+    }
+    let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    let todayDate = today.getDate();
+    if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+        if (todayDate <= 19) lastDayOfMonth = 19;
+        else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
+    }
+    let remainingDays = lastDayOfMonth - todayDate + 1;
+    return Math.max(1, remainingDays);
+}
+
 async function generatePDF(targetStoreId = 'all', isDetailed = false) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -118,23 +143,7 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         let mStart = new Date(startDate);
         let mEnd = new Date(endDate);
 
-        // Calculate Remaining Days
-        const nowReq = new Date();
-        let lastDayOfMonth = new Date(nowReq.getFullYear(), nowReq.getMonth() + 1, 0).getDate();
-
-        // 2026 March: Split into two target periods (1-19 Ramadan, 20-31 post-Ramadan)
-        let todayDate = nowReq.getDate();
-        if (nowReq.getFullYear() === 2026 && nowReq.getMonth() === 2) {
-            if (todayDate <= 19) {
-                lastDayOfMonth = 19;
-            } else {
-                lastDayOfMonth = 12; // 12 days in post-Ramadan period (20-31)
-                todayDate = todayDate - 19; // Convert to period-relative day
-            }
-        }
-
-        let remainingDays = lastDayOfMonth - todayDate + 1;
-        if (remainingDays < 1) remainingDays = 1;
+        let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
 
 
         // 1. First Pass: Calculate Header Totals (Target & Sales)

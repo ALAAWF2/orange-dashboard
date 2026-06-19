@@ -617,6 +617,8 @@
             document.getElementById('btnEditTargets').style.display = 'inline-block';
         }
 
+
+
         function logout() {
             localStorage.removeItem('currentUser');
             window.location.href = 'login.html';
@@ -1130,6 +1132,32 @@
             let branchStats = {}; // Map storeId -> {current, transactions, items}
             let monthlyTargetsData = {}; // Global for new targets
 
+            // Helpers
+            function getRemainingDays(metadataEndDate) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (metadataEndDate) {
+                    const parts = metadataEndDate.split('-');
+                    if (parts.length === 3) {
+                        const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        customEnd.setHours(0, 0, 0, 0);
+                        if (today <= customEnd) {
+                            const diffTime = customEnd.getTime() - today.getTime();
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                            return Math.max(1, diffDays);
+                        }
+                    }
+                }
+                let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                let todayDate = today.getDate();
+                if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+                    if (todayDate <= 19) lastDayOfMonth = 19;
+                    else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
+                }
+                let remainingDays = lastDayOfMonth - todayDate + 1;
+                return Math.max(1, remainingDays);
+            }
+
             // Period Change Handler
             function onPeriodChange() {
                 const period = document.getElementById('periodFilter').value;
@@ -1169,6 +1197,7 @@
 
                     // Expose to Global Scope for PDF Script
                     window.historyData = historyData;
+                    window.employeesMetadata = empJson.metadata;
 
                     window.targetsData = targetsData;
                     window.monthlyTargetsData = monthlyTargetsData; // Expose to Window
@@ -1623,23 +1652,7 @@
                     }
                 });
 
-                // Calculate dailyReq for sorting
-                const todayForDaily = new Date();
-                let lastDayOfMonth = new Date(todayForDaily.getFullYear(), todayForDaily.getMonth() + 1, 0).getDate();
-
-                // 2026 March: Split into two target periods (1-19 Ramadan, 20-31 post-Ramadan)
-                let todayDate = todayForDaily.getDate();
-                if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2) {
-                    if (todayDate <= 19) {
-                        lastDayOfMonth = 19;
-                    } else {
-                        lastDayOfMonth = 12; // 12 days in post-Ramadan period (20-31)
-                        todayDate = todayDate - 19; // Convert to period-relative day
-                    }
-                }
-
-                let remainingDays = lastDayOfMonth - todayDate + 1;
-                if (remainingDays < 1) remainingDays = 1;
+                let remainingDays = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null);
 
                 empList.forEach(e => {
                     e.dailyReq = 0;

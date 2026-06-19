@@ -166,6 +166,31 @@
             document.getElementById('branchName').textContent = branchName;
         }
 
+        function getRemainingDays(metadataEndDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (metadataEndDate) {
+                const parts = metadataEndDate.split('-');
+                if (parts.length === 3) {
+                    const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    customEnd.setHours(0, 0, 0, 0);
+                    if (today <= customEnd) {
+                        const diffTime = customEnd.getTime() - today.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        return Math.max(1, diffDays);
+                    }
+                }
+            }
+            let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            let todayDate = today.getDate();
+            if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+                if (todayDate <= 19) lastDayOfMonth = 19;
+                else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
+            }
+            let remainingDays = lastDayOfMonth - todayDate + 1;
+            return Math.max(1, remainingDays);
+        }
+
         async function init() {
             const errDiv = document.getElementById('loadingErrors');
 
@@ -180,6 +205,7 @@
                 const res = await fetch('employees_data.json');
                 if (!res.ok) throw new Error("File not found");
                 const allData = await res.json();
+                window.employeesMetadata = allData.metadata;
 
                 // NEW: Logic for handling both old and new data structures
                 let records = [];
@@ -355,21 +381,7 @@
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                     dailyReqDivisor = diffDays;
                 } else {
-                    // Standard MTD Remaining Divisor
-                    const todayForDaily = new Date();
-                    let lastDayOfMonth = new Date(todayForDaily.getFullYear(), todayForDaily.getMonth() + 1, 0).getDate();
-                    if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2) {
-                        lastDayOfMonth = 19;
-                    }
-                    let todayDate = todayForDaily.getDate() - 1; // Used yesterday as todayDate safely
-                    if (todayDate < 0) todayDate = 0;
-
-                    if (todayForDaily.getFullYear() === 2026 && todayForDaily.getMonth() === 2 && todayDate > 18) {
-                        todayDate = 18;
-                    }
-                    let remainingDays = lastDayOfMonth - todayDate;
-                    if (remainingDays < 1) remainingDays = 1;
-                    dailyReqDivisor = remainingDays;
+                    dailyReqDivisor = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null);
                 }
             }
 

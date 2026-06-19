@@ -1,5 +1,30 @@
 /* PDF Export Logic for Employees - Final Array Fix - Ver 1.2 */
 
+function getRemainingDays(metadataEndDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (metadataEndDate) {
+        const parts = metadataEndDate.split('-');
+        if (parts.length === 3) {
+            const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            customEnd.setHours(0, 0, 0, 0);
+            if (today <= customEnd) {
+                const diffTime = customEnd.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                return Math.max(1, diffDays);
+            }
+        }
+    }
+    let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    let todayDate = today.getDate();
+    if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+        if (todayDate <= 19) lastDayOfMonth = 19;
+        else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
+    }
+    let remainingDays = lastDayOfMonth - todayDate + 1;
+    return Math.max(1, remainingDays);
+}
+
 async function generateEmployeePDF(targetEmps = null, includeCommission = true, overrideStores = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -331,25 +356,7 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true, 
 
             let dailyReq = 0;
             if (!isPrevMode) {
-                // Only relevant for MTD
-                let daysInMonthLabel = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-                let daysPassedLabel = today.getDate() - 1;
-                if (daysPassedLabel < 0) daysPassedLabel = 0;
-
-                // 2026 March: Split into two target periods
-                if (today.getFullYear() === 2026 && today.getMonth() === 2) {
-                    if (today.getDate() <= 19) {
-                        daysInMonthLabel = 19;
-                    } else {
-                        daysInMonthLabel = 12; // post-Ramadan period (20-31)
-                        daysPassedLabel = today.getDate() - 20; // days passed since March 20
-                        if (daysPassedLabel < 0) daysPassedLabel = 0;
-                    }
-                }
-
-                let daysLeftLabel = daysInMonthLabel - daysPassedLabel;
-                if (daysLeftLabel < 1) daysLeftLabel = 1;
-
+                let daysLeftLabel = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null);
                 dailyReq = remaining / daysLeftLabel;
             }
 
@@ -395,24 +402,7 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true, 
         const col2Rem = Math.max(0, col2TotalTarget - col2TotalSales);
         let col2Daily = 0;
         if (!isPrevMode) {
-            let daysInMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-            let daysPassedEnd = today.getDate() - 1;
-            if (daysPassedEnd < 0) daysPassedEnd = 0;
-
-            // 2026 March: Split into two target periods
-            if (today.getFullYear() === 2026 && today.getMonth() === 2) {
-                if (today.getDate() <= 19) {
-                    daysInMonthEnd = 19;
-                } else {
-                    daysInMonthEnd = 12;
-                    daysPassedEnd = today.getDate() - 20;
-                    if (daysPassedEnd < 0) daysPassedEnd = 0;
-                }
-            }
-
-            let daysLeftEnd = daysInMonthEnd - daysPassedEnd;
-            if (daysLeftEnd < 1) daysLeftEnd = 1;
-
+            let daysLeftEnd = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null);
             col2Daily = col2Rem / daysLeftEnd;
         }
 
