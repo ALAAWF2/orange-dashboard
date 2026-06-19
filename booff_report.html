@@ -263,7 +263,7 @@
         <div id="showroomsContainer"></div>
     </div>
 
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script>
         let reportData = [];
         const labelMap = {
@@ -532,8 +532,96 @@
 
             const wb = XLSX.utils.book_new();
 
+            // Set Workbook-level RTL view direction so Excel displays columns Right-to-Left
+            if (!wb.Workbook) wb.Workbook = {};
+            if (!wb.Workbook.Views) wb.Workbook.Views = [];
+            wb.Workbook.Views[0] = { RTL: true };
+
+            // Styling tokens
+            const STYLE_HEADER_ORANGE = {
+                font: { name: 'Segoe UI', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: 'FE7900' } },
+                alignment: { horizontal: 'center', vertical: 'center' }
+            };
+
+            const STYLE_HEADER_GRAY = {
+                font: { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: '333333' } },
+                fill: { fgColor: { rgb: 'EFEFEF' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border: {
+                    top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+                }
+            };
+
+            const STYLE_CELL_NORMAL = {
+                font: { name: 'Segoe UI', sz: 10 },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border: {
+                    top: { style: 'thin', color: { rgb: 'E5E5E5' } },
+                    bottom: { style: 'thin', color: { rgb: 'E5E5E5' } },
+                    left: { style: 'thin', color: { rgb: 'E5E5E5' } },
+                    right: { style: 'thin', color: { rgb: 'E5E5E5' } }
+                }
+            };
+
+            const STYLE_CELL_LABEL = {
+                font: { name: 'Segoe UI', sz: 10, bold: true },
+                alignment: { horizontal: 'right', vertical: 'center' },
+                fill: { fgColor: { rgb: 'F9F9F9' } },
+                border: {
+                    top: { style: 'thin', color: { rgb: 'E5E5E5' } },
+                    bottom: { style: 'thin', color: { rgb: 'E5E5E5' } },
+                    left: { style: 'thin', color: { rgb: 'E5E5E5' } },
+                    right: { style: 'thin', color: { rgb: 'E5E5E5' } }
+                }
+            };
+
+            const STYLE_CELL_TOTAL = {
+                font: { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: 'D35400' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                fill: { fgColor: { rgb: 'FFFAF5' } },
+                border: {
+                    top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+                }
+            };
+
+            const STYLE_CELL_ACTIVE_YEAR = {
+                font: { name: 'Segoe UI', sz: 10 },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                fill: { fgColor: { rgb: 'FFF4EC' } }, // light orange highlight for current active year
+                border: {
+                    top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+                }
+            };
+
+            const STYLE_CELL_ACTIVE_YEAR_LABEL = {
+                font: { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: 'D35400' } },
+                alignment: { horizontal: 'right', vertical: 'center' },
+                fill: { fgColor: { rgb: 'FFF4EC' } }, // light orange highlight for labels
+                border: {
+                    top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+                }
+            };
+
             managerData.showrooms.forEach(showroom => {
                 const sheetRows = [];
+                
+                // Title blocks
+                sheetRows.push([`التقرير المقارن العام (2023 - 2026) - معرض ${showroom.name}`]);
+                sheetRows.push([`مدير المنطقة: ${selectedManager}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'المؤشرات السنوية للمقارنة', `تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}`]);
+                sheetRows.push([]); // Spacer row
                 
                 const headerRow = ['السنة / المؤشر'];
                 monthNames.forEach(m => headerRow.push(m));
@@ -598,11 +686,7 @@
                         rowData.push(sCfg.label);
                         const val = showroom.stats[sCfg.key];
                         if (val !== null && val !== undefined) {
-                            if (sCfg.isPct) {
-                                rowData.push(`${(val * 100).toFixed(2)}%`);
-                            } else {
-                                rowData.push(val % 1 === 0 ? val : Number(val.toFixed(2)));
-                            }
+                            rowData.push(val);
                         } else {
                             rowData.push('');
                         }
@@ -616,13 +700,102 @@
 
                 const ws = XLSX.utils.aoa_to_sheet(sheetRows);
                 
+                // Set RTL view direction on the sheet view metadata
+                ws['!views'] = [{ RTL: true }];
+
+                // Merge title cells at the top (A1:N1)
+                ws['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }
+                ];
+
+                // Post-process cells to apply styling and formatting
+                for (let ref in ws) {
+                    if (ref[0] === '!') continue;
+                    const cell = ws[ref];
+                    
+                    // Parse col letter and row index
+                    const match = ref.match(/^([A-Z]+)(\d+)$/);
+                    if (!match) continue;
+                    const col = match[1];
+                    const row = parseInt(match[2]);
+
+                    // Style Title (Row 1)
+                    if (row === 1) {
+                        cell.s = STYLE_HEADER_ORANGE;
+                        continue;
+                    }
+
+                    // Style Subtitle (Row 2)
+                    if (row === 2) {
+                        cell.s = {
+                            font: { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: '555555' } },
+                            alignment: { horizontal: col === 'A' ? 'right' : 'left' }
+                        };
+                        continue;
+                    }
+
+                    // Style Header Row (Row 4)
+                    if (row === 4) {
+                        if (col !== 'O') {
+                            cell.s = STYLE_HEADER_GRAY;
+                        }
+                        continue;
+                    }
+
+                    // Style Metric Table Rows (Row 5 to 12)
+                    if (row >= 5 && row <= 12) {
+                        const is2026 = (row === 11 || row === 12);
+                        
+                        if (col === 'A') {
+                            // Row labels
+                            cell.s = is2026 ? STYLE_CELL_ACTIVE_YEAR_LABEL : STYLE_CELL_LABEL;
+                        } else if (col === 'N') {
+                            // Totals column
+                            cell.s = STYLE_CELL_TOTAL;
+                        } else if (col === 'O') {
+                            // Spacer column
+                            continue;
+                        } else if (col >= 'B' && col <= 'M') {
+                            // Monthly values
+                            cell.s = is2026 ? STYLE_CELL_ACTIVE_YEAR : STYLE_CELL_NORMAL;
+                        }
+                    }
+
+                    // Style Yearly Statistics Columns (P and Q, Row 5 to 19)
+                    if (row >= 5 && row <= 19) {
+                        const is2026Stat = (row >= 16); // Last 4 rows represent 2026 stats
+                        
+                        if (col === 'P') {
+                            cell.s = is2026Stat ? STYLE_CELL_ACTIVE_YEAR_LABEL : STYLE_CELL_LABEL;
+                        } else if (col === 'Q') {
+                            cell.s = is2026Stat ? STYLE_CELL_ACTIVE_YEAR : STYLE_CELL_NORMAL;
+                        }
+                    }
+
+                    // Format numeric values
+                    if (typeof cell.v === 'number') {
+                        cell.t = 'n';
+                        
+                        if (col === 'Q') {
+                            const labelCell = ws['P' + row];
+                            if (labelCell && labelCell.v && (labelCell.v.includes('نمو') || labelCell.v.includes('النمو'))) {
+                                cell.z = '0.00%';
+                            } else {
+                                cell.z = '#,##0.00';
+                            }
+                        } else {
+                            cell.z = '#,##0';
+                        }
+                    }
+                }
+                
                 const colWidths = [
-                    { wch: 18 }, // A
-                    ...Array(12).fill({ wch: 10 }), // months
-                    { wch: 15 }, // TOTAL
+                    { wch: 22 }, // A
+                    ...Array(12).fill({ wch: 12 }), // months
+                    { wch: 16 }, // TOTAL
                     { wch: 4 }, // Spacer
-                    { wch: 30 }, // Stats Label
-                    { wch: 15 } // Stats Value
+                    { wch: 32 }, // Stats Label
+                    { wch: 18 } // Stats Value
                 ];
                 ws['!cols'] = colWidths;
 
