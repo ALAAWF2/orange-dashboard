@@ -659,7 +659,10 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
         <!-- Column 1: Promo Prices -->
         <div>
-          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; gap: 8px;">🏷️ الأسعار الترويجية الخاصة (Promo Prices)</h3>
+          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span>🏷️ الأسعار الترويجية الخاصة (Promo Prices)</span>
+            <button id="btnDeleteSelectedPromo" onclick="deleteSelectedItems('promo')" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.8rem; display: none;"><i class="fa-solid fa-trash-can"></i> حذف المحدد</button>
+          </h3>
           <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem;">
             <div class="controls-row" style="align-items: flex-end;">
               <div class="control-group">
@@ -670,8 +673,9 @@
                 <label>السعر الجديد (ريال)</label>
                 <input type="text" id="addPromoPrice" placeholder="مثال: 249">
               </div>
-              <div>
+              <div style="display: flex; gap: 8px;">
                 <button onclick="savePromoPrice()" class="btn btn-primary" style="height: 40px; padding: 0 1.5rem;">حفظ / تعديل</button>
+                <button onclick="openBulkModal('promo')" class="btn btn-outline" style="height: 40px; padding: 0 1.2rem; border-color: var(--primary); color: var(--primary);"><i class="fa-solid fa-file-import"></i> إضافة جماعية</button>
               </div>
             </div>
           </div>
@@ -680,6 +684,7 @@
             <table>
               <thead>
                 <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllPromo" onchange="toggleSelectAll('promo')"></th>
                   <th>كود المنتج</th>
                   <th>السعر الترويجي</th>
                   <th>آخر تحديث</th>
@@ -695,7 +700,10 @@
 
         <!-- Column 2: Batch Print Barcodes -->
         <div>
-          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; gap: 8px;">🖨️ قائمة طباعة الباركود الافتراضية</h3>
+          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span>🖨️ قائمة طباعة الباركود الافتراضية</span>
+            <button id="btnDeleteSelectedBatch" onclick="deleteSelectedItems('batch')" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.8rem; display: none;"><i class="fa-solid fa-trash-can"></i> حذف المحدد</button>
+          </h3>
           <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem;">
             <div class="controls-row" style="align-items: flex-end;">
               <div class="control-group">
@@ -706,8 +714,9 @@
                 <label>الكمية الافتراضية</label>
                 <input type="text" id="addBatchQty" placeholder="مثال: 1">
               </div>
-              <div>
+              <div style="display: flex; gap: 8px;">
                 <button onclick="saveBatchItem()" class="btn btn-primary" style="height: 40px; padding: 0 1.5rem;">حفظ / تعديل</button>
+                <button onclick="openBulkModal('batch')" class="btn btn-outline" style="height: 40px; padding: 0 1.2rem; border-color: var(--primary); color: var(--primary);"><i class="fa-solid fa-file-import"></i> إضافة جماعية</button>
               </div>
             </div>
           </div>
@@ -716,6 +725,7 @@
             <table>
               <thead>
                 <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllBatch" onchange="toggleSelectAll('batch')"></th>
                   <th>كود المنتج</th>
                   <th>الكمية</th>
                   <th>آخر تحديث</th>
@@ -859,6 +869,58 @@
       </div>
       <div style="margin-top:15px; text-align:left;">
         <button onclick="closeOrderDetailModal()" class="btn btn-outline">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Add Modal -->
+  <div class="modal-overlay" id="bulkModal">
+    <div class="modal-content" style="max-width: 650px; width: 90%; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3 id="bulkModalTitle">📥 إضافة جماعية وتعديل متعدد</h3>
+        <button class="modal-close" onclick="closeBulkModal()">×</button>
+      </div>
+      
+      <div class="modal-body" style="flex: 1; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 15px;">
+        <div style="text-align: right;">
+          <p id="bulkModalDescription" style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 10px;">
+            ألصق قائمة المنتجات والأسعار/الكميات هنا. سطر واحد لكل منتج.
+          </p>
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 15px; direction: rtl;">
+            <strong style="font-size: 0.85rem; color: var(--secondary);">التنسيقات المقبولة للأسطر:</strong>
+            <ul style="font-size: 0.8rem; color: var(--text-muted); margin-right: 15px; margin-top: 5px;">
+              <li>الكود [مسافة أو فاصلة] السعر أو الكمية (مثال: <code style="direction: ltr; display: inline-block;">100030424, 249</code>)</li>
+              <li>نسخ مباشر من أعمدة إكسل (Excel Columns)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="text-align: right; display: flex; flex-direction: column; flex: 1; min-height: 200px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: bold;" id="bulkInputLabel">البيانات (الكود والقيمة):</label>
+          <textarea id="bulkInputTextarea" placeholder="100030424, 249&#10;100040084, 109" style="width: 100%; flex: 1; min-height: 150px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical; background: #fafafa; direction: ltr; text-align: left;"></textarea>
+        </div>
+
+        <div id="bulkAnalysisContainer" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; max-height: 250px; overflow-y: auto; background: #fafafa;">
+          <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--secondary); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; text-align: right;" id="bulkAnalysisTitle">📋 مراجعة وتحليل البيانات</h4>
+          <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse; min-width: 100%;">
+            <thead>
+              <tr style="background: #f1f3f5;">
+                <th style="padding: 6px; text-align: right;">السطر</th>
+                <th style="padding: 6px; text-align: right;">كود المنتج</th>
+                <th style="padding: 6px; text-align: right;" id="bulkTableHeaderValue">القيمة</th>
+                <th style="padding: 6px; text-align: right;">الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="bulkAnalysisTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+        <button id="btnAnalyzeBulk" onclick="analyzeBulkData()" class="btn btn-outline" style="flex: 1; justify-content: center; height: 44px;">🔍 تحليل البيانات</button>
+        <button id="btnSaveBulk" onclick="saveBulkData()" class="btn btn-primary" style="flex: 1; justify-content: center; height: 44px;" disabled>💾 حفظ الكل</button>
       </div>
     </div>
   </div>
@@ -2020,8 +2082,8 @@
     async function loadPromoPricesAndBatchItems() {
       const pTbody = document.getElementById('promoPricesTableBody');
       const bTbody = document.getElementById('batchItemsTableBody');
-      pTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
-      bTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
+      pTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
+      bTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
 
       try {
         const { data: promoData, error: promoErr } = await supabaseClient
@@ -2044,17 +2106,22 @@
         renderBatchItemsTable();
       } catch (err) {
         showToast('❌ فشل تحميل بيانات العروض والباركود: ' + err.message, 'error');
-        pTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger)">فشل التحميل</td></tr>';
-        bTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger)">فشل التحميل</td></tr>';
+        pTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--danger)">فشل التحميل</td></tr>';
+        bTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--danger)">فشل التحميل</td></tr>';
       }
     }
 
     function renderPromoPricesTable() {
       const tbody = document.getElementById('promoPricesTableBody');
       tbody.innerHTML = '';
+      
+      const selectAllCb = document.getElementById('selectAllPromo');
+      if (selectAllCb) selectAllCb.checked = false;
+      const delBtn = document.getElementById('btnDeleteSelectedPromo');
+      if (delBtn) delBtn.style.display = 'none';
 
       if (promoPricesDb.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد أسعار ترويجية مضافة حالياً</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد أسعار ترويجية مضافة حالياً</td></tr>';
         return;
       }
 
@@ -2062,6 +2129,9 @@
         const tr = document.createElement('tr');
         const updatedDate = new Date(item.updated_at).toLocaleString('ar-EG');
         tr.innerHTML = `
+          <td style="text-align:center;">
+            <input type="checkbox" class="promo-select-checkbox" value="${item.item_code}" onchange="updateDeleteSelectedButtonVisibility('promo')">
+          </td>
           <td style="font-weight:bold;">${item.item_code}</td>
           <td style="color: var(--primary); font-weight: bold;">${item.price} ريال</td>
           <td style="font-size:0.85em; color:var(--text-muted);">${updatedDate}</td>
@@ -2076,9 +2146,14 @@
     function renderBatchItemsTable() {
       const tbody = document.getElementById('batchItemsTableBody');
       tbody.innerHTML = '';
+      
+      const selectAllCb = document.getElementById('selectAllBatch');
+      if (selectAllCb) selectAllCb.checked = false;
+      const delBtn = document.getElementById('btnDeleteSelectedBatch');
+      if (delBtn) delBtn.style.display = 'none';
 
       if (batchItemsDb.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد عناصر باركود مجهزة مسبقاً</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد عناصر باركود مجهزة مسبقاً</td></tr>';
         return;
       }
 
@@ -2086,6 +2161,9 @@
         const tr = document.createElement('tr');
         const updatedDate = new Date(item.updated_at).toLocaleString('ar-EG');
         tr.innerHTML = `
+          <td style="text-align:center;">
+            <input type="checkbox" class="batch-select-checkbox" value="${item.item_code}" onchange="updateDeleteSelectedButtonVisibility('batch')">
+          </td>
           <td style="font-weight:bold;">${item.item_code}</td>
           <td style="font-weight:bold;">${item.qty}</td>
           <td style="font-size:0.85em; color:var(--text-muted);">${updatedDate}</td>
@@ -2095,6 +2173,56 @@
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    // === Bulk Delete Logic ===
+    function toggleSelectAll(mode) {
+      const selectAllCheckbox = document.getElementById(mode === 'promo' ? 'selectAllPromo' : 'selectAllBatch');
+      const checkboxes = document.querySelectorAll(mode === 'promo' ? '.promo-select-checkbox' : '.batch-select-checkbox');
+      checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+      updateDeleteSelectedButtonVisibility(mode);
+    }
+
+    function updateDeleteSelectedButtonVisibility(mode) {
+      const checkboxes = document.querySelectorAll(mode === 'promo' ? '.promo-select-checkbox:checked' : '.batch-select-checkbox:checked');
+      const btn = document.getElementById(mode === 'promo' ? 'btnDeleteSelectedPromo' : 'btnDeleteSelectedBatch');
+      if (checkboxes.length > 0) {
+        btn.textContent = `🗑️ حذف المحدد (${checkboxes.length})`;
+        btn.style.display = 'inline-flex';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    async function deleteSelectedItems(mode) {
+      const checkboxes = document.querySelectorAll(mode === 'promo' ? '.promo-select-checkbox:checked' : '.batch-select-checkbox:checked');
+      const selectedCodes = Array.from(checkboxes).map(cb => cb.value);
+
+      if (selectedCodes.length === 0) return;
+
+      const confirmMsg = mode === 'promo' 
+        ? `هل أنت متأكد من حذف الأسعار الترويجية لـ ${selectedCodes.length} منتجات محددة؟`
+        : `هل أنت متأكد من حذف الباركود المجهز لـ ${selectedCodes.length} منتجات محددة؟`;
+
+      if (!confirm(confirmMsg)) return;
+
+      showToast('جاري الحذف الجماعي...');
+      
+      const targetTable = mode === 'promo' ? 'catalog_promo_prices' : 'catalog_batch_print_items';
+
+      try {
+        const { error } = await supabaseClient
+          .from(targetTable)
+          .delete()
+          .in('item_code', selectedCodes);
+
+        if (error) throw error;
+
+        showToast('✅ تم الحذف الجماعي بنجاح!', 'success');
+        await loadPromoPricesAndBatchItems();
+      } catch (err) {
+        showToast('❌ فشل الحذف الجماعي: ' + err.message, 'error');
+      }
     }
 
     async function savePromoPrice() {
@@ -2194,6 +2322,180 @@
         await loadPromoPricesAndBatchItems();
       } catch (err) {
         showToast('❌ فشل الحذف: ' + err.message, 'error');
+      }
+    }
+
+    // === Bulk Add / Edit Logic ===
+    let bulkMode = 'promo';
+    let parsedBulkItems = [];
+
+    function openBulkModal(mode) {
+      bulkMode = mode;
+      parsedBulkItems = [];
+      
+      document.getElementById('bulkInputTextarea').value = '';
+      document.getElementById('bulkAnalysisTableBody').innerHTML = '';
+      document.getElementById('bulkAnalysisContainer').style.display = 'none';
+      document.getElementById('btnSaveBulk').disabled = true;
+
+      const titleEl = document.getElementById('bulkModalTitle');
+      const descEl = document.getElementById('bulkModalDescription');
+      const labelEl = document.getElementById('bulkInputLabel');
+      const headerValEl = document.getElementById('bulkTableHeaderValue');
+      const textareaEl = document.getElementById('bulkInputTextarea');
+
+      if (mode === 'promo') {
+        titleEl.textContent = '📥 إضافة جماعية للأسعار الترويجية (Promo Prices)';
+        descEl.textContent = 'ألصق قائمة رموز المنتجات مع أسعارها الترويجية هنا. سطر واحد لكل منتج.';
+        labelEl.textContent = 'المنتجات والأسعار (الكود, السعر):';
+        headerValEl.textContent = 'السعر الجديد';
+        textareaEl.placeholder = "100030424, 249\n440114, 109";
+      } else {
+        titleEl.textContent = '📥 إضافة جماعية لقائمة طباعة الباركود (Batch Barcodes)';
+        descEl.textContent = 'ألصق قائمة رموز المنتجات مع الكميات المطلوبة للطباعة هنا. سطر واحد لكل منتج.';
+        labelEl.textContent = 'المنتجات والكميات (الكود, الكمية):';
+        headerValEl.textContent = 'الكمية';
+        textareaEl.placeholder = "100030424, 5\n440114, 1";
+      }
+
+      document.getElementById('bulkModal').style.display = 'flex';
+    }
+
+    function closeBulkModal() {
+      document.getElementById('bulkModal').style.display = 'none';
+    }
+
+    function analyzeBulkData() {
+      const text = document.getElementById('bulkInputTextarea').value;
+      const lines = text.split('\n');
+      const tbody = document.getElementById('bulkAnalysisTableBody');
+      tbody.innerHTML = '';
+      parsedBulkItems = [];
+
+      let hasValid = false;
+
+      lines.forEach((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        // Try splitting by comma, semicolon, tab or space
+        let parts = trimmed.split(/[\t,;]+/);
+        if (parts.length < 2) {
+          parts = trimmed.split(/\s+/);
+        }
+
+        const rawCode = parts[0] ? parts[0].trim() : '';
+        const rawVal = parts[1] ? parts[1].trim() : '';
+
+        let statusText = '';
+        let statusClass = '';
+        let isValid = true;
+        let parsedVal = null;
+
+        if (!rawCode) {
+          statusText = '❌ كود مفقود';
+          statusClass = 'color: var(--danger);';
+          isValid = false;
+        } else {
+          if (bulkMode === 'promo') {
+            parsedVal = parseFloat(rawVal);
+            if (isNaN(parsedVal) || parsedVal <= 0) {
+              statusText = '❌ سعر غير صالح';
+              statusClass = 'color: var(--danger);';
+              isValid = false;
+            }
+          } else {
+            parsedVal = parseInt(rawVal);
+            if (isNaN(parsedVal) || parsedVal <= 0) {
+              statusText = '❌ كمية غير صالحة';
+              statusClass = 'color: var(--danger);';
+              isValid = false;
+            }
+          }
+        }
+
+        let productName = '';
+        if (isValid && rawCode) {
+          const foundProd = productsList.find(p => String(p.code) === rawCode || (p.alias && String(p.alias).toLowerCase() === rawCode.toLowerCase()));
+          if (foundProd) {
+            productName = ` (${foundProd.name})`;
+          } else {
+            productName = ' (غير موجود بالكاتالوج المحلي)';
+          }
+        }
+
+        if (isValid) {
+          statusText = '✅ جاهز';
+          statusClass = 'color: var(--success);';
+          hasValid = true;
+          parsedBulkItems.push({
+            item_code: rawCode,
+            value: parsedVal
+          });
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="padding: 6px; border-bottom: 1px solid var(--border-color); text-align: right;">${index + 1}</td>
+          <td style="padding: 6px; border-bottom: 1px solid var(--border-color); font-weight: bold; text-align: right;">${rawCode}${productName}</td>
+          <td style="padding: 6px; border-bottom: 1px solid var(--border-color); text-align: right;">${rawVal || '—'}</td>
+          <td style="padding: 6px; border-bottom: 1px solid var(--border-color); font-weight: bold; ${statusClass} text-align: right;">${statusText}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('bulkAnalysisContainer').style.display = 'block';
+      document.getElementById('btnSaveBulk').disabled = !hasValid;
+      
+      if (hasValid) {
+        showToast(`🔍 تم تحليل البيانات: جاهز لحفظ ${parsedBulkItems.length} عنصر`, 'success');
+      } else {
+        showToast('❌ لم يتم العثور على أي أسطر صالحة للاستيراد', 'error');
+      }
+    }
+
+    async function saveBulkData() {
+      if (!userSessionToken || parsedBulkItems.length === 0) return;
+
+      const btn = document.getElementById('btnSaveBulk');
+      btn.disabled = true;
+      btn.textContent = '⏳ جاري الحفظ...';
+
+      showToast('جاري حفظ البيانات في قاعدة البيانات...');
+
+      try {
+        const rows = parsedBulkItems.map(item => {
+          if (bulkMode === 'promo') {
+            return {
+              item_code: item.item_code,
+              price: item.value,
+              updated_at: new Date().toISOString()
+            };
+          } else {
+            return {
+              item_code: item.item_code,
+              qty: item.value,
+              updated_at: new Date().toISOString()
+            };
+          }
+        });
+
+        const targetTable = bulkMode === 'promo' ? 'catalog_promo_prices' : 'catalog_batch_print_items';
+
+        const { error } = await supabaseClient
+          .from(targetTable)
+          .upsert(rows);
+
+        if (error) throw error;
+
+        showToast(`✅ تم حفظ ${rows.length} عنصر بنجاح!`, 'success');
+        closeBulkModal();
+        await loadPromoPricesAndBatchItems();
+      } catch (err) {
+        showToast('❌ فشل الحفظ الجماعي: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 حفظ الكل';
       }
     }
 
