@@ -1597,49 +1597,6 @@
             </div>
         </div>
 
-        <div class="row mt-4" id="trafficEfficiencyMatrixRow" style="display: none;">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm p-4" style="border-radius: var(--card-radius); background: white;">
-                    <h5 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
-                        <span>🗺️</span> مصفوفة كفاءة حركة الزوار والاستحواذ (Traffic Efficiency & Acquisition Matrix)
-                    </h5>
-                    <p class="text-muted small mb-4">
-                        تصنيف ديناميكي لأداء مدراء المناطق بناءً على حركة الزوار (المدخلات) ونسبة الاستحواذ (التحويل الفعلي للمبيعات). يساعد في تشخيص نوع الدعم المطلوب لكل منطقة.
-                    </p>
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <div class="p-3 rounded h-100" style="background-color: #e8f5e9; border-right: 4px solid #2e7d32; min-height: 120px;">
-                                <div class="fw-bold text-success mb-1">⭐ المنطقة النجمية (Stars)</div>
-                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">إقبال زوار قوي + كفاءة استحواذ عالية. (أفضل أداء للنمو)</div>
-                                <div id="matrixStarsList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="p-3 rounded h-100" style="background-color: #e3f2fd; border-right: 4px solid #1565c0; min-height: 120px;">
-                                <div class="fw-bold text-primary mb-1">⚡ عالية الكفاءة (High Efficiency)</div>
-                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">زوار أقل + كفاءة استحواذ عالية. (بحاجة لدعم تسويقي وجذب عملاء)</div>
-                                <div id="matrixHighEffList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="p-3 rounded h-100" style="background-color: #fff3e0; border-right: 4px solid #ef6c00; min-height: 120px;">
-                                <div class="fw-bold text-warning mb-1">💡 الفرص الضائعة (Opportunities)</div>
-                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">زوار كثيرون + كفاءة استحواذ منخفضة. (بحاجة لتدريب البائعين وتطوير العروض)</div>
-                                <div id="matrixOppList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="p-3 rounded h-100" style="background-color: #ffebee; border-right: 4px solid #c62828; min-height: 120px;">
-                                <div class="fw-bold text-danger mb-1">⚠️ المنطقة الحرجة (Critical)</div>
-                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">زوار أقل + كفاءة استحواذ منخفضة. (بحاجة لمراجعة شاملة للموقع والأسعار والخدمة)</div>
-                                <div id="matrixCriticalList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4">
             <div class="col-12">
@@ -2068,8 +2025,6 @@
                     if (ringRow) ringRow.style.display = 'flex';
                     const compRow = document.getElementById('areaManagersComparisonRow');
                     if (compRow) compRow.style.display = 'flex';
-                    const matrixRow = document.getElementById('trafficEfficiencyMatrixRow');
-                    if (matrixRow) matrixRow.style.display = 'flex';
                 }
 
 
@@ -2564,41 +2519,6 @@
                 }
 
                 renderMgrComparisonChart(mgrList);
-
-                let activeMgrs = mgrList.filter(m => m.visitors > 0);
-                if (activeMgrs.length > 0) {
-                    let totalVisitors = activeMgrs.reduce((sum, m) => sum + m.visitors, 0);
-                    let totalConv = activeMgrs.reduce((sum, m) => sum + m.conv, 0);
-                    let avgVisitors = totalVisitors / activeMgrs.length;
-                    let avgConv = totalConv / activeMgrs.length;
-
-                    let stars = [];
-                    let highEff = [];
-                    let opps = [];
-                    let critical = [];
-
-                    activeMgrs.forEach(m => {
-                        let isHighVisitors = m.visitors >= avgVisitors;
-                        let isHighConv = m.conv >= avgConv;
-
-                        let displayStr = `${m.name} (${Math.round(m.visitors).toLocaleString()} زائر، ${m.conv.toFixed(1)}%)`;
-
-                        if (isHighVisitors && isHighConv) {
-                            stars.push(displayStr);
-                        } else if (!isHighVisitors && isHighConv) {
-                            highEff.push(displayStr);
-                        } else if (isHighVisitors && !isHighConv) {
-                            opps.push(displayStr);
-                        } else {
-                            critical.push(displayStr);
-                        }
-                    });
-
-                    document.getElementById('matrixStarsList').innerHTML = stars.length > 0 ? stars.map(s => `• ${s}`).join('<br>') : 'لا يوجد';
-                    document.getElementById('matrixHighEffList').innerHTML = highEff.length > 0 ? highEff.map(s => `• ${s}`).join('<br>') : 'لا يوجد';
-                    document.getElementById('matrixOppList').innerHTML = opps.length > 0 ? opps.map(s => `• ${s}`).join('<br>') : 'لا يوجد';
-                    document.getElementById('matrixCriticalList').innerHTML = critical.length > 0 ? critical.map(s => `• ${s}`).join('<br>') : 'لا يوجد';
-                }
             }
 
             // Extract Global Top 5 Achievement
