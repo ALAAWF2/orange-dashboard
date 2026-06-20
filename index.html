@@ -1346,6 +1346,56 @@
             </div>
         </div>
 
+        <div class="row mb-4" id="companyTargetProgressRow" style="display: none;">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm p-4" style="border-radius: var(--card-radius); background: white; border-right: 5px solid #fe7900 !important; color: #212529;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold mb-4 text-dark d-flex align-items-center gap-2">
+                                <span class="fs-4">🎯</span> المستهدف العام للشركة (Company Overall Target)
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-6 col-sm-3">
+                                    <div class="small text-muted fw-bold mb-1">إجمالي المبيعات</div>
+                                    <div class="fs-4 fw-bold text-dark" id="compSalesVal">0</div>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <div class="small text-muted fw-bold mb-1">المستهدف الإجمالي</div>
+                                    <div class="fs-4 fw-bold text-dark" id="compTargetVal">0</div>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <div class="small text-muted fw-bold mb-1">المتبقي للهدف</div>
+                                    <div class="fs-4 fw-bold text-danger" id="compRemainingVal">0</div>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <div class="small text-muted fw-bold mb-1">الأيام المتبقية</div>
+                                    <div class="fs-4 fw-bold text-primary" id="compDaysVal">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center d-flex justify-content-center align-items-center mt-3 mt-md-0">
+                            <div style="position: relative; width: 150px; height: 150px;">
+                                <svg width="150" height="150" viewBox="0 0 150 150" style="transform: rotate(-90deg);">
+                                    <circle cx="75" cy="75" r="65" stroke="#f1f3f5" stroke-width="12" fill="transparent" />
+                                    <circle id="compProgressRing" cx="75" cy="75" r="65" stroke="url(#orangeGradient)" stroke-width="12" fill="transparent" stroke-dasharray="408.4" stroke-dashoffset="408.4" stroke-linecap="round" style="transition: stroke-dashoffset 0.8s ease;" />
+                                    <defs>
+                                        <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#fe7900" />
+                                            <stop offset="100%" stop-color="#ffad5c" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                    <span class="fs-3 fw-bold text-dark" id="compProgressPct">0%</span>
+                                    <span class="small text-muted" style="font-size: 0.75rem;">نسبة الإنجاز</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Row 1: High Level KPIs (Current) -->
         <h6 class="text-muted fw-bold mb-2">أداء العام الحالي (<span id="currYearTitle">...</span>)</h6>
         <div class="row g-3 mb-3">
@@ -1504,7 +1554,91 @@
             </div>
         </div>
 
+        <div class="row mt-4" id="areaManagersComparisonRow" style="display: none;">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                            <span>👥</span> مقارنة أداء مدراء المناطق (Area Managers Performance)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>المدير</th>
+                                        <th class="text-center">الفروع</th>
+                                        <th class="text-end">المبيعات</th>
+                                        <th class="text-end">المستهدف</th>
+                                        <th class="text-center" style="width: 150px;">تحقيق الهدف %</th>
+                                        <th class="text-center" style="width: 120px;">نسبة الاستحواذ %</th>
+                                        <th class="text-end">قيمة العميل</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mgrComparisonTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mt-3 mt-lg-0">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="fw-bold text-dark m-0">📊 رسم بياني للمقارنة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="min-height: 300px; position: relative;">
+                            <canvas id="mgrComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <div class="row mt-4" id="trafficEfficiencyMatrixRow" style="display: none;">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm p-4" style="border-radius: var(--card-radius); background: white;">
+                    <h5 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+                        <span>🗺️</span> مصفوفة كفاءة حركة الزوار والاستحواذ (Traffic Efficiency & Acquisition Matrix)
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        تصنيف ديناميكي لأداء مدراء المناطق بناءً على حركة الزوار (المدخلات) ونسبة الاستحواذ (التحويل الفعلي للمبيعات). يساعد في تشخيص نوع الدعم المطلوب لكل منطقة.
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="p-3 rounded h-100" style="background-color: #e8f5e9; border-right: 4px solid #2e7d32; min-height: 120px;">
+                                <div class="fw-bold text-success mb-1">⭐ المنطقة النجمية (Stars)</div>
+                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">إقبال زوار قوي + كفاءة استحواذ عالية. (أفضل أداء للنمو)</div>
+                                <div id="matrixStarsList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 rounded h-100" style="background-color: #e3f2fd; border-right: 4px solid #1565c0; min-height: 120px;">
+                                <div class="fw-bold text-primary mb-1">⚡ عالية الكفاءة (High Efficiency)</div>
+                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">زوار أقل + كفاءة استحواذ عالية. (بحاجة لدعم تسويقي وجذب عملاء)</div>
+                                <div id="matrixHighEffList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 rounded h-100" style="background-color: #fff3e0; border-right: 4px solid #ef6c00; min-height: 120px;">
+                                <div class="fw-bold text-warning mb-1">💡 الفرص الضائعة (Opportunities)</div>
+                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">زوار كثيرون + كفاءة استحواذ منخفضة. (بحاجة لتدريب البائعين وتطوير العروض)</div>
+                                <div id="matrixOppList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 rounded h-100" style="background-color: #ffebee; border-right: 4px solid #c62828; min-height: 120px;">
+                                <div class="fw-bold text-danger mb-1">⚠️ المنطقة الحرجة (Critical)</div>
+                                <div class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.3;">زوار أقل + كفاءة استحواذ منخفضة. (بحاجة لمراجعة شاملة للموقع والأسعار والخدمة)</div>
+                                <div id="matrixCriticalList" class="fw-bold text-dark" style="font-size: 0.85rem; line-height: 1.4;">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4">
@@ -1927,10 +2061,15 @@
                     if (btnTarget) btnTarget.style.display = 'inline-block';
                 }
 
-                // Show BooFF Report Button for Sales Manager or Admin
                 if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
                     const btnBooFF = document.getElementById('booffReportBtn');
                     if (btnBooFF) btnBooFF.style.display = 'inline-flex';
+                    const ringRow = document.getElementById('companyTargetProgressRow');
+                    if (ringRow) ringRow.style.display = 'flex';
+                    const compRow = document.getElementById('areaManagersComparisonRow');
+                    if (compRow) compRow.style.display = 'flex';
+                    const matrixRow = document.getElementById('trafficEfficiencyMatrixRow');
+                    if (matrixRow) matrixRow.style.display = 'flex';
                 }
 
 
@@ -2346,6 +2485,86 @@
             const globalCurr = calcStats(currentStart, currentEnd, {
                 branch: 'all', city: 'all', manager: 'all', type: 'all'
             });
+
+            if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
+                const compSales = globalCurr.sales;
+                const compTarget = globalCurr.target;
+                const compPct = compTarget > 0 ? (compSales / compTarget) * 100 : 0;
+                const remainingVal = compTarget > compSales ? (compTarget - compSales) : 0;
+                const remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
+
+                document.getElementById('compSalesVal').textContent = Math.round(compSales).toLocaleString();
+                document.getElementById('compTargetVal').textContent = Math.round(compTarget).toLocaleString();
+                document.getElementById('compRemainingVal').textContent = remainingVal > 0 ? Math.round(remainingVal).toLocaleString() : 'تم التحقيق! 🎉';
+                document.getElementById('compDaysVal').textContent = remainingDays.toLocaleString() + ' يوم';
+                document.getElementById('compProgressPct').textContent = compPct.toFixed(1) + '%';
+
+                const ring = document.getElementById('compProgressRing');
+                if (ring) {
+                    const offset = 408.4 * (1 - Math.min(compPct, 100) / 100);
+                    ring.style.strokeDashoffset = offset;
+                }
+
+                let managerStats = {};
+                Object.keys(rawData.store_meta).forEach(sid => {
+                    const meta = rawData.store_meta[sid];
+                    const mgr = meta.manager || 'Unknown';
+                    if (mgr === 'Unknown' || mgr === 'online') return;
+
+                    if (!managerStats[mgr]) {
+                        managerStats[mgr] = {
+                            name: mgr,
+                            storesCount: 0,
+                            sales: 0,
+                            target: 0,
+                            trans: 0,
+                            visitors: 0
+                        };
+                    }
+
+                    managerStats[mgr].storesCount++;
+                    managerStats[mgr].sales += globalCurr.branchSales[sid] || 0;
+                    managerStats[mgr].target += globalCurr.branchTarget[sid] || 0;
+                    managerStats[mgr].trans += globalCurr.branchTrans[sid] || 0;
+                    managerStats[mgr].visitors += globalCurr.branchVisitors[sid] || 0;
+                });
+
+                let mgrList = Object.values(managerStats).map(m => {
+                    const ach = m.target > 0 ? (m.sales / m.target * 100) : 0;
+                    const conv = m.visitors > 0 ? (m.trans / m.visitors * 100) : 0;
+                    const custVal = m.visitors > 0 ? (m.sales / m.visitors) : 0;
+                    return { ...m, ach, conv, custVal };
+                });
+
+                mgrList.sort((a, b) => b.ach - a.ach);
+
+                const tbody = document.getElementById('mgrComparisonTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    mgrList.forEach(m => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="fw-bold">${m.name}</td>
+                            <td class="text-center"><span class="badge bg-secondary">${m.storesCount}</span></td>
+                            <td class="text-end">${Math.round(m.sales).toLocaleString()}</td>
+                            <td class="text-end">${Math.round(m.target).toLocaleString()}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress w-100" style="height: 8px;">
+                                        <div class="progress-bar ${m.ach >= 100 ? 'bg-success' : 'bg-warning'}" style="width: ${Math.min(m.ach, 100)}%"></div>
+                                    </div>
+                                    <span class="fw-bold" style="min-width: 45px; font-size: 0.8rem;">${m.ach.toFixed(1)}%</span>
+                                </div>
+                            </td>
+                            <td class="text-center fw-bold text-primary">${m.conv.toFixed(1)}%</td>
+                            <td class="text-end fw-bold">${Math.round(m.custVal).toLocaleString()}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                renderMgrComparisonChart(mgrList);
+            }
 
             // Extract Global Top 5 Achievement
             let globalBranchRates = [];
@@ -4564,6 +4783,69 @@
                     responsive: true, maintainAspectRatio: false,
                     scales: { x: { display: false }, y: { grid: { display: false } } },
                     plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderMgrComparisonChart(mgrList) {
+            const ctx = document.getElementById('mgrComparisonChart').getContext('2d');
+            if (charts['mgrComparison']) {
+                charts['mgrComparison'].destroy();
+            }
+            const labels = mgrList.map(m => m.name);
+            const achData = mgrList.map(m => m.ach);
+            const convData = mgrList.map(m => m.conv);
+            charts['mgrComparison'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'نسبة تحقيق التارجت %',
+                            data: achData,
+                            backgroundColor: '#fe7900',
+                            borderRadius: 4,
+                            yAxisID: 'yAch'
+                        },
+                        {
+                            label: 'نسبة الاستحواذ %',
+                            data: convData,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            type: 'line',
+                            yAxisID: 'yConv',
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        yAch: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: true, text: 'نسبة تحقيق التارجت %' },
+                            min: 0,
+                            suggestedMax: 120,
+                            grid: { borderDash: [5, 5] }
+                        },
+                        yConv: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'نسبة الاستحواذ %' },
+                            min: 0,
+                            suggestedMax: 15,
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
                 }
             });
         }
