@@ -255,6 +255,16 @@ def main():
     ).drop_duplicates("itemId")
 
     # =====================
+    # PRODUCT NAMES (AllProducts)
+    # =====================
+    df_names = fetch_all(
+        token,
+        f"{BASE_URL}/AllProducts?$select=ProductNumber,ProductName",
+        "PRODUCT_NAMES"
+    )
+    df_names["ProductNumber"] = df_names["ProductNumber"].astype(str).str.strip()
+
+    # =====================
     # ITEM MASTER
     # =====================
     df_items_raw = fetch_all(
@@ -273,6 +283,7 @@ def main():
         .sort_values("SalesPriceDate", ascending=False)
         .drop_duplicates("ItemNumber")
         .merge(df_barcode, left_on="ItemNumber", right_on="itemId", how="left")
+        .merge(df_names, left_on="ItemNumber", right_on="ProductNumber", how="left")
     )
 
     # =====================
@@ -382,7 +393,12 @@ def main():
         if str(item_number).startswith("3") or str(item_number).startswith("29"):
             continue
 
-        name_ar = r["description"] if pd.notna(r["description"]) else ""
+        # Prioritize ProductName from AllProducts, fallback to Barcode description, then to ProductSearchName
+        name_ar = ""
+        if pd.notna(r.get("ProductName")) and str(r["ProductName"]).strip() != "":
+            name_ar = str(r["ProductName"]).strip()
+        elif pd.notna(r.get("description")) and str(r["description"]).strip() != "":
+            name_ar = str(r["description"]).strip()
         name_en = "" # r["english name"] -- Removed per user request
         name = " - ".join(x for x in [name_ar, name_en] if x) or r.get("ProductSearchName", "")
 
