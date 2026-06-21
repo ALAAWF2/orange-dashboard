@@ -1531,6 +1531,26 @@
                   userWarehouse = 'Warehouse';
                 }
               }
+              
+              // Manager Bypass/Default Mall & Warehouse setting
+              if (userRole === 'manager' && userManagedOutlets.length > 0) {
+                if (userWarehouse === 'ALL' || userWarehouse === '') {
+                  userMall = userManagedOutlets[0];
+                  userWarehouse = 'Warehouse'; // Default to Jeddah
+                  try {
+                    if (userMall === 'إجمالي المستودعات') {
+                      userWarehouse = 'TOTAL_WAREHOUSES';
+                    } else {
+                      const { data } = await supabaseClient.from('profiles').select('warehouse').eq('mall', userMall).neq('role', 'manager').limit(1).maybeSingle();
+                      if (data && data.warehouse && data.warehouse !== 'ALL') {
+                        userWarehouse = data.warehouse;
+                      } else if (String(userMall).toLowerCase().match(/riyadh|riyad|الرياض|malgha|alrabie|rabwa|atyaf|tala|hayat|meem|park avenue/)) {
+                        userWarehouse = 'warehouse riyadh';
+                      }
+                    }
+                  } catch(err) {}
+                }
+              }
             }
           } catch (fetchErr) {
             console.error("Exception during profile fetch:", fetchErr);
