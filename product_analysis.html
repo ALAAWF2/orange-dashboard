@@ -2247,15 +2247,15 @@
             const rawItems = periodCatalog[categoryName] || [];
             let items = [];
 
-            if (activeStore === 'all') {
+            if (storeId === 'all') {
                 items = [...rawItems];
             } else {
                 // Filter items specific to this store using the 'stores' breakdown map
                 rawItems.forEach(item => {
                     // Check if item has breakdown and sales in this store
                     // Note: Backend provides item.stores = { store_id: {q: qty, a: amt} }
-                    if (item.stores && item.stores[activeStore]) {
-                        const sData = item.stores[activeStore];
+                    if (item.stores && item.stores[storeId]) {
+                        const sData = item.stores[storeId];
                         if (sData.q > 0 || sData.a > 0) {
                             // Create copy with store specific stats
                             items.push({
@@ -2264,11 +2264,9 @@
                                 amount: sData.a
                             });
                         }
-                    } else {
-                        // Fallback logic if breakdown missing (e.g. old data)? 
-                        // Or if item genuinely didn't sell in this store.
-                        // If we are drill-downing a specific store, we should NOT show global items if they didn't sell here.
-                        // So we exclude them.
+                    } else if (!item.stores) {
+                        // If catalog is already store-specific (e.g. activeStore was storeId)
+                        items.push({ ...item });
                     }
                 });
             }
@@ -2778,6 +2776,10 @@
                             displayQty = sData.q;
                             displayAmt = sData.a;
                             if (displayQty > 0 || displayAmt > 0) includeItem = true;
+                        } else if (!item.stores) {
+                            displayQty = item.qty;
+                            displayAmt = item.amount;
+                            includeItem = true;
                         }
                     } else if (activeRegion !== 'all') {
                         // Region View (Aggregate stores in region)
