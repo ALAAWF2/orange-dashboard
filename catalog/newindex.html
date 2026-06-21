@@ -3005,8 +3005,10 @@
 
     function getPromoPrice(code, alias) {
       const c = String(code).trim();
+      const cAlt = c.toUpperCase().startsWith("KIT-") ? c.substring(4) : "KIT-" + c;
       const a = alias ? String(alias).trim() : "";
       if (promoPrices[c] !== undefined) return promoPrices[c];
+      if (promoPrices[cAlt] !== undefined) return promoPrices[cAlt];
       if (a && promoPrices[a] !== undefined) return promoPrices[a];
       return null;
     }
@@ -3058,6 +3060,7 @@
       if (isNaN(qty) || qty <= 0) qty = 1;
 
       const searchKeyword = String(code).trim().toLowerCase();
+      const altKeyword = searchKeyword.startsWith("kit-") ? searchKeyword.substring(4) : "kit-" + searchKeyword;
 
       // Override price if this is a special promo item
       const overridePrice = getPromoPrice(code, alias);
@@ -3065,10 +3068,12 @@
         price = overridePrice;
       }
 
-      const existing = batchPrintItems.find(item =>
-        String(item.code).trim().toLowerCase() === searchKeyword ||
-        (item.alias && String(item.alias).trim().toLowerCase() === searchKeyword)
-      );
+      const existing = batchPrintItems.find(item => {
+        const itemCode = String(item.code).trim().toLowerCase();
+        const itemAlias = item.alias ? String(item.alias).trim().toLowerCase() : "";
+        return itemCode === searchKeyword || itemCode === altKeyword ||
+               (itemAlias && (itemAlias === searchKeyword || itemAlias === altKeyword));
+      });
 
       if (existing) {
         existing.qty += qty;
@@ -3083,14 +3088,16 @@
           const dataSource = (window.data && window.data.length > 0) ? window.data : (window.products || []);
           let product = dataSource.find(p =>
             String(p.code).trim().toLowerCase() === searchKeyword ||
-            (p.alias && String(p.alias).trim().toLowerCase() === searchKeyword)
+            String(p.code).trim().toLowerCase() === altKeyword ||
+            (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
           );
 
           // Fallback to window.products if not found in window.data (due to warehouse stock filtering)
           if (!product && window.products) {
             product = window.products.find(p =>
               String(p.code).trim().toLowerCase() === searchKeyword ||
-              (p.alias && String(p.alias).trim().toLowerCase() === searchKeyword)
+              String(p.code).trim().toLowerCase() === altKeyword ||
+              (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
             );
           }
 

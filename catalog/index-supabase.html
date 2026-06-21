@@ -1788,10 +1788,14 @@
       if (isNaN(qty) || qty <= 0) qty = 1;
 
       const searchKeyword = String(code).trim().toLowerCase();
-      const existing = batchPrintItems.find(item =>
-        String(item.code).trim().toLowerCase() === searchKeyword ||
-        (item.alias && String(item.alias).trim().toLowerCase() === searchKeyword)
-      );
+      const altKeyword = searchKeyword.startsWith("kit-") ? searchKeyword.substring(4) : "kit-" + searchKeyword;
+
+      const existing = batchPrintItems.find(item => {
+        const itemCode = String(item.code).trim().toLowerCase();
+        const itemAlias = item.alias ? String(item.alias).trim().toLowerCase() : "";
+        return itemCode === searchKeyword || itemCode === altKeyword ||
+               (itemAlias && (itemAlias === searchKeyword || itemAlias === altKeyword));
+      });
 
       if (existing) {
         existing.qty += qty;
@@ -1802,14 +1806,16 @@
           const dataSource = (window.data && window.data.length > 0) ? window.data : (window.products || []);
           let product = dataSource.find(p =>
             String(p.code).trim().toLowerCase() === searchKeyword ||
-            (p.alias && String(p.alias).trim().toLowerCase() === searchKeyword)
+            String(p.code).trim().toLowerCase() === altKeyword ||
+            (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
           );
 
           // Fallback to window.products if not found in window.data (due to warehouse stock filtering)
           if (!product && window.products) {
             product = window.products.find(p =>
               String(p.code).trim().toLowerCase() === searchKeyword ||
-              (p.alias && String(p.alias).trim().toLowerCase() === searchKeyword)
+              String(p.code).trim().toLowerCase() === altKeyword ||
+              (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
             );
           }
 
