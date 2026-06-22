@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange | تقرير مقارنة الأعوال YoY</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="assets/amiri_font.js"></script>
+    <style>
+        :root {
+            --orange: #fe7900;
+            --orange-dark: #e06800;
+            --orange-light: #fff3e0;
+            --bg: #f5f6fa;
+            --card-bg: #ffffff;
+            --text-primary: #2d3436;
+            --text-muted: #636e72;
+            --radius: 14px;
+            --shadow: 0 2px 16px rgba(254, 121, 0, 0.08);
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            margin: 0;
+            min-height: 100vh;
+        }
+        .top-bar {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        .top-bar .brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        .top-bar .brand span {
+            color: var(--orange);
+        }
+        .top-bar .sub-label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-right: 12px;
+        }
+        .filter-panel {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin: 20px;
+            border: 1px solid #eee;
+        }
+        .filter-panel h5 {
+            color: var(--orange);
+            font-weight: 800;
+            margin-bottom: 18px;
+            font-size: 1.1rem;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        .filter-group select,
+        .filter-group input {
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: var(--orange);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.1);
+        }
+        .custom-dropdown {
+            position: relative;
+            background: #fff;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            height: 42px;
+        }
+        .dropdown-header {
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #444;
+            height: 100%;
+        }
+        .dropdown-header .arrow {
+            font-size: 0.8rem;
+            color: #888;
+            transition: transform 0.2s;
+        }
+        .custom-dropdown.open .arrow {
+            transform: rotate(180deg);
+        }
+        .dropdown-list {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            min-width: 100%;
+            width: max-content;
+            max-width: 450px;
+            max-height: 350px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 8px 0;
+        }
+        .custom-dropdown.open .dropdown-list {
+            display: block;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #333;
+            transition: background 0.1s;
+        }
+        .dropdown-item:hover {
+            background: #f8f9fa;
+        }
+        .dropdown-item input[type="checkbox"] {
+            margin-left: 10px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--orange);
+            cursor: pointer;
+        }
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        .btn-search {
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 32px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(254, 121, 0, 0.3);
+        }
+        .btn-search:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(254, 121, 0, 0.4);
+        }
+        .btn-excel {
+            background: #27ae60;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-excel:hover {
+            background: #219a52;
+        }
+        .btn-pdf {
+            background: #c0392b;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-pdf:hover {
+            background: #a93226;
+        }
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin: 20px;
+        }
+        .summary-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            box-shadow: var(--shadow);
+            border-right: 4px solid var(--orange);
+            text-align: center;
+        }
+        .summary-card .val {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--orange);
+        }
+        .summary-card .lbl {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .table-container {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin: 20px;
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+        .table-header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            padding: 18px 20px;
+        }
+        .table-header h5 {
+            margin: 0;
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
+        }
+        .table-header .subtitle {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        .results-table-wrapper {
+            overflow-x: auto;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        .results-table thead th {
+            background: #f8f9fa;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 800;
+            color: var(--text-primary);
+            border-bottom: 2px solid #ddd;
+            border-left: 1px solid #eee;
+            white-space: nowrap;
+        }
+        .results-table thead th:last-child {
+            border-left: none;
+        }
+        .results-table tbody td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            border-left: 1px solid #f9f9f9;
+            text-align: center;
+        }
+        .results-table tbody td:last-child {
+            border-left: none;
+        }
+        .results-table tbody tr:hover {
+            background: var(--orange-light);
+        }
+        .cat-a { background-color: #5DADE2 !important; color: #000000 !important; font-weight: bold; }
+        .cat-b { background-color: #52BE80 !important; color: #000000 !important; font-weight: bold; }
+        .cat-c { background-color: #F4D03F !important; color: #000000 !important; font-weight: bold; }
+        .cat-d { background-color: #EC7063 !important; color: #000000 !important; font-weight: bold; }
+        .cat-e { background-color: #EB984E !important; color: #000000 !important; font-weight: bold; }
+        .cat-s { background-color: #AF7AC5 !important; color: #000000 !important; font-weight: bold; }
+        .cat-online { background-color: #5DADE2 !important; color: #000000 !important; font-weight: bold; }
+        .total-row {
+            font-weight: bold;
+            background-color: #f8f9fa;
+            border-top: 2px solid #ddd;
+        }
+        .total-row td {
+            border-bottom: 2px solid #ddd !important;
+        }
+        .growth-pos {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .growth-neg {
+            color: #c0392b;
+            font-weight: bold;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .loading-overlay.show {
+            display: flex;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #eee;
+            border-top: 4px solid var(--orange);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            margin-top: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        .nav-home-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-home-btn:hover {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="brand">
+            <span>ORANGE</span> COMPARISON
+            <span class="sub-label">تقرير المقارنة السنوي YoY</span>
+        </div>
+        <a href="index.html" class="nav-home-btn">
+            <i class="bi bi-house-door-fill"></i> الصفحة الرئيسية
+        </a>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">جاري تحميل البيانات وتجهيز التقارير...</div>
+    </div>
+
+    <div class="filter-panel">
+        <h5>🔍 خيارات المقارنة والبحث</h5>
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>📅 الفترة الحالية (CY)</label>
+                <div class="d-flex gap-2">
+                    <input type="date" id="cyStart" class="form-control" onchange="autoFillPyDates()">
+                    <input type="date" id="cyEnd" class="form-control" onchange="autoFillPyDates()">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>📅 الفترة السابقة المقابلة (PY)</label>
+                <div class="d-flex gap-2">
+                    <input type="date" id="pyStart" class="form-control">
+                    <input type="date" id="pyEnd" class="form-control">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>🏷️ العروض الترويجية</label>
+                <div class="custom-dropdown w-100" id="offerDropdown">
+                    <div class="dropdown-header" onclick="toggleDropdown()">
+                        <span id="offerDropdownText">لم يتم تحديد عروض</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="dropdown-list" id="offerDropdownList" onclick="event.stopPropagation()">
+                        <div class="px-2 pb-2 border-bottom">
+                            <input type="text" id="offerSearch" class="form-control form-control-sm" placeholder="🔍 ابحث عن عرض..." onkeyup="filterOffersList()">
+                        </div>
+                        <div id="offerCheckboxes" class="overflow-auto" style="max-height: 250px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="action-bar">
+            <button class="btn-search" onclick="runReport()">عرض التقرير</button>
+            <button class="btn-excel" onclick="exportToExcel()" id="btnExcel" disabled>📊 تصدير Excel</button>
+            <button class="btn-pdf" onclick="exportToPDF()" id="btnPDF" disabled>📄 تصدير PDF</button>
+        </div>
+    </div>
+
+    <div class="summary-strip" id="summaryStrip" style="display: none;">
+        <div class="summary-card">
+            <div class="val text-success" id="sumCYSales">0</div>
+            <div class="lbl">مبيعات الفترة الحالية (CY)</div>
+        </div>
+        <div class="summary-card">
+            <div class="val text-muted" id="sumPYSales">0</div>
+            <div class="lbl">مبيعات الفترة السابقة (PY)</div>
+        </div>
+        <div class="summary-card">
+            <div class="val" id="sumSalesGrowth">0%</div>
+            <div class="lbl">نسبة نمو المبيعات</div>
+        </div>
+    </div>
+
+    <div class="table-container" id="reportContainer" style="display: none;">
+        <div class="table-header">
+            <h5 id="tableMainTitle">مبيعات الفروع مقارنة بالفترة المقابلة</h5>
+            <div class="subtitle" id="tableSubTitle">الفترة المقارنة</div>
+        </div>
+        <div class="results-table-wrapper">
+            <table class="results-table" id="yoyReportTable">
+                <thead>
+                    <tr>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2">المعرض</th>
+                        <th colspan="3">المبيعات</th>
+                        <th colspan="3">الزوار</th>
+                        <th colspan="3">قيمة العميل (ATV)</th>
+                        <th id="offerHeaderContainer" colspan="1">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
+                        <th rowspan="2">الملاحظات</th>
+                    </tr>
+                    <tr id="tableSubHeaderRow">
+                        <th>LY</th>
+                        <th>CY</th>
+                        <th>%</th>
+                        <th>LY</th>
+                        <th>CY</th>
+                        <th>%</th>
+                        <th>LY</th>
+                        <th>CY</th>
+                        <th>%</th>
+                        <th>الملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="yoyReportBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="users.js"></script>
+    <script>
+        const STORE_ROWS = [
+            { id: "1003", name: "06-Red Sea Mall", category: "A" },
+            { id: "1201", name: "08-Makkah Mall", category: "A" },
+            { id: "2101", name: "27-Dhahran Mall khobar", category: "A" },
+            { id: "2102", name: "28-Al Nakheel Mall Dammam", category: "A" },
+            { id: "1104", name: "29-Al Nakheel Mall Riyadh", category: "A", note: "تم اغلاق المعرض بتاريخ 26-4-2026" },
+            { id: "1001", name: "04-Andalos Mall", category: "B" },
+            { id: "1004", name: "07-Arab Mall", category: "B" },
+            { id: "1101", name: "12-Al_Hamra Mall", category: "B" },
+            { id: "1601", name: "16-Ehsa Othaim Mall", category: "B" },
+            { id: "1901", name: "21-Abha Al_Rashid Mall New", category: "B" },
+            { id: "1401", name: "23-Alia Mall Madinah", category: "B" },
+            { id: "1107", name: "38-Al_Riyadh Park", category: "B" },
+            { id: "1010", name: "54-THE VILLAGE", category: "B" },
+            { id: "1005", name: "09-Al-Salam Mall", category: "C" },
+            { id: "1301", name: "11-Jouri Mall", category: "C" },
+            { id: "1006", name: "13-Al-Yasmin Mall", category: "C" },
+            { id: "2001", name: "22-Tabuk Park", category: "C" },
+            { id: "1402", name: "26-Al-Noor Mall Madinah", category: "C" },
+            { id: "1109", name: "40-Hayat Mall Riyad", category: "C" },
+            { id: "1903", name: "43-Mujan Park", category: "C" },
+            { id: "1110", name: "45- Riyadh Gallery Mall", category: "C" },
+            { id: "1111", name: "46-Khaleej Mall Riyadh", category: "C" },
+            { id: "1008", name: "48 - Jeddah Park", category: "C" },
+            { id: "1113", name: "51-Park Avenue Riyadh", category: "C" },
+            { id: "1102", name: "15-Riyadh Othaim Mall", category: "D" },
+            { id: "1801", name: "19-Hail Othaim Mall", category: "D" },
+            { id: "1103", name: "25-Rabwa Othaim Mall", category: "D" },
+            { id: "1105", name: "30-Tala Mall Riyadh", category: "D" },
+            { id: "1108", name: "39-Salam Mall Riyadh", category: "D" },
+            { id: "2103", name: "42-Dareen Mall Dammam", category: "D" },
+            { id: "2401", name: "47-Al-Nakheel Plaza", category: "D" },
+            { id: "1602", name: "49-AlAhsa Mall", category: "D" },
+            { id: "1011", name: "56- Aziz Mall 2", category: "D" },
+            { id: "1002", name: "05-Haifa Mall", category: "E" },
+            { id: "1701", name: "17-Arar Othaim Mall", category: "E" },
+            { id: "1906", name: "1906-LAVANDA PARK", category: "E" },
+            { id: "1501", name: "24-Yanbu Dana Mall", category: "E" },
+            { id: "1106", name: "32-Atyaf Mall Riyadh", category: "E" },
+            { id: "2201", name: "36-Al jubail Mall", category: "E" },
+            { id: "2301", name: "44-Al-Jouf Center", category: "E" },
+            { id: "1904", name: "52-Al_Baha Mall", category: "E" },
+            { id: "1114", name: "1114-Malgha Mall", category: "S" },
+            { id: "1115", name: "1115-Alrabie Mall", category: "S" },
+            { id: "1302", name: "14-Al Kamal Mall", category: "S" },
+            { id: "1007", name: "18-Al_Khayyat Center", category: "S" },
+            { id: "1202", name: "20-Sitten Street Makkah", category: "S" },
+            { id: "1112", name: "50-Meem Plaza Riyadh", category: "S" },
+            { id: "1009", name: "53-Al Basateen Mall", category: "S" },
+            { id: "1203", name: "55- Jabl Omar", category: "S" },
+            { id: "1012", name: "57-Sauq7", category: "S" },
+            { id: "0", name: "Warehouse", category: "Online", note: "غير محسوب ضمن الإجمالي" },
+            { id: "1013", name: "PLATFORMS", category: "Online", note: "غير محسوب ضمن الإجمالي" }
+        ];
+
+        const arabicDays = {
+            'Sunday': 'الأحد',
+            'Monday': 'الاثنين',
+            'Tuesday': 'الثلاثاء',
+            'Wednesday': 'الأربعاء',
+            'Thursday': 'الخميس',
+            'Friday': 'الجمعة',
+            'Saturday': 'السبت'
+        };
+
+        let mgmtData = null;
+        let offersData = null;
+        let salesMap = {};
+        let visitorsMap = {};
+        let transMap = {};
+        let offerQtyMap = {};
+        let selectedOffersList = [];
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('loadingOverlay').classList.add('show');
+            try {
+                const [resMgmt, resOffers] = await Promise.all([
+                    fetch('management_data.json?t=' + Date.now()),
+                    fetch('offers_data.json?t=' + Date.now())
+                ]);
+
+                if (!resMgmt.ok || !resOffers.ok) throw new Error("Failed to load JSON files");
+
+                mgmtData = await resMgmt.json();
+                offersData = await resOffers.json();
+
+                preProcessData();
+                setupDefaultDates();
+                populateOffersDropdown();
+                document.getElementById('loadingOverlay').classList.remove('show');
+            } catch (e) {
+                console.error(e);
+                alert("حدث خطأ أثناء تحميل الملفات: " + e.message);
+                document.getElementById('loadingOverlay').classList.remove('show');
+            }
+        });
+
+        window.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('offerDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        function toggleDropdown() {
+            document.getElementById('offerDropdown').classList.toggle('open');
+        }
+
+        function preProcessData() {
+            mgmtData.sales.forEach(row => {
+                const [d, s, v] = row;
+                if (!salesMap[d]) salesMap[d] = {};
+                salesMap[d][s] = v;
+            });
+            mgmtData.visitors.forEach(row => {
+                const [d, s, v] = row;
+                if (!visitorsMap[d]) visitorsMap[d] = {};
+                visitorsMap[d][s] = v;
+            });
+            mgmtData.transactions.forEach(row => {
+                const [d, s, v] = row;
+                if (!transMap[d]) transMap[d] = {};
+                transMap[d][s] = v;
+            });
+
+            offersData.forEach(offer => {
+                if (offer.items) {
+                    offer.items.forEach(item => {
+                        const key = `${offer.id}_${item.d}_${item.s}`;
+                        if (!offerQtyMap[key]) offerQtyMap[key] = 0;
+                        offerQtyMap[key] += Math.abs(item.q);
+                    });
+                }
+            });
+        }
+
+        function setupDefaultDates() {
+            document.getElementById('cyStart').value = "2026-06-14";
+            document.getElementById('cyEnd').value = "2026-06-17";
+            autoFillPyDates();
+        }
+
+        function autoFillPyDates() {
+            const cyS = document.getElementById('cyStart').value;
+            const cyE = document.getElementById('cyEnd').value;
+            if (cyS) {
+                const date = new Date(cyS);
+                date.setDate(date.getDate() - 364);
+                document.getElementById('pyStart').value = date.toISOString().split('T')[0];
+            }
+            if (cyE) {
+                const date = new Date(cyE);
+                date.setDate(date.getDate() - 364);
+                document.getElementById('pyEnd').value = date.toISOString().split('T')[0];
+            }
+        }
+
+        function populateOffersDropdown() {
+            const list = document.getElementById('offerCheckboxes');
+            list.innerHTML = '';
+
+            const activeOffers = offersData.filter(o => (o.items && o.items.length > 0) || (o.stats && o.stats.length > 0));
+            activeOffers.sort((a, b) => {
+                const statusA = a.status || 'Enabled';
+                const statusB = b.status || 'Enabled';
+                if (statusA !== statusB) {
+                    return statusA === 'Enabled' ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name, 'ar');
+            });
+
+            const selectAllDiv = document.createElement('div');
+            selectAllDiv.className = 'dropdown-item d-flex align-items-center px-3 py-2 border-bottom';
+            selectAllDiv.innerHTML = `
+                <input type="checkbox" id="selectAllOffers" onchange="toggleSelectAllOffers(this)" class="form-check-input me-2">
+                <label for="selectAllOffers" class="form-check-label fw-bold text-dark w-100">تحديد الكل</label>
+            `;
+            list.appendChild(selectAllDiv);
+
+            activeOffers.forEach(offer => {
+                const isEnabled = (offer.status || 'Enabled') === 'Enabled';
+                const badgeColor = isEnabled ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
+                const badgeText = isEnabled ? 'فعال' : 'معطل';
+
+                const div = document.createElement('div');
+                div.className = 'dropdown-item d-flex align-items-center px-3 py-2 offer-list-item';
+                div.setAttribute('data-name', offer.name.toLowerCase());
+                div.setAttribute('data-id', offer.id.toLowerCase());
+                div.innerHTML = `
+                    <input type="checkbox" value="${offer.id}" id="chk_${offer.id}" onchange="updateSelectedOffersCount()" class="form-check-input me-2 offer-checkbox">
+                    <label for="chk_${offer.id}" class="form-check-label text-dark w-100 d-flex justify-content-between align-items-center">
+                        <span class="text-truncate" style="max-width: 280px;" title="${offer.name}">${offer.name}</span>
+                        <span class="badge ${badgeColor} ms-2" style="font-size: 0.7rem;">${badgeText}</span>
+                    </label>
+                `;
+                list.appendChild(div);
+            });
+
+            const defaultIds = ["ORNG-000013", "ORNG-00053", "ORNG-00060", "ORNG-000080"];
+            defaultIds.forEach(id => {
+                const chk = document.getElementById('chk_' + id);
+                if (chk) chk.checked = true;
+            });
+            updateSelectedOffersCount();
+        }
+
+        function toggleSelectAllOffers(master) {
+            const checkboxes = document.querySelectorAll('.offer-checkbox');
+            checkboxes.forEach(chk => {
+                const parent = chk.closest('.offer-list-item');
+                if (parent && parent.style.display !== 'none') {
+                    chk.checked = master.checked;
+                }
+            });
+            updateSelectedOffersCount();
+        }
+
+        function filterOffersList() {
+            const q = document.getElementById('offerSearch').value.toLowerCase();
+            const items = document.querySelectorAll('.offer-list-item');
+            items.forEach(item => {
+                const name = item.getAttribute('data-name');
+                const id = item.getAttribute('data-id');
+                if (name.includes(q) || id.includes(q)) {
+                    item.style.setProperty('display', 'flex', 'important');
+                } else {
+                    item.style.setProperty('display', 'none', 'important');
+                }
+            });
+        }
+
+        function updateSelectedOffersCount() {
+            const checked = document.querySelectorAll('.offer-checkbox:checked');
+            const txt = document.getElementById('offerDropdownText');
+            selectedOffersList = Array.from(checked).map(c => c.value);
+            if (selectedOffersList.length === 0) {
+                txt.textContent = 'لم يتم تحديد عروض';
+            } else {
+                txt.textContent = `تم تحديد ${selectedOffersList.length} عرض`;
+            }
+        }
+
+        function getDatesInRange(startStr, endStr) {
+            const dates = [];
+            let curr = new Date(startStr);
+            const end = new Date(endStr);
+            while (curr <= end) {
+                dates.push(curr.toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function getArabicDateTitle(d1Start, d1End, d2Start, d2End) {
+            const formatD = (dStr) => {
+                const d = new Date(dStr);
+                const dayName = arabicDays[d.toLocaleDateString('en-US', { weekday: 'long' })];
+                const day = d.getDate();
+                const month = d.getMonth() + 1;
+                const year = d.getFullYear();
+                return `${dayName} ${day}-${month}-${year}`;
+            };
+            return `مبيعات من ${formatD(d1Start)} الى ${formatD(d1End)} مع مبيعات من ${formatD(d2Start)} الى ${formatD(d2End)}`;
+        }
+
+        function aggregatePeriodData(dates, isPeriod1) {
+            const storeData = {};
+            STORE_ROWS.forEach(s => {
+                storeData[s.id] = {
+                    sales: 0,
+                    visitors: 0,
+                    transactions: 0,
+                    offers: {}
+                };
+                selectedOffersList.forEach(oid => {
+                    storeData[s.id].offers[oid] = 0;
+                });
+            });
+
+            dates.forEach(d => {
+                if (salesMap[d]) {
+                    Object.keys(salesMap[d]).forEach(sid => {
+                        if (storeData[sid]) storeData[sid].sales += salesMap[d][sid];
+                    });
+                }
+                if (visitorsMap[d]) {
+                    Object.keys(visitorsMap[d]).forEach(sid => {
+                        if (storeData[sid]) storeData[sid].visitors += visitorsMap[d][sid];
+                    });
+                }
+                if (transMap[d]) {
+                    Object.keys(transMap[d]).forEach(sid => {
+                        if (storeData[sid]) storeData[sid].transactions += transMap[d][sid];
+                    });
+                }
+
+                if (isPeriod1) {
+                    selectedOffersList.forEach(oid => {
+                        STORE_ROWS.forEach(s => {
+                            const key = `${oid}_${d}_${s.id}`;
+                            if (offerQtyMap[key]) {
+                                storeData[s.id].offers[oid] += offerQtyMap[key];
+                            }
+                        });
+                    });
+                }
+            });
+
+            return storeData;
+        }
+
+        function getCategoryClass(cat) {
+            switch(cat) {
+                case 'A': return 'cat-a';
+                case 'B': return 'cat-b';
+                case 'C': return 'cat-c';
+                case 'D': return 'cat-d';
+                case 'E': return 'cat-e';
+                case 'S': return 'cat-s';
+                default: return 'cat-online';
+            }
+        }
+
+        function runReport() {
+            const cyS = document.getElementById('cyStart').value;
+            const cyE = document.getElementById('cyEnd').value;
+            const pyS = document.getElementById('pyStart').value;
+            const pyE = document.getElementById('pyEnd').value;
+
+            if (!cyS || !cyE || !pyS || !pyE) {
+                alert("الرجاء تحديد فترات التاريخ كاملة");
+                return;
+            }
+
+            document.getElementById('loadingOverlay').classList.add('show');
+
+            const cyDates = getDatesInRange(cyS, cyE);
+            const pyDates = getDatesInRange(pyS, pyE);
+
+            const cyStoreData = aggregatePeriodData(cyDates, true);
+            const pyStoreData = aggregatePeriodData(pyDates, false);
+
+            const reportData = {};
+            STORE_ROWS.forEach(s => {
+                const cy = cyStoreData[s.id];
+                const py = pyStoreData[s.id];
+
+                const cyATV = cy.transactions > 0 ? (cy.sales / cy.transactions) : 0;
+                const pyATV = py.transactions > 0 ? (py.sales / py.transactions) : 0;
+
+                reportData[s.id] = {
+                    pySales: py.sales,
+                    cySales: cy.sales,
+                    pyVisitors: py.visitors,
+                    cyVisitors: cy.visitors,
+                    pyATV: pyATV,
+                    cyATV: cyATV,
+                    offers: cy.offers
+                };
+            });
+
+            renderTable(reportData, cyS, cyE, pyS, pyE);
+
+            document.getElementById('btnExcel').disabled = false;
+            document.getElementById('btnPDF').disabled = false;
+            document.getElementById('loadingOverlay').classList.remove('show');
+        }
+
+        function renderTable(reportData, cyS, cyE, pyS, pyE) {
+            const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
+            document.getElementById('tableMainTitle').textContent = mainTitle;
+            document.getElementById('tableSubTitle').textContent = `الفترة المقارنة الحالية: ${cyS} إلى ${cyE} | الفترة السابقة: ${pyS} إلى ${pyE}`;
+
+            const offerHeadContainer = document.getElementById('offerHeaderContainer');
+            offerHeadContainer.setAttribute('colspan', Math.max(1, selectedOffersList.length));
+
+            const subHeaderRow = document.getElementById('tableSubHeaderRow');
+            subHeaderRow.innerHTML = `
+                <th>LY</th>
+                <th>CY</th>
+                <th>%</th>
+                <th>LY</th>
+                <th>CY</th>
+                <th>%</th>
+                <th>LY</th>
+                <th>CY</th>
+                <th>%</th>
+            `;
+
+            if (selectedOffersList.length === 0) {
+                const th = document.createElement('th');
+                th.textContent = 'لا توجد عروض مختارة';
+                subHeaderRow.appendChild(th);
+            } else {
+                selectedOffersList.forEach(oid => {
+                    const offer = offersData.find(o => o.id === oid);
+                    const name = offer ? offer.name : oid;
+                    const th = document.createElement('th');
+                    th.textContent = name;
+                    th.style.fontSize = "0.78rem";
+                    subHeaderRow.appendChild(th);
+                });
+            }
+
+            const thNotes = document.createElement('th');
+            thNotes.textContent = 'الملاحظات';
+            subHeaderRow.appendChild(thNotes);
+
+            const tbody = document.getElementById('yoyReportBody');
+            tbody.innerHTML = '';
+
+            let totalPYSales = 0;
+            let totalCYSales = 0;
+            let totalPYVisitors = 0;
+            let totalCYVisitors = 0;
+            let totalPYATVSum = 0;
+            let totalCYATVSum = 0;
+            let pyATVCount = 0;
+            let cyATVCount = 0;
+
+            const offerTotals = {};
+            selectedOffersList.forEach(oid => {
+                offerTotals[oid] = 0;
+            });
+
+            STORE_ROWS.forEach((store, idx) => {
+                const data = reportData[store.id];
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-category', store.category);
+
+                const cClass = getCategoryClass(store.category);
+                
+                const tdClass = document.createElement('td');
+                tdClass.className = cClass;
+                tdClass.textContent = store.category;
+                tr.appendChild(tdClass);
+
+                const tdName = document.createElement('td');
+                tdName.className = cClass;
+                tdName.textContent = store.name;
+                tr.appendChild(tdName);
+
+                const salesGrowth = getGrowthValue(data.pySales, data.cySales);
+                const visitorsGrowth = getGrowthValue(data.pyVisitors, data.cyVisitors);
+                const atvGrowth = getGrowthValue(data.pyATV, data.cyATV);
+
+                tr.innerHTML += `
+                    <td>${data.pySales === 0 ? "" : Math.round(data.pySales).toLocaleString()}</td>
+                    <td>${data.cySales === 0 ? "" : Math.round(data.cySales).toLocaleString()}</td>
+                    <td class="${getGrowthClass(salesGrowth)}">${salesGrowth}</td>
+                    <td>${data.pyVisitors === 0 ? "" : Math.round(data.pyVisitors).toLocaleString()}</td>
+                    <td>${data.cyVisitors === 0 ? "" : Math.round(data.cyVisitors).toLocaleString()}</td>
+                    <td class="${getGrowthClass(visitorsGrowth)}">${visitorsGrowth}</td>
+                    <td>${data.pyATV === 0 ? "" : Math.round(data.pyATV).toLocaleString()}</td>
+                    <td>${data.cyATV === 0 ? "" : Math.round(data.cyATV).toLocaleString()}</td>
+                    <td class="${getGrowthClass(atvGrowth)}">${atvGrowth}</td>
+                `;
+
+                if (selectedOffersList.length === 0) {
+                    tr.innerHTML += `<td>-</td>`;
+                } else {
+                    selectedOffersList.forEach(oid => {
+                        const val = data.offers[oid] || 0;
+                        tr.innerHTML += `<td>${val === 0 ? "" : val.toLocaleString()}</td>`;
+                        if (idx <= 51) {
+                            offerTotals[oid] += val;
+                        }
+                    });
+                }
+
+                tr.innerHTML += `<td>${store.note || ""}</td>`;
+                tbody.appendChild(tr);
+
+                if (idx <= 50) {
+                    totalPYSales += data.pySales;
+                    totalCYSales += data.cySales;
+                    totalPYVisitors += data.pyVisitors;
+                    totalCYVisitors += data.cyVisitors;
+
+                    if (data.pyATV > 0) {
+                        totalPYATVSum += data.pyATV;
+                        pyATVCount++;
+                    }
+                    if (data.cyATV > 0) {
+                        totalCYATVSum += data.cyATV;
+                        cyATVCount++;
+                    }
+                }
+            });
+
+            const avgPYATV = pyATVCount > 0 ? (totalPYATVSum / pyATVCount) : 0;
+            const avgCYATV = cyATVCount > 0 ? (totalCYATVSum / cyATVCount) : 0;
+
+            const globalSalesGrowth = getGrowthValue(totalPYSales, totalCYSales);
+            const globalVisitorsGrowth = getGrowthValue(totalPYVisitors, totalCYVisitors);
+            const globalATVGrowth = getGrowthValue(avgPYATV, avgCYATV);
+
+            const trTotal = document.createElement('tr');
+            trTotal.className = 'total-row';
+            trTotal.innerHTML = `
+                <td colspan="2">الإجمالي</td>
+                <td>${Math.round(totalPYSales).toLocaleString()}</td>
+                <td>${Math.round(totalCYSales).toLocaleString()}</td>
+                <td class="${getGrowthClass(globalSalesGrowth)}">${globalSalesGrowth}</td>
+                <td>${Math.round(totalPYVisitors).toLocaleString()}</td>
+                <td>${Math.round(totalCYVisitors).toLocaleString()}</td>
+                <td class="${getGrowthClass(globalVisitorsGrowth)}">${globalVisitorsGrowth}</td>
+                <td>${Math.round(avgPYATV).toLocaleString()}</td>
+                <td>${Math.round(avgCYATV).toLocaleString()}</td>
+                <td class="${getGrowthClass(globalATVGrowth)}">${globalATVGrowth}</td>
+            `;
+
+            if (selectedOffersList.length === 0) {
+                trTotal.innerHTML += `<td>-</td>`;
+            } else {
+                selectedOffersList.forEach(oid => {
+                    const total = offerTotals[oid] || 0;
+                    trTotal.innerHTML += `<td>${total === 0 ? "0" : total.toLocaleString()}</td>`;
+                });
+            }
+
+            trTotal.innerHTML += `<td>تم حساب نسبة الفرق بناءً على الإجمالي</td>`;
+            tbody.appendChild(trTotal);
+
+            document.getElementById('sumCYSales').textContent = Math.round(totalCYSales).toLocaleString() + ' ر.س';
+            document.getElementById('sumPYSales').textContent = Math.round(totalPYSales).toLocaleString() + ' ر.س';
+            
+            const badgeGrowth = document.getElementById('sumSalesGrowth');
+            badgeGrowth.textContent = globalSalesGrowth;
+            badgeGrowth.className = 'val ' + (parseFloat(globalSalesGrowth) >= 0 ? 'text-success' : 'text-danger');
+
+            document.getElementById('summaryStrip').style.display = 'grid';
+            document.getElementById('reportContainer').style.display = 'block';
+        }
+
+        function getGrowthValue(py, cy) {
+            if (py === 0 && cy === 0) return "-";
+            if (py === 0) return "+100.0%";
+            const diff = ((cy - py) / py) * 100;
+            return (diff >= 0 ? "+" : "") + diff.toFixed(1) + "%";
+        }
+
+        function getGrowthClass(growthText) {
+            if (growthText === "-") return "";
+            return growthText.startsWith("-") ? "growth-neg" : "growth-pos";
+        }
+
+        function getColumnLetter(colIndex) {
+            let letter = "";
+            let temp = colIndex;
+            while (temp > 0) {
+                let modulo = (temp - 1) % 26;
+                letter = String.fromCharCode(65 + modulo) + letter;
+                temp = Math.floor((temp - modulo) / 26);
+            }
+            return letter;
+        }
+
+        function exportToExcel() {
+            const cyS = document.getElementById('cyStart').value;
+            const cyE = document.getElementById('cyEnd').value;
+            const pyS = document.getElementById('pyStart').value;
+            const pyE = document.getElementById('pyEnd').value;
+
+            const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
+            const totalCols = 12 + selectedOffersList.length;
+            const lastLetter = getColumnLetter(totalCols);
+
+            let tableHtml = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+            <meta charset="utf-8">
+            <!--[if gte mso 9]><xml>
+            <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+            <x:Name>مقارنة YoY</x:Name>
+            <x:WorksheetOptions>
+            <x:DisplayGridlines/>
+            </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+            </xml><![endif]-->
+            <style>
+                table { border-collapse: collapse; }
+                td, th { border: 0.5pt solid #cccccc; font-family: 'Tajawal', Arial, sans-serif; text-align: center; font-size: 10pt; }
+                th { font-weight: bold; background-color: #f2f2f2; }
+                .title-row { font-size: 14pt; font-weight: bold; background-color: #ffffff; height: 35px; }
+                .class-a { background-color: #5DADE2; color: #000000; font-weight: bold; }
+                .class-b { background-color: #52BE80; color: #000000; font-weight: bold; }
+                .class-c { background-color: #F4D03F; color: #000000; font-weight: bold; }
+                .class-d { background-color: #EC7063; color: #000000; font-weight: bold; }
+                .class-e { background-color: #EB984E; color: #000000; font-weight: bold; }
+                .class-s { background-color: #AF7AC5; color: #000000; font-weight: bold; }
+                .online { background-color: #5DADE2; color: #000000; font-weight: bold; }
+                .total-row { font-weight: bold; background-color: #ffffff; }
+                .num-cell { vnd-ms-excel-numberformat: "#,##0"; }
+                .pct-cell { vnd-ms-excel-numberformat: "0.0%"; }
+            </style>
+            </head>
+            <body dir="rtl">
+            <table>
+                <colgroup>
+                    <col width="60">
+                    <col width="220">
+                    <col width="110">
+                    <col width="110">
+                    <col width="90">
+                    <col width="100">
+                    <col width="100">
+                    <col width="90">
+                    <col width="100">
+                    <col width="100">
+                    <col width="90">
+            `;
+
+            if (selectedOffersList.length === 0) {
+                tableHtml += `<col width="180">`;
+            } else {
+                selectedOffersList.forEach(() => {
+                    tableHtml += `<col width="140">`;
+                });
+            }
+            tableHtml += `
+                    <col width="240">
+                </colgroup>
+                <tr>
+                    <td colspan="${totalCols}" class="title-row">${mainTitle}</td>
+                </tr>
+                <tr>
+                    <th rowspan="2">فئة المعرض</th>
+                    <th rowspan="2">المعرض</th>
+                    <th colspan="3">مبيعات</th>
+                    <th colspan="3">زوار</th>
+                    <th colspan="3">قيمة العميل (ATV)</th>
+                    <th colspan="${Math.max(1, selectedOffersList.length)}">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
+                    <th rowspan="2">الملاحظات</th>
+                </tr>
+                <tr>
+                    <th>مبيعات العام السابق</th>
+                    <th>مبيعات العام الحالي</th>
+                    <th>فرق المبيعات %</th>
+                    <th>زوار العام السابق</th>
+                    <th>زوار العام الحالي</th>
+                    <th>فرق الزوار%</th>
+                    <th>قيمة العميل العام السابق</th>
+                    <th>قيمة العميل العام الحالي</th>
+                    <th>فرق قيمة العميل %</th>
+            `;
+
+            if (selectedOffersList.length === 0) {
+                tableHtml += `<th>الملاحظات</th>`;
+            } else {
+                selectedOffersList.forEach(oid => {
+                    const offer = offersData.find(o => o.id === oid);
+                    tableHtml += `<th>${offer ? offer.name : oid}</th>`;
+                });
+            }
+            tableHtml += `
+                </tr>
+            `;
+
+            STORE_ROWS.forEach((store, idx) => {
+                const r = idx + 5;
+                let catClass = 'online';
+                if (store.category === 'A') catClass = 'class-a';
+                else if (store.category === 'B') catClass = 'class-b';
+                else if (store.category === 'C') catClass = 'class-c';
+                else if (store.category === 'D') catClass = 'class-d';
+                else if (store.category === 'E') catClass = 'class-e';
+                else if (store.category === 'S') catClass = 'class-s';
+
+                const targetRow = document.querySelectorAll('#yoyReportBody tr')[idx];
+                const cells = targetRow.querySelectorAll('td');
+
+                const pySalesVal = cells[2].textContent.replace(/,/g, '');
+                const cySalesVal = cells[3].textContent.replace(/,/g, '');
+                const pyVisitorsVal = cells[5].textContent.replace(/,/g, '');
+                const cyVisitorsVal = cells[6].textContent.replace(/,/g, '');
+                const pyATVVal = cells[8].textContent.replace(/,/g, '');
+                const cyATVVal = cells[9].textContent.replace(/,/g, '');
+
+                tableHtml += `
+                <tr>
+                    <td class="${catClass}">${store.category}</td>
+                    <td class="${catClass}">${store.name}</td>
+                `;
+
+                if (store.note && store.note.includes("تم اغلاق المعرض")) {
+                    tableHtml += `
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>-</td>
+                        <td></td>
+                        <td></td>
+                        <td>-</td>
+                    `;
+                } else {
+                    tableHtml += `
+                        <td class="num-cell">${pySalesVal === "" ? "" : pySalesVal}</td>
+                        <td class="num-cell">${cySalesVal === "" ? "" : cySalesVal}</td>
+                        <td class="pct-cell">=IF(C${r}=0, 0, (D${r}-C${r})/C${r})</td>
+                        <td class="num-cell">${pyVisitorsVal === "" ? "" : pyVisitorsVal}</td>
+                        <td class="num-cell">${cyVisitorsVal === "" ? "" : cyVisitorsVal}</td>
+                        <td class="pct-cell">=IF(F${r}=0, 0, (G${r}-F${r})/F${r})</td>
+                        <td class="num-cell">${pyATVVal === "" ? "" : pyATVVal}</td>
+                        <td class="num-cell">${cyATVVal === "" ? "" : cyATVVal}</td>
+                        <td class="pct-cell">=IF(I${r}=0, 0, (J${r}-I${r})/I${r})</td>
+                    `;
+                }
+
+                if (selectedOffersList.length === 0) {
+                    tableHtml += `<td>-</td>`;
+                } else {
+                    selectedOffersList.forEach((oid, oIdx) => {
+                        const offerVal = cells[11 + oIdx].textContent.replace(/,/g, '');
+                        tableHtml += `<td class="num-cell">${offerVal === "" ? "" : offerVal}</td>`;
+                    });
+                }
+
+                tableHtml += `<td>${store.note || ""}</td></tr>`;
+            });
+
+            const tR = 57;
+            tableHtml += `
+                <tr class="total-row">
+                    <td colspan="2">الإجمالي</td>
+                    <td class="num-cell">=SUM(C5:C39,C40:C47,C48:C52,C55:C55,C53:C54)</td>
+                    <td class="num-cell">=SUM(D5:D39,D40:D45,D46:D52,D55:D55,D53:D54)</td>
+                    <td class="pct-cell">=(D${tR}-C${tR})/C${tR}</td>
+                    <td class="num-cell">=SUM(F5:F39,F40:F45,F46:F52,F55:F55,F53:F54)</td>
+                    <td class="num-cell">=SUM(G5:G39,G40:G45,G46:G52,G55:G55,G53:G54)</td>
+                    <td class="pct-cell">=(G${tR}-F${tR})/F${tR}</td>
+                    <td class="num-cell">=AVERAGE(I5:I39,I40:I45,I46:I52,I55:I55,I53:I54)</td>
+                    <td class="num-cell">=AVERAGE(J5:J39,J40:J45,J46:J52,J55:J55,J53:J54)</td>
+                    <td class="pct-cell">=(J${tR}-I${tR})/I${tR}</td>
+            `;
+
+            if (selectedOffersList.length === 0) {
+                tableHtml += `<td>-</td>`;
+            } else {
+                selectedOffersList.forEach((oid, oIdx) => {
+                    const colLetter = getColumnLetter(12 + oIdx);
+                    tableHtml += `<td class="num-cell">=SUM(${colLetter}5:${colLetter}56)</td>`;
+                });
+            }
+
+            tableHtml += `
+                    <td>تم حساب نسبة الفرق بناءً على الإجمالي</td>
+                </tr>
+            </table>
+            </body>
+            </html>
+            `;
+
+            const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `تقرير_مقارنة_YoY_${cyS}_إلى_${cyE}.xls`;
+            link.click();
+        }
+
+        function exportToPDF() {
+            const cyS = document.getElementById('cyStart').value;
+            const cyE = document.getElementById('cyEnd').value;
+            const pyS = document.getElementById('pyStart').value;
+            const pyE = document.getElementById('pyEnd').value;
+
+            const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+
+            if (typeof amiriFontBase64 !== 'undefined') {
+                doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
+                doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+                doc.setFont("Amiri");
+            } else {
+                doc.setFont("helvetica");
+            }
+
+            doc.setFontSize(11);
+            doc.text(mainTitle, 14, 15);
+            doc.setFontSize(8);
+            doc.text(`مقارنة المبيعات والزوار للفترتين: الحالية [${cyS} إلى ${cyE}] والسابقة [${pyS} إلى ${pyE}]`, 14, 21);
+
+            const tableRows = [];
+            const rows = document.querySelectorAll('#yoyReportBody tr');
+            
+            rows.forEach(row => {
+                const rowData = [];
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    rowData.push(cell.textContent.trim());
+                });
+                tableRows.push(rowData);
+            });
+
+            const headerRow1 = ['الفئة', 'المعرض', 'مبيعات', '', '', 'الزوار', '', '', 'قيمة العميل (ATV)', '', ''];
+            const headerRow2 = ['', '', 'LY', 'CY', '%', 'LY', 'CY', '%', 'LY', 'CY', '%'];
+
+            if (selectedOffersList.length === 0) {
+                headerRow1.push('العروض الترويجية');
+                headerRow2.push('-');
+            } else {
+                selectedOffersList.forEach(oid => {
+                    const offer = offersData.find(o => o.id === oid);
+                    headerRow1.push(offer ? offer.name : oid);
+                    headerRow2.push('');
+                });
+            }
+
+            headerRow1.push('الملاحظات');
+            headerRow2.push('');
+
+            doc.autoTable({
+                head: [headerRow1, headerRow2],
+                body: tableRows,
+                startY: 25,
+                theme: 'grid',
+                styles: {
+                    font: 'Amiri',
+                    fontSize: 5.5,
+                    cellPadding: 0.6,
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                headStyles: {
+                    fillColor: [26, 33, 62],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                didParseCell: function (data) {
+                    if (data.row.section === 'head') return;
+                    
+                    const rowEl = data.row.raw;
+                    const cat = rowEl[0];
+
+                    if (data.row.index === tableRows.length - 1) {
+                        data.cell.styles.fillColor = [240, 240, 240];
+                        data.cell.styles.fontStyle = 'bold';
+                        return;
+                    }
+
+                    if (data.column.index === 0 || data.column.index === 1) {
+                        if (cat === 'A') data.cell.styles.fillColor = [93, 173, 226];
+                        else if (cat === 'B') data.cell.styles.fillColor = [82, 190, 128];
+                        else if (cat === 'C') data.cell.styles.fillColor = [244, 208, 63];
+                        else if (cat === 'D') data.cell.styles.fillColor = [236, 112, 99];
+                        else if (cat === 'E') data.cell.styles.fillColor = [235, 152, 78];
+                        else if (cat === 'S') data.cell.styles.fillColor = [175, 122, 197];
+                        else if (cat === 'Online') data.cell.styles.fillColor = [93, 173, 226];
+                    }
+                }
+            });
+
+            doc.save(`تقرير_مقارنة_YoY_${cyS}_إلى_${cyE}.pdf`);
+        }
+    </script>
+</body>
+</html>
