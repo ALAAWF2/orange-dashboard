@@ -438,6 +438,15 @@
         </div>
     </div>
 
+    <div class="filter-panel" id="offerProductsPanel" style="display: none; margin-top: -10px;">
+        <h5 class="d-flex align-items-center gap-2" style="font-weight: 800; color: var(--orange);">
+            <i class="bi bi-box-seam"></i> المنتجات المشمولة في العروض الترويجية المختارة
+        </h5>
+        <div id="offerProductsContent" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mt-2">
+            <!-- Will be populated by JS -->
+        </div>
+    </div>
+
     <div class="summary-strip" id="summaryStrip" style="display: none;">
         <div class="summary-card">
             <div class="val text-success" id="sumCYSales">0</div>
@@ -675,15 +684,26 @@
                 const badgeText = isEnabled ? 'فعال' : 'معطل';
                 const optName = `[${offer.id}] ${offer.name || ''}`;
 
+                const prodMap = {};
+                if (offer.items) {
+                    offer.items.forEach(item => {
+                        prodMap[item.i] = item.n || item.i;
+                    });
+                }
+                const uniqueProds = Object.entries(prodMap);
+                const prodNames = uniqueProds.map(([code, name]) => name);
+                const tooltipText = prodNames.length > 0 ? "المنتجات المشمولة:\n" + prodNames.join("\n") : "لا توجد منتجات مشمولة";
+
                 const div = document.createElement('div');
                 div.className = 'dropdown-item d-flex align-items-center px-3 py-2 offer-list-item';
                 div.setAttribute('data-name', optName.toLowerCase());
                 div.setAttribute('data-id', offer.id.toLowerCase());
+                div.setAttribute('title', tooltipText);
                 div.innerHTML = `
                     <input type="checkbox" value="${offer.id}" id="chk_${offer.id}" onchange="updateSelectedOffersCount()" class="form-check-input me-2 offer-checkbox">
-                    <label for="chk_${offer.id}" class="form-check-label text-dark w-100 d-flex justify-content-between align-items-center">
-                        <span class="text-truncate" style="max-width: 280px;" title="${optName}">${optName}</span>
-                        <span class="badge ${badgeColor} ms-2" style="font-size: 0.7rem;">${badgeText}</span>
+                    <label for="chk_${offer.id}" class="form-check-label text-dark w-100 d-flex justify-content-between align-items-center" style="cursor: pointer;">
+                        <span class="text-truncate" style="max-width: 260px;" title="${optName}">${optName}</span>
+                        <span class="badge ${badgeColor} ms-2" style="font-size: 0.7rem;">${badgeText} (${uniqueProds.length})</span>
                     </label>
                 `;
                 list.appendChild(div);
@@ -723,8 +743,78 @@
             selectedOffersList = Array.from(checked).map(c => c.value);
             if (selectedOffersList.length === 0) {
                 txt.textContent = 'لم يتم تحديد عروض';
+                const panel = document.getElementById('offerProductsPanel');
+                if (panel) panel.style.display = 'none';
             } else {
                 txt.textContent = `تم تحديد ${selectedOffersList.length} عرض`;
+                renderOfferProductsPanel();
+            }
+        }
+
+        function renderOfferProductsPanel() {
+            const panel = document.getElementById('offerProductsPanel');
+            const content = document.getElementById('offerProductsContent');
+            if (!panel || !content) return;
+
+            content.innerHTML = '';
+
+            if (selectedOffersList.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            let hasProducts = false;
+
+            selectedOffersList.forEach(oid => {
+                const offer = offersData.find(o => o.id === oid);
+                if (!offer) return;
+
+                const prodMap = {};
+                if (offer.items) {
+                    offer.items.forEach(item => {
+                        prodMap[item.i] = item.n || item.i;
+                    });
+                }
+
+                const uniqueProds = Object.entries(prodMap);
+                if (uniqueProds.length > 0) {
+                    hasProducts = true;
+                    const card = document.createElement('div');
+                    card.className = 'col';
+
+                    let itemsHtml = '';
+                    uniqueProds.forEach(([code, name]) => {
+                        itemsHtml += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" style="font-size: 0.82rem; border: none; border-bottom: 1px solid #f1f1f1;">
+                                <span class="text-dark fw-medium">${name}</span>
+                                <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.72rem;">${code}</span>
+                            </li>
+                        `;
+                    });
+
+                    card.innerHTML = `
+                        <div class="card h-100 border shadow-sm" style="border-radius: 10px; overflow: hidden;">
+                            <div class="card-header bg-light py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark text-truncate" style="max-width: 80%; font-size: 0.9rem;" title="[${offer.id}] ${offer.name}">
+                                    [${offer.id}] ${offer.name}
+                                </span>
+                                <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.72rem;">
+                                    ${uniqueProds.length} منتج
+                                </span>
+                            </div>
+                            <ul class="list-group list-group-flush overflow-auto" style="max-height: 180px;">
+                                ${itemsHtml}
+                            </ul>
+                        </div>
+                    `;
+                    content.appendChild(card);
+                }
+            });
+
+            if (hasProducts) {
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
             }
         }
 
@@ -815,31 +905,42 @@
             if (store.category === 'Online' || store.id === '0' || store.id === '1013') return "";
             if (store.note && store.note.includes("تم اغلاق المعرض")) return "";
 
-            let cyMissing = false;
-            let pyMissing = false;
+            const cyMissingDates = [];
+            const pyMissingDates = [];
 
             for (const d of cyDates) {
                 if (!visitorsMap[d] || !visitorsMap[d][storeId] || visitorsMap[d][storeId] <= 0) {
-                    cyMissing = true;
-                    break;
+                    cyMissingDates.push(d);
                 }
             }
 
             for (const d of pyDates) {
                 if (!visitorsMap[d] || !visitorsMap[d][storeId] || visitorsMap[d][storeId] <= 0) {
-                    pyMissing = true;
-                    break;
+                    pyMissingDates.push(d);
                 }
             }
 
-            if (cyMissing && pyMissing) {
-                return "بيانات زوار ناقصة بالفترتين";
-            } else if (cyMissing) {
-                return "بيانات زوار ناقصة بالفترة الحالية";
-            } else if (pyMissing) {
-                return "بيانات زوار ناقصة بالفترة السابقة";
+            const formatList = (dates) => {
+                const formatted = dates.map(d => {
+                    const parts = d.split('-');
+                    return parts.length === 3 ? `${parts[2]}-${parts[1]}` : d;
+                });
+                if (formatted.length <= 3) {
+                    return `(${formatted.join(', ')})`;
+                } else {
+                    return `(${formatted.slice(0, 3).join(', ')}... إلخ)`;
+                }
+            };
+
+            let note = "";
+            if (cyMissingDates.length > 0 && pyMissingDates.length > 0) {
+                note = `بيانات زوار ناقصة بالفترة الحالية ${formatList(cyMissingDates)} والسابقة ${formatList(pyMissingDates)}`;
+            } else if (cyMissingDates.length > 0) {
+                note = `بيانات زوار ناقصة بالفترة الحالية ${formatList(cyMissingDates)}`;
+            } else if (pyMissingDates.length > 0) {
+                note = `بيانات زوار ناقصة بالفترة السابقة ${formatList(pyMissingDates)}`;
             }
-            return "";
+            return note;
         }
 
         function runReport() {
@@ -900,7 +1001,16 @@
                 selectedOffersList.forEach(oid => {
                     const offer = offersData.find(o => o.id === oid);
                     const name = offer ? offer.name : oid;
-                    offerHeadersHtml += `<th style="font-size: 0.78rem;">${name}</th>`;
+                    const prodMap = {};
+                    if (offer && offer.items) {
+                        offer.items.forEach(item => {
+                            prodMap[item.i] = item.n || item.i;
+                        });
+                    }
+                    const uniqueProds = Object.entries(prodMap);
+                    const prodNames = uniqueProds.map(([code, name]) => name);
+                    const tooltipText = prodNames.length > 0 ? "المنتجات المشمولة:\n" + prodNames.join("\n") : "لا توجد منتجات مشمولة";
+                    offerHeadersHtml += `<th style="font-size: 0.78rem; cursor: help;" title="${tooltipText}">${name} <i class="bi bi-info-circle ms-1" style="font-size: 0.75rem; opacity: 0.75;"></i></th>`;
                 });
             }
 
