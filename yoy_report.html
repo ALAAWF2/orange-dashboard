@@ -480,7 +480,6 @@
                         <th>LY</th>
                         <th>CY</th>
                         <th>%</th>
-                        <th>الملاحظات</th>
                     </tr>
                 </thead>
                 <tbody id="yoyReportBody"></tbody>
@@ -890,10 +889,6 @@
                 });
             }
 
-            const thNotes = document.createElement('th');
-            thNotes.textContent = 'الملاحظات';
-            subHeaderRow.appendChild(thNotes);
-
             const tbody = document.getElementById('yoyReportBody');
             tbody.innerHTML = '';
 
@@ -950,7 +945,7 @@
                     selectedOffersList.forEach(oid => {
                         const val = data.offers[oid] || 0;
                         tr.innerHTML += `<td>${val === 0 ? "" : val.toLocaleString()}</td>`;
-                        if (idx <= 51) {
+                        if (idx <= 49) {
                             offerTotals[oid] += val;
                         }
                     });
@@ -959,7 +954,7 @@
                 tr.innerHTML += `<td>${store.note || ""}</td>`;
                 tbody.appendChild(tr);
 
-                if (idx <= 50) {
+                if (idx <= 49) {
                     totalPYSales += data.pySales;
                     totalCYSales += data.cySales;
                     totalPYVisitors += data.pyVisitors;
@@ -1051,7 +1046,7 @@
             const pyE = document.getElementById('pyEnd').value;
 
             const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
-            const totalCols = 12 + selectedOffersList.length;
+            const totalCols = 12 + Math.max(1, selectedOffersList.length);
             const lastLetter = getColumnLetter(totalCols);
 
             let tableHtml = `
@@ -1083,8 +1078,8 @@
                 .class-s { background-color: #AF7AC5; color: #000000; font-weight: bold; }
                 .online { background-color: #5DADE2; color: #000000; font-weight: bold; }
                 .total-row { font-weight: bold; background-color: #ffffff; }
-                .num-cell { vnd-ms-excel-numberformat: "#,##0"; }
-                .pct-cell { vnd-ms-excel-numberformat: "0.0%"; }
+                .num-cell { mso-number-format: "#,##0"; }
+                .pct-cell { mso-number-format: "0.0%"; }
             </style>
             </head>
             <body dir="rtl">
@@ -1138,7 +1133,7 @@
             `;
 
             if (selectedOffersList.length === 0) {
-                tableHtml += `<th>الملاحظات</th>`;
+                tableHtml += `<th>لا توجد عروض مختارة</th>`;
             } else {
                 selectedOffersList.forEach(oid => {
                     const offer = offersData.find(o => o.id === oid);
@@ -1150,7 +1145,7 @@
             `;
 
             STORE_ROWS.forEach((store, idx) => {
-                const r = idx + 5;
+                const r = idx + 4;
                 let catClass = 'online';
                 if (store.category === 'A') catClass = 'class-a';
                 else if (store.category === 'B') catClass = 'class-b';
@@ -1213,18 +1208,18 @@
                 tableHtml += `<td>${store.note || ""}</td></tr>`;
             });
 
-            const tR = 57;
+            const tR = 56;
             tableHtml += `
                 <tr class="total-row">
                     <td colspan="2">الإجمالي</td>
-                    <td class="num-cell">=SUM(C5:C39,C40:C47,C48:C52,C55:C55,C53:C54)</td>
-                    <td class="num-cell">=SUM(D5:D39,D40:D45,D46:D52,D55:D55,D53:D54)</td>
+                    <td class="num-cell">=SUM(C4:C53)</td>
+                    <td class="num-cell">=SUM(D4:D53)</td>
                     <td class="pct-cell">=(D${tR}-C${tR})/C${tR}</td>
-                    <td class="num-cell">=SUM(F5:F39,F40:F45,F46:F52,F55:F55,F53:F54)</td>
-                    <td class="num-cell">=SUM(G5:G39,G40:G45,G46:G52,G55:G55,G53:G54)</td>
+                    <td class="num-cell">=SUM(F4:F53)</td>
+                    <td class="num-cell">=SUM(G4:G53)</td>
                     <td class="pct-cell">=(G${tR}-F${tR})/F${tR}</td>
-                    <td class="num-cell">=AVERAGE(I5:I39,I40:I45,I46:I52,I55:I55,I53:I54)</td>
-                    <td class="num-cell">=AVERAGE(J5:J39,J40:J45,J46:J52,J55:J55,J53:J54)</td>
+                    <td class="num-cell">=AVERAGE(I4:I53)</td>
+                    <td class="num-cell">=AVERAGE(J4:J53)</td>
                     <td class="pct-cell">=(J${tR}-I${tR})/I${tR}</td>
             `;
 
@@ -1233,7 +1228,7 @@
             } else {
                 selectedOffersList.forEach((oid, oIdx) => {
                     const colLetter = getColumnLetter(12 + oIdx);
-                    tableHtml += `<td class="num-cell">=SUM(${colLetter}5:${colLetter}56)</td>`;
+                    tableHtml += `<td class="num-cell">=SUM(${colLetter}4:${colLetter}53)</td>`;
                 });
             }
 
