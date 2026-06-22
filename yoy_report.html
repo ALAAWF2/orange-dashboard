@@ -467,7 +467,7 @@
                         <th colspan="3">المبيعات</th>
                         <th colspan="3">الزوار</th>
                         <th colspan="3">قيمة العميل (ATV)</th>
-                        <th id="offerHeaderContainer" colspan="1">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
+                        <th colspan="1">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
                         <th rowspan="2">الملاحظات</th>
                     </tr>
                     <tr id="tableSubHeaderRow">
@@ -480,6 +480,7 @@
                         <th>LY</th>
                         <th>CY</th>
                         <th>%</th>
+                        <th>لا توجد عروض مختارة</th>
                     </tr>
                 </thead>
                 <tbody id="yoyReportBody"></tbody>
@@ -808,6 +809,39 @@
             }
         }
 
+        function getStoreVisitorNote(storeId, cyDates, pyDates) {
+            const store = STORE_ROWS.find(s => s.id === storeId);
+            if (!store) return "";
+            if (store.category === 'Online' || store.id === '0' || store.id === '1013') return "";
+            if (store.note && store.note.includes("تم اغلاق المعرض")) return "";
+
+            let cyMissing = false;
+            let pyMissing = false;
+
+            for (const d of cyDates) {
+                if (!visitorsMap[d] || !visitorsMap[d][storeId] || visitorsMap[d][storeId] <= 0) {
+                    cyMissing = true;
+                    break;
+                }
+            }
+
+            for (const d of pyDates) {
+                if (!visitorsMap[d] || !visitorsMap[d][storeId] || visitorsMap[d][storeId] <= 0) {
+                    pyMissing = true;
+                    break;
+                }
+            }
+
+            if (cyMissing && pyMissing) {
+                return "بيانات زوار ناقصة بالفترتين";
+            } else if (cyMissing) {
+                return "بيانات زوار ناقصة بالفترة الحالية";
+            } else if (pyMissing) {
+                return "بيانات زوار ناقصة بالفترة السابقة";
+            }
+            return "";
+        }
+
         function runReport() {
             const cyS = document.getElementById('cyStart').value;
             const cyE = document.getElementById('cyEnd').value;
@@ -858,36 +892,45 @@
             document.getElementById('tableMainTitle').textContent = mainTitle;
             document.getElementById('tableSubTitle').textContent = `الفترة المقارنة الحالية: ${cyS} إلى ${cyE} | الفترة السابقة: ${pyS} إلى ${pyE}`;
 
-            const offerHeadContainer = document.getElementById('offerHeaderContainer');
-            offerHeadContainer.setAttribute('colspan', Math.max(1, selectedOffersList.length));
-
-            const subHeaderRow = document.getElementById('tableSubHeaderRow');
-            subHeaderRow.innerHTML = `
-                <th>LY</th>
-                <th>CY</th>
-                <th>%</th>
-                <th>LY</th>
-                <th>CY</th>
-                <th>%</th>
-                <th>LY</th>
-                <th>CY</th>
-                <th>%</th>
-            `;
-
+            const offersColspan = Math.max(1, selectedOffersList.length);
+            let offerHeadersHtml = '';
             if (selectedOffersList.length === 0) {
-                const th = document.createElement('th');
-                th.textContent = 'لا توجد عروض مختارة';
-                subHeaderRow.appendChild(th);
+                offerHeadersHtml = '<th>لا توجد عروض مختارة</th>';
             } else {
                 selectedOffersList.forEach(oid => {
                     const offer = offersData.find(o => o.id === oid);
                     const name = offer ? offer.name : oid;
-                    const th = document.createElement('th');
-                    th.textContent = name;
-                    th.style.fontSize = "0.78rem";
-                    subHeaderRow.appendChild(th);
+                    offerHeadersHtml += `<th style="font-size: 0.78rem;">${name}</th>`;
                 });
             }
+
+            const thead = document.querySelector('#yoyReportTable thead');
+            thead.innerHTML = `
+                <tr>
+                    <th rowspan="2">الفئة</th>
+                    <th rowspan="2">المعرض</th>
+                    <th colspan="3">المبيعات</th>
+                    <th colspan="3">الزوار</th>
+                    <th colspan="3">قيمة العميل (ATV)</th>
+                    <th colspan="${offersColspan}">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
+                    <th rowspan="2">الملاحظات</th>
+                </tr>
+                <tr id="tableSubHeaderRow">
+                    <th>LY</th>
+                    <th>CY</th>
+                    <th>%</th>
+                    <th>LY</th>
+                    <th>CY</th>
+                    <th>%</th>
+                    <th>LY</th>
+                    <th>CY</th>
+                    <th>%</th>
+                    ${offerHeadersHtml}
+                </tr>
+            `;
+
+            const cyDates = getDatesInRange(cyS, cyE);
+            const pyDates = getDatesInRange(pyS, pyE);
 
             const tbody = document.getElementById('yoyReportBody');
             tbody.innerHTML = '';
@@ -951,7 +994,17 @@
                     });
                 }
 
-                tr.innerHTML += `<td>${store.note || ""}</td>`;
+                let storeNote = store.note || "";
+                const visitorNote = getStoreVisitorNote(store.id, cyDates, pyDates);
+                if (visitorNote) {
+                    if (storeNote) {
+                        storeNote += " - " + visitorNote;
+                    } else {
+                        storeNote = visitorNote;
+                    }
+                }
+
+                tr.innerHTML += `<td>${storeNote}</td>`;
                 tbody.appendChild(tr);
 
                 if (idx <= 49) {
@@ -1184,15 +1237,15 @@
                     `;
                 } else {
                     tableHtml += `
-                        <td class="num-cell">${pySalesVal === "" ? "" : pySalesVal}</td>
-                        <td class="num-cell">${cySalesVal === "" ? "" : cySalesVal}</td>
-                        <td class="pct-cell">=IF(C${r}=0, 0, (D${r}-C${r})/C${r})</td>
-                        <td class="num-cell">${pyVisitorsVal === "" ? "" : pyVisitorsVal}</td>
-                        <td class="num-cell">${cyVisitorsVal === "" ? "" : cyVisitorsVal}</td>
-                        <td class="pct-cell">=IF(F${r}=0, 0, (G${r}-F${r})/F${r})</td>
-                        <td class="num-cell">${pyATVVal === "" ? "" : pyATVVal}</td>
-                        <td class="num-cell">${cyATVVal === "" ? "" : cyATVVal}</td>
-                        <td class="pct-cell">=IF(I${r}=0, 0, (J${r}-I${r})/I${r})</td>
+                        <td class="num-cell" style="mso-number-format:'#,##0';">${pySalesVal === "" ? "" : pySalesVal}</td>
+                        <td class="num-cell" style="mso-number-format:'#,##0';">${cySalesVal === "" ? "" : cySalesVal}</td>
+                        <td class="pct-cell" style="mso-number-format:'0.0%';">=IF(C${r}=0, 0, (D${r}-C${r})/C${r})</td>
+                        <td class="num-cell" style="mso-number-format:'#,##0';">${pyVisitorsVal === "" ? "" : pyVisitorsVal}</td>
+                        <td class="num-cell" style="mso-number-format:'#,##0';">${cyVisitorsVal === "" ? "" : cyVisitorsVal}</td>
+                        <td class="pct-cell" style="mso-number-format:'0.0%';">=IF(F${r}=0, 0, (G${r}-F${r})/F${r})</td>
+                        <td class="num-cell" style="mso-number-format:'#,##0';">${pyATVVal === "" ? "" : pyATVVal}</td>
+                        <td class="num-cell" style="mso-number-format:'#,##0';">${cyATVVal === "" ? "" : cyATVVal}</td>
+                        <td class="pct-cell" style="mso-number-format:'0.0%';">=IF(I${r}=0, 0, (J${r}-I${r})/I${r})</td>
                     `;
                 }
 
@@ -1201,26 +1254,38 @@
                 } else {
                     selectedOffersList.forEach((oid, oIdx) => {
                         const offerVal = cells[11 + oIdx].textContent.replace(/,/g, '');
-                        tableHtml += `<td class="num-cell">${offerVal === "" ? "" : offerVal}</td>`;
+                        tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">${offerVal === "" ? "" : offerVal}</td>`;
                     });
                 }
 
-                tableHtml += `<td>${store.note || ""}</td></tr>`;
+                const cyDates = getDatesInRange(cyS, cyE);
+                const pyDates = getDatesInRange(pyS, pyE);
+                let storeNote = store.note || "";
+                const visitorNote = getStoreVisitorNote(store.id, cyDates, pyDates);
+                if (visitorNote) {
+                    if (storeNote) {
+                        storeNote += " - " + visitorNote;
+                    } else {
+                        storeNote = visitorNote;
+                    }
+                }
+
+                tableHtml += `<td>${storeNote}</td></tr>`;
             });
 
             const tR = 56;
             tableHtml += `
                 <tr class="total-row">
                     <td colspan="2">الإجمالي</td>
-                    <td class="num-cell">=SUM(C4:C53)</td>
-                    <td class="num-cell">=SUM(D4:D53)</td>
-                    <td class="pct-cell">=(D${tR}-C${tR})/C${tR}</td>
-                    <td class="num-cell">=SUM(F4:F53)</td>
-                    <td class="num-cell">=SUM(G4:G53)</td>
-                    <td class="pct-cell">=(G${tR}-F${tR})/F${tR}</td>
-                    <td class="num-cell">=AVERAGE(I4:I53)</td>
-                    <td class="num-cell">=AVERAGE(J4:J53)</td>
-                    <td class="pct-cell">=(J${tR}-I${tR})/I${tR}</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(C4:C53)</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(D4:D53)</td>
+                    <td class="pct-cell" style="mso-number-format:'0.0%';">=(D${tR}-C${tR})/C${tR}</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(F4:F53)</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(G4:G53)</td>
+                    <td class="pct-cell" style="mso-number-format:'0.0%';">=(G${tR}-F${tR})/F${tR}</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0';">=AVERAGE(I4:I53)</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0';">=AVERAGE(J4:J53)</td>
+                    <td class="pct-cell" style="mso-number-format:'0.0%';">=(J${tR}-I${tR})/I${tR}</td>
             `;
 
             if (selectedOffersList.length === 0) {
@@ -1228,7 +1293,7 @@
             } else {
                 selectedOffersList.forEach((oid, oIdx) => {
                     const colLetter = getColumnLetter(12 + oIdx);
-                    tableHtml += `<td class="num-cell">=SUM(${colLetter}4:${colLetter}53)</td>`;
+                    tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">=SUM(${colLetter}4:${colLetter}53)</td>`;
                 });
             }
 
