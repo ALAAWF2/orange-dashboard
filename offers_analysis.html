@@ -159,6 +159,9 @@
                 <button class="btn btn-warning btn-sm fw-bold text-dark" onclick="openStagnantModal()">
                     📉 المنتجات الراكدة (Suggestions)
                 </button>
+                <button class="btn btn-primary btn-sm fw-bold text-white" onclick="openAiOffersModal()" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); border: none; box-shadow: 0 4px 6px rgba(142, 68, 173, 0.2);">
+                    ✨ مقترح العروض الذكي (AI Offers)
+                </button>
                 <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
             </div>
         </div>
@@ -477,6 +480,141 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                     <a href="stagnant_products.html" class="btn btn-primary">🔍 عرض التفاصيل الكاملة</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Offers Proposal Modal -->
+    <div class="modal fade" id="aiOffersModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <h5 class="modal-title w-100 fw-bold d-flex align-items-center gap-2">
+                        <span>✨ مقترح العروض الذكي القائم على البيانات</span>
+                        <span class="badge bg-white text-dark fs-6" id="aiTotalValue" style="margin-right: auto; margin-left: 10px;">إجمالي القيمة: ...</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <!-- Top stats cards inside Modal -->
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: white;">
+                                <div class="card-body">
+                                    <div class="text-muted small mb-1">المخزون المستهدف تصفيته</div>
+                                    <h4 class="fw-bold text-dark mb-0" id="aiTotalStockText">0 قطعة</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: white;">
+                                <div class="card-body">
+                                    <div class="text-muted small mb-1">المبيعات المتوقعة بالعرض</div>
+                                    <h4 class="fw-bold text-success mb-0" id="aiProjectedRevText">0 ر.س</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: white;">
+                                <div class="card-body">
+                                    <div class="text-muted small mb-1">صافي الأرباح المتوقعة</div>
+                                    <h4 class="fw-bold text-primary mb-0" id="aiProjectedProfitText">0 ر.س</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: white;">
+                                <div class="card-body">
+                                    <div class="text-muted small mb-1">متوسط هامش الربح</div>
+                                    <h4 class="fw-bold text-info mb-0" id="aiAvgMarginText">0%</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-pills mb-3 gap-2" id="aiTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold shadow-sm" id="recommendations-tab" data-bs-toggle="pill" data-bs-target="#recommendations" type="button" role="tab" style="border-radius: 8px;">📋 المقترحات الستة الكبرى (Core 6 Offers)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold shadow-sm" id="simulator-tab" data-bs-toggle="pill" data-bs-target="#simulator" type="button" role="tab" style="border-radius: 8px;">🎛️ محاكي تسعير العروض التفاعلي</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold shadow-sm" id="auto-scanned-tab" data-bs-toggle="pill" data-bs-target="#auto-scanned" type="button" role="tab" style="border-radius: 8px;" onclick="loadAutoScannedOffers()">🔍 استكشاف الركود التلقائي (Other Stagnant)</button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="aiTabContent">
+                        <!-- Tab 1: Core 6 Recommendations -->
+                        <div class="tab-pane fade show active" id="recommendations" role="tabpanel">
+                            <div class="row g-3" id="aiRecommendationsList">
+                                <!-- JS Populated -->
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Interactive Simulator -->
+                        <div class="tab-pane fade" id="simulator" role="tabpanel">
+                            <div class="card border-0 shadow-sm p-4" style="border-radius: 12px; background: white;">
+                                <h5 class="fw-bold mb-3 border-bottom pb-2 text-dark">🎛️ محاكاة أثر الخصم على العائد المالي وهامش الربح</h5>
+                                <div class="table-responsive">
+                                    <table class="table align-middle table-hover">
+                                        <thead>
+                                            <tr class="table-light">
+                                                <th>المنتج</th>
+                                                <th class="text-center" style="width: 100px;">المخزون</th>
+                                                <th class="text-center" style="width: 120px;">سعر التجزئة</th>
+                                                <th class="text-center" style="width: 120px;">التكلفة</th>
+                                                <th class="text-center" style="width: 200px;">نسبة الخصم المقترحة</th>
+                                                <th class="text-center" style="width: 120px;">سعر العرض</th>
+                                                <th class="text-center" style="width: 120px;">هامش ربح العرض</th>
+                                                <th class="text-center" style="width: 150px;">الأرباح المتوقعة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="aiSimulatorTableBody">
+                                            <!-- JS Populated -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Auto Scanned stagnant items -->
+                        <div class="tab-pane fade" id="auto-scanned" role="tabpanel">
+                            <div class="card border-0 shadow-sm p-4" style="border-radius: 12px; background: white;">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="fw-bold mb-0 text-dark">🔍 مقترحات آلية من المنتجات الراكدة الأخرى (> 90 يوم)</h5>
+                                    <span class="badge bg-warning text-dark fw-bold" id="autoStagnantCount">...</span>
+                                </div>
+                                <p class="text-muted small">تم تجميع هذه المنتجات بناءً على مخزون المعارض وتصنيفها كـ "راكد" في آخر تحديث. نقترح تطبيق الخصم المقترح لتصريفها.</p>
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table align-middle table-striped table-hover table-sm">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>المنتج</th>
+                                                <th>الفرع</th>
+                                                <th class="text-center">الكمية</th>
+                                                <th class="text-center">أيام الركود</th>
+                                                <th class="text-center">سعر التجزئة</th>
+                                                <th class="text-center">سعر العرض المقترح (25% خصم)</th>
+                                                <th class="text-center">القيمة التقديرية قبل العرض</th>
+                                                <th class="text-center">العائد المتوقع بعد العرض</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="aiAutoScannedBody">
+                                            <!-- JS Populated -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-success fw-bold" onclick="exportAiProposalToExcel()">📊 تصدير المقترح بالكامل لـ Excel</button>
                 </div>
             </div>
         </div>
@@ -1189,6 +1327,458 @@
             // Download
             const fileName = `تحليل_العروض_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
+        }
+
+        // ==================== AI OFFERS PROPOSAL FUNCTIONS ====================
+        const aiCoreOffers = [
+            {
+                id: "120010051",
+                alias: "608106",
+                name: "طقم شراشف كينغ | 4 ق (كود 608106)",
+                stock: 2897,
+                warehouse: 2502,
+                showroom: 395,
+                cost: 80,
+                retail: 199,
+                discountPct: 25.1,
+                velocity: 67.12,
+                cover: 43.2,
+                rationale: "تكدس كبير في المستودعات (86% من المخزون) يغطي مبيعات 3.6 سنوات. الخصم المقترح 25% لتسريع الدوران مع بقاء هامش ربح ممتاز 46%.",
+                badge: "🔴 ركود طويل المدى"
+            },
+            {
+                id: "starts_5425",
+                alias: "5425%",
+                name: "كويلت بيج ون مقاس فل (فئة 5425) - BIG ONE / GOOD ONE",
+                stock: 17580,
+                warehouse: 11802,
+                showroom: 5778,
+                cost: 40,
+                retail: 99,
+                discountPct: 10.1,
+                velocity: 4094.72,
+                cover: 4.3,
+                rationale: "منتج سريع الحركة ولكن المخزون ضخم جداً. خصم بسيط 10% يولد سيولة سريعة 1.5 مليون ريال ويخفف المخزون بمعدل دوران صحي.",
+                badge: "⚡ تسييل سريع للسيولة"
+            },
+            {
+                id: "starts_5387_5388",
+                alias: "5387%/5388%",
+                name: "كويلت بيج ون مقاس كينج (فئة 5387/5388) - BIG ONE / GOOD ONE",
+                stock: 13565,
+                warehouse: 9078,
+                showroom: 4487,
+                cost: 57,
+                retail: 149,
+                discountPct: 33.6,
+                velocity: 3125.82,
+                cover: 4.3,
+                rationale: "مخزون مرتفع ودوران سريع. الخصم المقترح 33% لكسر حاجز الـ 100 ريال والوصول للنطاق النفسي الجذاب للمستهلك (99 ريال) بهامش ربح 42%.",
+                badge: "🎯 خصم نفسي جذاب"
+            },
+            {
+                id: "KIT-100010794_etc",
+                alias: "4489623/21/22",
+                name: "طقم لحاف كينغ 11 قطعة Desert Fleur",
+                stock: 572,
+                warehouse: 245,
+                showroom: 327,
+                cost: 335,
+                retail: 895,
+                discountPct: 10.7,
+                velocity: 52.19,
+                cover: 11.0,
+                rationale: "منتج فاخر (Premium) ذو تكلفة عالية ومخزون يغطي سنة كاملة. الخصم 11% ينشط المبيعات مع تحقيق هامش ربح استثنائي 58%.",
+                badge: "💎 منتج فاخر بهامش مرتفع"
+            },
+            {
+                id: "KIT-100010670_etc",
+                alias: "441101/02/03/00",
+                name: "طقم لحاف كينغ 8 قطع Barock/Loki/Vanloo",
+                stock: 2225,
+                warehouse: 1723,
+                showroom: 502,
+                cost: 300,
+                retail: 895,
+                discountPct: 44.2,
+                velocity: 81.65,
+                cover: 27.3,
+                rationale: "ركود تام ومخزون معطل يغطي مبيعات سنتين ونصف. خصم حاد 44% لتسييل رأس المال المعطل مع الحفاظ على هامش ربح 40%.",
+                badge: "📉 تصفية ركود حرج"
+            },
+            {
+                id: "KIT-100030108_etc",
+                alias: "22682",
+                name: "طقم لحاف Wamsutta مقاس فل (فئة 22682)",
+                stock: 1114,
+                warehouse: 380,
+                showroom: 734,
+                cost: 210,
+                retail: 599,
+                discountPct: 17.4,
+                velocity: 128.59,
+                cover: 8.7,
+                rationale: "مخزون متراكم في المعارض بشكل أساسي (734 قطعة). العرض يقدم هامش ربح 57.6% بخصم 17.4% لتفريغ رفوف المعارض.",
+                badge: "🏪 تفريغ رفوف الفروع"
+            }
+        ];
+
+        let simulatedOffers = [];
+        let stagnantDataLoaded = false;
+        let autoStagnantItems = [];
+
+        function openAiOffersModal() {
+            if (simulatedOffers.length === 0) {
+                simulatedOffers = JSON.parse(JSON.stringify(aiCoreOffers));
+            }
+            
+            // Show bootstrap modal
+            const modal = new bootstrap.Modal(document.getElementById('aiOffersModal'));
+            modal.show();
+            
+            renderAiRecommendations();
+            renderAiSimulator();
+            updateAiTotals();
+        }
+
+        function renderAiRecommendations() {
+            const list = document.getElementById('aiRecommendationsList');
+            list.innerHTML = '';
+            
+            simulatedOffers.forEach((o, idx) => {
+                const offPrice = o.retail * (1 - o.discountPct / 100);
+                const profit = offPrice - o.cost;
+                const margin = offPrice > 0 ? (profit / offPrice) * 100 : 0;
+                
+                list.innerHTML += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; background: white;">
+                            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3 pb-0 px-3">
+                                <span class="badge bg-light text-primary border fw-bold">${o.badge}</span>
+                                <span class="badge bg-dark fw-normal text-white">دوران: ${Math.round(o.velocity)} قطعة/شهر</span>
+                            </div>
+                            <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-2">${o.name}</h6>
+                                    <p class="text-muted small mb-3" style="line-height: 1.4; min-height: 40px;">${o.rationale}</p>
+                                    
+                                    <div class="row g-2 text-center mb-3">
+                                        <div class="col-4">
+                                            <div class="p-2 bg-light rounded" style="font-size: 0.85rem;">
+                                                <div class="text-muted small">المخزون</div>
+                                                <div class="fw-bold text-dark">${o.stock.toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 bg-light rounded" style="font-size: 0.85rem;">
+                                                <div class="text-muted small">التكلفة</div>
+                                                <div class="fw-bold text-danger">${o.cost.toFixed(0)} ر.س</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 bg-light rounded" style="font-size: 0.85rem;">
+                                                <div class="text-muted small">سعر التجزئة</div>
+                                                <div class="fw-bold text-muted text-decoration-line-through">${o.retail.toFixed(0)} ر.س</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="border-top pt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-muted" style="font-size: 0.9rem;">العرض المقترح الحالي:</span>
+                                        <span class="fs-5 fw-bold text-success">${Math.round(offPrice)} ر.س</span>
+                                    </div>
+                                    <div class="row g-1 text-center" style="font-size: 0.8rem;">
+                                        <div class="col-6 text-start text-muted">
+                                            الخصم: <span class="fw-bold text-danger">${o.discountPct.toFixed(1)}%</span> (${Math.round(o.retail - offPrice)} ر.س)
+                                        </div>
+                                        <div class="col-6 text-end text-muted">
+                                            الهامش: <span class="fw-bold text-success">${margin.toFixed(1)}%</span> (${Math.round(profit)} ر.س)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderAiSimulator() {
+            const tbody = document.getElementById('aiSimulatorTableBody');
+            tbody.innerHTML = '';
+            
+            simulatedOffers.forEach((o, idx) => {
+                tbody.innerHTML += `
+                    <tr id="sim_row_${idx}">
+                        <td style="max-width: 250px;">
+                            <div class="fw-bold text-dark small text-truncate" title="${o.name}">${o.name}</div>
+                            <div class="text-muted small font-monospace" style="font-size: 0.75rem;">الكود: ${o.alias}</div>
+                        </td>
+                        <td class="text-center font-monospace small">${o.stock.toLocaleString()}</td>
+                        <td class="text-center font-monospace text-muted small">${o.retail} ر.س</td>
+                        <td class="text-center font-monospace text-danger small">${o.cost} ر.س</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" class="form-range flex-grow-1" min="0" max="85" step="0.5" id="sim_range_${idx}" value="${o.discountPct}" oninput="syncSimSlider(${idx}, this.value)">
+                                <input type="number" class="form-control form-control-sm text-center fw-bold" min="0" max="85" step="0.1" id="sim_num_${idx}" value="${o.discountPct.toFixed(1)}" oninput="syncSimNum(${idx}, this.value)" style="width: 70px; border-radius: 6px;">
+                                <span class="small">%</span>
+                            </div>
+                        </td>
+                        <td class="text-center fw-bold fs-6" style="color: #fe7900;">
+                            <span id="sim_price_val_${idx}">0</span> ر.س
+                        </td>
+                        <td class="text-center">
+                            <span id="sim_margin_val_${idx}" class="badge fs-7 px-2 py-1">0%</span>
+                        </td>
+                        <td class="text-center fw-bold text-primary font-monospace">
+                            <span id="sim_profit_val_${idx}">0</span> ر.س
+                        </td>
+                    </tr>
+                `;
+                calculateSimRow(idx);
+            });
+        }
+
+        function syncSimSlider(idx, val) {
+            val = parseFloat(val);
+            if (isNaN(val)) val = 0;
+            document.getElementById(`sim_num_${idx}`).value = val.toFixed(1);
+            simulatedOffers[idx].discountPct = val;
+            calculateSimRow(idx);
+            updateAiTotals();
+            renderAiRecommendations();
+        }
+
+        function syncSimNum(idx, val) {
+            val = parseFloat(val);
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val > 100) val = 100;
+            document.getElementById(`sim_range_${idx}`).value = val;
+            simulatedOffers[idx].discountPct = val;
+            calculateSimRow(idx);
+            updateAiTotals();
+            renderAiRecommendations();
+        }
+
+        function calculateSimRow(idx) {
+            const o = simulatedOffers[idx];
+            const offPrice = o.retail * (1 - o.discountPct / 100);
+            const profit = offPrice - o.cost;
+            const margin = offPrice > 0 ? (profit / offPrice) * 100 : 0;
+            const projProfit = o.stock * profit;
+            
+            document.getElementById(`sim_price_val_${idx}`).textContent = Math.round(offPrice).toLocaleString();
+            document.getElementById(`sim_profit_val_${idx}`).textContent = Math.round(projProfit).toLocaleString();
+            
+            const marginEl = document.getElementById(`sim_margin_val_${idx}`);
+            marginEl.textContent = margin.toFixed(1) + '%';
+            
+            if (offPrice < o.cost) {
+                marginEl.className = 'badge bg-danger text-white px-2 py-1';
+                marginEl.textContent = `خسارة (${margin.toFixed(1)}%)`;
+            } else if (margin < 15) {
+                marginEl.className = 'badge bg-warning text-dark px-2 py-1';
+            } else {
+                marginEl.className = 'badge bg-success text-white px-2 py-1';
+            }
+        }
+
+        function updateAiTotals() {
+            let totalStock = 0;
+            let projectedRev = 0;
+            let projectedProfit = 0;
+            let totalCostVal = 0;
+            
+            simulatedOffers.forEach(o => {
+                const offPrice = o.retail * (1 - o.discountPct / 100);
+                const profit = offPrice - o.cost;
+                
+                totalStock += o.stock;
+                projectedRev += o.stock * offPrice;
+                projectedProfit += o.stock * profit;
+                totalCostVal += o.stock * o.cost;
+            });
+            
+            const avgMargin = projectedRev > 0 ? (projectedProfit / projectedRev) * 100 : 0;
+            
+            document.getElementById('aiTotalStockText').textContent = totalStock.toLocaleString() + ' قطعة';
+            document.getElementById('aiProjectedRevText').textContent = Math.round(projectedRev).toLocaleString() + ' ر.س';
+            document.getElementById('aiProjectedProfitText').textContent = Math.round(projectedProfit).toLocaleString() + ' ر.س';
+            document.getElementById('aiAvgMarginText').textContent = avgMargin.toFixed(1) + '%';
+            
+            const headBadge = document.getElementById('aiTotalValue');
+            headBadge.textContent = `تكلفة المخزون: ${Math.round(totalCostVal).toLocaleString()} ر.س ⬅ القيمة المقدرة للبيع بالعرض: ${Math.round(projectedRev).toLocaleString()} ر.س`;
+        }
+
+        async function loadAutoScannedOffers() {
+            const tbody = document.getElementById('aiAutoScannedBody');
+            const badge = document.getElementById('autoStagnantCount');
+            
+            if (stagnantDataLoaded) return;
+            
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-primary"></div> جاري التحميل...</td></tr>';
+            
+            try {
+                const res = await fetch('stagnant_data.json?t=' + Date.now());
+                if (!res.ok) throw new Error("تعذر تحميل ملف stagnant_data.json");
+                
+                const json = await res.json();
+                const data = json.data || {};
+                
+                autoStagnantItems = [];
+                Object.keys(data).forEach(sid => {
+                    if (!isStoreAccessible(sid)) return;
+                    if (activeStore !== 'all' && sid !== activeStore) return;
+                    if (activeRegion !== 'all') {
+                        const m = storeMeta[sid];
+                        if (!m || (m.region !== activeRegion && m.city !== activeRegion)) return;
+                    }
+                    
+                    data[sid].forEach(item => {
+                        // Filter out if already in core offers
+                        const isCore = aiCoreOffers.some(co => item.id === co.id || item.id.startsWith(co.id) || (co.id === 'starts_5425' && item.id.startsWith('11003')) || (co.id === 'starts_5387_5388' && item.id.startsWith('11001')));
+                        if (isCore) return;
+                        
+                        autoStagnantItems.push({
+                            ...item,
+                            sid: sid,
+                            storeName: storeMeta[sid]?.name_ar || storeMeta[sid]?.name || sid,
+                            val: item.qty * (item.est_price || 0)
+                        });
+                    });
+                });
+                
+                autoStagnantItems.sort((a, b) => b.val - a.val);
+                
+                tbody.innerHTML = '';
+                badge.textContent = `${autoStagnantItems.length} منتج`;
+                
+                if (autoStagnantItems.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">✅ لا توجد منتجات راكدة أخرى مطابقة للفلاتر</td></tr>';
+                    return;
+                }
+                
+                autoStagnantItems.slice(0, 100).forEach((item, idx) => {
+                    const retail = item.est_price || 0;
+                    const offerPrice = retail * 0.75;
+                    const expectedRev = item.qty * offerPrice;
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark small">${item.name}</div>
+                                <div class="text-muted font-monospace" style="font-size: 0.75rem;">الكود: ${item.id}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">${item.storeName}</span></td>
+                            <td class="text-center fw-bold">${item.qty}</td>
+                            <td class="text-center text-danger small">${item.days} يوم</td>
+                            <td class="text-center font-monospace small">${retail.toFixed(0)} ر.س</td>
+                            <td class="text-center font-monospace text-success fw-bold small">${offerPrice.toFixed(0)} ر.س</td>
+                            <td class="text-center font-monospace text-muted small">${Math.round(item.val).toLocaleString()} ر.س</td>
+                            <td class="text-center font-monospace text-primary fw-bold small">${Math.round(expectedRev).toLocaleString()} ر.س</td>
+                        </tr>
+                    `;
+                });
+                
+                stagnantDataLoaded = true;
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${e.message}</td></tr>`;
+            }
+        }
+
+        function exportAiProposalToExcel() {
+            let totalStock = 0;
+            let totalRetailVal = 0;
+            let totalCostVal = 0;
+            let projectedRev = 0;
+            let projectedProfit = 0;
+            
+            simulatedOffers.forEach(o => {
+                const offPrice = o.retail * (1 - o.discountPct / 100);
+                const profit = offPrice - o.cost;
+                
+                totalStock += o.stock;
+                totalRetailVal += o.stock * o.retail;
+                totalCostVal += o.stock * o.cost;
+                projectedRev += o.stock * offPrice;
+                projectedProfit += o.stock * profit;
+            });
+            
+            const avgMargin = projectedRev > 0 ? (projectedProfit / projectedRev) * 100 : 0;
+            
+            const summaryData = [
+                { "المؤشر المالي": "إجمالي كمية المخزون المستهدف تصفيتها", "القيمة": totalStock, "الوحدة": "قطعة" },
+                { "المؤشر المالي": "إجمالي القيمة الحالية بسعر التجزئة", "القيمة": totalRetailVal, "الوحدة": "ريال سعودي" },
+                { "المؤشر المالي": "إجمالي تكلفة المخزون (سعر الشراء)", "القيمة": totalCostVal, "الوحدة": "ريال سعودي" },
+                { "المؤشر المالي": "إجمالي العوائد المتوقعة بعد الخصم", "القيمة": Math.round(projectedRev), "الوحدة": "ريال سعودي" },
+                { "المؤشر المالي": "صافي الأرباح المتوقعة من العروض", "القيمة": Math.round(projectedProfit), "الوحدة": "ريال سعودي" },
+                { "المؤشر المالي": "متوسط هامش الربح الإجمالي للعروض", "القيمة": parseFloat(avgMargin.toFixed(1)), "الوحدة": "%" }
+            ];
+            
+            const coreOffersData = simulatedOffers.map((o, idx) => {
+                const offPrice = o.retail * (1 - o.discountPct / 100);
+                const profit = offPrice - o.cost;
+                const margin = offPrice > 0 ? (profit / offPrice) * 100 : 0;
+                
+                return {
+                    '#': idx + 1,
+                    'اسم المنتج / الفئة': o.name,
+                    'رمز المنتج': o.id,
+                    'إجمالي كمية المخزون': o.stock,
+                    'مخزون المستودع': o.warehouse,
+                    'مخزون المعارض': o.showroom,
+                    'معدل المبيعات الشهري': Math.round(o.velocity),
+                    'تغطية المخزون (شهور)': o.cover,
+                    'سعر التجزئة الحالي (ر.س)': o.retail,
+                    'سعر الشراء / التكلفة (ر.س)': o.cost,
+                    'نسبة الخصم المقترحة %': parseFloat(o.discountPct.toFixed(1)),
+                    'سعر العرض بعد الخصم (ر.س)': Math.round(offPrice),
+                    'صافي الربح للقطعة (ر.س)': Math.round(profit),
+                    'هامش ربح العرض %': parseFloat(margin.toFixed(1)),
+                    'إجمالي العائد المتوقع (ر.س)': Math.round(o.stock * offPrice),
+                    'إجمالي الأرباح المتوقعة (ر.س)': Math.round(o.stock * profit),
+                    'مبرر العرض (Rationale)': o.rationale
+                };
+            });
+            
+            const stagnantList = autoStagnantItems.map((item, idx) => {
+                const retail = item.est_price || 0;
+                const offerPrice = retail * 0.75;
+                const expectedRev = item.qty * offerPrice;
+                
+                return {
+                    '#': idx + 1,
+                    'اسم المنتج': item.name,
+                    'رمز المنتج': item.id,
+                    'الفرع': item.storeName,
+                    'الكمية الراكدة': item.qty,
+                    'أيام الركود': item.days,
+                    'سعر التجزئة الحالي (ر.س)': retail,
+                    'سعر العرض المقترح (خصم 25%)': Math.round(offerPrice),
+                    'القيمة التقديرية قبل العرض (ر.س)': Math.round(item.val),
+                    'العائد المتوقع بعد الخصم (ر.س)': Math.round(expectedRev)
+                };
+            });
+            
+            const wb = XLSX.utils.book_new();
+            
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+            const wsCore = XLSX.utils.json_to_sheet(coreOffersData);
+            
+            XLSX.utils.book_append_sheet(wb, wsSummary, "الملخص التنفيذي للمقترح");
+            XLSX.utils.book_append_sheet(wb, wsCore, "العروض الستة الكبرى");
+            
+            if (stagnantList.length > 0) {
+                const wsStagnant = XLSX.utils.json_to_sheet(stagnantList);
+                XLSX.utils.book_append_sheet(wb, wsStagnant, "تصفية المنتجات الراكدة الأخرى");
+            }
+            
+            const fileName = `مقترح_العروض_الذكي_Orange_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
         }
 
         // Run
