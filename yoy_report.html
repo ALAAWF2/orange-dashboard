@@ -435,6 +435,23 @@
                     </div>
                 </div>
             </div>
+            <div class="filter-group">
+                <label>🏷️ الفئة المستهدفة</label>
+                <select id="categorySelect" class="form-select" style="height: 42px;">
+                    <option value="">-- اختر الفئة --</option>
+                </select>
+            </div>
+            <div class="filter-group position-relative">
+                <label>📦 المنتج المستهدف</label>
+                <div class="d-flex gap-1 align-items-center">
+                    <input type="text" id="productSearchInput" class="form-control" placeholder="ابحث باسم أو كود..." onfocus="ensureProductsLoaded()" oninput="searchProducts(this.value)" style="height: 42px;">
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearSelectedProduct()" id="btnClearProduct" style="border-radius: 8px; height: 42px; display: none;">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="selectedProductId">
+                <div id="productSuggestions" class="dropdown-list w-100" style="display: none; max-height: 250px; overflow-y: auto;"></div>
+            </div>
         </div>
         <div class="action-bar">
             <button class="btn-search" onclick="runReport()">عرض التقرير</button>
@@ -605,6 +622,11 @@
                 preProcessData();
                 setupDefaultDates();
                 populateOffersDropdown();
+
+                // Load category list and pre-load products list in background
+                loadMetaAndPopulateCategories();
+                ensureProductsLoaded();
+
                 document.getElementById('loadingOverlay').classList.remove('show');
             } catch (e) {
                 console.error(e);
@@ -617,6 +639,11 @@
             const dropdown = document.getElementById('offerDropdown');
             if (dropdown && !dropdown.contains(e.target)) {
                 dropdown.classList.remove('open');
+            }
+            const suggestions = document.getElementById('productSuggestions');
+            const input = document.getElementById('productSearchInput');
+            if (suggestions && !suggestions.contains(e.target) && e.target !== input) {
+                suggestions.style.display = 'none';
             }
         });
 
@@ -960,7 +987,7 @@
             return note;
         }
 
-        function runReport() {
+        async function runReport() {
             const cyS = document.getElementById('cyStart').value;
             const cyE = document.getElementById('cyEnd').value;
             const pyS = document.getElementById('pyStart').value;
@@ -973,11 +1000,63 @@
 
             document.getElementById('loadingOverlay').classList.add('show');
 
+            const selectedCategory = document.getElementById('categorySelect').value;
+            const selectedProductCode = document.getElementById('selectedProductId').value;
+            const hasCategory = !!selectedCategory;
+            const hasProduct = !!selectedProductCode;
+
+            try {
+                if (hasCategory || hasProduct) {
+                    await ensureProductsLoaded();
+                    await loadSalesFilesForRange(cyS, cyE);
+                }
+            } catch (err) {
+                console.error("Failed to load required files:", err);
+                alert("حدث خطأ أثناء تحميل ملفات المبيعات أو المنتجات.");
+                document.getElementById('loadingOverlay').classList.remove('show');
+                return;
+            }
+
             const cyDates = getDatesInRange(cyS, cyE);
             const pyDates = getDatesInRange(pyS, pyE);
 
             const cyStoreData = aggregatePeriodData(cyDates, true);
             const pyStoreData = aggregatePeriodData(pyDates, false);
+
+            let categoryProductIds = [];
+            if (hasCategory && allProductsDict) {
+                for (const [pid, p] of Object.entries(allProductsDict)) {
+                    if (p.category === selectedCategory) {
+                        categoryProductIds.push(pid);
+                    }
+                }
+            }
+
+            const cyStoreProductQty = {};
+            STORE_ROWS.forEach(s => {
+                cyStoreProductQty[s.id] = {};
+            });
+
+            if (hasCategory || hasProduct) {
+                const cyDatesSet = new Set(cyDates);
+                const months = getMonthsInRange(cyS, cyE);
+                months.forEach(m => {
+                    const fileData = fetchedSalesFiles[m];
+                    if (fileData && fileData.records) {
+                        fileData.records.forEach(rec => {
+                            if (cyDatesSet.has(rec.d)) {
+                                const sid = rec.s;
+                                const pid = rec.i;
+                                const qty = rec.q || 0;
+                                if (cyStoreProductQty[sid]) {
+                                    if (!cyStoreProductQty[sid][pid]) cyStoreProductQty[sid][pid] = 0;
+                                    cyStoreProductQty[sid][pid] += qty;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
 
             const reportData = {};
             STORE_ROWS.forEach(s => {
@@ -987,6 +1066,18 @@
                 const cyATV = cy.transactions > 0 ? (cy.sales / cy.transactions) : 0;
                 const pyATV = py.transactions > 0 ? (py.sales / py.transactions) : 0;
 
+                let catQty = 0;
+                if (hasCategory) {
+                    categoryProductIds.forEach(pid => {
+                        catQty += (cyStoreProductQty[s.id][pid] || 0);
+                    });
+                }
+
+                let prodQty = 0;
+                if (hasProduct) {
+                    prodQty = (cyStoreProductQty[s.id][selectedProductCode] || 0);
+                }
+
                 reportData[s.id] = {
                     pySales: py.sales,
                     cySales: cy.sales,
@@ -994,7 +1085,9 @@
                     cyVisitors: cy.visitors,
                     pyATV: pyATV,
                     cyATV: cyATV,
-                    offers: cy.offers
+                    offers: cy.offers,
+                    categoryQty: catQty,
+                    productQty: prodQty
                 };
             });
 
@@ -1009,6 +1102,11 @@
             const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
             document.getElementById('tableMainTitle').textContent = mainTitle;
             document.getElementById('tableSubTitle').textContent = `الفترة المقارنة الحالية: ${cyS} إلى ${cyE} | الفترة السابقة: ${pyS} إلى ${pyE}`;
+
+            const selectedCategory = document.getElementById('categorySelect').value;
+            const selectedProductCode = document.getElementById('selectedProductId').value;
+            const hasCategory = !!selectedCategory;
+            const hasProduct = !!selectedProductCode;
 
             const offersColspan = Math.max(1, selectedOffersList.length);
             let offerHeadersHtml = '';
@@ -1031,6 +1129,15 @@
                 });
             }
 
+            let extraHeadersRow1Html = '';
+            if (hasCategory) {
+                extraHeadersRow1Html += `<th rowspan="2">كمية ${selectedCategory} (CY)</th>`;
+            }
+            if (hasProduct) {
+                const pName = allProductsDict[selectedProductCode] ? allProductsDict[selectedProductCode].name : selectedProductCode;
+                extraHeadersRow1Html += `<th rowspan="2" style="max-width: 150px; font-size: 0.78rem;" title="${pName}">كمية ${pName} (CY)</th>`;
+            }
+
             const thead = document.querySelector('#yoyReportTable thead');
             thead.innerHTML = `
                 <tr>
@@ -1040,6 +1147,7 @@
                     <th colspan="3">الزوار</th>
                     <th colspan="3">قيمة العميل (ATV)</th>
                     <th colspan="${offersColspan}">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
+                    ${extraHeadersRow1Html}
                     <th rowspan="2">الملاحظات</th>
                 </tr>
                 <tr id="tableSubHeaderRow">
@@ -1071,6 +1179,9 @@
             let pyATVCount = 0;
             let cyATVCount = 0;
 
+            let totalCategoryQty = 0;
+            let totalProductQty = 0;
+
             const offerTotals = {};
             selectedOffersList.forEach(oid => {
                 offerTotals[oid] = 0;
@@ -1097,28 +1208,27 @@
                 const visitorsGrowth = getGrowthValue(data.pyVisitors, data.cyVisitors);
                 const atvGrowth = getGrowthValue(data.pyATV, data.cyATV);
 
-                tr.innerHTML += `
-                    <td>${data.pySales === 0 ? "" : Math.round(data.pySales).toLocaleString()}</td>
-                    <td>${data.cySales === 0 ? "" : Math.round(data.cySales).toLocaleString()}</td>
-                    <td class="${getGrowthClass(salesGrowth)}">${salesGrowth}</td>
-                    <td>${data.pyVisitors === 0 ? "" : Math.round(data.pyVisitors).toLocaleString()}</td>
-                    <td>${data.cyVisitors === 0 ? "" : Math.round(data.cyVisitors).toLocaleString()}</td>
-                    <td class="${getGrowthClass(visitorsGrowth)}">${visitorsGrowth}</td>
-                    <td>${data.pyATV === 0 ? "" : Math.round(data.pyATV).toLocaleString()}</td>
-                    <td>${data.cyATV === 0 ? "" : Math.round(data.cyATV).toLocaleString()}</td>
-                    <td class="${getGrowthClass(atvGrowth)}">${atvGrowth}</td>
-                `;
-
+                let offersHtml = '';
                 if (selectedOffersList.length === 0) {
-                    tr.innerHTML += `<td>-</td>`;
+                    offersHtml = `<td>-</td>`;
                 } else {
                     selectedOffersList.forEach(oid => {
                         const val = data.offers[oid] || 0;
-                        tr.innerHTML += `<td>${val === 0 ? "" : val.toLocaleString()}</td>`;
+                        offersHtml += `<td>${val === 0 ? "" : val.toLocaleString()}</td>`;
                         if (idx <= 49) {
                             offerTotals[oid] += val;
                         }
                     });
+                }
+
+                let extraHtml = '';
+                if (hasCategory) {
+                    const val = data.categoryQty || 0;
+                    extraHtml += `<td class="fw-medium text-dark">${val === 0 ? "" : val.toLocaleString()}</td>`;
+                }
+                if (hasProduct) {
+                    const val = data.productQty || 0;
+                    extraHtml += `<td class="fw-medium text-dark">${val === 0 ? "" : val.toLocaleString()}</td>`;
                 }
 
                 let storeNote = store.note || "";
@@ -1131,7 +1241,20 @@
                     }
                 }
 
-                tr.innerHTML += `<td>${storeNote}</td>`;
+                tr.innerHTML += `
+                    <td>${data.pySales === 0 ? "" : Math.round(data.pySales).toLocaleString()}</td>
+                    <td>${data.cySales === 0 ? "" : Math.round(data.cySales).toLocaleString()}</td>
+                    <td class="${getGrowthClass(salesGrowth)}">${salesGrowth}</td>
+                    <td>${data.pyVisitors === 0 ? "" : Math.round(data.pyVisitors).toLocaleString()}</td>
+                    <td>${data.cyVisitors === 0 ? "" : Math.round(data.cyVisitors).toLocaleString()}</td>
+                    <td class="${getGrowthClass(visitorsGrowth)}">${visitorsGrowth}</td>
+                    <td>${data.pyATV === 0 ? "" : Math.round(data.pyATV).toLocaleString()}</td>
+                    <td>${data.cyATV === 0 ? "" : Math.round(data.cyATV).toLocaleString()}</td>
+                    <td class="${getGrowthClass(atvGrowth)}">${atvGrowth}</td>
+                    ${offersHtml}
+                    ${extraHtml}
+                    <td>${storeNote}</td>
+                `;
                 tbody.appendChild(tr);
 
                 if (idx <= 49) {
@@ -1139,6 +1262,8 @@
                     totalCYSales += data.cySales;
                     totalPYVisitors += data.pyVisitors;
                     totalCYVisitors += data.cyVisitors;
+                    if (hasCategory) totalCategoryQty += (data.categoryQty || 0);
+                    if (hasProduct) totalProductQty += (data.productQty || 0);
 
                     if (data.pyATV > 0) {
                         totalPYATVSum += data.pyATV;
@@ -1158,6 +1283,24 @@
             const globalVisitorsGrowth = getGrowthValue(totalPYVisitors, totalCYVisitors);
             const globalATVGrowth = getGrowthValue(avgPYATV, avgCYATV);
 
+            let offersTotalHtml = '';
+            if (selectedOffersList.length === 0) {
+                offersTotalHtml = `<td>-</td>`;
+            } else {
+                selectedOffersList.forEach(oid => {
+                    const total = offerTotals[oid] || 0;
+                    offersTotalHtml += `<td>${total === 0 ? "0" : total.toLocaleString()}</td>`;
+                });
+            }
+
+            let extraTotalsHtml = '';
+            if (hasCategory) {
+                extraTotalsHtml += `<td class="fw-bold">${totalCategoryQty === 0 ? "0" : totalCategoryQty.toLocaleString()}</td>`;
+            }
+            if (hasProduct) {
+                extraTotalsHtml += `<td class="fw-bold">${totalProductQty === 0 ? "0" : totalProductQty.toLocaleString()}</td>`;
+            }
+
             const trTotal = document.createElement('tr');
             trTotal.className = 'total-row';
             trTotal.innerHTML = `
@@ -1171,18 +1314,10 @@
                 <td>${Math.round(avgPYATV).toLocaleString()}</td>
                 <td>${Math.round(avgCYATV).toLocaleString()}</td>
                 <td class="${getGrowthClass(globalATVGrowth)}">${globalATVGrowth}</td>
+                ${offersTotalHtml}
+                ${extraTotalsHtml}
+                <td>تم حساب نسبة الفرق بناءً على الإجمالي</td>
             `;
-
-            if (selectedOffersList.length === 0) {
-                trTotal.innerHTML += `<td>-</td>`;
-            } else {
-                selectedOffersList.forEach(oid => {
-                    const total = offerTotals[oid] || 0;
-                    trTotal.innerHTML += `<td>${total === 0 ? "0" : total.toLocaleString()}</td>`;
-                });
-            }
-
-            trTotal.innerHTML += `<td>تم حساب نسبة الفرق بناءً على الإجمالي</td>`;
             tbody.appendChild(trTotal);
 
             document.getElementById('sumCYSales').textContent = Math.round(totalCYSales).toLocaleString() + ' ر.س';
@@ -1225,8 +1360,15 @@
             const pyS = document.getElementById('pyStart').value;
             const pyE = document.getElementById('pyEnd').value;
 
+            const selectedCategory = document.getElementById('categorySelect').value;
+            const selectedProductCode = document.getElementById('selectedProductId').value;
+            const hasCategory = !!selectedCategory;
+            const hasProduct = !!selectedProductCode;
+
             const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
-            const totalCols = 12 + Math.max(1, selectedOffersList.length);
+            let totalCols = 12 + Math.max(1, selectedOffersList.length);
+            if (hasCategory) totalCols++;
+            if (hasProduct) totalCols++;
             const lastLetter = getColumnLetter(totalCols);
 
             let tableHtml = `
@@ -1285,6 +1427,14 @@
                     tableHtml += `<col width="140">`;
                 });
             }
+
+            if (hasCategory) {
+                tableHtml += `<col width="140">`;
+            }
+            if (hasProduct) {
+                tableHtml += `<col width="160">`;
+            }
+
             tableHtml += `
                     <col width="240">
                 </colgroup>
@@ -1298,6 +1448,17 @@
                     <th colspan="3">زوار</th>
                     <th colspan="3">قيمة العميل (ATV)</th>
                     <th colspan="${Math.max(1, selectedOffersList.length)}">الكميات المباعة من العروض الترويجية المختارة (CY)</th>
+            `;
+
+            if (hasCategory) {
+                tableHtml += `<th rowspan="2">كمية ${selectedCategory} (CY)</th>`;
+            }
+            if (hasProduct) {
+                const pName = allProductsDict[selectedProductCode] ? allProductsDict[selectedProductCode].name : selectedProductCode;
+                tableHtml += `<th rowspan="2">كمية ${pName} (CY)</th>`;
+            }
+
+            tableHtml += `
                     <th rowspan="2">الملاحظات</th>
                 </tr>
                 <tr>
@@ -1385,6 +1546,18 @@
                     });
                 }
 
+                let currentIdx = 11 + Math.max(1, selectedOffersList.length);
+                if (hasCategory) {
+                    const catVal = cells[currentIdx].textContent.replace(/,/g, '');
+                    tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">${catVal === "" ? "" : catVal}</td>`;
+                    currentIdx++;
+                }
+                if (hasProduct) {
+                    const prodVal = cells[currentIdx].textContent.replace(/,/g, '');
+                    tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">${prodVal === "" ? "" : prodVal}</td>`;
+                    currentIdx++;
+                }
+
                 const cyDates = getDatesInRange(cyS, cyE);
                 const pyDates = getDatesInRange(pyS, pyE);
                 let storeNote = store.note || "";
@@ -1424,6 +1597,18 @@
                 });
             }
 
+            let colIndex = 12 + Math.max(1, selectedOffersList.length);
+            if (hasCategory) {
+                const colLetter = getColumnLetter(colIndex);
+                tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">=SUM(${colLetter}4:${colLetter}53)</td>`;
+                colIndex++;
+            }
+            if (hasProduct) {
+                const colLetter = getColumnLetter(colIndex);
+                tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">=SUM(${colLetter}4:${colLetter}53)</td>`;
+                colIndex++;
+            }
+
             tableHtml += `
                     <td>تم حساب نسبة الفرق بناءً على الإجمالي</td>
                 </tr>
@@ -1444,6 +1629,11 @@
             const cyE = document.getElementById('cyEnd').value;
             const pyS = document.getElementById('pyStart').value;
             const pyE = document.getElementById('pyEnd').value;
+
+            const selectedCategory = document.getElementById('categorySelect').value;
+            const selectedProductCode = document.getElementById('selectedProductId').value;
+            const hasCategory = !!selectedCategory;
+            const hasProduct = !!selectedProductCode;
 
             const mainTitle = getArabicDateTitle(cyS, cyE, pyS, pyE);
             const { jsPDF } = window.jspdf;
@@ -1486,6 +1676,16 @@
                     headerRow1.push(offer ? offer.name : oid);
                     headerRow2.push('');
                 });
+            }
+
+            if (hasCategory) {
+                headerRow1.push(`كمية ${selectedCategory} (CY)`);
+                headerRow2.push('');
+            }
+            if (hasProduct) {
+                const pName = allProductsDict[selectedProductCode] ? allProductsDict[selectedProductCode].name : selectedProductCode;
+                headerRow1.push(`كمية ${pName} (CY)`);
+                headerRow2.push('');
             }
 
             headerRow1.push('الملاحظات');
@@ -1533,6 +1733,132 @@
             });
 
             doc.save(`تقرير_مقارنة_YoY_${cyS}_إلى_${cyE}.pdf`);
+        }
+
+        // ==========================================
+        // CATEGORY & PRODUCT DYNAMIC LOAD & AUTOCOMPLETE
+        // ==========================================
+        let allProductsDict = null;
+        let productsLoadingPromise = null;
+        const fetchedSalesFiles = {};
+
+        async function ensureProductsLoaded() {
+            if (allProductsDict) return;
+            if (productsLoadingPromise) return productsLoadingPromise;
+
+            productsLoadingPromise = (async () => {
+                try {
+                    const response = await fetch('ceo_data/products.json?t=' + Date.now());
+                    if (!response.ok) throw new Error("Failed to load products.json");
+                    const data = await response.json();
+                    allProductsDict = data.products || {};
+                } catch (err) {
+                    console.error("Error loading products.json:", err);
+                    productsLoadingPromise = null;
+                }
+            })();
+            return productsLoadingPromise;
+        }
+
+        async function loadMetaAndPopulateCategories() {
+            try {
+                const response = await fetch('ceo_data/meta.json?t=' + Date.now());
+                if (!response.ok) throw new Error("Failed to load meta.json");
+                const meta = await response.json();
+                const selectEl = document.getElementById('categorySelect');
+                if (selectEl && meta.categories) {
+                    meta.categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat;
+                        opt.textContent = cat;
+                        selectEl.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading meta.json:", err);
+            }
+        }
+
+        function searchProducts(query) {
+            const suggestionsDiv = document.getElementById('productSuggestions');
+            if (!query || query.trim().length < 2) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            if (!allProductsDict) {
+                suggestionsDiv.innerHTML = '<div class="dropdown-item text-muted">جاري تحميل قائمة المنتجات...</div>';
+                suggestionsDiv.style.display = 'block';
+                return;
+            }
+
+            const cleanQuery = query.toLowerCase().trim();
+            const results = [];
+            for (const [pid, p] of Object.entries(allProductsDict)) {
+                const name = p.name || "";
+                const alias = p.alias || "";
+                if (pid.includes(cleanQuery) || name.toLowerCase().includes(cleanQuery) || alias.toLowerCase().includes(cleanQuery)) {
+                    results.push({ id: pid, name: name, alias: alias });
+                    if (results.length >= 15) break;
+                }
+            }
+
+            if (results.length === 0) {
+                suggestionsDiv.innerHTML = '<div class="dropdown-item text-muted">لا توجد نتائج مطابقة</div>';
+            } else {
+                suggestionsDiv.innerHTML = results.map(r => `
+                    <div class="dropdown-item py-2 px-3 text-start animate-fade-in" style="cursor: pointer; border-bottom: 1px solid #f8f9fa;" onclick="selectProduct('${r.id}', '${r.name.replace(/'/g, "\\'")}')">
+                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.88rem;">${r.name}</div>
+                        <div class="text-secondary font-monospace" style="font-size: 0.72rem; margin-top: 2px;">الكود: ${r.id} ${r.alias ? `| البديل: ${r.alias}` : ''}</div>
+                    </div>
+                `).join('');
+            }
+            suggestionsDiv.style.display = 'block';
+        }
+
+        function selectProduct(id, name) {
+            document.getElementById('productSearchInput').value = name;
+            document.getElementById('selectedProductId').value = id;
+            document.getElementById('productSuggestions').style.display = 'none';
+            document.getElementById('btnClearProduct').style.display = 'block';
+        }
+
+        function clearSelectedProduct() {
+            document.getElementById('productSearchInput').value = '';
+            document.getElementById('selectedProductId').value = '';
+            document.getElementById('productSuggestions').style.display = 'none';
+            document.getElementById('btnClearProduct').style.display = 'none';
+        }
+
+        function getMonthsInRange(startStr, endStr) {
+            const months = [];
+            const start = new Date(startStr);
+            const end = new Date(endStr);
+            let curr = new Date(start.getFullYear(), start.getMonth(), 1);
+            while (curr <= end) {
+                const yyyy = curr.getFullYear();
+                const mm = String(curr.getMonth() + 1).padStart(2, '0');
+                months.push(`${yyyy}_${mm}`);
+                curr.setMonth(curr.getMonth() + 1);
+            }
+            return months;
+        }
+
+        async function loadSalesFilesForRange(startStr, endStr) {
+            const months = getMonthsInRange(startStr, endStr);
+            const promises = months.map(async (m) => {
+                if (fetchedSalesFiles[m]) return fetchedSalesFiles[m];
+                try {
+                    const response = await fetch(`ceo_data/sales_${m}.json?t=` + Date.now());
+                    if (!response.ok) return null;
+                    const data = await response.json();
+                    fetchedSalesFiles[m] = data;
+                    return data;
+                } catch (err) {
+                    console.error(`Error loading sales file for month ${m}:`, err);
+                    return null;
+                }
+            });
+            await Promise.all(promises);
         }
     </script>
 </body>
