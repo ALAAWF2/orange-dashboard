@@ -1110,6 +1110,44 @@
         .bubble-close-btn:hover {
             color: #fe7900;
         }
+
+        /* City Heatmap Table Styles */
+        .table-custom-city thead th {
+            background-color: #343a40;
+            color: white;
+            font-weight: 700;
+            border: none;
+            padding: 12px 10px;
+            font-size: 0.84rem;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .table-custom-city tbody td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: filter 0.15s;
+            vertical-align: middle;
+        }
+
+        .table-custom-city tbody tr:hover {
+            background-color: rgba(254, 121, 0, 0.03) !important;
+        }
+
+        .table-custom-city tbody tr:hover td {
+            filter: brightness(0.96);
+        }
+
+        .table-custom-city tfoot td {
+            padding: 12px 10px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            background-color: #f8f9fa;
+            border-top: 2px solid #fe7900;
+            vertical-align: middle;
+        }
     </style>
 </head>
 
@@ -1600,6 +1638,51 @@
             </div>
         </div>
 
+        <!-- City Performance Heatmap Row -->
+        <div class="row mt-4" id="cityHeatmapRow" style="display: none;">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                            <span>📍</span> مقارنة أداء المدن (City Performance Heatmap)
+                        </h5>
+                        <div class="rhythm-legend m-0" style="font-size: 0.8rem;">
+                            <span class="badge bg-secondary" style="font-size: 0.75rem;">تلوين حراري نسبي للأعمدة (Relative Heatmap Shading)</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center table-custom-city" style="font-size: 0.88rem;">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">#</th>
+                                        <th onclick="setCitySort('nameAr')" style="cursor: pointer; text-align: right; padding-right: 20px;">المدينة (City) ↕</th>
+                                        <th onclick="setCitySort('storesCount')" style="cursor: pointer;">الفروع ↕</th>
+                                        <th onclick="setCitySort('sales')" style="cursor: pointer;">المبيعات ↕</th>
+                                        <th onclick="setCitySort('target')" style="cursor: pointer;">المستهدف ↕</th>
+                                        <th onclick="setCitySort('ach')" style="cursor: pointer;">التحقيق % ↕</th>
+                                        <th onclick="setCitySort('growth')" style="cursor: pointer;">النمو % ↕</th>
+                                        <th onclick="setCitySort('absGrowth')" style="cursor: pointer;">قيمة النمو ↕</th>
+                                        <th onclick="setCitySort('trans')" style="cursor: pointer;">الفواتير ↕</th>
+                                        <th onclick="setCitySort('avgInv')" style="cursor: pointer;">م. الفاتورة ↕</th>
+                                        <th onclick="setCitySort('visitors')" style="cursor: pointer;">الزوار ↕</th>
+                                        <th onclick="setCitySort('custVal')" style="cursor: pointer;">قيمة العميل ↕</th>
+                                        <th onclick="setCitySort('conv')" style="cursor: pointer;">التحويل % ↕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cityHeatmapTableBody">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                                <tfoot id="cityHeatmapTableFoot" class="fw-bold">
+                                    <!-- Dynamic content -->
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4">
             <div class="col-12">
@@ -1890,6 +1973,29 @@
 
         let currentSort = { col: 'val', asc: false }; // Default: Sales Desc
         let dailySort = { col: 'salesY', asc: false }; // Daily Report Sort
+        let citySort = { col: 'sales', asc: false }; // City Heatmap Sort
+        let globalCityList = [];
+
+        const cityNamesAr = {
+            'Riyadh': 'الرياض',
+            'Jeddah': 'جدة',
+            'Makkah': 'مكة المكرمة',
+            'Madinah': 'المدينة المنورة',
+            'Dammam': 'الدمام',
+            'Abha': 'أبها',
+            'Taif': 'الطائف',
+            'Ehsa': 'الأحساء',
+            'Yanbu': 'ينبع',
+            'Jubail': 'الجبيل',
+            'Baha': 'الباحة',
+            'Tabuk': 'تبوك',
+            'Hail': 'حائل',
+            'Arar': 'عرعر',
+            'Aljouf': 'الجوف',
+            'Qasim': 'القصيم',
+            'Online': 'أونلاين',
+            'Unknown': 'غير معروف'
+        };
 
         function setSort(col) {
             if (currentSort.col === col) {
@@ -2030,6 +2136,12 @@
                     if (ringRow) ringRow.style.display = 'flex';
                     const compRow = document.getElementById('areaManagersComparisonRow');
                     if (compRow) compRow.style.display = 'flex';
+                }
+
+                // Show City Heatmap Row only for Alaa and Sales Manager
+                if (currentUser && (currentUser.name === 'علاء' || currentUser.name === 'Sales Manager')) {
+                    const cityRow = document.getElementById('cityHeatmapRow');
+                    if (cityRow) cityRow.style.display = 'flex';
                 }
 
 
