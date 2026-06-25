@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>عمل عرض سعر - شركة زهر البرتقال</title>
+  
+  <!-- Font and Stylesheets -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link id="bootstrap-rtl" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+  <link id="bootstrap-ltr" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" disabled>
+
+  <!-- PDF Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="../assets/amiri_font.js"></script>
+
+  <style>
+    :root {
+      --primary: #fe7900;
+      --primary-dark: #e06b00;
+      --primary-light: #fff3e6;
+      --accent: #2c3e50;
+      --accent-light: #f8f9fa;
+      --border-color: #dee2e6;
+      --font-family: 'Tajawal', sans-serif;
+      --transition: all 0.2s ease-in-out;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: #f3f5f8;
+      color: #2c3e50;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+
+    .glass-header {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+    }
+
+    .main-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      padding: 24px;
+      margin-bottom: 24px;
+      transition: var(--transition);
+    }
+
+    .main-card:hover {
+      box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.25rem rgba(254, 121, 0, 0.15);
+    }
+
+    .btn-orange {
+      background-color: var(--primary);
+      color: white;
+      font-weight: bold;
+      border: none;
+      transition: var(--transition);
+    }
+
+    .btn-orange:hover {
+      background-color: var(--primary-dark);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline-orange {
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      background: transparent;
+      font-weight: bold;
+      transition: var(--transition);
+    }
+
+    .btn-outline-orange:hover {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    /* Autocomplete dropdown list styling */
+    .autocomplete-wrapper {
+      position: relative;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      margin-top: 4px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .autocomplete-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f3f5;
+      text-align: right;
+      transition: var(--transition);
+      font-size: 0.9em;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Sheet Live Preview */
+    .sheet-preview-container {
+      background: #525659;
+      padding: 30px 15px;
+      border-radius: 16px;
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      min-height: 800px;
+    }
+
+    .sheet-paper {
+      background: #ffffff;
+      width: 210mm;
+      min-height: 297mm;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      padding: 20mm 15mm;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      position: relative;
+      color: #000000;
+      box-sizing: border-box;
+    }
+
+    .sheet-title-banner {
+      border: 2px solid #000;
+      padding: 4px 12px;
+      display: inline-block;
+      font-weight: bold;
+      font-size: 1.4em;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      margin-bottom: 15px;
+      font-size: 0.95em;
+    }
+
+    .sheet-table th, .sheet-table td {
+      border: 1px solid #000000;
+      padding: 6px;
+      vertical-align: middle;
+    }
+
+    .sheet-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .sheet-meta-label {
+      font-weight: bold;
+      width: 90px;
+    }
+
+    .sheet-meta-value {
+      border-bottom: 1px dashed #000;
+      padding-bottom: 2px;
+    }
+
+    .sheet-footer {
+      margin-top: auto;
+      border-top: 1px solid #000;
+      padding-top: 10px;
+      font-size: 0.85em;
+    }
+
+    .sheet-thumbnail {
+      width: 45px;
+      height: 45px;
+      object-fit: contain;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    /* Direction utilities for preview */
+    .rtl-preview {
+      direction: rtl;
+      text-align: right;
+    }
+
+    .ltr-preview {
+      direction: ltr;
+      text-align: left;
+    }
+
+    .ltr-preview .sheet-meta-label {
+      width: 110px;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Glass Header -->
+  <header class="glass-header py-3 px-4 shadow-sm mb-4">
+    <div class="container-fluid d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-3">
+        <a href="index.html" class="btn btn-outline-orange py-2 px-3 text-decoration-none d-inline-flex align-items-center gap-2">
+          <span id="txtBack">العودة للكاتالوج</span> ↩
+        </a>
+        <h3 class="m-0 fw-bold text-dark d-inline-block" id="txtPageTitle">عمل عرض سعر للعملاء</h3>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <!-- Language Switcher Switch -->
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" id="langSwitch" onchange="toggleLanguage()">
+          <label class="form-check-label fw-bold text-dark" for="langSwitch" id="lblLang">English</label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <div class="container-fluid px-4 mb-5">
+    <div class="row">
+      <!-- Left Column: Draft Creator & Controls -->
+      <div class="col-lg-5 col-xl-4">
+        <!-- Customer details -->
+        <div class="main-card">
+          <h5 class="fw-bold mb-3 border-bottom pb-2" id="txtCustomerHeader">بيانات العميل</h5>
+          <div class="mb-3">
+            <label class="form-label font-bold" id="lblCustName">اسم العميل</label>
+            <input type="text" id="custName" class="form-control" placeholder="أدخل اسم العميل..." oninput="updatePreview()">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" id="lblCustCompany">الشركة</label>
+            <input type="text" id="custCompany" class="form-control" placeholder="أدخل اسم الشركة..." oninput="updatePreview()">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" id="lblCustMobile">رقم الجوال</label>
+            <input type="text" id="custMobile" class="form-control text-start" placeholder="966..." oninput="updatePreview()">
+          </div>
+          <div class="mb-0">
+            <label class="form-label" id="lblQuoteDate">تاريخ العرض</label>
+            <input type="date" id="quoteDate" class="form-control" onchange="updatePreview()">
+          </div>
+        </div>
+
+        <!-- Product selection -->
+        <div class="main-card">
+          <h5 class="fw-bold mb-3 border-bottom pb-2" id="txtSearchHeader">البحث وإضافة المنتجات</h5>
+          
+          <div class="mb-3 autocomplete-wrapper">
+            <label class="form-label" id="lblSearchItem">البحث عن الصنف (بالكود أو الـ Alias أو الاسم)</label>
+            <div class="input-group">
+              <input type="text" id="searchItem" class="form-control" placeholder="اكتب للبحث..." oninput="onSearchInput()">
+              <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">×</button>
+            </div>
+            <ul id="suggestions" class="autocomplete-list" style="display:none;"></ul>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label" id="lblItemCode">كود الصنف</label>
+              <input type="text" id="itemCode" class="form-control bg-light" readonly>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label" id="lblItemPrice">سعر المبيع (ريال)</label>
+              <input type="number" id="itemPrice" class="form-control" step="0.01">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" id="lblItemDesc">الشرح / الوصف</label>
+            <textarea id="itemDesc" class="form-control" rows="2"></textarea>
+          </div>
+
+          <div class="row align-items-end">
+            <div class="col-md-6 mb-3">
+              <label class="form-label" id="lblItemQty">الكمية</label>
+              <input type="number" id="itemQty" class="form-control text-center" value="1" min="1">
+            </div>
+            <div class="col-md-6 mb-3">
+              <button onclick="addItem()" class="btn btn-orange w-100 py-2" id="btnAddItem">إضافة للعرض ➕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output Options -->
+        <div class="main-card">
+          <h5 class="fw-bold mb-3 border-bottom pb-2" id="txtOutputHeader">خيارات التصدير</h5>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="includeImages" checked onchange="updatePreview()">
+            <label class="form-check-label fw-bold" for="includeImages" id="lblIncludeImages">تضمين صور المنتجات في الـ PDF</label>
+          </div>
+          <button onclick="downloadPDF()" class="btn btn-orange w-100 py-3 mb-2" id="btnDownloadPDF">
+            📥 تحميل عرض السعر بصيغة PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Sheet Preview -->
+      <div class="col-lg-7 col-xl-8">
+        <!-- Draft table editor -->
+        <div class="main-card">
+          <h5 class="fw-bold mb-3 border-bottom pb-2" id="txtDraftHeader">أصناف عرض السعر الحالي</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+              <thead class="table-light text-center">
+                <tr id="draftTableHead">
+                  <th>تسلسل</th>
+                  <th>كود الصنف</th>
+                  <th>الشرح</th>
+                  <th style="width: 80px;">الكمية</th>
+                  <th style="width: 120px;">السعر</th>
+                  <th>المجموع</th>
+                  <th>إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="draftTableBody">
+                <!-- Injected Rows -->
+              </tbody>
+            </table>
+          </div>
+          <div id="emptyDraftMessage" class="text-center py-4 text-muted">
+            لا توجد أصناف في عرض السعر حالياً. استخدم لوحة البحث أعلاه لإضافة أصناف.
+          </div>
+        </div>
+
+        <!-- Visual Preview Sheet (mimicking A4 Excel) -->
+        <div class="sheet-preview-container">
+          <div class="sheet-paper rtl-preview" id="previewSheet">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <div class="fw-bold fs-5 text-dark" id="sheetHeaderComp">شركة زهر البرتقال للتجارة</div>
+              <div class="text-muted" style="font-size:0.8em;" id="sheetHeaderDoc">Orange Bed & Bath</div>
+            </div>
+            
+            <div class="text-center">
+              <span class="sheet-title-banner" id="sheetDocTitle">عرض سعر</span>
+            </div>
+
+            <!-- Meta details (Grid) -->
+            <div class="row my-3" id="sheetMetaGrid">
+              <!-- Right side details -->
+              <div class="col-6">
+                <div class="d-flex mb-2">
+                  <span class="sheet-meta-label" id="smLabelName">الاسم :</span>
+                  <span class="sheet-meta-value flex-grow-1 px-2" id="smValueName">&nbsp;</span>
+                </div>
+                <div class="d-flex mb-2">
+                  <span class="sheet-meta-label" id="smLabelComp">الشركة:</span>
+                  <span class="sheet-meta-value flex-grow-1 px-2" id="smValueComp">&nbsp;</span>
+                </div>
+                <div class="d-flex">
+                  <span class="sheet-meta-label" id="smLabelMob">رقم الجوال:</span>
+                  <span class="sheet-meta-value flex-grow-1 px-2 text-start" id="smValueMob" dir="ltr">&nbsp;</span>
+                </div>
+              </div>
+              
+              <!-- Left side details -->
+              <div class="col-6 d-flex flex-column align-items-end">
+                <div class="d-flex w-100 justify-content-end mb-2">
+                  <span class="sheet-meta-label text-end px-2" id="smLabelDate">التاريخ:</span>
+                  <span class="sheet-meta-value text-center" style="width: 150px;" id="smValueDate">&nbsp;</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Items Table -->
+            <table class="sheet-table" id="sheetPreviewTable">
+              <thead>
+                <tr id="sheetTableHead">
+                  <th style="width: 5%">تسلسل</th>
+                  <th style="width: 15%">رقم الصنف</th>
+                  <th style="width: 10%" class="col-preview-image">الصورة</th>
+                  <th style="width: 40%">الشرح</th>
+                  <th style="width: 10%">الكمية</th>
+                  <th style="width: 10%">سعر المبيع</th>
+                  <th style="width: 10%">المجموع</th>
+                </tr>
+              </thead>
+              <tbody id="sheetTableBody">
+                <!-- Draft rows pre-rendered in excel format -->
+              </tbody>
+            </table>
+
+            <!-- Footers and Signatures -->
+            <div class="sheet-footer">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold" id="sheetFooterMsg">العرض ساري لمدة 15 يوم من تاريخه</div>
+                <div class="text-center" style="border-top: 1px solid #000; width: 150px; padding-top: 5px;" id="sheetSignature">توقيع المبيعات</div>
+              </div>
+              <div class="row pt-2 text-muted" style="font-size: 0.9em; border-top: 1px dashed #ccc;">
+                <div class="col-6" id="sheetFooterCR">رقم السجل التجاري 4030148891</div>
+                <div class="col-6 text-end" id="sheetFooterBox" dir="ltr">P.O.Box 118961 Jeddah 21312 KSA | Tel: +966 12 6658899</div>
+                <div class="col-12 text-center mt-1" id="sheetFooterAddr">جدة- طريق المدينة النازل حي الروضة سوق جدة الدولي</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="text-center">
+      <div class="spinner-border text-orange mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+      <div id="loadingText">جاري تحميل المنتجات...</div>
+    </div>
+  </div>
+
+  <!-- Script Logic -->
+  <script>
+    // Dictionary of translations
+    const dict = {
+      ar: {
+        pageTitle: "عمل عرض سعر للعملاء",
+        back: "العودة للكاتالوج",
+        customerHeader: "بيانات العميل",
+        lblCustName: "اسم العميل",
+        lblCustCompany: "الشركة",
+        lblCustMobile: "رقم الجوال",
+        lblQuoteDate: "تاريخ العرض",
+        txtSearchHeader: "البحث وإضافة المنتجات",
+        lblSearchItem: "البحث عن الصنف (بالكود أو الـ Alias أو الاسم)",
+        lblItemCode: "كود الصنف",
+        lblItemPrice: "سعر المبيع (ريال)",
+        lblItemDesc: "الشرح / الوصف",
+        lblItemQty: "الكمية",
+        btnAddItem: "إضافة للعرض ➕",
+        txtOutputHeader: "خيارات التصدير",
+        lblIncludeImages: "تضمين صور المنتجات في الـ PDF",
+        btnDownloadPDF: "📥 تحميل عرض السعر بصيغة PDF",
+        txtDraftHeader: "أصناف عرض السعر الحالي",
+        emptyDraftMessage: "لا توجد أصناف في عرض السعر حالياً. استخدم لوحة البحث أعلاه لإضافة أصناف.",
+        draftTableHead: ["تسلسل", "كود الصنف", "الشرح", "الكمية", "السعر", "المجموع", "إجراء"],
+        sheetHeaderComp: "شركة زهر البرتقال للتجارة",
+        sheetHeaderDoc: "Orange Bed & Bath",
+        sheetDocTitle: "عرض سعر",
+        smLabelName: "الاسم :",
+        smLabelComp: "الشركة:",
+        smLabelMob: "رقم الجوال:",
+        smLabelDate: "التاريخ:",
+        sheetTableHeadPreview: ["تسلسل", "رقم الصنف", "الصورة", "الشرح", "الكمية", "سعر المبيع", "المجموع"],
+        sheetFooterMsg: "العرض ساري لمدة 15 يوم من تاريخه",
+        sheetSignature: "توقيع المبيعات",
+        sheetFooterCR: "رقم السجل التجاري 4030148891",
+        sheetFooterBox: "P.O.Box 118961 Jeddah 21312 KSA | Tel: +966 12 6658899",
+        sheetFooterAddr: "جدة- طريق المدينة النازل حي الروضة سوق جدة الدولي",
+        totalExclVat: "الإجمالي بدون ضريبة",
+        vatAmount: "ضريبة القيمة المضافة",
+        totalInclVat: "الإجمالي مع الضريبة",
+        totalPieces: "إجمالي القطع",
+        loadingText: "جاري تحميل المنتجات...",
+        imageCol: "الصورة",
+        langLabel: "English"
+      },
+      en: {
+        pageTitle: "Create Quotation",
+        back: "Back to Catalog",
+        customerHeader: "Customer Information",
+        lblCustName: "Customer Name",
+        lblCustCompany: "Company Name",
+        lblCustMobile: "Mobile Number",
+        lblQuoteDate: "Quotation Date",
+        txtSearchHeader: "Search & Add Products",
+        lblSearchItem: "Search Product (by Code, Alias, or Name)",
+        lblItemCode: "Item Code",
+        lblItemPrice: "Selling Price (SAR)",
+        lblItemDesc: "Description",
+        lblItemQty: "Quantity",
+        btnAddItem: "Add to Offer ➕",
+        txtOutputHeader: "Export Options",
+        lblIncludeImages: "Include product images in PDF",
+        btnDownloadPDF: "📥 Download Price Offer PDF",
+        txtDraftHeader: "Current Quotation Items",
+        emptyDraftMessage: "No items added. Use the search panel above to add items.",
+        draftTableHead: ["S.No", "Item Code", "Description", "Qty", "Price", "Total", "Action"],
+        sheetHeaderComp: "Zahr Al-Orange Trading Co.",
+        sheetHeaderDoc: "Orange Bed & Bath",
+        sheetDocTitle: "Quotation",
+        smLabelName: "Name:",
+        smLabelComp: "Company:",
+        smLabelMob: "Mobile:",
+        smLabelDate: "Date:",
+        sheetTableHeadPreview: ["S.No", "Item Code", "Image", "Description", "Qty", "Unit Price", "Total"],
+        sheetFooterMsg: "Offer valid for 15 days from date",
+        sheetSignature: "Authorized Signature",
+        sheetFooterCR: "C.R. Number 4030148891",
+        sheetFooterBox: "P.O.Box 118961 Jeddah 21312 KSA | Tel: +966 12 6658899",
+        sheetFooterAddr: "Jeddah - Madinah Road Southbound, Al-Rawdah Dist, Jeddah International Market",
+        totalExclVat: "Total (Excl. VAT)",
+        vatAmount: "VAT (15%)",
+        totalInclVat: "Total (Incl. VAT)",
+        totalPieces: "Total Pieces",
+        loadingText: "Loading catalog products...",
+        imageCol: "Image",
+        langLabel: "العربية"
+      }
+    };
+
+    let currentLang = 'ar';
+    let products = [];
+    let draftItems = [];
+    let selectedProduct = null;
+
+    // Load products and set default date on DOM load
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById('quoteDate').value = getLocalDateString();
+      await fetchCatalog();
+      updatePreview();
+    });
+
+    function getLocalDateString() {
+      const d = new Date();
+      const offset = d.getTimezoneOffset();
+      const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+      return localTime.toISOString().split('T')[0];
+    }
+
+    async function fetchCatalog() {
+      showLoading(true, currentLang === 'ar' ? 'جاري تحميل المنتجات...' : 'Loading catalog products...');
+      try {
+        const res = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to load products");
+        products = await res.json();
+        console.log("Loaded products:", products.length);
+      } catch (err) {
+        console.error("Error loading products:", err);
+        alert(currentLang === 'ar' ? "فشل تحميل بيانات البضاعة" : "Failed to load catalog products.");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function showLoading(show, text = "") {
+      const overlay = document.getElementById('loadingOverlay');
+      const label = document.getElementById('loadingText');
+      if (show) {
+        label.textContent = text;
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
+    // Toggle RTL / LTR layout and translations
+    function toggleLanguage() {
+      currentLang = document.getElementById('langSwitch').checked ? 'en' : 'ar';
+      
+      // Update Bootstrap stylesheets and page direction
+      document.getElementById('bootstrap-rtl').disabled = (currentLang === 'en');
+      document.getElementById('bootstrap-ltr').disabled = (currentLang === 'ar');
+      document.body.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
+      // Update Preview Container Class
+      const preview = document.getElementById('previewSheet');
+      if (currentLang === 'en') {
+        preview.classList.remove('rtl-preview');
+        preview.classList.add('ltr-preview');
+      } else {
+        preview.classList.remove('ltr-preview');
+        preview.classList.add('rtl-preview');
+      }
+
+      // Apply texts
+      const t = dict[currentLang];
+      document.getElementById('txtBack').textContent = t.back;
+      document.getElementById('txtPageTitle').textContent = t.pageTitle;
+      document.getElementById('lblLang').textContent = t.langLabel;
+      
+      document.getElementById('txtCustomerHeader').textContent = t.customerHeader;
+      document.getElementById('lblCustName').textContent = t.lblCustName;
+      document.getElementById('lblCustCompany').textContent = t.lblCustCompany;
+      document.getElementById('lblCustMobile').textContent = t.lblCustMobile;
+      document.getElementById('lblQuoteDate').textContent = t.lblQuoteDate;
+      
+      document.getElementById('txtSearchHeader').textContent = t.txtSearchHeader;
+      document.getElementById('lblSearchItem').textContent = t.lblSearchItem;
+      document.getElementById('lblItemCode').textContent = t.lblItemCode;
+      document.getElementById('lblItemPrice').textContent = t.lblItemPrice;
+      document.getElementById('lblItemDesc').textContent = t.lblItemDesc;
+      document.getElementById('lblItemQty').textContent = t.lblItemQty;
+      document.getElementById('btnAddItem').textContent = t.btnAddItem;
+      
+      document.getElementById('txtOutputHeader').textContent = t.txtOutputHeader;
+      document.getElementById('lblIncludeImages').textContent = t.lblIncludeImages;
+      document.getElementById('btnDownloadPDF').textContent = t.btnDownloadPDF;
+      
+      document.getElementById('txtDraftHeader').textContent = t.txtDraftHeader;
+      document.getElementById('emptyDraftMessage').textContent = t.emptyDraftMessage;
+
+      // Update Table Headers in UI Draft Table
+      const ths = document.getElementById('draftTableHead').children;
+      t.draftTableHead.forEach((h, idx) => {
+        if (ths[idx]) ths[idx].textContent = h;
+      });
+
+      // Update Sheet Preview Static labels
+      document.getElementById('sheetHeaderComp').textContent = t.sheetHeaderComp;
+      document.getElementById('sheetHeaderDoc').textContent = t.sheetHeaderDoc;
+      document.getElementById('sheetDocTitle').textContent = t.sheetDocTitle;
+      document.getElementById('smLabelName').textContent = t.smLabelName;
+      document.getElementById('smLabelComp').textContent = t.smLabelComp;
+      document.getElementById('smLabelMob').textContent = t.smLabelMob;
+      document.getElementById('smLabelDate').textContent = t.smLabelDate;
+      document.getElementById('sheetFooterMsg').textContent = t.sheetFooterMsg;
+      document.getElementById('sheetSignature').textContent = t.sheetSignature;
+      document.getElementById('sheetFooterCR').textContent = t.sheetFooterCR;
+      document.getElementById('sheetFooterBox').textContent = t.sheetFooterBox;
+      document.getElementById('sheetFooterAddr').textContent = t.sheetFooterAddr;
+
+      // Update Table Headers in Preview Table
+      const pThs = document.getElementById('sheetTableHead').children;
+      let headerTexts = [...t.sheetTableHeadPreview];
+      if (!document.getElementById('includeImages').checked) {
+        headerTexts = headerTexts.filter(h => h !== t.imageCol && h !== "الصورة" && h !== "Image");
+      }
+      
+      // Clear and rebuild sheet preview headers
+      const sheetTableHeadRow = document.getElementById('sheetTableHead');
+      sheetTableHeadRow.innerHTML = '';
+      headerTexts.forEach((text, index) => {
+        let width = "10%";
+        if (index === 0) width = "5%";
+        else if (index === 1) width = "15%";
+        else if (text === t.imageCol || text === "الصورة" || text === "Image") width = "10%";
+        else if (index === (headerTexts.length - 4)) width = "40%"; // description
+        
+        const th = document.createElement('th');
+        th.style.width = width;
+        th.textContent = text;
+        sheetTableHeadRow.appendChild(th);
+      });
+
+      updatePreview();
+    }
+
+    // Search and Autocomplete Logic
+    let searchTimeout = null;
+    function onSearchInput() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const query = document.getElementById('searchItem').value.trim().toLowerCase();
+        const list = document.getElementById('suggestions');
+        
+        if (query.length < 2) {
+          list.style.display = 'none';
+          return;
+        }
+
+        // Search by code, alias, or name
+        const matches = products.filter(p => 
+          String(p.code).toLowerCase().includes(query) || 
+          String(p.alias).toLowerCase().includes(query) || 
+          String(p.name).toLowerCase().includes(query)
+        ).slice(0, 15);
+
+        if (matches.length === 0) {
+          list.innerHTML = `<li class="autocomplete-item text-center text-muted">${currentLang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</li>`;
+        } else {
+          list.innerHTML = matches.map(p => {
+            const aliasStr = p.alias ? ` (Alias: ${p.alias})` : '';
+            return `<li class="autocomplete-item" onclick="selectProduct('${p.code}')">
+              <strong>${p.code}</strong>${aliasStr} - ${p.name} [${p.price} ${currentLang === 'ar' ? 'ريال' : 'SAR'}]
+            </li>`;
+          }).join('');
+        }
+        list.style.display = 'block';
+      }, 150);
+    }
+
+    function clearSearch() {
+      document.getElementById('searchItem').value = '';
+      document.getElementById('suggestions').style.display = 'none';
+      selectedProduct = null;
+      document.getElementById('itemCode').value = '';
+      document.getElementById('itemPrice').value = '';
+      document.getElementById('itemDesc').value = '';
+      document.getElementById('itemQty').value = '1';
+    }
+
+    window.selectProduct = function(code) {
+      const prod = products.find(p => String(p.code) === String(code));
+      if (!prod) return;
+
+      selectedProduct = prod;
+      document.getElementById('searchItem').value = prod.name;
+      document.getElementById('itemCode').value = prod.code;
+      document.getElementById('itemPrice').value = prod.price || 0;
+      document.getElementById('itemDesc').value = prod.name;
+      document.getElementById('suggestions').style.display = 'none';
+      document.getElementById('itemQty').focus();
+    };
+
+    // Close autocomplete on clicking outside
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest('.autocomplete-wrapper')) {
+        document.getElementById('suggestions').style.display = 'none';
+      }
+    });
+
+    // Add selected item to the quotation draft
+    function addItem() {
+      const code = document.getElementById('itemCode').value.trim();
+      const desc = document.getElementById('itemDesc').value.trim();
+      const priceVal = parseFloat(document.getElementById('itemPrice').value);
+      const qtyVal = parseInt(document.getElementById('itemQty').value);
+
+      if (!code) {
+        alert(currentLang === 'ar' ? "يرجى اختيار منتج أولاً" : "Please select a product first");
+        return;
+      }
+      if (isNaN(priceVal) || priceVal < 0) {
+        alert(currentLang === 'ar' ? "يرجى إدخال سعر صحيح" : "Please enter a valid price");
+        return;
+      }
+      if (isNaN(qtyVal) || qtyVal <= 0) {
+        alert(currentLang === 'ar' ? "يرجى إدخال كمية صحيحة" : "Please enter a valid quantity");
+        return;
+      }
+
+      // Add to list (or update if already exists)
+      const existingIdx = draftItems.findIndex(i => i.code === code);
+      if (existingIdx > -1) {
+        draftItems[existingIdx].qty += qtyVal;
+        draftItems[existingIdx].price = priceVal;
+        draftItems[existingIdx].desc = desc;
+      } else {
+        draftItems.push({
+          code: code,
+          alias: selectedProduct ? selectedProduct.alias : '',
+          name: selectedProduct ? selectedProduct.name : desc,
+          desc: desc,
+          qty: qtyVal,
+          price: priceVal,
+          image_path: selectedProduct ? selectedProduct.image_path : ''
+        });
+      }
+
+      clearSearch();
+      updatePreview();
+    }
+
+    window.removeItem = function(index) {
+      draftItems.splice(index, 1);
+      updatePreview();
+    };
+
+    window.updateDraftItem = function(index, field, value) {
+      if (field === 'qty') {
+        const val = parseInt(value);
+        draftItems[index].qty = isNaN(val) || val <= 0 ? 1 : val;
+      } else if (field === 'price') {
+        const val = parseFloat(value);
+        draftItems[index].price = isNaN(val) || val < 0 ? 0 : val;
+      } else if (field === 'desc') {
+        draftItems[index].desc = value;
+      }
+      updatePreview();
+    };
+
+    // Render Draft Editor Table and Live Preview sheet
+    function updatePreview() {
+      // 1. Gather Customer details
+      const name = document.getElementById('custName').value.trim();
+      const comp = document.getElementById('custCompany').value.trim();
+      const mob = document.getElementById('custMobile').value.trim();
+      const dateVal = document.getElementById('quoteDate').value;
+
+      // Update Preview Text Fields
+      document.getElementById('smValueName').innerHTML = name ? name : '&nbsp;';
+      document.getElementById('smValueComp').innerHTML = comp ? comp : '&nbsp;';
+      document.getElementById('smValueMob').innerHTML = mob ? mob : '&nbsp;';
+      
+      let formattedDate = "";
+      if (dateVal) {
+        const d = new Date(dateVal);
+        formattedDate = d.toLocaleDateString(currentLang === 'en' ? 'en-US' : 'ar-SA');
+      }
+      document.getElementById('smValueDate').innerHTML = formattedDate ? formattedDate : '&nbsp;';
+
+      // 2. Compute Totals
+      let totalQty = 0;
+      let totalInclVat = 0;
+      draftItems.forEach(item => {
+        totalQty += item.qty;
+        totalInclVat += item.qty * item.price;
+      });
+
+      const vat = totalInclVat * (15 / 115);
+      const exclVat = totalInclVat - vat;
+
+      // 3. Render Draft Table (Draft Manager)
+      const tbody = document.getElementById('draftTableBody');
+      const emptyMsg = document.getElementById('emptyDraftMessage');
+      
+      if (draftItems.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.style.display = 'block';
+      } else {
+        emptyMsg.style.display = 'none';
+        tbody.innerHTML = draftItems.map((item, idx) => `
+          <tr class="text-center">
+            <td>${idx + 1}</td>
+            <td class="font-monospace text-start">${item.code}</td>
+            <td>
+              <input type="text" class="form-control form-control-sm" value="${item.desc}" oninput="updateDraftItem(${idx}, 'desc', this.value)">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm text-center" value="${item.qty}" min="1" onchange="updateDraftItem(${idx}, 'qty', this.value)">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm text-center" value="${item.price}" step="0.01" onchange="updateDraftItem(${idx}, 'price', this.value)">
+            </td>
+            <td class="fw-bold">${(item.qty * item.price).toFixed(2)}</td>
+            <td>
+              <button onclick="removeItem(${idx})" class="btn btn-sm btn-danger py-1 px-2" title="حذف">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // 4. Render Live Preview Table (Excel-like Sheet)
+      const sheetBody = document.getElementById('sheetTableBody');
+      sheetBody.innerHTML = '';
+
+      const includeImages = document.getElementById('includeImages').checked;
+      const t = dict[currentLang];
+
+      draftItems.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        
+        let imgHtml = '';
+        if (includeImages) {
+          const fallbackId = item.alias ? item.alias : item.code;
+          const imgSrc = item.image_path 
+            ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + item.image_path 
+            : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_100,q_auto,f_auto,d_noimage.png/${fallbackId}.jpg`;
+          
+          imgHtml = `<td class="text-center col-preview-image">
+            <img src="${imgSrc}" class="sheet-thumbnail" onerror="this.src='noimage.png'">
+          </td>`;
+        }
+
+        // Layout rows based on direction (RTL or LTR)
+        if (currentLang === 'ar') {
+          tr.innerHTML = `
+            <td class="text-center">${(item.qty * item.price).toFixed(2)}</td>
+            <td class="text-center">${item.price.toFixed(2)}</td>
+            <td class="text-center">${item.qty}</td>
+            <td>${item.desc}</td>
+            ${imgHtml}
+            <td class="text-center font-monospace">${item.code}</td>
+            <td class="text-center">${idx + 1}</td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td class="text-center">${idx + 1}</td>
+            <td class="text-center font-monospace">${item.code}</td>
+            ${imgHtml}
+            <td>${item.desc}</td>
+            <td class="text-center">${item.qty}</td>
+            <td class="text-center">${item.price.toFixed(2)}</td>
+            <td class="text-center">${(item.qty * item.price).toFixed(2)}</td>
+          `;
+        }
+        sheetBody.appendChild(tr);
+      });
+
+      // Render Totals inside sheet preview
+      const totalColsCount = includeImages ? 7 : 6;
+      
+      const totalPiecesRow = document.createElement('tr');
+      if (currentLang === 'ar') {
+        totalPiecesRow.innerHTML = `
+          <td colspan="2" class="text-center fw-bold">${totalQty}</td>
+          <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.totalPieces}</td>
+        `;
+      } else {
+        totalPiecesRow.innerHTML = `
+          <td colspan="${totalColsCount - 3}" class="fw-bold px-3 text-end">${t.totalPieces}</td>
+          <td class="text-center fw-bold" colspan="2">${totalQty}</td>
+          <td></td>
+        `;
+      }
+      sheetBody.appendChild(totalPiecesRow);
+
+      const exclVatRow = document.createElement('tr');
+      if (currentLang === 'ar') {
+        exclVatRow.innerHTML = `
+          <td colspan="2" class="text-center fw-bold">${exclVat.toFixed(2)}</td>
+          <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.totalExclVat}</td>
+        `;
+      } else {
+        exclVatRow.innerHTML = `
+          <td colspan="${totalColsCount - 1}" class="fw-bold px-3 text-end">${t.totalExclVat}</td>
+          <td class="text-center fw-bold">${exclVat.toFixed(2)}</td>
+        `;
+      }
+      sheetBody.appendChild(exclVatRow);
+
+      const vatRow = document.createElement('tr');
+      if (currentLang === 'ar') {
+        vatRow.innerHTML = `
+          <td colspan="2" class="text-center fw-bold">${vat.toFixed(2)}</td>
+          <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.vatAmount}</td>
+        `;
+      } else {
+        vatRow.innerHTML = `
+          <td colspan="${totalColsCount - 1}" class="fw-bold px-3 text-end">${t.vatAmount}</td>
+          <td class="text-center fw-bold">${vat.toFixed(2)}</td>
+        `;
+      }
+      sheetBody.appendChild(vatRow);
+
+      const inclVatRow = document.createElement('tr');
+      if (currentLang === 'ar') {
+        inclVatRow.innerHTML = `
+          <td colspan="2" class="text-center fw-bold bg-light">${totalInclVat.toFixed(2)}</td>
+          <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start bg-light">${t.totalInclVat}</td>
+        `;
+      } else {
+        inclVatRow.innerHTML = `
+          <td colspan="${totalColsCount - 1}" class="fw-bold px-3 text-end bg-light">${t.totalInclVat}</td>
+          <td class="text-center fw-bold bg-light">${totalInclVat.toFixed(2)}</td>
+        `;
+      }
+      sheetBody.appendChild(inclVatRow);
+
+      // Hide or show Image Columns in Live Preview based on toggle
+      const imgHeaders = document.querySelectorAll('.col-preview-image');
+      imgHeaders.forEach(el => {
+        el.style.display = includeImages ? '' : 'none';
+      });
+    }
+
+    // Prepare Base64 Images for jsPDF (asynchronous loading with toast loader)
+    async function fetchAllBase64Images() {
+      const itemsToLoad = draftItems.filter(i => i.image_path || i.alias || i.code);
+      if (itemsToLoad.length === 0) return;
+
+      showLoading(true, currentLang === 'ar' ? 'جاري تجهيز صور المنتجات للـ PDF...' : 'Preparing product images for PDF...');
+      
+      for (let item of draftItems) {
+        if (!item.base64) {
+          const fallbackId = item.alias ? item.alias : item.code;
+          const primaryUrl = item.image_path 
+            ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + item.image_path 
+            : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_200,q_auto,f_auto,d_noimage.png/${fallbackId}.jpg`;
+          
+          let base64 = await loadImageAsBase64(primaryUrl);
+          if (!base64 && item.image_path) {
+            // Secondary Cloudinary fallback
+            const fallbackUrl = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_200,q_auto,f_auto,d_noimage.png/${fallbackId}.jpg`;
+            base64 = await loadImageAsBase64(fallbackUrl);
+          }
+          item.base64 = base64;
+        }
+      }
+      
+      showLoading(false);
+    }
+
+    function loadImageAsBase64(url) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          try {
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          } catch (e) {
+            console.error("Canvas toDataURL failed:", e);
+            resolve(null);
+          }
+        };
+        img.onerror = function() {
+          resolve(null);
+        };
+        img.src = url;
+      });
+    }
+
+    // Client-side PDF generation matching نموذج عرض سعر.xlsx
+    async function downloadPDF() {
+      if (draftItems.length === 0) {
+        alert(currentLang === 'ar' ? "يرجى إضافة صنف واحد على الأقل للعرض" : "Please add at least one item to the offer");
+        return;
+      }
+
+      const includeImages = document.getElementById('includeImages').checked;
+      if (includeImages) {
+        await fetchAllBase64Images();
+      }
+
+      // Initialize jsPDF
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Load Arabic Font
+      const fontFileName = "Amiri-Regular.ttf";
+      const fontName = "Amiri";
+      let hasFont = false;
+
+      try {
+        if (typeof amiriFontBase64 !== 'undefined') {
+          doc.addFileToVFS(fontFileName, amiriFontBase64);
+          doc.addFont(fontFileName, fontName, "normal");
+          doc.setFont(fontName);
+          hasFont = true;
+        } else {
+          doc.setFont("helvetica");
+        }
+      } catch (e) {
+        console.error("Amiri Font Loading Error:", e);
+        doc.setFont("helvetica");
+      }
+
+      const t = dict[currentLang];
+      const isAr = (currentLang === 'ar');
+
+      // Colors matching brand
+      const textDark = '#000000';
+      const borderDark = '#000000';
+
+      // 1. Drawing Header (Row 8 & 9)
+      doc.setTextColor(textDark);
+      doc.setFontSize(14);
+      if (isAr) {
+        doc.text(t.sheetHeaderComp, pageWidth - 15, 15, { align: 'right' });
+      } else {
+        doc.text(t.sheetHeaderComp, 15, 15, { align: 'left' });
+      }
+
+      doc.setFontSize(10);
+      doc.setTextColor('#888888');
+      if (isAr) {
+        doc.text(t.sheetHeaderDoc, 15, 15, { align: 'left' });
+      } else {
+        doc.text(t.sheetHeaderDoc, pageWidth - 15, 15, { align: 'right' });
+      }
+
+      // Document Title Box (عرض سعر)
+      doc.setFontSize(16);
+      doc.setTextColor(textDark);
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      
+      const titleWidth = 40;
+      const titleX = (pageWidth - titleWidth) / 2;
+      doc.rect(titleX, 20, titleWidth, 10);
+      doc.text(t.sheetDocTitle, pageWidth / 2, 27, { align: 'center' });
+
+      // 2. Customer Meta Grid (Row 10 - 12)
+      doc.setFontSize(11);
+      const name = document.getElementById('custName').value.trim() || "-";
+      const comp = document.getElementById('custCompany').value.trim() || "-";
+      const mob = document.getElementById('custMobile').value.trim() || "-";
+      const dateVal = document.getElementById('quoteDate').value;
+      
+      let formattedDate = "-";
+      if (dateVal) {
+        const d = new Date(dateVal);
+        formattedDate = d.toLocaleDateString(isAr ? 'ar-SA' : 'en-US');
+      }
+
+      const metaYStart = 40;
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(180);
+
+      if (isAr) {
+        // Arabic Grid (Labels on right, dotted lines or text on left)
+        doc.text(`${t.smLabelName}  ${name}`, pageWidth - 15, metaYStart, { align: 'right' });
+        doc.text(`${t.smLabelComp}  ${comp}`, pageWidth - 15, metaYStart + 7, { align: 'right' });
+        doc.text(`${t.smLabelMob}  ${mob}`, pageWidth - 15, metaYStart + 14, { align: 'right' });
+
+        doc.text(`${t.smLabelDate}  ${formattedDate}`, 15, metaYStart, { align: 'left' });
+      } else {
+        // English Grid (Labels on left, text on right)
+        doc.text(`${t.smLabelName}  ${name}`, 15, metaYStart, { align: 'left' });
+        doc.text(`${t.smLabelComp}  ${comp}`, 15, metaYStart + 7, { align: 'left' });
+        doc.text(`${t.smLabelMob}  ${mob}`, 15, metaYStart + 14, { align: 'left' });
+
+        doc.text(`${t.smLabelDate}  ${formattedDate}`, pageWidth - 15, metaYStart, { align: 'right' });
+      }
+
+      // 3. Build AutoTable rows & columns
+      let autoTableCols = [];
+      let autoTableRows = [];
+
+      // Quantities and Totals
+      let totalQty = 0;
+      let totalInclVat = 0;
+      draftItems.forEach(item => {
+        totalQty += item.qty;
+        totalInclVat += item.qty * item.price;
+      });
+      const vat = totalInclVat * (15 / 115);
+      const exclVat = totalInclVat - vat;
+
+      // Define columns
+      if (isAr) {
+        autoTableCols = [
+          { header: 'المجموع', dataKey: 'total' },
+          { header: 'سعر المبيع', dataKey: 'price' },
+          { header: 'الكمية', dataKey: 'qty' },
+          { header: 'الشرح', dataKey: 'desc' }
+        ];
+        if (includeImages) autoTableCols.push({ header: 'الصورة', dataKey: 'image' });
+        autoTableCols.push(
+          { header: 'رقم الصنف', dataKey: 'code' },
+          { header: 'تسلسل', dataKey: 'index' }
+        );
+      } else {
+        autoTableCols = [
+          { header: 'S.No', dataKey: 'index' },
+          { header: 'Item Code', dataKey: 'code' }
+        ];
+        if (includeImages) autoTableCols.push({ header: 'Image', dataKey: 'image' });
+        autoTableCols.push(
+          { header: 'Description', dataKey: 'desc' },
+          { header: 'Qty', dataKey: 'qty' },
+          { header: 'Unit Price', dataKey: 'price' },
+          { header: 'Total', dataKey: 'total' }
+        );
+      }
+
+      // Define Table Rows
+      draftItems.forEach((item, idx) => {
+        const rowData = {};
+        rowData['index'] = idx + 1;
+        rowData['code'] = item.code;
+        rowData['desc'] = item.desc;
+        rowData['qty'] = item.qty;
+        rowData['price'] = item.price.toFixed(2);
+        rowData['total'] = (item.qty * item.price).toFixed(2);
+        rowData['image'] = item.base64 || ''; // store base64 string
+        
+        autoTableRows.push(rowData);
+      });
+
+      // Build autotable styles
+      const tableStyleOptions = {
+        startY: metaYStart + 22,
+        theme: 'plain',
+        columns: autoTableCols,
+        body: autoTableRows,
+        styles: {
+          font: hasFont ? 'Amiri' : 'helvetica',
+          textColor: [0, 0, 0],
+          fontSize: 9,
+          lineWidth: 0.1,
+          lineColor: [0, 0, 0],
+          valign: 'middle'
+        },
+        headStyles: {
+          fillColor: [242, 242, 242],
+          fontStyle: 'bold',
+          halign: 'center',
+          textColor: [0, 0, 0]
+        },
+        columnStyles: {},
+        didDrawCell: function(data) {
+          // Draw Image inside the cell if it's the image column
+          if (includeImages && data.column.key === 'image' && data.cell.section === 'body') {
+            const base64Img = data.cell.raw;
+            if (base64Img) {
+              const x = data.cell.x + 2;
+              const y = data.cell.y + 2;
+              const w = data.cell.width - 4;
+              const h = data.cell.height - 4;
+              try {
+                doc.addImage(base64Img, 'JPEG', x, y, w, h);
+              } catch (e) {
+                console.error("doc.addImage failed in autotable cell:", e);
+              }
+            }
+          }
+        }
+      };
+
+      // Set cell alignments and custom heights
+      if (isAr) {
+        tableStyleOptions.styles.halign = 'right';
+        tableStyleOptions.columnStyles = {
+          'index': { halign: 'center', width: 10 },
+          'code': { halign: 'center', font: 'helvetica', width: 25 },
+          'qty': { halign: 'center', width: 15 },
+          'price': { halign: 'center', width: 20 },
+          'total': { halign: 'center', width: 22 }
+        };
+        if (includeImages) {
+          tableStyleOptions.columnStyles['image'] = { halign: 'center', width: 20 };
+          tableStyleOptions.columnStyles['desc'] = { width: 68 };
+        } else {
+          tableStyleOptions.columnStyles['desc'] = { width: 88 };
+        }
+      } else {
+        tableStyleOptions.styles.halign = 'left';
+        tableStyleOptions.columnStyles = {
+          'index': { halign: 'center', width: 10 },
+          'code': { halign: 'center', font: 'helvetica', width: 25 },
+          'qty': { halign: 'center', width: 15 },
+          'price': { halign: 'center', width: 20 },
+          'total': { halign: 'center', width: 22 }
+        };
+        if (includeImages) {
+          tableStyleOptions.columnStyles['image'] = { halign: 'center', width: 20 };
+          tableStyleOptions.columnStyles['desc'] = { width: 68 };
+        } else {
+          tableStyleOptions.columnStyles['desc'] = { width: 88 };
+        }
+      }
+
+      // If including images, set cell heights in the body to make room
+      if (includeImages) {
+        tableStyleOptions.bodyStyles = {
+          minCellHeight: 18
+        };
+      }
+
+      // Generate Table
+      doc.autoTable(tableStyleOptions);
+      
+      // Calculate final Y position after table
+      let finalY = doc.lastAutoTable.finalY + 5;
+
+      // 4. Render Totals Box (mimicking right aligned summary blocks in Excel)
+      const summaryBoxWidth = 80;
+      const summaryBoxX = isAr ? 15 : pageWidth - summaryBoxWidth - 15;
+      doc.setFontSize(9);
+      doc.setLineWidth(0.1);
+      
+      const renderSummaryRow = (label, val, y) => {
+        doc.setDrawColor(0);
+        doc.rect(summaryBoxX, y, summaryBoxWidth, 6);
+        doc.setFont(hasFont ? 'Amiri' : 'helvetica', 'normal');
+        
+        if (isAr) {
+          // Label on right, value on left
+          doc.text(label, summaryBoxX + summaryBoxWidth - 2, y + 4.5, { align: 'right' });
+          doc.text(val, summaryBoxX + 2, y + 4.5, { align: 'left' });
+        } else {
+          // Label on left, value on right
+          doc.text(label, summaryBoxX + 2, y + 4.5, { align: 'left' });
+          doc.text(val, summaryBoxX + summaryBoxWidth - 2, y + 4.5, { align: 'right' });
+        }
+      };
+
+      renderSummaryRow(t.totalPieces, String(totalQty), finalY);
+      renderSummaryRow(t.totalExclVat, exclVat.toFixed(2), finalY + 6);
+      renderSummaryRow(t.vatAmount, vat.toFixed(2), finalY + 12);
+      
+      // Double border/highlighted box for Grand Total
+      doc.setDrawColor(0);
+      doc.rect(summaryBoxX, finalY + 18, summaryBoxWidth, 6);
+      doc.setFont(hasFont ? 'Amiri' : 'helvetica', 'bold');
+      if (isAr) {
+        doc.text(t.totalInclVat, summaryBoxX + summaryBoxWidth - 2, finalY + 22.5, { align: 'right' });
+        doc.text(totalInclVat.toFixed(2), summaryBoxX + 2, finalY + 22.5, { align: 'left' });
+      } else {
+        doc.text(t.totalInclVat, summaryBoxX + 2, finalY + 22.5, { align: 'left' });
+        doc.text(totalInclVat.toFixed(2), summaryBoxX + summaryBoxWidth - 2, finalY + 22.5, { align: 'right' });
+      }
+
+      // Check if page height exceeds. If so, add new page for signature/footers
+      if (finalY + 50 > pageHeight - 20) {
+        doc.addPage();
+        finalY = 20;
+      } else {
+        finalY += 30;
+      }
+
+      // 5. Signature Section
+      doc.setFontSize(10);
+      doc.setFont(hasFont ? 'Amiri' : 'helvetica', 'bold');
+      if (isAr) {
+        doc.text(t.sheetFooterMsg, pageWidth - 15, finalY);
+        doc.setDrawColor(0);
+        doc.line(15, finalY + 5, 55, finalY + 5);
+        doc.text(t.sheetSignature, 35, finalY + 10, { align: 'center' });
+      } else {
+        doc.text(t.sheetFooterMsg, 15, finalY);
+        doc.setDrawColor(0);
+        doc.line(pageWidth - 55, finalY + 5, pageWidth - 15, finalY + 5);
+        doc.text(t.sheetSignature, pageWidth - 35, finalY + 10, { align: 'center' });
+      }
+
+      // 6. Address / Contact footer details (Row 41 & 42)
+      doc.setFontSize(8.5);
+      doc.setFont(hasFont ? 'Amiri' : 'helvetica', 'normal');
+      doc.setTextColor('#555555');
+      
+      const footerY = pageHeight - 22;
+      doc.setLineWidth(0.1);
+      doc.setDrawColor(200);
+      doc.line(15, footerY - 2, pageWidth - 15, footerY - 2);
+
+      doc.text(t.sheetFooterCR, 15, footerY);
+      doc.text(t.sheetFooterBox, pageWidth - 15, footerY, { align: 'right' });
+      doc.text(t.sheetFooterAddr, pageWidth / 2, footerY + 6, { align: 'center' });
+
+      // Save PDF document
+      const filename = `Price_Offer_${name.replace(/\s+/g, '_')}_${getLocalDateString()}.pdf`;
+      doc.save(filename);
+    }
+  </script>
+</body>
+
+</html>
