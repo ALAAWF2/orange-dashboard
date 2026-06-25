@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تشخيص أخطاء تحميل البيانات</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f8f9fa; direction: rtl; text-align: right; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        pre { background: #eee; padding: 10px; border-radius: 4px; overflow-x: auto; text-align: left; direction: ltr; }
+    </style>
+</head>
+<body>
+    <h2>أداة تشخيص اتصال وتحميل بيانات لوحة التحكم</h2>
+    <p>افتح هذه الصفحة من نفس المتصفح والجهاز الذي تظهر فيه المشكلة لتحديد سبب ظهور الأرقام كـ 0.</p>
+    
+    <div class="card">
+        <h3>1. فحص ملف management_data.json</h3>
+        <div id="mgmtStatus">جاري الفحص...</div>
+        <pre id="mgmtDetails"></pre>
+    </div>
+
+    <div class="card">
+        <h3>2. فحص ملف employees_data.json</h3>
+        <div id="empStatus">جاري الفحص...</div>
+        <pre id="empDetails"></pre>
+    </div>
+
+    <div class="card">
+        <h3>3. فحص الاتصال بالـ API المحلي</h3>
+        <div id="apiStatus">جاري الفحص...</div>
+        <pre id="apiDetails"></pre>
+    </div>
+
+    <script>
+        async function runDiagnostics() {
+            // Test management_data.json
+            try {
+                const t0 = performance.now();
+                const res = await fetch('management_data.json?t=' + Date.now());
+                const t1 = performance.now();
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('mgmtStatus').innerHTML = '<span class="success">✅ تم التحميل والتحليل بنجاح!</span>';
+                    document.getElementById('mgmtDetails').textContent = 
+                        `وقت التحميل: ${((t1-t0)/1000).toFixed(2)} ثانية\n` +
+                        `حجم الملف المستلم: ${res.headers.get('Content-Length') || 'غير محدد (مضغوط)'} بايت\n` +
+                        `عدد المعارض في الملف: ${Object.keys(data.stores || {}).length}\n` +
+                        `آخر تحديث للملف: ${data.metadata ? data.metadata.generated_at : 'غير معروف'}`;
+                } else {
+                    document.getElementById('mgmtStatus').innerHTML = `<span class="error">❌ فشل التحميل. كود الحالة: ${res.status}</span>`;
+                }
+            } catch (err) {
+                document.getElementById('mgmtStatus').innerHTML = '<span class="error">❌ حدث خطأ أثناء الاتصال أو تحليل الملف</span>';
+                document.getElementById('mgmtDetails').textContent = err.stack || err.message;
+            }
+
+            // Test employees_data.json
+            try {
+                const t0 = performance.now();
+                const res = await fetch('employees_data.json?t=' + Date.now());
+                const t1 = performance.now();
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('empStatus').innerHTML = '<span class="success">✅ تم التحميل والتحليل بنجاح!</span>';
+                    document.getElementById('empDetails').textContent = 
+                        `وقت التحميل: ${((t1-t0)/1000).toFixed(2)} ثانية\n` +
+                        `عدد التواريخ في سجل الموظفين: ${Object.keys(data.history || {}).length}`;
+                } else {
+                    document.getElementById('empStatus').innerHTML = `<span class="error">❌ فشل التحميل. كود الحالة: ${res.status}</span>`;
+                }
+            } catch (err) {
+                document.getElementById('empStatus').innerHTML = '<span class="error">❌ حدث خطأ أثناء الاتصال أو تحليل الملف</span>';
+                document.getElementById('empDetails').textContent = err.stack || err.message;
+            }
+
+            // Test API connection
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const pin = currentUser ? currentUser.pin : "9630";
+                const authHeader = "Basic " + btoa(unescape(encodeURIComponent("علاء:" + pin)));
+                
+                const res = await fetch('/api/targets?month=2026-05', {
+                    headers: { 'Authorization': authHeader }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('apiStatus').innerHTML = '<span class="success">✅ تم الاتصال بالـ API بنجاح!</span>';
+                    document.getElementById('apiDetails').textContent = `المنفذ المستجيب: ${window.location.origin}\nحالة تعديل المستهدفات للمدراء: ${data.allow_manager_target_edit}`;
+                } else {
+                    document.getElementById('apiStatus').innerHTML = `<span class="error">❌ فشل الاتصال بالـ API. كود الحالة: ${res.status}</span>`;
+                    document.getElementById('apiDetails').textContent = await res.text();
+                }
+            } catch (err) {
+                document.getElementById('apiStatus').innerHTML = '<span class="error">❌ حدث خطأ أثناء الاتصال بالـ API</span>';
+                document.getElementById('apiDetails').textContent = err.stack || err.message;
+            }
+        }
+
+        window.onload = runDiagnostics;
+    </script>
+</body>
+</html>
