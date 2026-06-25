@@ -479,6 +479,7 @@
       <button class="tab-btn" onclick="switchTab('tabUsers')">👥 إدارة الحسابات</button>
       <button class="tab-btn" onclick="switchTab('tabMediaLibrary')">🖼️ مكتبة الصور المرفوعة</button>
       <button class="tab-btn" onclick="switchTab('tabAuditLogs')">📋 سجل الأنشطة والأمان</button>
+      <button class="tab-btn" onclick="switchTab('tabChecklist')">✅ قائمة التفقد اليومية</button>
     </div>
 
     <!-- TAB 1: Blocked items -->
@@ -831,6 +832,90 @@
             </table>
           </div>
         </div>
+    <!-- TAB 9: Daily Checklist Management and Reports -->
+    <div id="tabChecklist" class="tab-content">
+      <div style="display: grid; grid-template-columns: 1fr; gap: 2rem; margin-bottom: 2rem;">
+        
+        <!-- Checklist Items Management (Only visible to Admins) -->
+        <div id="checklistItemsAdminSection" style="display: none;">
+          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; gap: 8px;">
+            <span>🛠️ إدارة بنود قائمة التفقد اليومية</span>
+          </h3>
+          <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem;">
+            <div class="controls-row" style="align-items: flex-end; gap: 15px;">
+              <div class="control-group" style="flex: 2;">
+                <label>إضافة بند تفقد جديد</label>
+                <input type="text" id="newChecklistItemInput" placeholder="أدخل نص البند الجديد (مثال: نظافة المعرض)...">
+              </div>
+              <div class="control-group">
+                <button onclick="addChecklistItem()" class="btn btn-primary" style="height: 44px; display: flex; align-items: center; gap: 8px; font-weight: bold;">
+                  ➕ إضافة البند
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: white;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 80px;">رقم البند</th>
+                  <th>نص البند المطلوب تفكده</th>
+                  <th style="width: 150px;">تاريخ الإنشاء</th>
+                  <th style="width: 100px; text-align: center;">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="checklistItemsTableBody">
+                <tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البنود...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Checklist Logs Report (Visible to Admins and Managers) -->
+        <div>
+          <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span>📋 تقرير تفقد المعارض اليومي</span>
+            <button onclick="loadChecklistReport()" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-rotate"></i> تحديث التقرير
+            </button>
+          </h3>
+          
+          <!-- Filters Container -->
+          <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1.5rem;">
+            <div class="controls-row" style="align-items: flex-end; gap: 15px;">
+              <div class="control-group" style="flex: 1;">
+                <label>تاريخ التفقد</label>
+                <input type="date" id="checklistReportDate" onchange="loadChecklistReport()" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; font-family: inherit;">
+              </div>
+              <div class="control-group" style="flex: 1.5;">
+                <label>المعرض</label>
+                <select id="checklistReportMall" onchange="loadChecklistReport()" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; font-family: inherit;">
+                  <!-- Options will be populated dynamically -->
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Report Matrix/Table -->
+          <div class="table-responsive" style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: white;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 250px;">اسم المعرض</th>
+                  <th style="width: 250px;">البند</th>
+                  <th style="width: 150px; text-align: center;">حالة التفقد</th>
+                  <th style="width: 180px; text-align: center;">وقت إتمام التفقد</th>
+                  <th>بواسطة (البريد الإلكتروني)</th>
+                </tr>
+              </thead>
+              <tbody id="checklistReportTableBody">
+                <tr><td colspan="5" style="text-align:center; padding:20px;">الرجاء تحديد الفلاتر لتحميل التقرير...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -1152,6 +1237,8 @@
 
     let currentUser = null;
     let userSessionToken = null;
+    let currentUserRole = 'user';
+    let userManagedOutlets = [];
     let productsList = [];
     let blockedList = [];
     
@@ -1198,25 +1285,45 @@
 
       // Check Profile Role or check email alaa.wafae@orangebedbath.com
       let userRole = 'user';
+      let managedOutlets = [];
       let email = session.user.email.toLowerCase().strip();
       try {
-        const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', session.user.id).single();
+        const { data: profile } = await supabaseClient.from('profiles').select('role, managed_outlets').eq('id', session.user.id).single();
         if (profile) {
           userRole = profile.role;
+          managedOutlets = profile.managed_outlets || [];
         }
       } catch (err) {}
 
-      // Authorize if master admin alaa.wafae@orangebedbath.com or role matches admin/maintenance_admin
-      const isAuthorized = (email === "alaa.wafae@orangebedbath.com") || ['admin', 'maintenance_admin'].includes(userRole);
+      // Authorize if master admin alaa.wafae@orangebedbath.com or role matches admin/maintenance_admin/manager
+      const isAuthorized = (email === "alaa.wafae@orangebedbath.com") || ['admin', 'maintenance_admin', 'manager'].includes(userRole);
 
       if (isAuthorized) {
         currentUser = session.user;
         userSessionToken = session.access_token;
+        currentUserRole = userRole;
+        userManagedOutlets = managedOutlets;
         document.body.style.visibility = 'visible';
         document.getElementById('adminEmailText').textContent = `مرحباً بك: ${session.user.email}`;
         
+        // Hide tabs that managers should not access
+        if (userRole === 'manager') {
+          const adminOnlyTabs = ['tabBlocked', 'tabSync', 'tabImages', 'tabUsers', 'tabMediaLibrary', 'tabAuditLogs', 'tabPromoBarcodes'];
+          document.querySelectorAll('.tab-btn').forEach(btn => {
+            const onclickAttr = btn.getAttribute('onclick') || '';
+            const match = onclickAttr.match(/'([^']+)'/);
+            if (match && adminOnlyTabs.includes(match[1])) {
+              btn.style.display = 'none';
+            }
+          });
+        }
+
         // Load All Data
         await initializeCatalogAdmin();
+
+        if (userRole === 'manager') {
+          switchTab('tabChecklist');
+        }
       } else {
         await supabaseClient.auth.signOut();
         showAuthScreen('⛔ حساب غير مصرح', 'عذراً، لا تمتلك صلاحيات الدخول لصفحة إدارة البضاعة.', true);
@@ -1331,6 +1438,8 @@
          resetMediaLibraryTab();
       } else if (tabId === 'tabAuditLogs') {
          loadAuditLogs();
+      } else if (tabId === 'tabChecklist') {
+         initializeChecklistTab();
       }
     }
 
@@ -3332,6 +3441,300 @@
         showToast('❌ خطأ في الاتصال بالشبكة', 'error');
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 تعميد ونقل الصور المعتمدة للمشروع';
+      }
+    }
+
+    // === TAB 9: DAILY CHECKLIST LOGIC ===
+    let adminChecklistItems = [];
+    let reportShowroomsList = [];
+
+    async function initializeChecklistTab() {
+      // Show/hide management section based on role
+      const adminSection = document.getElementById('checklistItemsAdminSection');
+      if (adminSection) {
+        adminSection.style.display = (currentUserRole === 'admin' || currentUserRole === 'maintenance_admin') ? 'block' : 'none';
+      }
+
+      // Populate Report Date with today's local date if empty
+      const dateInput = document.getElementById('checklistReportDate');
+      if (dateInput && !dateInput.value) {
+        const d = new Date();
+        const offset = d.getTimezoneOffset();
+        const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+        dateInput.value = localTime.toISOString().split('T')[0];
+      }
+
+      // Fetch checklist items and showrooms
+      await loadChecklistItems();
+      await populateReportShowroomsFilter();
+      await loadChecklistReport();
+    }
+
+    async function loadChecklistItems() {
+      try {
+        const { data: items, error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        adminChecklistItems = items || [];
+
+        // Render in admin management table
+        const tbody = document.getElementById('checklistItemsTableBody');
+        if (!tbody) return;
+
+        if (adminChecklistItems.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:gray;">لا توجد بنود تفقد مضافة حالياً.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = adminChecklistItems.map(item => `
+          <tr>
+            <td style="font-weight: bold; text-align: center;">${item.id}</td>
+            <td style="font-weight: 500;">${item.text}</td>
+            <td>${new Date(item.created_at).toLocaleDateString('en-US')}</td>
+            <td style="text-align: center;">
+              <button onclick="deleteChecklistItem(${item.id})" class="btn btn-outline" style="padding:4px 8px; font-size:0.8rem; border-color:var(--danger); color:var(--danger);">
+                <i class="fa-solid fa-trash-can"></i> حذف
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        console.error("Failed to load checklist items:", err);
+        showToast("❌ فشل تحميل بنود التفقد", "error");
+      }
+    }
+
+    async function addChecklistItem() {
+      const input = document.getElementById('newChecklistItemInput');
+      const text = input ? input.value.trim() : '';
+      if (!text) {
+        showToast("⚠️ الرجاء إدخال نص البند", "error");
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .insert({
+            text: text,
+            created_by: currentUser.email
+          });
+
+        if (error) throw error;
+
+        showToast("✅ تم إضافة البند بنجاح", "success");
+        if (input) input.value = '';
+        await loadChecklistItems();
+        await loadChecklistReport();
+        
+        // Log audit log
+        await supabaseClient.from('catalog_audit_logs').insert({
+          user_email: currentUser.email,
+          action_type: 'CHECKLIST_ITEM_CREATE',
+          details: `Created daily checklist item: ${text}`
+        });
+
+      } catch (err) {
+        console.error("Failed to add checklist item:", err);
+        showToast("❌ فشل إضافة البند (قد يكون مكرراً)", "error");
+      }
+    }
+
+    async function deleteChecklistItem(itemId) {
+      if (!confirm("هل أنت متأكد من رغبتك في حذف هذا البند؟ سيتم حذف كافة سجلات التفقد المرتبطة به.")) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .delete()
+          .eq('id', itemId);
+
+        if (error) throw error;
+
+        showToast("✅ تم حذف البند بنجاح", "success");
+        await loadChecklistItems();
+        await loadChecklistReport();
+        
+        // Log audit log
+        await supabaseClient.from('catalog_audit_logs').insert({
+          user_email: currentUser.email,
+          action_type: 'CHECKLIST_ITEM_DELETE',
+          details: `Deleted daily checklist item ID: ${itemId}`
+        });
+
+      } catch (err) {
+        console.error("Failed to delete checklist item:", err);
+        showToast("❌ فشل حذف البند", "error");
+      }
+    }
+
+    async function populateReportShowroomsFilter() {
+      const select = document.getElementById('checklistReportMall');
+      if (!select) return;
+
+      try {
+        // Fetch all active showrooms from profiles (role = user)
+        const { data: profiles, error } = await supabaseClient
+          .from('profiles')
+          .select('mall')
+          .eq('role', 'user')
+          .order('mall', { ascending: true });
+
+        if (error) throw error;
+
+        // Extract unique showroom names
+        const showrooms = [...new Set(profiles.map(p => p.mall).filter(Boolean))];
+        reportShowroomsList = showrooms;
+
+        select.innerHTML = '';
+
+        // If admin/general manager, add "All" option
+        const isGeneralManager = (currentUserRole === 'manager' && (currentUser.email === 'm.hamadon@orangebedbath.com' || currentUser.email === 'rama@orangebedbath.com'));
+        const isSuperAdmin = (currentUserRole === 'admin' || currentUserRole === 'maintenance_admin' || currentUser.email === 'alaa.wafae@orangebedbath.com');
+        
+        if (isSuperAdmin || isGeneralManager) {
+          const opt = document.createElement('option');
+          opt.value = 'all';
+          opt.textContent = 'كل المعارض';
+          select.appendChild(opt);
+
+          showrooms.forEach(mall => {
+            const o = document.createElement('option');
+            o.value = mall;
+            o.textContent = mall;
+            select.appendChild(o);
+          });
+        } else {
+          // It's a regional manager. Only show their managed outlets.
+          const managed = showrooms.filter(mall => userManagedOutlets.includes(mall));
+          
+          const opt = document.createElement('option');
+          opt.value = 'all';
+          opt.textContent = 'كل المعارض التابعة لي';
+          select.appendChild(opt);
+
+          managed.forEach(mall => {
+            const o = document.createElement('option');
+            o.value = mall;
+            o.textContent = mall;
+            select.appendChild(o);
+          });
+        }
+
+      } catch (err) {
+        console.error("Failed to populate showroom filter:", err);
+      }
+    }
+
+    async function loadChecklistReport() {
+      const tbody = document.getElementById('checklistReportTableBody');
+      const dateVal = document.getElementById('checklistReportDate').value;
+      const mallVal = document.getElementById('checklistReportMall').value;
+
+      if (!tbody) return;
+      if (!dateVal) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">الرجاء تحديد التاريخ...</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل سجلات التفقد...</td></tr>';
+
+      try {
+        // 1. Fetch checklist items
+        const { data: items } = await supabaseClient
+          .from('catalog_checklist_items')
+          .select('*')
+          .order('id', { ascending: true });
+
+        const currentItems = items || [];
+        if (currentItems.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:gray;">لا توجد بنود تفقد حالياً.</td></tr>';
+          return;
+        }
+
+        // 2. Fetch logs for selected date
+        let query = supabaseClient
+          .from('catalog_checklist_logs')
+          .select('*')
+          .eq('checked_date', dateVal);
+
+        const { data: logs, error: logsErr } = await query;
+        if (logsErr) throw logsErr;
+
+        const logsMap = {}; // key: mall_name + "_" + item_id
+        if (logs) {
+          logs.forEach(log => {
+            logsMap[log.mall + "_" + log.item_id] = log;
+          });
+        }
+
+        // 3. Determine target showrooms list based on filter and user permissions
+        let targetShowrooms = [];
+        const isGeneralManager = (currentUserRole === 'manager' && (currentUser.email === 'm.hamadon@orangebedbath.com' || currentUser.email === 'rama@orangebedbath.com'));
+        const isSuperAdmin = (currentUserRole === 'admin' || currentUserRole === 'maintenance_admin' || currentUser.email === 'alaa.wafae@orangebedbath.com');
+
+        if (mallVal === 'all') {
+          if (isSuperAdmin || isGeneralManager) {
+            targetShowrooms = reportShowroomsList;
+          } else {
+            targetShowrooms = reportShowroomsList.filter(mall => userManagedOutlets.includes(mall));
+          }
+        } else {
+          targetShowrooms = [mallVal];
+        }
+
+        if (targetShowrooms.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:gray;">لا توجد معارض لعرضها.</td></tr>';
+          return;
+        }
+
+        // Build grid rows
+        let rowsHtml = '';
+        targetShowrooms.forEach(mall => {
+          currentItems.forEach(item => {
+            const logKey = mall + "_" + item.id;
+            const log = logsMap[logKey];
+            const isChecked = !!log;
+
+            let statusCell = `<span class="badge" style="background:#fee2e2; color:#ef4444; font-weight:bold; font-size:0.85em; padding:4px 8px; border-radius:12px;">❌ لم يتم التفقد</span>`;
+            let timeCell = '—';
+            let emailCell = '—';
+
+            if (isChecked) {
+              statusCell = `<span class="badge" style="background:#d1fae5; color:#059669; font-weight:bold; font-size:0.85em; padding:4px 8px; border-radius:12px;">✅ تم التفقد</span>`;
+              
+              const dt = new Date(log.checked_at);
+              timeCell = dt.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+              });
+              
+              emailCell = `<span style="font-family: monospace; font-size: 0.9em; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${log.email}</span>`;
+            }
+
+            rowsHtml += `
+              <tr>
+                <td style="font-weight:bold; color:var(--text-main);">${mall}</td>
+                <td style="font-weight:500;">${item.text}</td>
+                <td style="text-align:center;">${statusCell}</td>
+                <td style="text-align:center; font-weight:bold; color:var(--primary);">${timeCell}</td>
+                <td>${emailCell}</td>
+              </tr>
+            `;
+          });
+        });
+
+        tbody.innerHTML = rowsHtml;
+
+      } catch (err) {
+        console.error("Failed to build checklist report:", err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:red;">❌ فشل تحميل التقرير...</td></tr>';
       }
     }
 

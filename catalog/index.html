@@ -791,6 +791,7 @@
       <button id="customProductBtn" onclick="openCustomProductModal()" class="btn-gray">➕ منتج غير
         موجود</button>
       <a id="myOrdersBtn" href="outlet-orders-supabase.html" class="btn-info" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--border-radius-sm); font-weight:bold; font-size:0.95em; font-family:var(--font-family);">📋 طلباتي السابقة</a>
+      <button id="checklistBtn" onclick="openChecklistModal()" class="btn-success" style="display:none; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--border-radius-sm); font-weight:bold; font-size:0.95em; font-family:var(--font-family);">✅ قائمة التفقد اليومية</button>
       <a id="maintenanceBtn" href="maintenance.html" class="btn-danger" style="text-decoration:none; display:none; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--border-radius-sm); font-weight:bold; font-size:0.95em; font-family:var(--font-family);">🔧 طلبات الصيانة</a>
       <button id="loginBtn" onclick="login()" class="btn-outline">🔑 تسجيل الدخول</button>
     </div>
@@ -927,6 +928,66 @@
         }
         .extra-card-qty input:focus {
           background: #ffeaa7;
+        }
+
+        /* Checklist Styles */
+        .checklist-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 18px;
+          background: #fafafa;
+          border: 1px solid var(--border-color);
+          border-radius: var(--border-radius-sm);
+          margin-bottom: 12px;
+          transition: var(--transition);
+          cursor: pointer;
+        }
+        .checklist-item:hover {
+          background: var(--primary-light);
+          border-color: rgba(242, 101, 34, 0.3);
+          transform: translateY(-1px);
+        }
+        .checklist-item.checked {
+          background: rgba(39, 174, 96, 0.05);
+          border-color: rgba(39, 174, 96, 0.3);
+        }
+        .checklist-item-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .checklist-checkbox-wrapper {
+          position: relative;
+          width: 22px;
+          height: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .checklist-checkbox-wrapper input[type="checkbox"] {
+          width: 100%;
+          height: 100%;
+          cursor: pointer;
+          accent-color: var(--accent);
+        }
+        .checklist-text {
+          font-size: 1.05rem;
+          font-weight: 500;
+          color: var(--text-main);
+          transition: var(--transition);
+        }
+        .checklist-item.checked .checklist-text {
+          color: var(--text-muted);
+          text-decoration: line-through;
+        }
+        .checklist-meta {
+          font-size: 0.8em;
+          color: var(--accent);
+          background: rgba(39, 174, 96, 0.1);
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-weight: bold;
         }
       </style>
 
@@ -1715,9 +1776,14 @@
             }
           }
 
+          const checklistBtn = document.getElementById('checklistBtn');
+          if (checklistBtn) checklistBtn.style.display = (userRole === 'user' && userMall) ? 'inline-flex' : 'none';
+
           renderProducts();
           resetLogoutTimer();
         } else {
+          const checklistBtn = document.getElementById('checklistBtn');
+          if (checklistBtn) checklistBtn.style.display = 'none';
           cart = {};
           updateCartBadge();
           userWarehouse = "";
@@ -1952,7 +2018,7 @@
       if (userInfo) userInfo.textContent = 'وضع التصفح (زائر)';
 
       // Hide User Controls
-      const hideIds = ['sendOrderBtn', 'crossOutletSearchBtn', 'customProductBtn', 'myOrdersBtn'];
+      const hideIds = ['sendOrderBtn', 'crossOutletSearchBtn', 'customProductBtn', 'myOrdersBtn', 'checklistBtn'];
       hideIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -2567,8 +2633,8 @@
     function closeProductModal() { document.getElementById('productModal').style.display = 'none'; }
     document.getElementById('productModal').addEventListener('click', function (e) { if (e.target === this) closeProductModal(); });
 
-    const _closeableModals = ['productModal', 'orderModal', 'extrasModal', 'customProductModal', 'guestExportModal', 'printBarcodeModal', 'loginModal'];
-    const _overlayCloseModals = ['productModal', 'customProductModal', 'guestExportModal', 'loginModal'];
+    const _closeableModals = ['productModal', 'orderModal', 'extrasModal', 'customProductModal', 'guestExportModal', 'printBarcodeModal', 'loginModal', 'checklistModal'];
+    const _overlayCloseModals = ['productModal', 'customProductModal', 'guestExportModal', 'loginModal', 'checklistModal'];
     function closeAllModals() {
       _closeableModals.forEach(id => {
         const el = document.getElementById(id);
@@ -3126,6 +3192,204 @@
       </div>
     </div>
   </div>
+
+  <!-- مودال قائمة التفقد اليومية -->
+  <div id="checklistModal" class="modal-overlay" style="z-index: 10090;">
+    <div class="modal-content" style="max-width: 500px; text-align: right; direction: rtl;">
+      <button class="modal-close" onclick="closeChecklistModal()">×</button>
+      <h3 style="color: var(--primary); margin-bottom: 20px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+        🔍 قائمة التفقد اليومية - <span id="checklistMallName">المعرض</span>
+      </h3>
+      
+      <div id="checklistLoading" style="text-align: center; padding: 20px; color: var(--text-muted);">
+        <span style="font-size: 24px; color: var(--primary);">⏳</span>
+        <p style="margin-top: 10px;">جاري تحميل البنود وسجلات اليوم...</p>
+      </div>
+
+      <div id="checklistItemsContainer" style="display: none; max-height: 400px; overflow-y: auto; padding: 5px;">
+        <!-- Checklist items will be injected here -->
+      </div>
+      
+      <div id="checklistEmptyState" style="display: none; text-align: center; padding: 30px; color: var(--text-muted);">
+        <span style="font-size: 40px; color: var(--text-muted); margin-bottom: 10px;">ℹ️</span>
+        <p>لا توجد بنود تفقد نشطة حالياً. يرجى مراجعة الإدارة.</p>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px; display: flex; justify-content: flex-end;">
+        <button onclick="closeChecklistModal()" class="btn-primary" style="padding: 10px 24px; font-weight: bold;">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === DAILY CHECKLIST LOGIC ===
+    let checklistItems = [];
+    let todayLogs = {};
+
+    function openChecklistModal() {
+      if (!currentUser || !userMall) {
+        showToast("يرجى تسجيل الدخول أولاً", "warning");
+        return;
+      }
+      
+      document.getElementById('checklistMallName').textContent = userMall;
+      document.getElementById('checklistLoading').style.display = 'block';
+      document.getElementById('checklistItemsContainer').style.display = 'none';
+      document.getElementById('checklistEmptyState').style.display = 'none';
+      document.getElementById('checklistModal').style.display = 'flex';
+      
+      loadChecklistData();
+    }
+
+    function closeChecklistModal() {
+      document.getElementById('checklistModal').style.display = 'none';
+    }
+
+    async function loadChecklistData() {
+      try {
+        // 1. Fetch checklist items
+        const { data: items, error: itemsErr } = await supabaseClient
+          .from('catalog_checklist_items')
+          .select('*')
+          .order('id', { ascending: true });
+        
+        if (itemsErr) throw itemsErr;
+        checklistItems = items || [];
+
+        if (checklistItems.length === 0) {
+          document.getElementById('checklistLoading').style.display = 'none';
+          document.getElementById('checklistEmptyState').style.display = 'block';
+          return;
+        }
+
+        // 2. Fetch today's logs for this showroom (based on Saudi Arabia local date YYYY-MM-DD)
+        const localDateStr = getLocalDateString();
+        
+        const { data: logs, error: logsErr } = await supabaseClient
+          .from('catalog_checklist_logs')
+          .select('*')
+          .eq('mall', userMall)
+          .eq('checked_date', localDateStr);
+          
+        if (logsErr) throw logsErr;
+        
+        todayLogs = {};
+        if (logs) {
+          logs.forEach(log => {
+            todayLogs[log.item_id] = log;
+          });
+        }
+        
+        renderChecklist();
+      } catch (err) {
+        console.error("Failed to load checklist data:", err);
+        showToast("حدث خطأ أثناء تحميل قائمة التفقد", "error");
+        closeChecklistModal();
+      }
+    }
+
+    function getLocalDateString() {
+      const d = new Date();
+      const offset = d.getTimezoneOffset();
+      const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+      return localTime.toISOString().split('T')[0];
+    }
+
+    function renderChecklist() {
+      const container = document.getElementById('checklistItemsContainer');
+      container.innerHTML = '';
+      
+      checklistItems.forEach(item => {
+        const log = todayLogs[item.id];
+        const isChecked = !!log;
+        const checkedTimeStr = isChecked ? formatCheckedTime(log.checked_at) : '';
+        
+        const itemEl = document.createElement('div');
+        itemEl.className = `checklist-item ${isChecked ? 'checked' : ''}`;
+        
+        itemEl.onclick = (e) => {
+          if (e.target.tagName === 'INPUT') return;
+          const checkbox = itemEl.querySelector('input[type="checkbox"]');
+          checkbox.checked = !checkbox.checked;
+          handleChecklistToggle(item.id, checkbox.checked, log ? log.id : null);
+        };
+        
+        itemEl.innerHTML = `
+          <div class="checklist-item-right">
+            <div class="checklist-checkbox-wrapper">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                     onchange="handleChecklistToggle(${item.id}, this.checked, ${log ? log.id : null})">
+            </div>
+            <span class="checklist-text">${item.text}</span>
+          </div>
+          ${isChecked ? `<span class="checklist-meta">✓ تفقد ${checkedTimeStr}</span>` : ''}
+        `;
+        
+        container.appendChild(itemEl);
+      });
+      
+      document.getElementById('checklistLoading').style.display = 'none';
+      container.style.display = 'block';
+    }
+
+    function formatCheckedTime(timestampStr) {
+      if (!timestampStr) return '';
+      const dt = new Date(timestampStr);
+      return dt.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    async function handleChecklistToggle(itemId, isChecked, logId) {
+      if (!currentUser || !userMall) return;
+      
+      document.getElementById('checklistLoading').style.display = 'block';
+      document.getElementById('checklistItemsContainer').style.display = 'none';
+      
+      try {
+        if (isChecked) {
+          const localDateStr = getLocalDateString();
+          const { error } = await supabaseClient
+            .from('catalog_checklist_logs')
+            .insert({
+              item_id: itemId,
+              mall: userMall,
+              email: currentUser.email,
+              checked_date: localDateStr
+            });
+            
+          if (error) throw error;
+          showToast("تم حفظ عملية التفقد بنجاح", "success");
+        } else {
+          if (!logId) {
+            const localDateStr = getLocalDateString();
+            const { error } = await supabaseClient
+              .from('catalog_checklist_logs')
+              .delete()
+              .eq('item_id', itemId)
+              .eq('mall', userMall)
+              .eq('checked_date', localDateStr);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient
+              .from('catalog_checklist_logs')
+              .delete()
+              .eq('id', logId);
+            if (error) throw error;
+          }
+          showToast("تم إلغاء التفقد", "info");
+        }
+        
+        await loadChecklistData();
+      } catch (err) {
+        console.error("Checklist toggle failed:", err);
+        showToast("فشلت عملية حفظ التعديل", "error");
+        await loadChecklistData();
+      }
+    }
+  </script>
 
   <!-- نافذة تسجيل الدخول -->
   <div id="loginModal" class="modal-overlay" style="z-index: 11000;">
