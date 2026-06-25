@@ -602,28 +602,45 @@
 
     // Load Company Logo
     function loadLogo() {
-      const logoImg = new Image();
-      logoImg.onload = function() {
-        const canvas = document.createElement('canvas');
-        canvas.width = logoImg.naturalWidth || logoImg.width;
-        canvas.height = logoImg.naturalHeight || logoImg.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(logoImg, 0, 0);
-        try {
-          logoBase64 = canvas.toDataURL('image/png');
+      fetch('../../logo.png')
+        .then(response => {
+          if (!response.ok) throw new Error("Logo file not found");
+          return response.blob();
+        })
+        .then(blob => {
+          const reader = new FileReader();
+          reader.onloadend = function() {
+            logoBase64 = reader.result;
+            const previewImg = document.getElementById('sheetLogoImg');
+            if (previewImg) {
+              previewImg.src = logoBase64;
+              previewImg.style.display = 'block';
+            }
+            updatePreview();
+          };
+          reader.readAsDataURL(blob);
+        })
+        .catch(err => {
+          console.warn("Could not load logo.png using fetch:", err);
+          // Fallback to direct src loading so it at least displays in the mockup
           const previewImg = document.getElementById('sheetLogoImg');
-          previewImg.src = logoBase64;
-          previewImg.style.display = 'block';
-          updatePreview();
-        } catch (e) {
-          console.error("Logo toDataURL failed:", e);
-        }
-      };
-      logoImg.onerror = function() {
-        console.warn("Could not load logo.png from relative path.");
-      };
-      // Workspace root path: logo.png is two levels up from catalog folder
-      logoImg.src = '../../logo.png';
+          if (previewImg) {
+            previewImg.src = '../../logo.png';
+            previewImg.style.display = 'block';
+            previewImg.onload = function() {
+              const canvas = document.createElement('canvas');
+              canvas.width = previewImg.naturalWidth || previewImg.width;
+              canvas.height = previewImg.naturalHeight || previewImg.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(previewImg, 0, 0);
+              try {
+                logoBase64 = canvas.toDataURL('image/png');
+              } catch (e) {
+                console.warn("Canvas toDataURL fallback failed:", e);
+              }
+            };
+          }
+        });
     }
 
     async function fetchCatalog() {
@@ -979,8 +996,8 @@
       const totalPiecesRow = document.createElement('tr');
       if (currentLang === 'ar') {
         totalPiecesRow.innerHTML = `
-          <td colspan="2" class="text-center fw-bold">${totalQty}</td>
           <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.totalPieces}</td>
+          <td colspan="2" class="text-center fw-bold">${totalQty}</td>
         `;
       } else {
         totalPiecesRow.innerHTML = `
@@ -994,8 +1011,8 @@
       const exclVatRow = document.createElement('tr');
       if (currentLang === 'ar') {
         exclVatRow.innerHTML = `
-          <td colspan="2" class="text-center fw-bold">${exclVat.toFixed(2)}</td>
           <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.totalExclVat}</td>
+          <td colspan="2" class="text-center fw-bold">${exclVat.toFixed(2)}</td>
         `;
       } else {
         exclVatRow.innerHTML = `
@@ -1008,8 +1025,8 @@
       const vatRow = document.createElement('tr');
       if (currentLang === 'ar') {
         vatRow.innerHTML = `
-          <td colspan="2" class="text-center fw-bold">${vat.toFixed(2)}</td>
           <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.vatAmount}</td>
+          <td colspan="2" class="text-center fw-bold">${vat.toFixed(2)}</td>
         `;
       } else {
         vatRow.innerHTML = `
@@ -1022,8 +1039,8 @@
       const inclVatRow = document.createElement('tr');
       if (currentLang === 'ar') {
         inclVatRow.innerHTML = `
-          <td colspan="2" class="text-center fw-bold bg-light">${totalInclVat.toFixed(2)}</td>
           <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start bg-light">${t.totalInclVat}</td>
+          <td colspan="2" class="text-center fw-bold bg-light">${totalInclVat.toFixed(2)}</td>
         `;
       } else {
         inclVatRow.innerHTML = `
@@ -1118,14 +1135,14 @@
         if (typeof amiriFontBase64 !== 'undefined') {
           doc.addFileToVFS(fontFileName, amiriFontBase64);
           doc.addFont(fontFileName, fontName, "normal");
-          doc.setFont(fontName);
+          doc.setFont(fontName, "normal");
           hasFont = true;
         } else {
-          doc.setFont("helvetica");
+          doc.setFont("helvetica", "normal");
         }
       } catch (e) {
         console.error("Amiri Font Loading Error:", e);
-        doc.setFont("helvetica");
+        doc.setFont("helvetica", "normal");
       }
 
       const t = dict[currentLang];
@@ -1135,37 +1152,30 @@
       const textDark = '#000000';
       const borderDark = '#000000';
 
-      // 1. Drawing Header (Logo + Company Name)
+      // 1. Drawing Header (Logo on Left, Company Name on Right)
       doc.setTextColor(textDark);
-      doc.setFontSize(14);
       
       if (logoBase64) {
-        if (isAr) {
-          // Logo on the right
-          doc.addImage(logoBase64, 'PNG', pageWidth - 45, 10, 30, 12);
-          // Company name to the left of the logo
-          doc.text(t.sheetHeaderComp, pageWidth - 48, 17, { align: 'right' });
-        } else {
-          // Logo on the left
-          doc.addImage(logoBase64, 'PNG', 15, 10, 30, 12);
-          // Company name to the right of the logo
-          doc.text(t.sheetHeaderComp, 48, 17, { align: 'left' });
-        }
-      } else {
-        // Fallback text if logo is not loaded
-        if (isAr) {
-          doc.text(t.sheetHeaderComp, pageWidth - 15, 17, { align: 'right' });
-        } else {
-          doc.text(t.sheetHeaderComp, 15, 17, { align: 'left' });
-        }
+        // Logo is always on the left
+        doc.addImage(logoBase64, 'PNG', 15, 10, 30, 12);
       }
 
-      doc.setFontSize(10);
-      doc.setTextColor('#888888');
+      // Company Name and Subtitle placement based on language
+      doc.setFontSize(14);
       if (isAr) {
-        doc.text(t.sheetHeaderDoc, 15, 17, { align: 'left' });
+        // Arabic name on the right
+        doc.text("شركة زهر البرتقال للتجارة", pageWidth - 15, 17, { align: 'right' });
+        // Subtitle on the left (below the logo position)
+        doc.setFontSize(10);
+        doc.setTextColor('#888888');
+        doc.text("orange bed bath", 15, 25, { align: 'left' });
       } else {
-        doc.text(t.sheetHeaderDoc, pageWidth - 15, 17, { align: 'right' });
+        // English company name on the left next to logo
+        doc.text("Zahr Al-Orange Trading Co.", logoBase64 ? 48 : 15, 17, { align: 'left' });
+        // Subtitle on the right
+        doc.setFontSize(10);
+        doc.setTextColor('#888888');
+        doc.text("orange bed bath", pageWidth - 15, 17, { align: 'right' });
       }
 
       // Document Title Box (عرض سعر)
@@ -1176,8 +1186,9 @@
       
       const titleWidth = 40;
       const titleX = (pageWidth - titleWidth) / 2;
-      doc.rect(titleX, 23, titleWidth, 10);
-      doc.text(t.sheetDocTitle, pageWidth / 2, 30, { align: 'center' });
+      doc.rect(titleX, 28, titleWidth, 10);
+      doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
+      doc.text(t.sheetDocTitle, pageWidth / 2, 35, { align: 'center' });
 
       // 2. Customer Meta Grid (Row 10 - 12)
       doc.setFontSize(11);
@@ -1281,7 +1292,7 @@
         },
         headStyles: {
           fillColor: [242, 242, 242],
-          fontStyle: 'bold',
+          fontStyle: 'normal',
           halign: 'center',
           textColor: [0, 0, 0]
         },
@@ -1375,6 +1386,9 @@
       // Generate Table
       doc.autoTable(tableStyleOptions);
       
+      // Reset font style to normal immediately to avoid autoTable font style persistence
+      doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
+      
       // Calculate final Y position after table
       let finalY = doc.lastAutoTable.finalY + 5;
 
@@ -1387,7 +1401,7 @@
       const renderSummaryRow = (label, val, y) => {
         doc.setDrawColor(0);
         doc.rect(summaryBoxX, y, summaryBoxWidth, 6);
-        doc.setFont(hasFont ? fontName : 'helvetica');
+        doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
         
         if (isAr) {
           // Label on right, value on left
@@ -1407,7 +1421,7 @@
       // Double border/highlighted box for Grand Total
       doc.setDrawColor(0);
       doc.rect(summaryBoxX, finalY + 18, summaryBoxWidth, 6);
-      doc.setFont(hasFont ? fontName : 'helvetica');
+      doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
       if (isAr) {
         doc.text(t.totalInclVat, summaryBoxX + summaryBoxWidth - 2, finalY + 22.5, { align: 'right' });
         doc.text(totalInclVat.toFixed(2), summaryBoxX + 2, finalY + 22.5, { align: 'left' });
@@ -1417,41 +1431,71 @@
       }
 
       // Check if page height exceeds. If so, add new page for signature/footers
-      if (finalY + 50 > pageHeight - 20) {
+      const footerTableHeight = 33;
+      if (finalY + footerTableHeight + 15 > pageHeight - 15) {
         doc.addPage();
         finalY = 20;
       } else {
-        finalY += 30;
+        finalY += 10;
       }
 
-      // 5. Signature Section
-      doc.setFontSize(10);
-      doc.setFont(hasFont ? fontName : 'helvetica');
-      if (isAr) {
-        doc.text(t.sheetFooterMsg, pageWidth - 15, finalY);
-        doc.setDrawColor(0);
-        doc.line(15, finalY + 5, 55, finalY + 5);
-        doc.text(t.sheetSignature, 35, finalY + 10, { align: 'center' });
-      } else {
-        doc.text(t.sheetFooterMsg, 15, finalY);
-        doc.setDrawColor(0);
-        doc.line(pageWidth - 55, finalY + 5, pageWidth - 15, finalY + 5);
-        doc.text(t.sheetSignature, pageWidth - 35, finalY + 10, { align: 'center' });
-      }
-
-      // 6. Address / Contact footer details (Row 41 & 42)
-      doc.setFontSize(8.5);
-      doc.setFont(hasFont ? fontName : 'helvetica');
-      doc.setTextColor('#555555');
+      // Draw Footer Table
+      const xStart = 15;
+      const col1Width = 55;
+      const col2Width = 75;
+      const col3Width = 50;
+      const totalTableWidth = col1Width + col2Width + col3Width; // 180mm
       
-      const footerY = pageHeight - 22;
-      doc.setLineWidth(0.1);
-      doc.setDrawColor(200);
-      doc.line(15, footerY - 2, pageWidth - 15, footerY - 2);
-
-      doc.text(t.sheetFooterCR, 15, footerY);
-      doc.text(t.sheetFooterBox, pageWidth - 15, footerY, { align: 'right' });
-      doc.text(t.sheetFooterAddr, pageWidth / 2, footerY + 6, { align: 'center' });
+      const r1Height = 8;
+      const r2Height = 16;
+      const r3Height = 8;
+      
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.2);
+      
+      // --- Row 1 ---
+      const y1 = finalY;
+      // Col 1: Company Name
+      doc.rect(xStart, y1, col1Width, r1Height);
+      doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
+      doc.setFontSize(9);
+      if (isAr) {
+        doc.text("شركة زهر البرتقال للتجارة", xStart + col1Width / 2, y1 + 5, { align: 'center' });
+      } else {
+        doc.text("Zahr Al-Orange Trading Co.", xStart + col1Width / 2, y1 + 5, { align: 'center' });
+      }
+      
+      // Col 2: Offer Message
+      doc.rect(xStart + col1Width, y1, col2Width, r1Height);
+      doc.text(t.sheetFooterMsg, xStart + col1Width + col2Width / 2, y1 + 5, { align: 'center' });
+      
+      // Col 3: Signature Label
+      doc.rect(xStart + col1Width + col2Width, y1, col3Width, r1Height);
+      doc.text(isAr ? "توقيع المبيعات:" : "Sales Signature:", xStart + col1Width + col2Width + 5, y1 + 5, { align: 'left' });
+      
+      // --- Row 2 ---
+      const y2 = y1 + r1Height;
+      // Col 1: Commercial Register
+      doc.rect(xStart, y2, col1Width, r2Height);
+      doc.text(t.sheetFooterCR, xStart + col1Width / 2, y2 + 9, { align: 'center' });
+      
+      // Col 2: Contact info (P.O.Box, Tel, Fax)
+      doc.rect(xStart + col1Width, y2, col2Width, r2Height);
+      doc.setFont('helvetica', 'normal'); // Numbers/English info in Helvetica
+      doc.setFontSize(8.5);
+      doc.text("P.O.Box 118961 Jeddah 21312 KSA", xStart + col1Width + col2Width / 2, y2 + 4.5, { align: 'center' });
+      doc.text("Tel: +966 12 6658899", xStart + col1Width + col2Width / 2, y2 + 9, { align: 'center' });
+      doc.text("Fax: +966 12 6659469", xStart + col1Width + col2Width / 2, y2 + 13.5, { align: 'center' });
+      
+      // Col 3: Signature area (empty box)
+      doc.rect(xStart + col1Width + col2Width, y2, col3Width, r2Height);
+      
+      // --- Row 3 (Address) ---
+      const y3 = y2 + r2Height;
+      doc.rect(xStart, y3, totalTableWidth, r3Height);
+      doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(t.sheetFooterAddr, xStart + totalTableWidth / 2, y3 + 5.5, { align: 'center' });
 
       // Save PDF document
       const filename = `Price_Offer_${name.replace(/\s+/g, '_')}_${getLocalDateString()}.pdf`;
