@@ -7,6 +7,7 @@
             window.location.replace('http://dashboard.orangebedbath.com' + window.location.pathname.replace('/orange-dashboard', ''));
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orange | Executive Dashboard</title>
@@ -1856,6 +1857,57 @@
             </div>
         </div>
 
+        <!-- Row: Checklist Status Dashboard Panel (Only visible for managers/admins) -->
+        <div class="row mt-4" id="dashboardChecklistPanel" style="display: none;">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">📋 حالة تفقد المعارض اليومي (Today's Checklist Status)</h5>
+                    <a href="catalog/checklist-status.html" class="btn btn-outline-warning btn-sm fw-bold" style="border-radius:20px; font-size:0.85rem;"><i class="fas fa-clipboard-list"></i> تقرير تفصيلي كامل</a>
+                </div>
+                <div class="card border-0 shadow-sm p-3">
+                    <!-- Filters Row -->
+                    <div class="row g-2 mb-3 align-items-center p-2 bg-light rounded" id="checklistFiltersRow" style="display: none; margin-left: 0; margin-right: 0;">
+                        <div class="col-md-auto d-flex align-items-center gap-1">
+                            <span class="fw-bold small text-muted text-nowrap"><i class="fas fa-filter text-primary"></i> تصفية المعارض:</span>
+                        </div>
+                        <!-- Region Filter (Admin/Sales Manager only) -->
+                        <div class="col-md-3" id="checklistRegionFilterCol" style="display: none;">
+                            <select id="checklistRegionFilter" class="form-select form-select-sm" onchange="filterDashboardChecklist()">
+                                <option value="all">كل المناطق / المشرفين</option>
+                            </select>
+                        </div>
+                        <!-- Showroom Filter -->
+                        <div class="col-md-3">
+                            <select id="checklistShowroomFilter" class="form-select form-select-sm" onchange="filterDashboardChecklist()">
+                                <option value="all">كل المعارض</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="dashboardChecklistLoading" class="text-center py-4" style="color: var(--bs-secondary);">
+                        <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;"></div>
+                        <p class="mt-2 mb-0">جاري تحميل حالة التفقد اليومي...</p>
+                    </div>
+                    <div id="dashboardChecklistContent" style="display: none;">
+                        <div class="table-responsive" style="max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+                            <table class="table table-hover align-middle mb-0 text-right" style="direction: rtl; text-align: right;">
+                                <thead class="table-light sticky-top" style="position: sticky; top: 0; background: #f8f9fa; z-index: 5;">
+                                    <tr>
+                                        <th style="text-align: right; font-size: 0.85rem; font-weight: 700; color: #555; padding: 12px 15px;">المعرض</th>
+                                        <th style="text-align: center; font-size: 0.85rem; font-weight: 700; color: #555; width: 180px;">حالة التفقد اليومي</th>
+                                        <th style="text-align: center; font-size: 0.85rem; font-weight: 700; color: #555; width: 150px;">وقت التفقد</th>
+                                        <th style="text-align: center; font-size: 0.85rem; font-weight: 700; color: #555; width: 120px;">التقرير</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboardChecklistTableBody">
+                                    <!-- Dynamic rows will be injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4">
             <div class="col-12">
@@ -2303,6 +2355,13 @@
                 if (currentUser && (currentUser.role === 'Manager' || currentUser.role === 'Admin' || currentUser.name === 'Sales Manager')) {
                     const btnChecklist = document.getElementById('dashboardChecklistBtn');
                     if (btnChecklist) btnChecklist.style.display = 'inline-flex';
+
+                    // Show and Load the Checklist Panel on Main Dashboard
+                    const panel = document.getElementById('dashboardChecklistPanel');
+                    if (panel) {
+                        panel.style.display = 'block';
+                        loadDashboardChecklist();
+                    }
                 }
 
                 if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
@@ -5611,6 +5670,240 @@
             modalInfo.show();
         }
 
+        async function loadDashboardChecklist() {
+            const tableBody = document.getElementById('dashboardChecklistTableBody');
+            const loading = document.getElementById('dashboardChecklistLoading');
+            const content = document.getElementById('dashboardChecklistContent');
+            if (!tableBody || !loading || !content) return;
+
+            try {
+                const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+                const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+                
+                let supabaseClient;
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } else {
+                    console.error("Supabase library not loaded.");
+                    return;
+                }
+
+                // Silent login in the background if no active session or if logged in as another user
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session || session.user.email !== 'supervisor.reader@orangebedbath.com') {
+                    await supabaseClient.auth.signInWithPassword({
+                        email: "supervisor.reader@orangebedbath.com",
+                        password: "OrangeReader2026!"
+                    });
+                }
+
+                // Determine target showrooms based on dashboard session user
+                let targetShowrooms = [];
+                const isSuperAdmin = (currentUser.role === 'Admin' || currentUser.name === 'Sales Manager');
+
+                // Fetch manager profiles to build manager -> showroom mapping
+                const { data: managerProfiles, error: mErr } = await supabaseClient
+                    .from('profiles')
+                    .select('mall, managed_outlets')
+                    .eq('role', 'manager');
+                if (mErr) throw mErr;
+
+                if (isSuperAdmin) {
+                    // Fetch all showroom user profiles from Supabase
+                    const { data: profiles, error: pErr } = await supabaseClient
+                        .from('profiles')
+                        .select('mall')
+                        .eq('role', 'user')
+                        .order('mall', { ascending: true });
+                    if (pErr) throw pErr;
+                    targetShowrooms = [...new Set(profiles.map(p => p.mall).filter(Boolean))];
+                } else {
+                    // Fetch this manager's profile to get managed outlets
+                    const { data: profile, error: pErr } = await supabaseClient
+                        .from('profiles')
+                        .select('managed_outlets')
+                        .eq('mall', currentUser.name)
+                        .eq('role', 'manager')
+                        .maybeSingle();
+                    if (pErr) throw pErr;
+                    targetShowrooms = profile?.managed_outlets || [];
+                }
+
+                if (targetShowrooms.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">لا توجد معارض تابعة لعرضها...</td></tr>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                    return;
+                }
+
+                // Fetch active items and today's logs (corrected timezone)
+                const d = new Date();
+                const offset = d.getTimezoneOffset();
+                const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+                const todayDate = localTime.toISOString().split('T')[0];
+
+                const [itemsRes, logsRes] = await Promise.all([
+                    supabaseClient.from('catalog_checklist_items').select('*').order('id', { ascending: true }),
+                    supabaseClient.from('catalog_checklist_logs').select('*').eq('checked_date', todayDate)
+                ]);
+
+                if (itemsRes.error) throw itemsRes.error;
+                if (logsRes.error) throw logsRes.error;
+
+                const activeItems = itemsRes.data || [];
+                const logs = logsRes.data || [];
+
+                if (activeItems.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">لا توجد بنود تفقد نشطة حالياً في النظام...</td></tr>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                    return;
+                }
+
+                const logsMap = {};
+                logs.forEach(log => {
+                    logsMap[log.mall + "_" + log.item_id] = log;
+                });
+
+                // Build showroom to manager map
+                const showroomToManagerMap = {};
+                if (managerProfiles) {
+                    managerProfiles.forEach(mgr => {
+                        const outlets = mgr.managed_outlets || [];
+                        outlets.forEach(outlet => {
+                            showroomToManagerMap[outlet] = mgr.mall;
+                        });
+                    });
+                }
+
+                // Save to window cache
+                window.checklistCache = {
+                    showrooms: targetShowrooms.map(mall => ({
+                        name: mall,
+                        managerName: showroomToManagerMap[mall] || 'أخرى'
+                    })),
+                    activeItems: activeItems,
+                    logsMap: logsMap
+                };
+
+                // Populate Filters
+                const filtersRow = document.getElementById('checklistFiltersRow');
+                const regionFilterCol = document.getElementById('checklistRegionFilterCol');
+                const regionFilter = document.getElementById('checklistRegionFilter');
+                const showroomFilter = document.getElementById('checklistShowroomFilter');
+
+                if (regionFilter) regionFilter.innerHTML = '<option value="all">كل المناطق / المشرفين</option>';
+                if (showroomFilter) showroomFilter.innerHTML = '<option value="all">كل المعارض</option>';
+
+                if (isSuperAdmin) {
+                    if (regionFilterCol && regionFilter) {
+                        regionFilterCol.style.display = 'block';
+                        const managers = [...new Set(managerProfiles.map(m => m.mall).filter(Boolean))].sort();
+                        managers.forEach(mgr => {
+                            const opt = document.createElement('option');
+                            opt.value = mgr;
+                            opt.textContent = mgr;
+                            regionFilter.appendChild(opt);
+                        });
+                    }
+                } else {
+                    if (regionFilterCol) regionFilterCol.style.display = 'none';
+                }
+
+                if (showroomFilter) {
+                    targetShowrooms.forEach(mall => {
+                        const opt = document.createElement('option');
+                        opt.value = mall;
+                        opt.textContent = mall;
+                        showroomFilter.appendChild(opt);
+                    });
+                }
+
+                if (filtersRow) filtersRow.style.display = 'flex';
+
+                // Initial render of filtered table
+                filterDashboardChecklist();
+                
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+            } catch (err) {
+                console.error("Failed to load dashboard checklist:", err);
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">⚠️ فشل تحميل تقرير التفقد اليومي من قاعدة البيانات.</td></tr>';
+                loading.style.display = 'none';
+                content.style.display = 'block';
+            }
+        }
+
+        function filterDashboardChecklist() {
+            const regionVal = document.getElementById('checklistRegionFilter')?.value || 'all';
+            const showroomVal = document.getElementById('checklistShowroomFilter')?.value || 'all';
+            const tableBody = document.getElementById('dashboardChecklistTableBody');
+            if (!tableBody || !window.checklistCache) return;
+
+            const { showrooms, activeItems, logsMap } = window.checklistCache;
+            let filteredShowrooms = showrooms;
+
+            if (regionVal !== 'all') {
+                filteredShowrooms = filteredShowrooms.filter(s => s.managerName === regionVal);
+            }
+
+            if (showroomVal !== 'all') {
+                filteredShowrooms = filteredShowrooms.filter(s => s.name === showroomVal);
+            }
+
+            let rowsHtml = '';
+            if (filteredShowrooms.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">لا توجد معارض مطابقة للتصفية...</td></tr>';
+                return;
+            }
+
+            filteredShowrooms.forEach(s => {
+                const showroom = s.name;
+                let checkedCount = 0;
+                let latestTime = null;
+                let latestTimeStr = '';
+                
+                activeItems.forEach(item => {
+                    const log = logsMap[showroom + "_" + item.id];
+                    if (log) {
+                        checkedCount++;
+                        const dt = new Date(log.checked_at);
+                        if (!latestTime || dt > latestTime) {
+                            latestTime = dt;
+                            latestTimeStr = dt.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+                        }
+                    }
+                });
+
+                let statusBadge = '<span class="badge bg-danger-subtle text-danger py-1 px-3" style="font-size:0.8rem; font-weight: 700; min-width: 110px; display: inline-block;">لم يتم التفقد ❌</span>';
+                
+                if (checkedCount === activeItems.length) {
+                    statusBadge = '<span class="badge bg-success-subtle text-success py-1 px-3" style="font-size:0.8rem; font-weight: 700; min-width: 110px; display: inline-block;">مكتمل ✅</span>';
+                } else if (checkedCount > 0) {
+                    statusBadge = `<span class="badge bg-warning-subtle text-warning-emphasis py-1 px-3" style="font-size:0.8rem; font-weight: 700; min-width: 110px; display: inline-block;">تم ${checkedCount}/${activeItems.length} ⚠️</span>`;
+                }
+
+                let timeDisplay = latestTimeStr ? latestTimeStr : '—';
+
+                rowsHtml += `
+                    <tr>
+                        <td class="fw-bold" style="padding: 12px 15px; font-size: 0.9rem; color: #2c3e50; text-align: right;">${showroom}</td>
+                        <td style="text-align: center;">${statusBadge}</td>
+                        <td style="text-align: center; font-weight: bold; color: #555; direction: ltr;">${timeDisplay}</td>
+                        <td style="text-align: center;">
+                            <a href="catalog/checklist-status.html?mall=${encodeURIComponent(showroom)}" class="btn btn-sm btn-link text-primary p-0 fw-bold" style="font-size: 0.85rem; text-decoration: none;">عرض التفاصيل 🔍</a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = rowsHtml;
+        }
     </script>
 
     <!-- Chatbot Floating Button & Speech Bubble -->
