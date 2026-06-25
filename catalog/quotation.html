@@ -385,7 +385,7 @@
             <div class="d-flex justify-content-between align-items-center mb-2" style="direction: ltr;">
               <!-- Left Side: Logo and Subtitle -->
               <div class="d-flex flex-column align-items-start">
-                <img id="sheetLogoImg" src="" style="height: 45px; display: none; margin-bottom: 2px;">
+                <img id="sheetLogoImg" src="" style="height: 65px; display: none; margin-bottom: 4px;">
                 <div class="text-muted fw-bold" style="font-size:0.85em;" id="sheetHeaderDoc">orange bed bath</div>
               </div>
               
@@ -445,32 +445,48 @@
             </table>
 
             <!-- Excel-style Footer Table -->
-            <table class="w-100 mt-auto" style="border: 1px solid #000; border-collapse: collapse; font-size: 0.8em; color: #000; direction: rtl;">
+            <table class="w-100 mt-auto" style="border: 2px solid #000; border-collapse: collapse; font-size: 0.8em; color: #000; direction: inherit;">
               <tr>
-                <td style="border: 1px solid #000; padding: 4px; width: 30%; font-weight: bold; text-align: center;" id="sheetFooterCompName">
+                <td rowspan="3" style="border: 1px solid #000; padding: 6px; width: 30%; font-weight: bold; text-align: center; vertical-align: middle;" id="sheetFooterCompName">
                   شركة زهر البرتقال للتجارة
                 </td>
-                <td style="border: 1px solid #000; padding: 4px; width: 45%; text-align: center; font-weight: bold;" id="sheetFooterMsg">
-                  العرض ساري لمدة 15 يوم من تاريخه
+                <td style="border: 1px solid #000; padding: 6px; width: 40%; font-weight: bold; text-align: center;" id="sheetFooterTotalPiecesLabel">
+                  إجمالي القطع
                 </td>
-                <td style="border: 1px solid #000; padding: 4px; width: 25%; font-weight: bold;" id="sheetFooterSign">
-                  توقيع المبيعات:
+                <td style="border: 1px solid #000; padding: 6px; width: 15%; font-weight: bold; text-align: center;" id="sheetFooterTotalPiecesValue">
+                  0
                 </td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #000; padding: 4px;" id="sheetFooterCR">
-                  رقم السجل التجاري 4030148891
-                </td>
-                <td style="border: 1px solid #000; padding: 4px; text-align: center; direction: ltr;" id="sheetFooterBox">
-                  P.O.Box 118961 Jeddah 21312 KSA<br>
-                  Tel: +966 12 6658899 | Fax: +966 12 6659469
-                </td>
-                <td style="border: 1px solid #000; padding: 4px;">
+                <td style="border: 1px solid #000; padding: 6px; width: 15%;">
                   &nbsp;
                 </td>
               </tr>
               <tr>
-                <td colspan="3" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold;" id="sheetFooterAddr">
+                <td style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold;" id="sheetFooterMsg">
+                  العرض ساري لمدة 15 يوم من تاريخه
+                </td>
+                <td colspan="2" rowspan="2" style="border: 1px solid #000; padding: 6px; text-align: start; vertical-align: top; font-weight: bold; height: 35px;" id="sheetFooterSign">
+                  توقيع المبيعات:
+                </td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #000; padding: 6px;">
+                  &nbsp;
+                </td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle;" id="sheetFooterCR">
+                  رقم السجل التجاري 4030148891
+                </td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center; direction: ltr; font-size: 0.95em;" id="sheetFooterBox">
+                  P.O.Box 118961 Jeddah 21312 KSA<br>
+                  Tel: +966 12 6658899 | Fax: +966 12 6659469
+                </td>
+                <td colspan="2" style="border: 1px solid #000; padding: 6px;">
+                  &nbsp;
+                </td>
+              </tr>
+              <tr>
+                <td colspan="4" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold;" id="sheetFooterAddr">
                   جدة- طريق المدينة النازل حي الروضة سوق جدة الدولي
                 </td>
               </tr>
@@ -600,47 +616,37 @@
       return localTime.toISOString().split('T')[0];
     }
 
-    // Load Company Logo
     function loadLogo() {
-      fetch('../../logo.png')
-        .then(response => {
-          if (!response.ok) throw new Error("Logo file not found");
-          return response.blob();
-        })
-        .then(blob => {
-          const reader = new FileReader();
-          reader.onloadend = function() {
-            logoBase64 = reader.result;
-            const previewImg = document.getElementById('sheetLogoImg');
-            if (previewImg) {
-              previewImg.src = logoBase64;
-              previewImg.style.display = 'block';
-            }
-            updatePreview();
-          };
-          reader.readAsDataURL(blob);
-        })
-        .catch(err => {
-          console.warn("Could not load logo.png using fetch:", err);
-          // Fallback to direct src loading so it at least displays in the mockup
-          const previewImg = document.getElementById('sheetLogoImg');
-          if (previewImg) {
-            previewImg.src = '../../logo.png';
-            previewImg.style.display = 'block';
-            previewImg.onload = function() {
-              const canvas = document.createElement('canvas');
-              canvas.width = previewImg.naturalWidth || previewImg.width;
-              canvas.height = previewImg.naturalHeight || previewImg.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(previewImg, 0, 0);
-              try {
-                logoBase64 = canvas.toDataURL('image/png');
-              } catch (e) {
-                console.warn("Canvas toDataURL fallback failed:", e);
+      const paths = ['logo.png', '../logo.png', '../../logo.png'];
+      const attempt = (idx) => {
+        if (idx >= paths.length) {
+          console.warn("Could not load logo.png from any path");
+          return;
+        }
+        const path = paths[idx];
+        fetch(path)
+          .then(response => {
+            if (!response.ok) throw new Error("Not found");
+            return response.blob();
+          })
+          .then(blob => {
+            const reader = new FileReader();
+            reader.onloadend = function() {
+              logoBase64 = reader.result;
+              const previewImg = document.getElementById('sheetLogoImg');
+              if (previewImg) {
+                previewImg.src = logoBase64;
+                previewImg.style.display = 'block';
               }
+              updatePreview();
             };
-          }
-        });
+            reader.readAsDataURL(blob);
+          })
+          .catch(() => {
+            attempt(idx + 1);
+          });
+      };
+      attempt(0);
     }
 
     async function fetchCatalog() {
@@ -738,6 +744,7 @@
       
       // Footer table fields
       document.getElementById('sheetFooterCompName').textContent = t.sheetHeaderComp;
+      document.getElementById('sheetFooterTotalPiecesLabel').textContent = t.totalPieces;
       document.getElementById('sheetFooterMsg').textContent = t.sheetFooterMsg;
       document.getElementById('sheetFooterSign').textContent = t.sheetSignature + (currentLang === 'ar' ? " :" : ":");
       document.getElementById('sheetFooterCR').textContent = t.sheetFooterCR;
@@ -909,8 +916,12 @@
       
       let formattedDate = "";
       if (dateVal) {
-        const d = new Date(dateVal);
-        formattedDate = d.toLocaleDateString(currentLang === 'en' ? 'en-US' : 'ar-SA');
+        const parts = dateVal.split('-');
+        if (parts.length === 3) {
+          formattedDate = `${parts[1]}/${parts[2]}/${parts[0]}`;
+        } else {
+          formattedDate = dateVal;
+        }
       }
       document.getElementById('smValueDate').innerHTML = formattedDate ? formattedDate : '&nbsp;';
 
@@ -993,20 +1004,10 @@
       // Render Totals inside sheet preview
       const totalColsCount = includeImages ? 7 : 6;
       
-      const totalPiecesRow = document.createElement('tr');
-      if (currentLang === 'ar') {
-        totalPiecesRow.innerHTML = `
-          <td colspan="${totalColsCount - 2}" class="fw-bold px-3 text-start">${t.totalPieces}</td>
-          <td colspan="2" class="text-center fw-bold">${totalQty}</td>
-        `;
-      } else {
-        totalPiecesRow.innerHTML = `
-          <td colspan="${totalColsCount - 3}" class="fw-bold px-3 text-end">${t.totalPieces}</td>
-          <td class="text-center fw-bold" colspan="2">${totalQty}</td>
-          <td></td>
-        `;
+      const totalPiecesValueEl = document.getElementById('sheetFooterTotalPiecesValue');
+      if (totalPiecesValueEl) {
+        totalPiecesValueEl.textContent = totalQty;
       }
-      sheetBody.appendChild(totalPiecesRow);
 
       const exclVatRow = document.createElement('tr');
       if (currentLang === 'ar') {
@@ -1156,23 +1157,17 @@
       doc.setTextColor(textDark);
       
       if (logoBase64) {
-        // Logo is always on the left
-        doc.addImage(logoBase64, 'PNG', 15, 10, 30, 12);
+        doc.addImage(logoBase64, 'PNG', 15, 8, 18, 18);
       }
 
-      // Company Name and Subtitle placement based on language
       doc.setFontSize(14);
       if (isAr) {
-        // Arabic name on the right
         doc.text("شركة زهر البرتقال للتجارة", pageWidth - 15, 17, { align: 'right' });
-        // Subtitle on the left (below the logo position)
         doc.setFontSize(10);
         doc.setTextColor('#888888');
-        doc.text("orange bed bath", 15, 25, { align: 'left' });
+        doc.text("orange bed bath", 15, 29, { align: 'left' });
       } else {
-        // English company name on the left next to logo
-        doc.text("Zahr Al-Orange Trading Co.", logoBase64 ? 48 : 15, 17, { align: 'left' });
-        // Subtitle on the right
+        doc.text("Zahr Al-Orange Trading Co.", logoBase64 ? 36 : 15, 17, { align: 'left' });
         doc.setFontSize(10);
         doc.setTextColor('#888888');
         doc.text("orange bed bath", pageWidth - 15, 17, { align: 'right' });
@@ -1199,8 +1194,12 @@
       
       let formattedDate = "-";
       if (dateVal) {
-        const d = new Date(dateVal);
-        formattedDate = d.toLocaleDateString(isAr ? 'ar-SA' : 'en-US');
+        const parts = dateVal.split('-');
+        if (parts.length === 3) {
+          formattedDate = `${parts[1]}/${parts[2]}/${parts[0]}`;
+        } else {
+          formattedDate = dateVal;
+        }
       }
 
       const metaYStart = 43;
@@ -1213,7 +1212,10 @@
         doc.text(`${t.smLabelComp}  ${comp}`, pageWidth - 15, metaYStart + 7, { align: 'right' });
         doc.text(`${t.smLabelMob}  ${mob}`, pageWidth - 15, metaYStart + 14, { align: 'right' });
 
-        doc.text(`${t.smLabelDate}  ${formattedDate}`, 15, metaYStart, { align: 'left' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(formattedDate, 15, metaYStart, { align: 'left' });
+        doc.setFont(fontName, 'normal');
+        doc.text(t.smLabelDate, 38, metaYStart, { align: 'left' });
       } else {
         // English Grid (Labels on left, text on right)
         doc.text(`${t.smLabelName}  ${name}`, 15, metaYStart, { align: 'left' });
@@ -1414,88 +1416,96 @@
         }
       };
 
-      renderSummaryRow(t.totalPieces, String(totalQty), finalY);
-      renderSummaryRow(t.totalExclVat, exclVat.toFixed(2), finalY + 6);
-      renderSummaryRow(t.vatAmount, vat.toFixed(2), finalY + 12);
+      renderSummaryRow(t.totalExclVat, exclVat.toFixed(2), finalY);
+      renderSummaryRow(t.vatAmount, vat.toFixed(2), finalY + 6);
       
-      // Double border/highlighted box for Grand Total
       doc.setDrawColor(0);
-      doc.rect(summaryBoxX, finalY + 18, summaryBoxWidth, 6);
+      doc.rect(summaryBoxX, finalY + 12, summaryBoxWidth, 6);
       doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
       if (isAr) {
-        doc.text(t.totalInclVat, summaryBoxX + summaryBoxWidth - 2, finalY + 22.5, { align: 'right' });
-        doc.text(totalInclVat.toFixed(2), summaryBoxX + 2, finalY + 22.5, { align: 'left' });
+        doc.text(t.totalInclVat, summaryBoxX + summaryBoxWidth - 2, finalY + 16.5, { align: 'right' });
+        doc.text(totalInclVat.toFixed(2), summaryBoxX + 2, finalY + 16.5, { align: 'left' });
       } else {
-        doc.text(t.totalInclVat, summaryBoxX + 2, finalY + 22.5, { align: 'left' });
-        doc.text(totalInclVat.toFixed(2), summaryBoxX + summaryBoxWidth - 2, finalY + 22.5, { align: 'right' });
+        doc.text(t.totalInclVat, summaryBoxX + 2, finalY + 16.5, { align: 'left' });
+        doc.text(totalInclVat.toFixed(2), summaryBoxX + summaryBoxWidth - 2, finalY + 16.5, { align: 'right' });
       }
 
-      // Check if page height exceeds. If so, add new page for signature/footers
-      const footerTableHeight = 33;
-      if (finalY + footerTableHeight + 15 > pageHeight - 15) {
+      const footerTableHeight = 42;
+      if (finalY + footerTableHeight + 25 > pageHeight - 15) {
         doc.addPage();
         finalY = 20;
       } else {
-        finalY += 10;
+        finalY += 22;
       }
 
-      // Draw Footer Table
       const xStart = 15;
-      const col1Width = 55;
-      const col2Width = 75;
-      const col3Width = 50;
-      const totalTableWidth = col1Width + col2Width + col3Width; // 180mm
+      const col1Width = 54;
+      const col2Width = 72;
+      const col3Width = 27;
+      const col4Width = 27;
+      const totalTableWidth = 180;
       
-      const r1Height = 8;
-      const r2Height = 16;
-      const r3Height = 8;
+      const r1Height = 7;
+      const r2Height = 7;
+      const r3Height = 7;
+      const r4Height = 14;
+      const r5Height = 7;
       
       doc.setDrawColor(0);
       doc.setLineWidth(0.2);
       
-      // --- Row 1 ---
       const y1 = finalY;
-      // Col 1: Company Name
-      doc.rect(xStart, y1, col1Width, r1Height);
+      doc.rect(xStart, y1, col1Width, r1Height + r2Height + r3Height);
       doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
       doc.setFontSize(9);
       if (isAr) {
-        doc.text("شركة زهر البرتقال للتجارة", xStart + col1Width / 2, y1 + 5, { align: 'center' });
+        doc.text("شركة زهر البرتقال للتجارة", xStart + col1Width / 2, y1 + 11.5, { align: 'center' });
       } else {
-        doc.text("Zahr Al-Orange Trading Co.", xStart + col1Width / 2, y1 + 5, { align: 'center' });
+        doc.text("Zahr Al-Orange Trading Co.", xStart + col1Width / 2, y1 + 11.5, { align: 'center' });
       }
       
-      // Col 2: Offer Message
       doc.rect(xStart + col1Width, y1, col2Width, r1Height);
-      doc.text(t.sheetFooterMsg, xStart + col1Width + col2Width / 2, y1 + 5, { align: 'center' });
+      doc.text(t.totalPieces, xStart + col1Width + col2Width / 2, y1 + 4.5, { align: 'center' });
       
-      // Col 3: Signature Label
       doc.rect(xStart + col1Width + col2Width, y1, col3Width, r1Height);
-      doc.text(isAr ? "توقيع المبيعات:" : "Sales Signature:", xStart + col1Width + col2Width + 5, y1 + 5, { align: 'left' });
+      doc.text(String(totalQty), xStart + col1Width + col2Width + col3Width / 2, y1 + 4.5, { align: 'center' });
       
-      // --- Row 2 ---
+      doc.rect(xStart + col1Width + col2Width + col3Width, y1, col4Width, r1Height);
+
       const y2 = y1 + r1Height;
-      // Col 1: Commercial Register
-      doc.rect(xStart, y2, col1Width, r2Height);
-      doc.text(t.sheetFooterCR, xStart + col1Width / 2, y2 + 9, { align: 'center' });
-      
-      // Col 2: Contact info (P.O.Box, Tel, Fax)
       doc.rect(xStart + col1Width, y2, col2Width, r2Height);
-      doc.setFont('helvetica', 'normal'); // Numbers/English info in Helvetica
+      doc.text(t.sheetFooterMsg, xStart + col1Width + col2Width / 2, y2 + 4.5, { align: 'center' });
+      
+      doc.rect(xStart + col1Width + col2Width, y2, col3Width + col4Width, r2Height + r3Height);
       doc.setFontSize(8.5);
-      doc.text("P.O.Box 118961 Jeddah 21312 KSA", xStart + col1Width + col2Width / 2, y2 + 4.5, { align: 'center' });
-      doc.text("Tel: +966 12 6658899", xStart + col1Width + col2Width / 2, y2 + 9, { align: 'center' });
-      doc.text("Fax: +966 12 6659469", xStart + col1Width + col2Width / 2, y2 + 13.5, { align: 'center' });
-      
-      // Col 3: Signature area (empty box)
-      doc.rect(xStart + col1Width + col2Width, y2, col3Width, r2Height);
-      
-      // --- Row 3 (Address) ---
+      if (isAr) {
+        doc.text("توقيع المبيعات:", xStart + col1Width + col2Width + col3Width + col4Width - 2, y2 + 4.5, { align: 'right' });
+      } else {
+        doc.text("Authorized Signature:", xStart + col1Width + col2Width + 2, y2 + 4.5, { align: 'left' });
+      }
+
       const y3 = y2 + r2Height;
-      doc.rect(xStart, y3, totalTableWidth, r3Height);
+      doc.rect(xStart + col1Width, y3, col2Width, r3Height);
+
+      const y4 = y3 + r3Height;
+      doc.rect(xStart, y4, col1Width, r4Height);
+      doc.setFontSize(9);
+      doc.text(t.sheetFooterCR, xStart + col1Width / 2, y4 + 8, { align: 'center' });
+      
+      doc.rect(xStart + col1Width, y4, col2Width, r4Height);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text("P.O.Box 118961 Jeddah 21312 KSA", xStart + col1Width + col2Width / 2, y4 + 4, { align: 'center' });
+      doc.text("Tel: +966 12 6658899", xStart + col1Width + col2Width / 2, y4 + 8, { align: 'center' });
+      doc.text("Fax: +966 12 6659469", xStart + col1Width + col2Width / 2, y4 + 12, { align: 'center' });
+      
+      doc.rect(xStart + col1Width + col2Width, y4, col3Width + col4Width, r4Height);
+
+      const y5 = y4 + r4Height;
+      doc.rect(xStart, y5, totalTableWidth, r5Height);
       doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text(t.sheetFooterAddr, xStart + totalTableWidth / 2, y3 + 5.5, { align: 'center' });
+      doc.text(t.sheetFooterAddr, xStart + totalTableWidth / 2, y5 + 4.5, { align: 'center' });
 
       // Save PDF document
       const filename = `Price_Offer_${name.replace(/\s+/g, '_')}_${getLocalDateString()}.pdf`;
