@@ -1489,7 +1489,9 @@
       try {
         const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
         if (!productsRes.ok) throw new Error("Failed to load products.json");
-        window.products = await productsRes.json();
+        const rawProducts = await productsRes.json();
+        window.allProductsUnfiltered = JSON.parse(JSON.stringify(rawProducts));
+        window.products = rawProducts;
 
         // Filter out disabled items (from itemsfornotshow.xlsx)
         const blockedAliases = ["489901","489902","489903","489904","489905","489906","489907","489908","489909","489910","489911","489912","489913","489914","489915","489916","489917","489918"];
@@ -3098,6 +3100,15 @@
           // Fallback to window.products if not found in window.data (due to warehouse stock filtering)
           if (!product && window.products) {
             product = window.products.find(p =>
+              String(p.code).trim().toLowerCase() === searchKeyword ||
+              String(p.code).trim().toLowerCase() === altKeyword ||
+              (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
+            );
+          }
+
+          // Fallback to window.allProductsUnfiltered if not found in window.products (due to product blocking)
+          if (!product && window.allProductsUnfiltered) {
+            product = window.allProductsUnfiltered.find(p =>
               String(p.code).trim().toLowerCase() === searchKeyword ||
               String(p.code).trim().toLowerCase() === altKeyword ||
               (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
