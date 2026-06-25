@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تقرير التفقد اليومي للمعارض</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #f26522;
+      --primary-dark: #d55317;
+      --primary-light: #fff0e8;
+      --accent: #27ae60;
+      --danger: #e74c3c;
+      --bg-color: #f7f9fc;
+      --card-bg: #ffffff;
+      --text-main: #2c3e50;
+      --text-muted: #7f8c8d;
+      --border-color: #ebedef;
+      --font-family: 'Tajawal', sans-serif;
+      --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.08);
+      --border-radius: 12px;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-color);
+      margin: 0;
+      padding: 0;
+      color: var(--text-main);
+      direction: rtl;
+    }
+
+    .header-container {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container h1 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-btn {
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 8px 22px;
+      border-radius: 20px;
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 700;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-btn:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .filters-bar {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      display: none;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+      align-items: center;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 200px;
+      flex: 1;
+    }
+
+    .filter-item label {
+      font-weight: bold;
+      color: var(--text-main);
+      font-size: 0.9em;
+    }
+
+    input[type="date"], select {
+      padding: 10px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95em;
+      outline: none;
+      background: #fafafa;
+      width: 100%;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+
+    input[type="date"]:focus, select:focus {
+      border-color: var(--primary);
+      background: white;
+    }
+
+    .report-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+    }
+
+    th, td {
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 0.9em;
+      background: #fdfdfd;
+    }
+
+    tr:hover {
+      background: #fbfcfd;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+
+    .badge-success {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .badge-danger {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    .error-container, .auth-container {
+      text-align: center;
+      padding: 60px 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      max-width: 500px;
+      margin: 80px auto;
+    }
+
+    .error-icon {
+      font-size: 50px;
+      color: var(--danger);
+      margin-bottom: 20px;
+    }
+
+    .info-icon {
+      font-size: 50px;
+      color: var(--primary);
+      margin-bottom: 20px;
+    }
+
+    .spinner {
+      font-size: 30px;
+      color: var(--primary);
+      animation: spin 1s infinite linear;
+      margin-bottom: 10px;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-container">
+    <h1><i class="fa-solid fa-clipboard-check"></i> تقرير التفقد اليومي للمعارض</h1>
+    <div style="display: flex; gap: 10px;">
+      <a href="../index.html" class="back-btn" style="border-color: var(--primary); color: var(--primary);"><i class="fa-solid fa-house"></i> العودة للداشبورد الرئيسي</a>
+      <a href="index.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> العودة للكاتالوج</a>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <!-- Auth & Loading Status -->
+    <div id="statusSection" style="text-align: center; margin-top: 80px;">
+      <i class="fa-solid fa-spinner spinner"></i>
+      <p>جاري التحقق من الهوية وصلاحيات الدخول...</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar" id="filtersBar">
+      <div class="filter-item">
+        <label>تاريخ التفقد</label>
+        <input type="date" id="reportDate" onchange="loadReport()">
+      </div>
+      <div class="filter-item">
+        <label>المعرض</label>
+        <select id="reportMall" onchange="loadReport()">
+          <!-- Options injected dynamically -->
+        </select>
+      </div>
+    </div>
+
+    <!-- Report Table -->
+    <div class="report-card" id="reportCard" style="display: none;">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 250px;">اسم المعرض</th>
+              <th style="width: 250px;">البند</th>
+              <th style="width: 180px; text-align: center;">حالة التفقد</th>
+              <th style="width: 200px; text-align: center;">وقت التفقد</th>
+              <th>بواسطة (البريد الإلكتروني)</th>
+            </tr>
+          </thead>
+          <tbody id="reportTableBody">
+            <!-- Table content injected dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let currentUser = null;
+    let userRole = 'user';
+    let userManagedOutlets = [];
+    let reportShowroomsList = [];
+
+    // Helper to get local date string (Saudi Arabia timezone)
+    function getLocalDateString() {
+      const d = new Date();
+      const offset = d.getTimezoneOffset();
+      const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+      return localTime.toISOString().split('T')[0];
+    }
+
+    let isSwitchingSession = false;
+
+    async function performAutoLogin() {
+      try {
+        isSwitchingSession = true;
+        document.getElementById('statusSection').innerHTML = `
+          <i class="fa-solid fa-spinner spinner"></i>
+          <p>جاري تسجيل الدخول التلقائي للوصول الآمن للتقارير...</p>
+        `;
+        const { data: loginData, error: loginErr } = await supabaseClient.auth.signInWithPassword({
+          email: "supervisor.reader@orangebedbath.com",
+          password: "OrangeReader2026!"
+        });
+        if (loginErr) throw loginErr;
+      } catch (autoLoginErr) {
+        console.error("Auto login failed:", autoLoginErr);
+        showAuthError("🔒 يرجى تسجيل الدخول أولاً", "هذه الصفحة مخصصة لمديري المناطق والمسؤولين فقط.");
+      } finally {
+        isSwitchingSession = false;
+      }
+    }
+
+    // Check Auth Status on Load
+    (async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      const dashboardUserStr = localStorage.getItem('currentUser');
+      let isDashboardManager = false;
+      if (dashboardUserStr) {
+        try {
+          const dashboardUser = JSON.parse(dashboardUserStr);
+          isDashboardManager = dashboardUser && (dashboardUser.role === 'Manager' || dashboardUser.role === 'Admin' || dashboardUser.name === 'Sales Manager');
+        } catch(e) {}
+      }
+
+      if (session?.user) {
+        currentUser = session.user;
+        if (isDashboardManager && currentUser.email !== 'supervisor.reader@orangebedbath.com') {
+          // If logged into dashboard as manager, check if Supabase session is also manager/admin/reader
+          try {
+            let { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', currentUser.id).single();
+            if (!profile) {
+              const fallback = await supabaseClient.from('profiles').select('role').eq('email', currentUser.email).single();
+              profile = fallback.data;
+            }
+            if (!profile || profile.role === 'user') {
+              console.log("Store user detected in Supabase session. Switching to supervisor reader...");
+              await performAutoLogin();
+              return;
+            }
+          } catch (err) {
+            console.error("Error verifying current Supabase session:", err);
+          }
+        }
+        await checkUserRoleAndInit();
+      } else {
+        if (isDashboardManager) {
+          await performAutoLogin();
+        } else {
+          showAuthError("🔒 يرجى تسجيل الدخول أولاً", "هذه الصفحة مخصصة لمديري المناطق والمسؤولين فقط.");
+        }
+      }
+
+      // Listen for auth state changes
+      supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
+        if (event === 'SIGNED_IN' && newSession?.user) {
+          currentUser = newSession.user;
+          await checkUserRoleAndInit();
+        } else if (event === 'SIGNED_OUT') {
+          if (isSwitchingSession) {
+            console.log("SIGNED_OUT received during session switch. Ignoring...");
+            return;
+          }
+          currentUser = null;
+          userRole = 'user';
+          userManagedOutlets = [];
+          showAuthError("🔒 تم تسجيل الخروج", "الرجاء تسجيل الدخول للوصول للتقرير.");
+        }
+      });
+    })();
+
+    async function checkUserRoleAndInit() {
+      try {
+        let { data: profile, error } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+        if (error) {
+          const fallback = await supabaseClient.from('profiles').select('*').eq('email', currentUser.email).single();
+          profile = fallback.data;
+        }
+
+        if (!profile) {
+          showAuthError("⛔ حساب غير مصرح", "لا يوجد ملف شخصي (Profile) لحسابك في النظام.");
+          return;
+        }
+
+        userRole = profile.role || 'user';
+        userManagedOutlets = profile.managed_outlets || [];
+
+        // Auto-mapping from Dashboard Session (Bypass password re-entry)
+        const dashboardUserStr = localStorage.getItem('currentUser');
+        if (dashboardUserStr && currentUser.email === 'supervisor.reader@orangebedbath.com') {
+          try {
+            const dashboardUser = JSON.parse(dashboardUserStr);
+            if (dashboardUser && dashboardUser.role === 'Manager') {
+              // Fetch real manager's profile using their name (stored in 'mall' column)
+              const { data: realProfile, error: pErr } = await supabaseClient
+                .from('profiles')
+                .select('managed_outlets')
+                .eq('mall', dashboardUser.name)
+                .eq('role', 'manager')
+                .maybeSingle();
+
+              if (!pErr && realProfile) {
+                userRole = 'manager';
+                userManagedOutlets = realProfile.managed_outlets || [];
+                console.log("Auto-mapped manager dashboard user:", dashboardUser.name, "Managed outlets:", userManagedOutlets);
+              }
+            } else if (dashboardUser && (dashboardUser.role === 'Admin' || dashboardUser.name === 'Sales Manager')) {
+              userRole = 'admin';
+              userManagedOutlets = [];
+            }
+          } catch (mapErr) {
+            console.error("Failed to parse dashboard user for mapping:", mapErr);
+          }
+        }
+
+        const emailLower = currentUser?.email?.toLowerCase() || '';
+        const isSuperAdmin = (userRole === 'admin' || userRole === 'maintenance_admin' || emailLower === 'alaa.wafae@orangebedbath.com');
+        const isGeneralManager = (userRole === 'manager' && (emailLower === 'm.hamadon@orangebedbath.com' || emailLower === 'rama@orangebedbath.com'));
+        const isRegionalManager = (userRole === 'manager');
+
+        if (!isSuperAdmin && !isGeneralManager && !isRegionalManager) {
+          showAuthError("⛔ حساب غير مصرح", "عذراً، ليست لديك صلاحيات المدير أو المشرف لعرض تقارير المعارض.");
+          return;
+        }
+
+        // Hide status message, show filters & report
+        document.getElementById('statusSection').style.display = 'none';
+        document.getElementById('filtersBar').style.display = 'flex';
+        document.getElementById('reportCard').style.display = 'block';
+
+        // Set default date
+        const dateInput = document.getElementById('reportDate');
+        if (!dateInput.value) {
+          dateInput.value = getLocalDateString();
+        }
+
+        // Populate Showrooms dropdown
+        await populateShowroomsFilter(isSuperAdmin, isGeneralManager);
+        await loadReport();
+
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        showAuthError("⚠️ خطأ في النظام", "فشل التحقق من التخويل الخاص بحسابك.");
+      }
+    }
+
+    function showAuthError(title, subtitle) {
+      document.getElementById('statusSection').style.display = 'block';
+      document.getElementById('filtersBar').style.display = 'none';
+      document.getElementById('reportCard').style.display = 'none';
+      
+      document.getElementById('statusSection').innerHTML = `
+        <div class="error-container">
+          <i class="fa-solid fa-circle-exclamation error-icon"></i>
+          <h2>${title}</h2>
+          <p>${subtitle}</p>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+            <a href="../index.html" class="back-btn" style="display:inline-flex; justify-content:center; border-color: var(--primary); color: var(--primary);"><i class="fa-solid fa-house"></i> العودة للداشبورد الرئيسي</a>
+            <a href="index.html" class="back-btn" style="display:inline-flex; justify-content:center;">العودة للكاتالوج</a>
+          </div>
+        </div>
+      `;
+    }
+
+    async function populateShowroomsFilter(isSuperAdmin, isGeneralManager) {
+      const select = document.getElementById('reportMall');
+      if (!select) return;
+
+      try {
+        const { data: profiles, error } = await supabaseClient
+          .from('profiles')
+          .select('mall')
+          .eq('role', 'user')
+          .order('mall', { ascending: true });
+
+        if (error) throw error;
+
+        const showrooms = [...new Set(profiles.map(p => p.mall).filter(Boolean))];
+        reportShowroomsList = showrooms;
+
+        select.innerHTML = '';
+
+        if (isSuperAdmin || isGeneralManager) {
+          const opt = document.createElement('option');
+          opt.value = 'all';
+          opt.textContent = 'كل المعارض';
+          select.appendChild(opt);
+
+          showrooms.forEach(mall => {
+            const o = document.createElement('option');
+            o.value = mall;
+            o.textContent = mall;
+            select.appendChild(o);
+          });
+        } else {
+          // Regional manager
+          const managed = showrooms.filter(mall => userManagedOutlets.includes(mall));
+          
+          const opt = document.createElement('option');
+          opt.value = 'all';
+          opt.textContent = 'كل المعارض التابعة لي';
+          select.appendChild(opt);
+
+          managed.forEach(mall => {
+            const o = document.createElement('option');
+            o.value = mall;
+            o.textContent = mall;
+            select.appendChild(o);
+          });
+        }
+
+      } catch (err) {
+        console.error("Failed to load showrooms list:", err);
+      }
+    }
+
+    async function loadReport() {
+      const tbody = document.getElementById('reportTableBody');
+      const dateVal = document.getElementById('reportDate').value;
+      const mallVal = document.getElementById('reportMall').value;
+
+      if (!tbody) return;
+      if (!dateVal) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">الرجاء تحديد التاريخ...</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;"><i class="fa-solid fa-spinner spinner"></i> جاري تحميل التقرير...</td></tr>';
+
+      try {
+        // 1. Fetch checklist items
+        const { data: items } = await supabaseClient
+          .from('catalog_checklist_items')
+          .select('*')
+          .order('id', { ascending: true });
+
+        const currentItems = items || [];
+        if (currentItems.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:gray;">لا توجد بنود تفقد حالياً في النظام.</td></tr>';
+          return;
+        }
+
+        // 2. Fetch logs
+        const { data: logs, error: logsErr } = await supabaseClient
+          .from('catalog_checklist_logs')
+          .select('*')
+          .eq('checked_date', dateVal);
+
+        if (logsErr) throw logsErr;
+
+        const logsMap = {};
+        if (logs) {
+          logs.forEach(log => {
+            logsMap[log.mall + "_" + log.item_id] = log;
+          });
+        }
+
+        // 3. Determine target showrooms
+        let targetShowrooms = [];
+        const emailLower = currentUser?.email?.toLowerCase() || '';
+        const isSuperAdmin = (userRole === 'admin' || userRole === 'maintenance_admin' || emailLower === 'alaa.wafae@orangebedbath.com');
+        const isGeneralManager = (userRole === 'manager' && (emailLower === 'm.hamadon@orangebedbath.com' || emailLower === 'rama@orangebedbath.com'));
+
+        if (mallVal === 'all') {
+          if (isSuperAdmin || isGeneralManager) {
+            targetShowrooms = reportShowroomsList;
+          } else {
+            targetShowrooms = reportShowroomsList.filter(mall => userManagedOutlets.includes(mall));
+          }
+        } else {
+          targetShowrooms = [mallVal];
+        }
+
+        if (targetShowrooms.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:gray;">لا توجد معارض لعرضها.</td></tr>';
+          return;
+        }
+
+        let rowsHtml = '';
+        targetShowrooms.forEach(mall => {
+          currentItems.forEach(item => {
+            const logKey = mall + "_" + item.id;
+            const log = logsMap[logKey];
+            const isChecked = !!log;
+
+            let statusCell = `<span class="badge badge-danger">❌ لم يتم التفقد</span>`;
+            let timeCell = '—';
+            let emailCell = '—';
+
+            if (isChecked) {
+              statusCell = `<span class="badge badge-success">✅ تم التفقد</span>`;
+              const dt = new Date(log.checked_at);
+              timeCell = dt.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+              });
+              emailCell = `<span style="font-family: monospace; font-size: 0.9em; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">${log.email}</span>`;
+            }
+
+            rowsHtml += `
+              <tr>
+                <td style="font-weight:bold;">${mall}</td>
+                <td>${item.text}</td>
+                <td style="text-align:center;">${statusCell}</td>
+                <td style="text-align:center; font-weight:bold; color:var(--primary-dark);">${timeCell}</td>
+                <td>${emailCell}</td>
+              </tr>
+            `;
+          });
+        });
+
+        tbody.innerHTML = rowsHtml;
+
+      } catch (err) {
+        console.error("Failed to build checklist report page:", err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:red;">❌ فشل تحميل التقرير...</td></tr>';
+      }
+    }
+  </script>
+</body>
+</html>
