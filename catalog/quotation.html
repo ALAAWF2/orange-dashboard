@@ -751,29 +751,6 @@
       document.getElementById('sheetFooterBox').innerHTML = t.sheetFooterBox;
       document.getElementById('sheetFooterAddr').textContent = t.sheetFooterAddr;
 
-      // Update Table Headers in Preview Table
-      const pThs = document.getElementById('sheetTableHead').children;
-      let headerTexts = [...t.sheetTableHeadPreview];
-      if (!document.getElementById('includeImages').checked) {
-        headerTexts = headerTexts.filter(h => h !== t.imageCol && h !== "الصورة" && h !== "Image");
-      }
-      
-      // Clear and rebuild sheet preview headers
-      const sheetTableHeadRow = document.getElementById('sheetTableHead');
-      sheetTableHeadRow.innerHTML = '';
-      headerTexts.forEach((text, index) => {
-        let width = "10%";
-        if (index === 0) width = "5%";
-        else if (index === 1) width = "15%";
-        else if (text === t.imageCol || text === "الصورة" || text === "Image") width = "10%";
-        else if (index === (headerTexts.length - 4)) width = "40%"; // description
-        
-        const th = document.createElement('th');
-        th.style.width = width;
-        th.textContent = text;
-        sheetTableHeadRow.appendChild(th);
-      });
-
       updatePreview();
     }
 
@@ -967,11 +944,32 @@
       }
 
       // 4. Render Live Preview Table (Excel-like Sheet)
-      const sheetBody = document.getElementById('sheetTableBody');
-      sheetBody.innerHTML = '';
-
+      const sheetTableHeadRow = document.getElementById('sheetTableHead');
       const includeImages = document.getElementById('includeImages').checked;
       const t = dict[currentLang];
+
+      if (sheetTableHeadRow) {
+        let headerTexts = [...t.sheetTableHeadPreview];
+        if (!includeImages) {
+          headerTexts = headerTexts.filter(h => h !== t.imageCol && h !== "الصورة" && h !== "Image");
+        }
+        sheetTableHeadRow.innerHTML = '';
+        headerTexts.forEach((text, index) => {
+          let width = "10%";
+          if (index === 0) width = "5%";
+          else if (index === 1) width = "15%";
+          else if (text === t.imageCol || text === "الصورة" || text === "Image") width = "10%";
+          else if (index === (headerTexts.length - 4)) width = includeImages ? "40%" : "50%"; // description
+          
+          const th = document.createElement('th');
+          th.style.width = width;
+          th.textContent = text;
+          sheetTableHeadRow.appendChild(th);
+        });
+      }
+
+      const sheetBody = document.getElementById('sheetTableBody');
+      sheetBody.innerHTML = '';
 
       draftItems.forEach((item, idx) => {
         const tr = document.createElement('tr');
@@ -983,7 +981,7 @@
             ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + item.image_path 
             : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_100,q_auto,f_auto,d_noimage.png/${fallbackId}.jpg`;
           
-          imgHtml = `<td class="text-center col-preview-image">
+          imgHtml = `<td class="text-center">
             <img src="${imgSrc}" class="sheet-thumbnail" onerror="this.src='noimage.png'">
           </td>`;
         }
@@ -1050,12 +1048,6 @@
         `;
       }
       sheetBody.appendChild(inclVatRow);
-
-      // Hide or show Image Columns in Live Preview based on toggle
-      const imgHeaders = document.querySelectorAll('.col-preview-image');
-      imgHeaders.forEach(el => {
-        el.style.display = includeImages ? '' : 'none';
-      });
     }
 
     // Prepare Base64 Images for jsPDF (asynchronous loading with toast loader)
