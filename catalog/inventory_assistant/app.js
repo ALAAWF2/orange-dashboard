@@ -17,6 +17,8 @@ let currentCameraId = null;
 let camerasList = [];
 let isScanning = false;
 let scanLock = false;
+let lastScannedBarcode = "";
+let lastScanTime = 0;
 
 // Audio Feedbacks
 function playBeep(type = 'success') {
@@ -59,6 +61,23 @@ function showFeedback(message, isError = false) {
     }, 2500);
 }
 
+// Visual flash overlay directly on camera viewfinder
+function triggerFlashFeedback(itemName, isError = false) {
+    const flashEl = document.getElementById("scanner-flash");
+    const textEl = document.getElementById("scanner-flash-text");
+    if (!flashEl || !textEl) return;
+    
+    flashEl.style.backgroundColor = isError ? "rgba(220, 53, 69, 0.35)" : "rgba(25, 135, 84, 0.35)";
+    textEl.style.display = "block";
+    textEl.className = isError ? "text-white fw-bold px-3 py-2 rounded-pill bg-danger" : "text-white fw-bold px-3 py-2 rounded-pill bg-success";
+    textEl.innerText = itemName;
+    
+    setTimeout(() => {
+        flashEl.style.backgroundColor = "rgba(0, 0, 0, 0)";
+        textEl.style.display = "none";
+    }, 800);
+}
+
 // Render inventory items in table
 function renderTable() {
     const tbody = document.getElementById("inventory-tbody");
@@ -95,6 +114,7 @@ function renderTable() {
                 <td class="text-center" style="width: 120px;">
                     <input type="number" class="form-control form-control-sm text-center fw-bold" 
                         value="${item.counted_qty}" min="1" 
+                        onfocus="this.select()"
                         onchange="updateItemQty('${item.item_id}', this.value)">
                 </td>
                 <td class="text-center">
@@ -220,6 +240,7 @@ async function handleScan(barcode) {
         scannedItems[existingIndex].counted_qty += 1;
         playBeep('success');
         showFeedback(`تم تحديث كمية الصنف: ${scannedItems[existingIndex].name} لـ (${scannedItems[existingIndex].counted_qty})`);
+        triggerFlashFeedback(`${scannedItems[existingIndex].name} (${scannedItems[existingIndex].counted_qty})`);
         saveSession();
         renderTable();
         
@@ -252,6 +273,7 @@ async function handleScan(barcode) {
         scannedItems.push(newItem);
         playBeep('success');
         showFeedback(`تمت إضافة الصنف: ${newItem.name}`);
+        triggerFlashFeedback(newItem.name);
         saveSession();
         renderTable();
         
@@ -267,6 +289,7 @@ async function handleScan(barcode) {
         // Not found, play error sound
         playBeep('error');
         showFeedback(`تنبيه: الباركود/الصنف ${cleanBarcode} غير مسجل بالنظام!`, true);
+        triggerFlashFeedback("باركود غير مسجل ⚠️", true);
         
         // Add as an unknown item so they can still count it
         const newItem = {
@@ -660,17 +683,20 @@ async function stopScanning() {
     }
 }
 
-// Scan Success Handler with Debounce Lock
+// Scan Success Handler with Smart Debounce Lock
 async function onScanSuccess(decodedText, decodedResult) {
-    if (scanLock) return; // Prevent double scans
+    const now = Date.now();
+    const cleanBarcode = decodedText.trim();
     
-    scanLock = true;
+    // If it's the SAME barcode scanned within 1.5 seconds, ignore it to prevent double scans
+    if (cleanBarcode === lastScannedBarcode && (now - lastScanTime) < 1500) {
+        return; 
+    }
+    
+    // Update scan state immediately
+    lastScannedBarcode = cleanBarcode;
+    lastScanTime = now;
     
     // Process the scanned item
-    await handleScan(decodedText);
-    
-    // Release the scan lock after 1.5 seconds to allow the next item scan
-    setTimeout(() => {
-        scanLock = false;
-    }, 1500);
+    await handleScan(cleanBarcode);
 }
