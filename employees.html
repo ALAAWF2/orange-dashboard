@@ -728,6 +728,18 @@
                         <option value="list">قائمة (List)</option>
                         <option value="matrix">جدول يومي (Matrix)</option>
                         <option value="audit">تتبع التنقلات (Audit)</option>
+                        <option value="perf">مصفوفة الأداء (Performance)</option>
+                        <option value="tenure">تحليل الأقدمية (Tenure)</option>
+                    </select>
+                </div>
+                <!-- New Employees Filter (HR Only) -->
+                <div class="col-md-2 col-lg-2" id="newEmpFilterContainer" style="display:none;">
+                    <label class="form-label small text-muted fw-bold mb-1">فلترة الأقدمية</label>
+                    <select id="tenureFilter" class="form-select form-select-sm" onchange="updatePage()">
+                        <option value="all">كل الموظفين</option>
+                        <option value="new3">جدد (&lt; 3 شهور)</option>
+                        <option value="new6">جدد (&lt; 6 شهور)</option>
+                        <option value="old12">قدماء (&ge; سنة)</option>
                     </select>
                 </div>
                 <!-- Sort -->
@@ -862,6 +874,7 @@
                                                 onclick="sortTable('avg_ticket')">معدل الفاتورة</th>
                                             <th class="d-none d-md-table-cell sortable" data-sort="items_per_inv"
                                                 onclick="sortTable('items_per_inv')">متوسط القطع</th>
+                                            <th class="text-center" title="مراجعة الفواتير (أعلى فاتورة مقارنة بالمتوسط)">⚠️</th>
                                         </tr>
                                     </thead>
                                     <tbody id="leaderboardBody">
@@ -913,6 +926,157 @@
                 </div>
             </div>
 
+            <!-- HR VIEW: Performance Matrix (Tables) -->
+            <div class="row" id="perfMatrixContainer" style="display:none;">
+                <div class="col-12">
+                    <h5 class="section-title">🎯 مصفوفة الأداء (Performance Matrix)</h5>
+                    <div class="card border-0 shadow-sm p-3 mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2 border-bottom pb-2">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <select id="perfXAxis" class="form-select form-select-sm" onchange="renderPerfMatrix()" style="width:auto;">
+                                    <option value="avg_ticket" selected>محور X: معدل الفاتورة</option>
+                                    <option value="items_per_inv">محور X: متوسط القطع (UPT)</option>
+                                    <option value="transactions">محور X: عدد الفواتير</option>
+                                    <option value="achievement">محور X: تحقيق الهدف %</option>
+                                </select>
+                                <select id="perfYAxis" class="form-select form-select-sm" onchange="renderPerfMatrix()" style="width:auto;">
+                                    <option value="avg_ticket">محور Y: معدل الفاتورة</option>
+                                    <option value="items_per_inv" selected>محور Y: متوسط القطع (UPT)</option>
+                                    <option value="transactions">محور Y: عدد الفواتير</option>
+                                    <option value="achievement">محور Y: تحقيق الهدف %</option>
+                                </select>
+                            </div>
+                            <div class="small text-muted" id="perfMediansLabel">
+                                متوسط فرز المجموعات (الوسيط): ...
+                            </div>
+                        </div>
+
+                        <!-- 4 Quadrants Grid -->
+                        <div class="row g-3">
+                            <!-- Quadrant 1: Stars -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #198754 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-success mb-0">⭐ نجوم (عالي X / عالي Y)</h6>
+                                        <span class="badge bg-success" id="badge-stars">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th class="text-end">المبيعات</th>
+                                                    <th class="text-end" id="col-x-stars">X</th>
+                                                    <th class="text-end" id="col-y-stars">Y</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-stars">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quadrant 2: Luxury Sellers -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #0dcaf0 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-info mb-0">💎 بائع قطعة فاخرة (عالي X / منخفض Y)</h6>
+                                        <span class="badge bg-info text-dark" id="badge-luxury">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th class="text-end">المبيعات</th>
+                                                    <th class="text-end" id="col-x-luxury">X</th>
+                                                    <th class="text-end" id="col-y-luxury">Y</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-luxury">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quadrant 3: Volume Sellers -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #fe7900 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-warning mb-0" style="color: #fe7900 !important;">📈 بائع حجم (منخفض X / عالي Y)</h6>
+                                        <span class="badge bg-warning text-dark" id="badge-volume">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th class="text-end">المبيعات</th>
+                                                    <th class="text-end" id="col-x-volume">X</th>
+                                                    <th class="text-end" id="col-y-volume">Y</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-volume">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quadrant 4: Needs Training -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #dc3545 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-danger mb-0">⚠️ يحتاج تدريب (منخفض X / منخفض Y)</h6>
+                                        <span class="badge bg-danger" id="badge-training">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th class="text-end">المبيعات</th>
+                                                    <th class="text-end" id="col-x-training">X</th>
+                                                    <th class="text-end" id="col-y-training">Y</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-training">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HR VIEW: Tenure Analysis -->
+            <div class="row" id="tenureViewContainer" style="display:none;">
+                <div class="col-12">
+                    <h5 class="section-title">📅 تحليل الأقدمية (Tenure Analysis)</h5>
+                    <div class="card border-0 shadow-sm p-3 mb-3">
+                        <div class="row g-3 mb-3" id="tenureKpis"></div>
+                        <div style="height: 420px;">
+                            <canvas id="tenureChart"></canvas>
+                        </div>
+                        <div class="alert alert-info small mt-3 mb-0">
+                            يعرض المخطط علاقة سنوات الخدمة (X) بمتوسط المبيعات اليومية (Y) لكل موظف. كل نقطة = موظف. يساعد على تقييم أثر الخبرة على الأداء.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -947,6 +1111,56 @@
 
                 <!-- 2. Quality Metrics (Comparisons) -->
                 <h6 class="fw-bold mb-3">⚡ جودة الأداء (مقارنة بالفرع)</h6>
+
+                <!-- Tenure Badge -->
+                <div class="insight-card" id="panelTenureCard" style="display:none;">
+                    <div class="insight-label">📅 مدة الخدمة (Tenure)</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="insight-value" id="panelTenure">-</div>
+                        <div id="panelTenureBadge" class="diff-badge">--</div>
+                    </div>
+                    <small class="text-muted d-block mt-2">تاريخ التعيين: <span id="panelJoinDate">-</span></small>
+                </div>
+
+                <!-- Anomaly Badge -->
+                <div class="insight-card" id="panelAnomalyCard" style="display:none;">
+                    <div class="insight-label">⚠️ مراجعة الفواتير</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="insight-value" id="panelMaxTicket">0</div>
+                            <small class="text-muted">أعلى فاتورة / المتوسط: <span id="panelAnomalyRatio">-</span></div>
+                        </div>
+                        <div id="panelAnomalyBadge" class="diff-badge">--</div>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="panelAnomalyNote"></small>
+                </div>
+
+                <!-- Peer Comparison -->
+                <div class="insight-card">
+                    <div class="insight-label">👥 المقارنة مع زملاء الفرع (Peer Rank)</div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="insight-value" id="panelPeerRank">-</div>
+                        <div id="panelPeerBadge" class="diff-badge">--</div>
+                    </div>
+                    <small class="text-muted d-block" id="panelPeerPct">-</small>
+                    <div id="panelTopPeers" class="small mt-2"></div>
+                </div>
+
+                <!-- Day Pattern -->
+                <div class="insight-card">
+                    <div class="insight-label">📅 نمط الأيام (Day Pattern)</div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <div class="text-center">
+                            <small class="text-muted d-block">أفضل يوم</small>
+                            <div class="fw-bold text-success" id="panelBestDay">-</div>
+                        </div>
+                        <div class="text-center">
+                            <small class="text-muted d-block">أسوأ يوم</small>
+                            <div class="fw-bold text-danger" id="panelWorstDay">-</div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block" id="panelDayNote"></small>
+                </div>
 
                 <!-- Avg Ticket -->
                 <div class="insight-card">
@@ -1287,6 +1501,9 @@
                 document.getElementById('listViewContainer').style.display = viewMode === 'list' ? 'block' : 'none';
                 document.getElementById('matrixViewContainer').style.display = viewMode === 'matrix' ? 'block' : 'none';
                 document.getElementById('auditViewContainer').style.display = viewMode === 'audit' ? 'block' : 'none';
+                document.getElementById('perfMatrixContainer').style.display = viewMode === 'perf' ? 'block' : 'none';
+                document.getElementById('tenureViewContainer').style.display = viewMode === 'tenure' ? 'block' : 'none';
+                document.getElementById('newEmpFilterContainer').style.display = (currentUser.role === 'Admin' && (viewMode === 'list' || viewMode === 'tenure' || viewMode === 'perf')) ? 'block' : 'none';
 
                 // Aggregate employee data
                 const empAgg = {};
@@ -1393,7 +1610,8 @@
                             current: 0,
                             prev: 0,
                             transactions: 0,
-                            items: 0
+                            items: 0,
+                            max_ticket: 0
                         };
                     }
 
@@ -1416,6 +1634,9 @@
                             branchStats[storeCode].current += sales || 0;
                             branchStats[storeCode].transactions += trans || 0;
                             branchStats[storeCode].items += items || 0;
+                            if (maxTicket > branchStats[storeCode].max_ticket) {
+                                branchStats[storeCode].max_ticket = maxTicket;
+                            }
                         }
                         if (pStatus === 2) branchStats[storeCode].prev += sales || 0;
 
@@ -1581,10 +1802,37 @@
                     empList = empList.filter(e => e.name.toLowerCase().includes(searchTerm));
                 }
 
+                // Tenure filter (new employees / old employees)
+                if (currentUser.role === 'Admin') {
+                    const tenureFilter = document.getElementById('tenureFilter') ? document.getElementById('tenureFilter').value : 'all';
+                    if (tenureFilter === 'new3') {
+                        empList = empList.filter(e => e.tenureYears !== null && e.tenureYears < 0.25);
+                    } else if (tenureFilter === 'new6') {
+                        empList = empList.filter(e => e.tenureYears !== null && e.tenureYears < 0.5);
+                    } else if (tenureFilter === 'old12') {
+                        empList = empList.filter(e => e.tenureYears !== null && e.tenureYears >= 1);
+                    }
+                }
+
                 // Calculate metrics
                 empList.forEach(e => {
                     e.avg_ticket = e.transactions > 0 ? e.sales / e.transactions : 0;
                     e.items_per_inv = e.transactions > 0 ? Math.abs(e.items) / e.transactions : 0;
+
+                    // Tenure (years of service) from join_dates
+                    e.joinDate = null;
+                    e.tenureYears = null;
+                    const joinStr = employeeJoinDates ? (employeeJoinDates[e.id] || employeeJoinDates[e.id + '-' + e.name]) : null;
+                    if (joinStr) {
+                        const jd = new Date(joinStr);
+                        if (!isNaN(jd.getTime())) {
+                            e.joinDate = joinStr;
+                            e.tenureYears = (today - jd) / (365.25 * 24 * 3600 * 1000);
+                        }
+                    }
+
+                    // Anomaly: max_ticket vs avg_ticket ratio
+                    e.anomalyRatio = e.avg_ticket > 0 ? e.max_ticket / e.avg_ticket : 0;
 
                     // Achievement
                     e.achievement = 0;
@@ -1709,6 +1957,10 @@
                     renderMatrixView(currentEmpList, periodFilter);
                 } else if (viewMode === 'audit') {
                     renderAuditView(currentEmpList, history); // Need full history for Audit
+                } else if (viewMode === 'perf') {
+                    renderPerfMatrix();
+                } else if (viewMode === 'tenure') {
+                    renderTenureView();
                 }
             }
 
@@ -1871,6 +2123,7 @@
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
         <td class="d-none d-md-table-cell">${emp.avg_ticket.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
         <td class="d-none d-md-table-cell">${emp.items_per_inv.toFixed(1)}</td>
+        <td class="text-center">${getAnomalyIcon(emp)}</td>
     </tr>
     `;
                 }).join('');
@@ -2279,6 +2532,9 @@
                 // 4. Render Daily Breakdown Table
                 renderEmpDailyTable(empId);
 
+                // Populate offcanvas insight metrics
+                renderEnhancedInsights(emp);
+
                 // Show Offcanvas
                 const offcanvasEl = document.getElementById('empInsightPanel');
                 const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
@@ -2441,93 +2697,364 @@
                 });
                 const data = filtered.map(d => d.sales);
 
-                if (empTrendChartInstance) {
-                    empTrendChartInstance.destroy();
+                if (empTrendCh            // === PERFORMANCE MATRIX (TABLES) ===
+            function formatPerfValue(val, key) {
+                if (key === 'sales' || key === 'avg_ticket') {
+                    return Math.round(val).toLocaleString() + ' ر.س';
+                } else if (key === 'achievement') {
+                    return val.toFixed(1) + '%';
+                } else if (key === 'items_per_inv') {
+                    return val.toFixed(2);
+                } else {
+                    return Math.round(val);
+                }
+            }
+
+            function axisLabel(key) {
+                const map = {
+                    avg_ticket: 'معدل الفاتورة',
+                    items_per_inv: 'متوسط القطع (UPT)',
+                    transactions: 'عدد الفواتير',
+                    achievement: 'تحقيق الهدف %'
+                };
+                return map[key] || key;
+            }
+
+            function renderPerfMatrix() {
+                const xKey = document.getElementById('perfXAxis').value;
+                const yKey = document.getElementById('perfYAxis').value;
+
+                // Filter out 'R' and employees with 0 transactions
+                const emps = currentEmpList.filter(e => e.name !== 'R' && e.transactions > 0);
+
+                if (emps.length === 0) {
+                    const emptyRow = '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات كافية</td></tr>';
+                    document.getElementById('body-stars').innerHTML = emptyRow;
+                    document.getElementById('body-luxury').innerHTML = emptyRow;
+                    document.getElementById('body-volume').innerHTML = emptyRow;
+                    document.getElementById('body-training').innerHTML = emptyRow;
+                    
+                    document.getElementById('badge-stars').textContent = '0';
+                    document.getElementById('badge-luxury').textContent = '0';
+                    document.getElementById('badge-volume').textContent = '0';
+                    document.getElementById('badge-training').textContent = '0';
+                    document.getElementById('perfMediansLabel').textContent = 'لا توجد بيانات كافية لحساب المجموعات';
+                    return;
                 }
 
-                empTrendChartInstance = new Chart(ctx, {
-                    type: 'line',
-                    /*
-                    // The following code block was inserted as per instruction.
-                    // It appears to be data processing logic and would cause a syntax error
-                    // if placed directly within the Chart.js configuration object.
-                    // It has been commented out to maintain a syntactically correct document.
-                    // Please relocate this code to an appropriate data processing function (e.g., `loadData`)
-                    // if it is intended to be active.
-                    if (!branchStats[sid]) {
-                        branchStats[sid] = { 
-                            current: 0, 
-                            prev: 0,
-                            transactions: 0,
-                            items: 0
-                        };
-                    }
+                // Compute Medians
+                const xMed = median(emps.map(e => e[xKey] || 0));
+                const yMed = median(emps.map(e => e[yKey] || 0));
+
+                // Update medians label
+                document.getElementById('perfMediansLabel').innerHTML = 
+                    `وسيط ${axisLabel(xKey)}: <strong>${formatPerfValue(xMed, xKey)}</strong>` +
+                    ` &nbsp;|&nbsp; ` +
+                    `وسيط ${axisLabel(yKey)}: <strong>${formatPerfValue(yMed, yKey)}</strong>`;
+
+                // Update table column headers
+                const quadrants = ['stars', 'luxury', 'volume', 'training'];
+                quadrants.forEach(q => {
+                    document.getElementById(`col-x-${q}`).textContent = axisLabel(xKey);
+                    document.getElementById(`col-y-${q}`).textContent = axisLabel(yKey);
+                });
+
+                // Group employees
+                const groups = { stars: [], luxury: [], volume: [], training: [] };
+                
+                emps.forEach(e => {
+                    const x = e[xKey] || 0;
+                    const y = e[yKey] || 0;
                     
-                    // Populate Employee Daily Helper
-                    if (!employeeDailyMaps[cleanId]) {
-                        employeeDailyMaps[cleanId] = [];
+                    if (x >= xMed && y >= yMed) {
+                        groups.stars.push(e);
+                    } else if (x >= xMed && y < yMed) {
+                        groups.luxury.push(e);
+                    } else if (x < xMed && y >= yMed) {
+                        groups.volume.push(e);
+                    } else {
+                        groups.training.push(e);
                     }
-                    employeeDailyMaps[cleanId].push({
-                        date: r[0],
-                        sales: r[2],
-                        inv: r[3],
-                        items: r[4]
-                    });
+                });
 
-                    if (isCurrentPeriod) {
-                        // Employee Aggregation
-                        if (!historyData[cleanId]) {
-                            historyData[cleanId] = {
-                                id: cleanId,
-                                name: empName, // Default to mapped name or clean ID
-                                sales: 0,
-                                transactions: 0,
-                                items: 0,
-                                storeCode: sid,
-                                storeName: storeName,
-                                prevSales: 0,
-                                target: 0
-                            };
-                        }
-                        historyData[cleanId].sales += r[2];
-                        historyData[cleanId].transactions += r[3];
-                        historyData[cleanId].items += r[4];
+                // Sort and render each group
+                quadrants.forEach(q => {
+                    const list = groups[q];
+                    // Sort by sales descending
+                    list.sort((a, b) => b.sales - a.sales);
 
-                        // Update Name if Arabic Map available
-                        if (employeeNames && employeeNames[cleanId]) {
-                            historyData[cleanId].name = employeeNames[cleanId];
-                        }
+                    // Update count badge
+                    document.getElementById(`badge-${q}`).textContent = list.length;
 
-                        // Branch Aggregation (Extended for Averages)
-                        branchStats[sid].current += r[2];
-                        branchStats[sid].transactions += r[3];
-                        branchStats[sid].items += r[4];
+                    const tbody = document.getElementById(`body-${q}`);
+                    if (list.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">لا يوجد موظفين في هذه المجموعة</td></tr>';
+                        return;
                     }
-                    */
+
+                    tbody.innerHTML = list.map(e => {
+                        const xVal = e[xKey] || 0;
+                        const yVal = e[yKey] || 0;
+                        
+                        return `
+                        <tr onclick="openEmployeeInsights('${e.id}')" style="cursor: pointer;">
+                            <td>
+                                <span class="text-primary text-decoration-underline fw-bold">${e.name}</span>
+                            </td>
+                            <td><small class="text-muted">${e.storeName}</small></td>
+                            <td class="text-end fw-bold text-success">${Math.round(e.sales).toLocaleString()} ر.س</td>
+                            <td class="text-end fw-semibold text-dark">${formatPerfValue(xVal, xKey)}</td>
+                            <td class="text-end fw-semibold text-dark">${formatPerfValue(yVal, yKey)}</td>
+                        </tr>
+                        `;
+                    }).join('');
+                });
+            }
+
+            function median(arr) {
+                if (arr.length === 0) return 0;
+                const s = [...arr].sort((a, b) => a - b);
+                const mid = Math.floor(s.length / 2);
+                return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+            }
+
+            // === TENURE VIEW ===
+            let tenureChartInstance = null;
+
+            function renderTenureView() {
+                const ctx = document.getElementById('tenureChart').getContext('2d');
+                const emps = currentEmpList.filter(e => e.name !== 'R' && e.tenureYears !== null);
+
+                // KPIs
+                const totalWithTenure = emps.length;
+                const new3 = emps.filter(e => e.tenureYears < 0.25).length;
+                const new6 = emps.filter(e => e.tenureYears < 0.5).length;
+                const old12 = emps.filter(e => e.tenureYears >= 1).length;
+                const avgTenure = totalWithTenure > 0 ? emps.reduce((s, e) => s + e.tenureYears, 0) / totalWithTenure : 0;
+
+                const kpi = (label, val, color, sub) => `
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card border-bottom border-4" style="border-color:${color} !important;">
+                            <div class="text-muted small">${label}</div>
+                            <div class="fs-4 fw-bold" style="color:${color}">${val}</div>
+                            <div class="small text-muted">${sub}</div>
+                        </div>
+                    </div>`;
+                document.getElementById('tenureKpis').innerHTML =
+                    kpi('إجمالي موظفين بتاريخ تعيين', totalWithTenure, '#fe7900', '') +
+                    kpi('متوسط الأقدمية', avgTenure.toFixed(1) + ' سنة', '#0d6efd', '') +
+                    kpi('جدد (أقل من 3 شهور)', new3, '#dc3545', 'يحتاجون مراقبة اندماج') +
+                    kpi('قدامى (سنة فأكثر)', old12, '#198754', 'خبرة مستقرة');
+
+                // Average daily sales for Y axis
+                const today = new Date();
+                let activeDays = 1;
+                const yStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                // estimate active days in month
+                activeDays = Math.max(1, today.getDate());
+
+                const data = emps.map(e => ({
+                    x: e.tenureYears,
+                    y: e.sales / activeDays,
+                    r: 6,
+                    emp: e
+                }));
+
+                if (tenureChartInstance) tenureChartInstance.destroy();
+
+                tenureChartInstance = new Chart(ctx, {
+                    type: 'bubble',
                     data: {
-                        labels: labels,
                         datasets: [{
-                            label: 'المبيعات',
+                            label: 'موظف',
                             data: data,
-                            borderColor: '#fe7900',
-                            backgroundColor: 'rgba(254, 121, 0, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 4
+                            backgroundColor: 'rgba(254,121,0,0.55)',
+                            borderColor: '#fe7900'
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false }
+                            legend: { display: false },
+                            tooltip: {
+                                titleFont: { family: 'Tajawal' },
+                                bodyFont: { family: 'Tajawal' },
+                                callbacks: {
+                                    title: (items) => {
+                                        const e = items[0].raw.emp;
+                                        return e.name + ' — ' + e.storeName;
+                                    },
+                                    label: (item) => {
+                                        const e = item.raw.emp;
+                                        return [
+                                            'الأقدمية: ' + e.tenureYears.toFixed(2) + ' سنة',
+                                            'تاريخ التعيين: ' + e.joinDate,
+                                            'المبيعات: ' + Math.round(e.sales).toLocaleString(),
+                                            'متوسط يومي: ' + Math.round(item.raw.y).toLocaleString()
+                                        ];
+                                    }
+                                }
+                            }
                         },
-                        x: {
-                            grid: { display: false }
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'سنوات الخدمة', font: { family: 'Tajawal', weight: 'bold' } },
+                                grid: { color: '#eee' },
+                                beginAtZero: true
+                            },
+                            y: {
+                                title: { display: true, text: 'متوسط المبيعات اليومية', font: { family: 'Tajawal', weight: 'bold' } },
+                                grid: { color: '#eee' },
+                                beginAtZero: true
+                            }
                         }
                     }
                 });
+            }
+
+            // === ENHANCED INSIGHT PANEL: PEER COMPARISON + TENURE + DAYS + ANOMALY ===
+            function renderEnhancedInsights(emp) {
+                // --- Tenure ---
+                const tenureCard = document.getElementById('panelTenureCard');
+                if (emp.tenureYears !== null) {
+                    tenureCard.style.display = 'block';
+                    const years = emp.tenureYears;
+                    let disp;
+                    if (years < 1) disp = Math.round(years * 12) + ' شهر';
+                    else disp = years.toFixed(1) + ' سنة';
+                    document.getElementById('panelTenure').textContent = disp;
+                    document.getElementById('panelJoinDate').textContent = emp.joinDate || '-';
+
+                    let badge, cls;
+                    if (years < 0.25) { badge = 'جديد'; cls = 'diff-neg'; }
+                    else if (years < 1) { badge = 'تحت سنة'; cls = 'diff-neutral'; }
+                    else { badge = 'خبير'; cls = 'diff-pos'; }
+                    const bEl = document.getElementById('panelTenureBadge');
+                    bEl.textContent = badge;
+                    bEl.className = 'diff-badge ' + cls;
+                } else {
+                    tenureCard.style.display = 'none';
+                }
+
+                // --- Anomaly ---
+                const anomalyCard = document.getElementById('panelAnomalyCard');
+                if (emp.max_ticket > 0 && emp.avg_ticket > 0) {
+                    anomalyCard.style.display = 'block';
+                    document.getElementById('panelMaxTicket').textContent = Math.round(emp.max_ticket).toLocaleString();
+                    const ratio = emp.anomalyRatio;
+                    document.getElementById('panelAnomalyRatio').textContent = ratio.toFixed(1) + 'x';
+                    const bStats = branchStats[emp.storeCode];
+                    const branchMax = bStats ? bStats.max_ticket : 0;
+                    const vsBranch = branchMax > 0 ? emp.max_ticket / branchMax : 0;
+
+                    let badge, cls, note;
+                    if (ratio >= 4 || vsBranch >= 1.5) {
+                        badge = 'مراجعة عالية'; cls = 'diff-neg';
+                        note = `أعلى فاتورة تفوق ${vsBranch.toFixed(1)}x أعلى فاتورة بالفرع. قد يشير لتجميع فواتير أو خطأ.`;
+                    } else if (ratio >= 2.5 || vsBranch >= 1.2) {
+                        badge = 'مراجعة'; cls = 'diff-neutral';
+                        note = `أعلى فاتورة ${ratio.toFixed(1)}x متوسطه. ضمن نطاق المراجعة.`;
+                    } else {
+                        badge = 'طبيعي'; cls = 'diff-pos';
+                        note = 'الفواتير ضمن النطاق الطبيعي مقارنة بمتوسطه وفرعه.';
+                    }
+                    const bEl = document.getElementById('panelAnomalyBadge');
+                    bEl.textContent = badge; bEl.className = 'diff-badge ' + cls;
+                    document.getElementById('panelAnomalyNote').textContent = note;
+                } else {
+                    anomalyCard.style.display = 'none';
+                }
+
+                // --- Peer Comparison ---
+                const peers = currentEmpList.filter(e =>
+                    e.name !== 'R' && e.storeCode === emp.storeCode && e.transactions > 0
+                );
+                const sortedBySales = [...peers].sort((a, b) => b.sales - a.sales);
+                const rank = sortedBySales.findIndex(e => e.id === emp.id) + 1;
+                const rankEl = document.getElementById('panelPeerRank');
+                const peerBadge = document.getElementById('panelPeerBadge');
+                const peerPct = document.getElementById('panelPeerPct');
+
+                if (rank > 0 && peers.length > 1) {
+                    rankEl.textContent = '#' + rank + ' من ' + peers.length;
+                    // Percentile (higher = better than more peers)
+                    const pctile = Math.round(((peers.length - rank) / (peers.length - 1)) * 100);
+                    peerPct.textContent = 'أعلى من ' + pctile + '% من زملاء الفرع بالمبيعات';
+
+                    let badge, cls;
+                    if (rank === 1) { badge = 'الأول'; cls = 'diff-pos'; }
+                    else if (rank <= 3) { badge = 'Top 3'; cls = 'diff-pos'; }
+                    else if (rank <= Math.ceil(peers.length / 2)) { badge = 'فوق المتوسط'; cls = 'diff-neutral'; }
+                    else { badge = 'تحت المتوسط'; cls = 'diff-neg'; }
+                    peerBadge.textContent = badge; peerBadge.className = 'diff-badge ' + cls;
+
+                    // Top 3 list
+                    const top3 = sortedBySales.slice(0, 3);
+                    const top3Html = top3.map((p, i) => {
+                        const isMe = p.id === emp.id;
+                        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+                        return `<div class="d-flex justify-content-between ${isMe ? 'fw-bold text-primary' : ''}">
+                            <span>${medal} ${p.name}</span>
+                            <span>${Math.round(p.sales).toLocaleString()}</span>
+                        </div>`;
+                    }).join('');
+                    document.getElementById('panelTopPeers').innerHTML =
+                        '<small class="text-muted fw-bold d-block mb-1">Top 3 بالفرع:</small>' + top3Html;
+                } else {
+                    rankEl.textContent = peers.length <= 1 ? 'موظف وحيد' : '-';
+                    peerBadge.textContent = '--'; peerBadge.className = 'diff-badge diff-neutral';
+                    peerPct.textContent = 'لا يوجد زملاء كافيون للمقارنة';
+                    document.getElementById('panelTopPeers').innerHTML = '';
+                }
+
+                // --- Day Pattern ---
+                renderDayPattern(emp);
+            }
+
+            function renderDayPattern(emp) {
+                const daily = Object.values(employeeDailyMaps[emp.id] || {});
+                if (daily.length === 0) {
+                    document.getElementById('panelBestDay').textContent = '-';
+                    document.getElementById('panelWorstDay').textContent = '-';
+                    document.getElementById('panelDayNote').textContent = 'لا توجد بيانات يومية';
+                    return;
+                }
+                const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                const byDay = [0, 0, 0, 0, 0, 0, 0];
+                const byDayCount = [0, 0, 0, 0, 0, 0, 0];
+                let totalAll = 0;
+                daily.forEach(d => {
+                    const dow = new Date(d.date).getDay();
+                    byDay[dow] += d.sales || 0;
+                    byDayCount[dow] += 1;
+                    totalAll += d.sales || 0;
+                });
+                // average per working day of week
+                const avgByDay = byDay.map((s, i) => byDayCount[i] > 0 ? s / byDayCount[i] : 0);
+
+                let bestIdx = 0, worstIdx = 0;
+                for (let i = 1; i < 7; i++) {
+                    if (byDayCount[i] > 0) {
+                        if (byDay[i] > byDay[bestIdx] || byDayCount[bestIdx] === 0) bestIdx = i;
+                    }
+                }
+                // worst among days actually worked
+                let worked = avgByDay.map((v, i) => byDayCount[i] > 0 ? v : -1);
+                worstIdx = worked.indexOf(Math.min(...worked.filter(v => v >= 0)));
+
+                document.getElementById('panelBestDay').textContent = dayNames[bestIdx];
+                document.getElementById('panelWorstDay').textContent = worstIdx >= 0 ? dayNames[worstIdx] : '-';
+
+                // Concentration note: % of sales in best day
+                const bestShare = totalAll > 0 ? (byDay[bestIdx] / totalAll) * 100 : 0;
+                let note;
+                if (bestShare >= 40) {
+                    note = `⚠️ ${Math.round(bestShare)}% من مبيعاته في يوم ${dayNames[bestIdx]} — اعتماد عالٍ على يوم واحد.`;
+                } else {
+                    note = `يوم ${dayNames[bestIdx]} = ${Math.round(bestShare)}% من المبيعات. توزيع متوازن.`;
+                }
+                document.getElementById('panelDayNote').textContent = note;
             }
 
             // Initialize
