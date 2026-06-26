@@ -458,6 +458,10 @@
             }
         }
 
+        .offcanvas {
+            width: 450px !important;
+        }
+
         /* Offcanvas Mobile */
         @media (max-width: 768px) {
             .offcanvas {
@@ -767,6 +771,7 @@
                     </button>
                 </div>
             </div>
+        </div>
 
             <!-- List View Container (Default) -->
             <div id="listViewContainer">
@@ -1067,11 +1072,85 @@
                     <h5 class="section-title">📅 تحليل الأقدمية (Tenure Analysis)</h5>
                     <div class="card border-0 shadow-sm p-3 mb-3">
                         <div class="row g-3 mb-3" id="tenureKpis"></div>
-                        <div style="height: 420px;">
-                            <canvas id="tenureChart"></canvas>
-                        </div>
-                        <div class="alert alert-info small mt-3 mb-0">
-                            يعرض المخطط علاقة سنوات الخدمة (X) بمتوسط المبيعات اليومية (Y) لكل موظف. كل نقطة = موظف. يساعد على تقييم أثر الخبرة على الأداء.
+                        <!-- Tenure Tables Grid -->
+                        <div class="row g-3" id="tenureTablesGrid">
+                            <!-- Column 1: Experienced (>= 1 year) -->
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #198754 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-success mb-0">👤 قدامى (سنة فأكثر)</h6>
+                                        <span class="badge bg-success" id="badge-tenure-old">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th>تاريخ التعيين</th>
+                                                    <th class="text-end">الخدمة</th>
+                                                    <th class="text-end">معدل يومي</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-tenure-old">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Column 2: Mid Tenure (3 months to 1 year) -->
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #fe7900 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-warning mb-0" style="color: #fe7900 !important;">👤 متوسطين (3 شهور إلى سنة)</h6>
+                                        <span class="badge bg-warning text-dark" id="badge-tenure-mid">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th>تاريخ التعيين</th>
+                                                    <th class="text-end">الخدمة</th>
+                                                    <th class="text-end">معدل يومي</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-tenure-mid">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Column 3: New (< 3 months) -->
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100 bg-white" style="border-top: 4px solid #dc3545 !important;">
+                                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                                        <h6 class="fw-bold text-danger mb-0">👤 جدد (أقل من 3 شهور)</h6>
+                                        <span class="badge bg-danger" id="badge-tenure-new">0</span>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>الموظف</th>
+                                                    <th>الفرع</th>
+                                                    <th>تاريخ التعيين</th>
+                                                    <th class="text-end">الخدمة</th>
+                                                    <th class="text-end">معدل يومي</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="body-tenure-new">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1083,7 +1162,7 @@
 
         <!-- Employee Insight Offcanvas -->
         <div class="offcanvas offcanvas-start" tabindex="-1" id="empInsightPanel"
-            style="width: 100%; border-right: 5px solid #fe7900;">
+            style="border-left: 5px solid #fe7900;">
             <div class="offcanvas-header bg-light">
                 <div>
                     <h5 class="offcanvas-title fw-bold" id="panelEmpName">Employee Name</h5>
@@ -1128,7 +1207,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="insight-value" id="panelMaxTicket">0</div>
-                            <small class="text-muted">أعلى فاتورة / المتوسط: <span id="panelAnomalyRatio">-</span></div>
+                            <small class="text-muted">أعلى فاتورة / المتوسط: <span id="panelAnomalyRatio">-</span></small>
                         </div>
                         <div id="panelAnomalyBadge" class="diff-badge">--</div>
                     </div>
@@ -2697,7 +2776,66 @@
                 });
                 const data = filtered.map(d => d.sales);
 
-                if (empTrendCh            // === PERFORMANCE MATRIX (TABLES) ===
+                if (empTrendChartInstance) {
+                    empTrendChartInstance.destroy();
+                }
+
+                empTrendChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'المبيعات',
+                            data: data,
+                            borderColor: '#fe7900',
+                            backgroundColor: 'rgba(254, 121, 0, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                });
+            }
+
+            // === ANOMALY ICON HELPER ===
+            function getAnomalyIcon(emp) {
+                if (!emp.max_ticket || emp.max_ticket <= 0 || emp.avg_ticket <= 0) {
+                    return '<span class="text-muted">-</span>';
+                }
+                const ratio = emp.anomalyRatio;
+                const bStats = branchStats[emp.storeCode];
+                const branchMax = bStats ? bStats.max_ticket : 0;
+                const vsBranch = branchMax > 0 ? emp.max_ticket / branchMax : 0;
+
+                let icon, color, title;
+                if (ratio >= 4 || vsBranch >= 1.5) {
+                    icon = '🔴';
+                    color = 'text-danger';
+                    title = `مراجعة عالية: أعلى فاتورة ${emp.max_ticket.toLocaleString()} = ${ratio.toFixed(1)}x المتوسط`;
+                } else if (ratio >= 2.5 || vsBranch >= 1.2) {
+                    icon = '🟡';
+                    color = 'text-warning';
+                    title = `مراجعة متوسطة: أعلى فاتورة ${emp.max_ticket.toLocaleString()} = ${ratio.toFixed(1)}x المتوسط`;
+                } else {
+                    icon = '✅';
+                    color = 'text-success';
+                    title = `طبيعي: ${ratio.toFixed(1)}x المتوسط`;
+                }
+                return `<span class="${color}" title="${title}">${icon}</span>`;
+            }
+
+            // === PERFORMANCE MATRIX (TABLES) ===
             function formatPerfValue(val, key) {
                 if (key === 'sales' || key === 'avg_ticket') {
                     return Math.round(val).toLocaleString() + ' ر.س';
@@ -2819,16 +2957,12 @@
             }
 
             // === TENURE VIEW ===
-            let tenureChartInstance = null;
-
             function renderTenureView() {
-                const ctx = document.getElementById('tenureChart').getContext('2d');
                 const emps = currentEmpList.filter(e => e.name !== 'R' && e.tenureYears !== null);
 
                 // KPIs
                 const totalWithTenure = emps.length;
                 const new3 = emps.filter(e => e.tenureYears < 0.25).length;
-                const new6 = emps.filter(e => e.tenureYears < 0.5).length;
                 const old12 = emps.filter(e => e.tenureYears >= 1).length;
                 const avgTenure = totalWithTenure > 0 ? emps.reduce((s, e) => s + e.tenureYears, 0) / totalWithTenure : 0;
 
@@ -2846,71 +2980,56 @@
                     kpi('جدد (أقل من 3 شهور)', new3, '#dc3545', 'يحتاجون مراقبة اندماج') +
                     kpi('قدامى (سنة فأكثر)', old12, '#198754', 'خبرة مستقرة');
 
-                // Average daily sales for Y axis
+                // Active days estimation for daily average
                 const today = new Date();
-                let activeDays = 1;
-                const yStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-                // estimate active days in month
-                activeDays = Math.max(1, today.getDate());
+                const activeDays = Math.max(1, today.getDate());
 
-                const data = emps.map(e => ({
-                    x: e.tenureYears,
-                    y: e.sales / activeDays,
-                    r: 6,
-                    emp: e
-                }));
+                // Group lists
+                const groups = {
+                    old: emps.filter(e => e.tenureYears >= 1.0),
+                    mid: emps.filter(e => e.tenureYears >= 0.25 && e.tenureYears < 1.0),
+                    new: emps.filter(e => e.tenureYears < 0.25)
+                };
 
-                if (tenureChartInstance) tenureChartInstance.destroy();
+                const renderTenureTable = (tbodyId, list, badgeId) => {
+                    document.getElementById(badgeId).textContent = list.length;
+                    const tbody = document.getElementById(tbodyId);
 
-                tenureChartInstance = new Chart(ctx, {
-                    type: 'bubble',
-                    data: {
-                        datasets: [{
-                            label: 'موظف',
-                            data: data,
-                            backgroundColor: 'rgba(254,121,0,0.55)',
-                            borderColor: '#fe7900'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                titleFont: { family: 'Tajawal' },
-                                bodyFont: { family: 'Tajawal' },
-                                callbacks: {
-                                    title: (items) => {
-                                        const e = items[0].raw.emp;
-                                        return e.name + ' — ' + e.storeName;
-                                    },
-                                    label: (item) => {
-                                        const e = item.raw.emp;
-                                        return [
-                                            'الأقدمية: ' + e.tenureYears.toFixed(2) + ' سنة',
-                                            'تاريخ التعيين: ' + e.joinDate,
-                                            'المبيعات: ' + Math.round(e.sales).toLocaleString(),
-                                            'متوسط يومي: ' + Math.round(item.raw.y).toLocaleString()
-                                        ];
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                title: { display: true, text: 'سنوات الخدمة', font: { family: 'Tajawal', weight: 'bold' } },
-                                grid: { color: '#eee' },
-                                beginAtZero: true
-                            },
-                            y: {
-                                title: { display: true, text: 'متوسط المبيعات اليومية', font: { family: 'Tajawal', weight: 'bold' } },
-                                grid: { color: '#eee' },
-                                beginAtZero: true
-                            }
-                        }
+                    if (list.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">لا يوجد موظفين</td></tr>';
+                        return;
                     }
-                });
+
+                    // Sort by sales descending
+                    list.sort((a, b) => b.sales - a.sales);
+
+                    tbody.innerHTML = list.map(e => {
+                        const years = e.tenureYears;
+                        let tenureDisp;
+                        if (years < 1) {
+                            tenureDisp = Math.round(years * 12) + ' شهر';
+                        } else {
+                            tenureDisp = years.toFixed(1) + ' سنة';
+                        }
+                        const dailyAvg = e.sales / activeDays;
+
+                        return `
+                        <tr onclick="openEmployeeInsights('${e.id}')" style="cursor: pointer;">
+                            <td>
+                                <span class="text-primary text-decoration-underline fw-bold">${e.name}</span>
+                            </td>
+                            <td><small class="text-muted">${e.storeName}</small></td>
+                            <td><small class="text-muted">${e.joinDate || '-'}</small></td>
+                            <td class="text-end fw-semibold">${tenureDisp}</td>
+                            <td class="text-end fw-bold text-success">${Math.round(dailyAvg).toLocaleString()} ر.س</td>
+                        </tr>
+                        `;
+                    }).join('');
+                };
+
+                renderTenureTable('body-tenure-old', groups.old, 'badge-tenure-old');
+                renderTenureTable('body-tenure-mid', groups.mid, 'badge-tenure-mid');
+                renderTenureTable('body-tenure-new', groups.new, 'badge-tenure-new');
             }
 
             // === ENHANCED INSIGHT PANEL: PEER COMPARISON + TENURE + DAYS + ANOMALY ===
@@ -2950,11 +3069,19 @@
 
                     let badge, cls, note;
                     if (ratio >= 4 || vsBranch >= 1.5) {
-                        badge = 'مراجعة عالية'; cls = 'diff-neg';
-                        note = `أعلى فاتورة تفوق ${vsBranch.toFixed(1)}x أعلى فاتورة بالفرع. قد يشير لتجميع فواتير أو خطأ.`;
+                        badge = 'فاتورة استثنائية (مراجعة)'; cls = 'diff-neutral';
+                        if (vsBranch >= 1.5) {
+                            note = `أعلى فاتورة تفوق أعلى فاتورة بالفرع بـ ${vsBranch.toFixed(1)} ضعفاً. قد تكون صفقة كبرى ناجحة وممتازة (ضربة حظ)، أو تجميع فواتير/خطأ يتطلب التحقق.`;
+                        } else {
+                            note = `أعلى فاتورة تفوق متوسط فواتيره بـ ${ratio.toFixed(1)} ضعفاً. قد تكون صفقة كبرى ناجحة وممتازة (ضربة حظ)، أو تجميع فواتير/خطأ يتطلب التحقق.`;
+                        }
                     } else if (ratio >= 2.5 || vsBranch >= 1.2) {
                         badge = 'مراجعة'; cls = 'diff-neutral';
-                        note = `أعلى فاتورة ${ratio.toFixed(1)}x متوسطه. ضمن نطاق المراجعة.`;
+                        if (vsBranch >= 1.2) {
+                            note = `أعلى فاتورة قريبة من أعلى فاتورة بالفرع (${vsBranch.toFixed(1)}x). قد تكون صفقة كبرى ناجحة أو بحاجة لمراجعة.`;
+                        } else {
+                            note = `أعلى فاتورة تفوق متوسط فواتيره بـ ${ratio.toFixed(1)} ضعفاً. ضمن نطاق المراجعة الطبيعي.`;
+                        }
                     } else {
                         badge = 'طبيعي'; cls = 'diff-pos';
                         note = 'الفواتير ضمن النطاق الطبيعي مقارنة بمتوسطه وفرعه.';
