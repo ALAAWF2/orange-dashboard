@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد الجرد - شركة أورانج</title>
+    <!-- Bootstrap 5.3.0 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts: Outfit & Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bs-primary: #fe7900;
+            --orange-hover: #e06a00;
+            --dark-bg: #1c1c1e;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --border-radius-sm: 8px;
+            --border-radius-lg: 16px;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f5f5f7;
+            color: #333;
+            padding-bottom: 80px; /* Space for sticky actions on mobile */
+        }
+
+        .navbar {
+            background-color: var(--dark-bg);
+            border-bottom: 3px solid var(--bs-primary);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: #fff !important;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-orange {
+            color: var(--bs-primary);
+        }
+
+        .card {
+            border: none;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+        }
+
+        .btn-primary {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
+            font-weight: 700;
+        }
+
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: var(--orange-hover);
+            border-color: var(--orange-hover);
+        }
+
+        /* Scanner Area Styles */
+        #reader {
+            width: 100%;
+            border-radius: var(--border-radius-lg);
+            border: 2px dashed #ccc !important;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        #reader__dashboard {
+            background-color: #fff !important;
+            padding: 10px !important;
+            border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+        }
+
+        #reader button {
+            background-color: var(--bs-primary) !important;
+            color: white !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: var(--border-radius-sm) !important;
+            font-weight: bold !important;
+            margin: 5px !important;
+            cursor: pointer;
+        }
+
+        #reader button:hover {
+            background-color: var(--orange-hover) !important;
+        }
+
+        /* Scanned Item List Row */
+        .scanned-row {
+            transition: background-color 0.3s ease;
+        }
+
+        .scanned-row.just-added {
+            background-color: rgba(254, 121, 0, 0.15);
+        }
+
+        /* Mobile Responsive adjustments */
+        @media (max-width: 576px) {
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+            .btn-action-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        .badge-diff {
+            font-weight: bold;
+        }
+
+        .badge-diff.diff-equal {
+            background-color: #198754;
+            color: #fff;
+        }
+
+        .badge-diff.diff-surplus {
+            background-color: #0dcaf0;
+            color: #000;
+        }
+
+        .badge-diff.diff-deficit {
+            background-color: #dc3545;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm py-3">
+        <div class="container text-center justify-content-center">
+            <span class="navbar-brand">
+                🍊 مساعد الجرد الذكي <span class="brand-orange">| أورانج</span>
+            </span>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container my-4">
+        
+        <!-- Step 1: Select Showroom -->
+        <div class="card p-3" id="showroom-selection-card">
+            <h5 class="card-title font-weight-bold mb-3">📍 اختيار معرض الجرد</h5>
+            <div class="mb-3">
+                <label for="showroom-select" class="form-label">المعرض الحالي:</label>
+                <select id="showroom-select" class="form-select form-select-lg">
+                    <option value="" disabled selected>جاري تحميل المعارض...</option>
+                </select>
+            </div>
+            <button id="start-inventory-btn" class="btn btn-primary btn-lg w-100" disabled>
+                بدء عملية الجرد 🚀
+            </button>
+        </div>
+
+        <!-- Step 2: Scanner & Inputs (Initially Hidden) -->
+        <div id="inventory-workspace" style="display: none;">
+            
+            <!-- Statistics Card -->
+            <div class="card p-3 text-white bg-dark">
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h6 class="mb-1 text-muted">المعرض الجاري جرده:</h6>
+                        <h4 id="active-outlet-name" class="brand-orange fw-bold mb-0">-</h4>
+                    </div>
+                    <div class="col-4 text-start">
+                        <h6 class="mb-1 text-muted">إجمالي الممسوح:</h6>
+                        <h4 id="total-scanned-qty" class="fw-bold mb-0">0</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barcode Scanner Card -->
+            <div class="card p-3">
+                <h5 class="card-title font-weight-bold mb-3">📷 مسح الباركود</h5>
+                <div class="mb-3">
+                    <div id="reader"></div>
+                </div>
+                
+                <hr class="my-3">
+                
+                <!-- Manual Entry Form -->
+                <form id="manual-barcode-form" class="row g-2 align-items-center">
+                    <div class="col-8 col-sm-9">
+                        <input type="text" id="manual-barcode-input" class="form-control form-control-lg" placeholder="أدخل الباركود أو رقم الصنف يدوياً..." autocomplete="off">
+                    </div>
+                    <div class="col-4 col-sm-3">
+                        <button type="submit" class="btn btn-primary btn-lg w-100">مسح 🔍</button>
+                    </div>
+                </form>
+                <div id="scan-feedback" class="mt-2 text-center fw-bold" style="display: none;"></div>
+            </div>
+
+            <!-- Current Inventory Table -->
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title font-weight-bold mb-0">📦 قائمة المواد المجرودة</h5>
+                    <button id="clear-current-inventory" class="btn btn-sm btn-outline-danger">مسح الكل 🗑️</button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>رقم المنتج</th>
+                                <th>اسم الصنف</th>
+                                <th>الباركود</th>
+                                <th class="text-center">المتوقع</th>
+                                <th class="text-center">الفعلي</th>
+                                <th class="text-center">الفرق</th>
+                                <th class="text-center">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-tbody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">لم يتم جرد أي مواد بعد. ابدأ بمسح الباركود!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sticky Action Footer on Mobile, normal at bottom -->
+            <div class="card p-3">
+                <h5 class="card-title font-weight-bold mb-3">💾 حفظ وإنهاء الجرد</h5>
+                <div class="d-flex gap-3 btn-action-group">
+                    <button id="download-excel-btn" class="btn btn-success btn-lg flex-fill">
+                        📥 تحميل ملف Excel
+                    </button>
+                    <button id="whatsapp-share-btn" class="btn btn-info btn-lg flex-fill text-white" style="background-color: #25d366; border-color: #25d366;">
+                        💬 مشاركة عبر واتساب
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS (Excel generation) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- html5-qrcode (Scanner) -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+
+</body>
+</html>
