@@ -12,7 +12,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let stockByOutlet = {};
 let currentOutlet = "";
 let scannedItems = []; // Array of { item_id, name, old_item_id, price, barcode, expected_qty, counted_qty }
-let html5QrcodeScanner = null;
+let html5Qrcode = null;
+let currentCameraId = null;
+let camerasList = [];
+let isScanning = false;
+let scanLock = false;
 
 // Audio Feedbacks
 function playBeep(type = 'success') {
@@ -281,7 +285,7 @@ async function handleScan(barcode) {
     }
 }
 
-// Generate Excel file rows representing multiple barcodes
+// Generate Excel file rows representing multiple barcodes in columns
 async function generateExcelRows() {
     if (scannedItems.length === 0) return [];
     
@@ -307,7 +311,18 @@ async function generateExcelRows() {
         if (!barcodesMap[b.item_id]) {
             barcodesMap[b.item_id] = [];
         }
-        barcodesMap[b.item_id].push(b.barcode);
+        if (!barcodesMap[b.item_id].includes(b.barcode)) {
+            barcodesMap[b.item_id].push(b.barcode);
+        }
+    });
+    
+    // Find maximum number of barcodes for any scanned item
+    let maxBarcodesCount = 1;
+    scannedItems.forEach(item => {
+        const barcodes = barcodesMap[item.item_id] || [item.barcode];
+        if (barcodes.length > maxBarcodesCount) {
+            maxBarcodesCount = barcodes.length;
+        }
     });
     
     const rows = [];
@@ -316,18 +331,24 @@ async function generateExcelRows() {
         let barcodes = barcodesMap[item.item_id] || [item.barcode];
         if (barcodes.length === 0) barcodes = [item.barcode];
         
-        // Print each barcode on a separate row as requested
-        barcodes.forEach(bc => {
-            rows.push({
-                "رقم المنتج (Item ID)": item.item_id,
-                "اسم الصنف (Item Name)": item.name,
-                "الكود البديل (Alias)": item.old_item_id,
-                "الباركود (Barcode)": bc,
-                "الكمية الموجودة بالمعرض (Expected)": item.expected_qty,
-                "الكمية الفعلية بالجرد (Counted)": item.counted_qty,
-                "الفرق (Difference)": item.counted_qty - item.expected_qty
-            });
-        });
+        // Build base row object
+        const rowObj = {
+            "رقم المنتج (Item ID)": item.item_id,
+            "اسم الصنف (Item Name)": item.name,
+            "الكود البديل (Alias)": item.old_item_id
+        };
+        
+        // Add barcode columns dynamically (الباركود 1، الباركود 2، إلخ)
+        for (let i = 0; i < maxBarcodesCount; i++) {
+            rowObj[`الباركود ${i + 1}`] = barcodes[i] || "";
+        }
+        
+        // Add stock and difference columns
+        rowObj["الكمية الموجودة بالمعرض (Expected)"] = item.expected_qty;
+        rowObj["الكمية الفعلية بالجرد (Counted)"] = item.counted_qty;
+        rowObj["الفرق (Difference)"] = item.counted_qty - item.expected_qty;
+        
+        rows.push(rowObj);
     });
     
     return rows;
@@ -400,8 +421,36 @@ window.addEventListener("DOMContentLoaded", async () => {
         loadSession();
         renderTable();
         
-        // Initialize HTML5 QR Code scanner
-        initScanner();
+        // Auto-initialize camera search
+        initCamerasAndStart();
+    });
+    
+    // Toggle Camera click event
+    document.getElementById("toggle-camera-btn").addEventListener("click", async () => {
+        if (isScanning) {
+            await stopScanning();
+        } else {
+            if (currentCameraId) {
+                await startScanning(currentCameraId);
+            } else {
+                alert("لم يتم العثور على كاميرات نشطة.");
+            }
+        }
+    });
+
+    // Switch Camera click event
+    document.getElementById("switch-camera-btn").addEventListener("click", async () => {
+        if (camerasList.length <= 1) return;
+        
+        const currentIndex = camerasList.findIndex(c => c.id === currentCameraId);
+        const nextIndex = (currentIndex + 1) % camerasList.length;
+        currentCameraId = camerasList[nextIndex].id;
+        
+        if (isScanning) {
+            await startScanning(currentCameraId);
+        } else {
+            showFeedback(`تم التبديل إلى الكاميرا: ${camerasList[nextIndex].label || nextIndex + 1}`);
+        }
     });
     
     // 3. Manual entry form submission
@@ -508,31 +557,120 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-// Initialize Camera Barcode Scanner
-function initScanner() {
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-        fps: 10, 
-        qrbox: { width: 250, height: 150 },
-        aspectRatio: 1.0,
-        experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-        }
-    }, false);
-    
-    async function onScanSuccess(decodedText, decodedResult) {
-        // Pause scanning to process the item and play feedback sound
-        html5QrcodeScanner.clear();
-        await handleScan(decodedText);
-        
-        // Restart scanner after 1.5 seconds delay
-        setTimeout(() => {
-            if (document.getElementById("reader")) {
-                initScanner();
+// Initialize Camera Devices
+function initCamerasAndStart() {
+    Html5Qrcode.getCameras().then(async (devices) => {
+        if (devices && devices.length > 0) {
+            camerasList = devices;
+            currentCameraId = devices[0].id;
+            
+            // Try to find the back camera automatically
+            const backCamera = devices.find(d => 
+                d.label.toLowerCase().includes("back") || 
+                d.label.toLowerCase().includes("rear") || 
+                d.label.toLowerCase().includes("environment") ||
+                d.label.toLowerCase().includes("خلفية")
+            );
+            
+            if (backCamera) {
+                currentCameraId = backCamera.id;
             }
-        }, 1500);
-    }
-    
-    html5QrcodeScanner.render(onScanSuccess, (err) => {
-        // Silence errors to avoid flood in console during active search
+            
+            // Show switch camera button if there are multiple cameras
+            if (devices.length > 1) {
+                document.getElementById("switch-camera-btn").style.display = "inline-block";
+            }
+            
+            // Auto start the scanner
+            await startScanning(currentCameraId);
+        } else {
+            console.warn("No cameras found.");
+            alert("تنبيه: لم نتمكن من العثور على أي كاميرا متصلة.");
+        }
+    }).catch(err => {
+        console.error("Error listing cameras:", err);
     });
+}
+
+// Start Camera Scanning
+async function startScanning(cameraId) {
+    try {
+        if (!html5Qrcode) {
+            html5Qrcode = new Html5Qrcode("reader");
+        }
+        
+        // Stop current scanning session if running
+        if (isScanning) {
+            await html5Qrcode.stop();
+        }
+        
+        const config = {
+            fps: 20, // Faster scan rate for smoother performance
+            qrbox: function(width, height) {
+                // Focus area: 75% width, 60% height
+                return { width: width * 0.75, height: height * 0.60 };
+            },
+            aspectRatio: 1.2
+        };
+        
+        await html5Qrcode.start(
+            { deviceId: { exact: cameraId } },
+            config,
+            onScanSuccess
+        );
+        
+        isScanning = true;
+        scanLock = false;
+        document.querySelector(".scanner-laser").style.display = "block";
+        document.getElementById("toggle-camera-btn").innerText = "🛑 إيقاف الكاميرا";
+        document.getElementById("toggle-camera-btn").className = "btn btn-danger btn-lg flex-fill";
+        
+    } catch (err) {
+        console.error("Failed to start camera:", err);
+        // Fallback: Try launching using environment camera config
+        try {
+            await html5Qrcode.start(
+                { facingMode: "environment" },
+                { fps: 20, qrbox: { width: 280, height: 180 }, aspectRatio: 1.2 },
+                onScanSuccess
+            );
+            isScanning = true;
+            scanLock = false;
+            document.querySelector(".scanner-laser").style.display = "block";
+            document.getElementById("toggle-camera-btn").innerText = "🛑 إيقاف الكاميرا";
+            document.getElementById("toggle-camera-btn").className = "btn btn-danger btn-lg flex-fill";
+        } catch (fallbackErr) {
+            console.error("Fallback start failed:", fallbackErr);
+        }
+    }
+}
+
+// Stop Camera Scanning
+async function stopScanning() {
+    if (html5Qrcode && isScanning) {
+        try {
+            await html5Qrcode.stop();
+            isScanning = false;
+            document.querySelector(".scanner-laser").style.display = "none";
+            document.getElementById("toggle-camera-btn").innerText = "📷 تشغيل الكاميرا";
+            document.getElementById("toggle-camera-btn").className = "btn btn-primary btn-lg flex-fill";
+        } catch (err) {
+            console.error("Error stopping camera:", err);
+        }
+    }
+}
+
+// Scan Success Handler with Debounce Lock
+async function onScanSuccess(decodedText, decodedResult) {
+    if (scanLock) return; // Prevent double scans
+    
+    scanLock = true;
+    
+    // Process the scanned item
+    await handleScan(decodedText);
+    
+    // Release the scan lock after 1.5 seconds to allow the next item scan
+    setTimeout(() => {
+        scanLock = false;
+    }, 1500);
 }
