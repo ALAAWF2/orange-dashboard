@@ -26,6 +26,10 @@ let activeSessionId = null;
 let realtimeChannel = null;
 let currentActiveSession = null;
 
+// Torch / Flashlight State
+let isTorchSupported = false;
+let isTorchOn = false;
+
 // Audio Feedbacks
 function playBeep(type = 'success') {
     try {
@@ -696,6 +700,28 @@ window.addEventListener("DOMContentLoaded", async () => {
         });
     }
     
+    // Toggle Torch click event
+    if (document.getElementById("toggle-torch-btn")) {
+        document.getElementById("toggle-torch-btn").addEventListener("click", async () => {
+            if (!html5Qrcode || !isScanning || !isTorchSupported) return;
+            const torchBtn = document.getElementById("toggle-torch-btn");
+            try {
+                isTorchOn = !isTorchOn;
+                await html5Qrcode.applyVideoConstraints({
+                    advanced: [{ torch: isTorchOn }]
+                });
+                if (torchBtn) {
+                    torchBtn.innerText = isTorchOn ? "🔦 إطفاء الفلاش" : "🔦 تشغيل الفلاش";
+                    torchBtn.className = isTorchOn ? "btn btn-light btn-lg text-dark border" : "btn btn-warning btn-lg";
+                }
+            } catch (err) {
+                console.error("Failed to toggle torch:", err);
+                isTorchOn = !isTorchOn;
+                showFeedback("الفلاش غير مدعوم على هذه الكاميرا!", true);
+            }
+        });
+    }
+    
     // Manual entry form submission
     if (document.getElementById("manual-barcode-form")) {
         document.getElementById("manual-barcode-form").addEventListener("submit", async (e) => {
@@ -920,6 +946,31 @@ function initCamerasAndStart() {
     });
 }
 
+// Check if the current camera supports a torch (flashlight)
+function checkTorchCapability() {
+    try {
+        const capabilities = html5Qrcode.getRunningTrackCapabilities();
+        const torchBtn = document.getElementById("toggle-torch-btn");
+        if (capabilities.torch) {
+            isTorchSupported = true;
+            isTorchOn = false;
+            if (torchBtn) {
+                torchBtn.style.display = "inline-block";
+                torchBtn.innerText = "🔦 تشغيل الفلاش";
+                torchBtn.className = "btn btn-warning btn-lg";
+            }
+        } else {
+            isTorchSupported = false;
+            if (torchBtn) torchBtn.style.display = "none";
+        }
+    } catch (e) {
+        console.warn("Torch capability check failed:", e);
+        isTorchSupported = false;
+        const torchBtn = document.getElementById("toggle-torch-btn");
+        if (torchBtn) torchBtn.style.display = "none";
+    }
+}
+
 // Start Camera Scanning
 async function startScanning(cameraId) {
     try {
@@ -953,6 +1004,7 @@ async function startScanning(cameraId) {
             toggleBtn.innerText = "🛑 إيقاف الكاميرا";
             toggleBtn.className = "btn btn-danger btn-lg flex-fill";
         }
+        checkTorchCapability();
         
     } catch (err) {
         console.error("Failed to start camera:", err);
@@ -970,6 +1022,7 @@ async function startScanning(cameraId) {
                 toggleBtn.innerText = "🛑 إيقاف الكاميرا";
                 toggleBtn.className = "btn btn-danger btn-lg flex-fill";
             }
+            checkTorchCapability();
         } catch (fallbackErr) {
             console.error("Fallback start failed:", fallbackErr);
         }
@@ -982,6 +1035,14 @@ async function stopScanning() {
         try {
             await html5Qrcode.stop();
             isScanning = false;
+            isTorchOn = false;
+            isTorchSupported = false;
+            const torchBtn = document.getElementById("toggle-torch-btn");
+            if (torchBtn) {
+                torchBtn.style.display = "none";
+                torchBtn.innerText = "🔦 تشغيل الفلاش";
+                torchBtn.className = "btn btn-warning btn-lg";
+            }
             if (document.querySelector(".scanner-laser")) document.querySelector(".scanner-laser").style.display = "none";
             const toggleBtn = document.getElementById("toggle-camera-btn");
             if (toggleBtn) {
