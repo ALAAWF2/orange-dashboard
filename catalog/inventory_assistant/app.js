@@ -1055,19 +1055,39 @@ async function stopScanning() {
     }
 }
 
-// Scan Success Handler with Smart Debounce Lock
+// Global Scan Lock State
+let globalScanLock = false;
+
+// Scan Success Handler with Paced Cooldown Lock
 async function onScanSuccess(decodedText, decodedResult) {
-    const now = Date.now();
+    if (globalScanLock) return;
+    
     const cleanBarcode = decodedText.trim();
     
-    if (cleanBarcode === lastScannedBarcode && (now - lastScanTime) < 1500) {
-        return; 
+    // Activate global lock immediately to prevent double scans or accidental adjacent scans
+    globalScanLock = true;
+    
+    // Vibration feedback on mobile devices for physical confirmation
+    if (navigator.vibrate) {
+        navigator.vibrate(100); 
     }
     
-    lastScannedBarcode = cleanBarcode;
-    lastScanTime = now;
+    // Temporarily hide the scanning laser line to visually show it is paused
+    const laser = document.querySelector(".scanner-laser");
+    if (laser) {
+        laser.style.display = "none";
+    }
     
+    // Process the scanned barcode
     await handleScan(cleanBarcode);
+    
+    // Unlock scanning and show the laser line after 2 seconds
+    setTimeout(() => {
+        globalScanLock = false;
+        if (isScanning && laser) {
+            laser.style.display = "block";
+        }
+    }, 2000);
 }
 
 // Register Service Worker for PWA installation support
