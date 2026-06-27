@@ -488,7 +488,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         }
     } catch (e) {
         console.error("Error fetching stock map:", e);
-        alert("خطأ أثناء تحميل بيانات المخزون.");
+        alert("خطأ أثناء تحميل بيانات المخزون: " + e.message);
     }
     
     // Active session status check
