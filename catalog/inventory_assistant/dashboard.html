@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم جرد المعارض - الإدارة</title>
+    <!-- Bootstrap 5.3.0 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts: Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-orange: #fe7900;
+            --primary-orange-hover: #e06a00;
+            --bg-light: #f5f5f7;
+            --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg-light);
+            color: #333333;
+        }
+        
+        .navbar-brand-orange {
+            background-color: var(--primary-orange);
+            color: white !important;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 6px 16px;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            background-color: white !important;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        
+        .card-header-orange {
+            background-color: white;
+            border-bottom: 2px solid var(--primary-orange);
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #222;
+        }
+
+        .kpi-card {
+            transition: transform 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+        .kpi-icon {
+            font-size: 2.5rem;
+            opacity: 0.85;
+        }
+        
+        .badge-active {
+            background-color: rgba(25, 135, 84, 0.15);
+            color: #198754;
+            border: 1px solid rgba(25, 135, 84, 0.25);
+            padding: 5px 12px;
+            font-size: 0.85rem;
+            animation: pulse 1.8s infinite;
+        }
+        
+        .badge-completed {
+            background-color: rgba(108, 117, 125, 0.15);
+            color: #6c757d;
+            border: 1px solid rgba(108, 117, 125, 0.25);
+            padding: 5px 12px;
+            font-size: 0.85rem;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .session-item {
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .session-item:hover, .session-item.active {
+            border-color: var(--primary-orange);
+            background-color: rgba(254, 121, 0, 0.03);
+            box-shadow: 0 4px 12px rgba(254, 121, 0, 0.08);
+        }
+        
+        .diff-surplus {
+            background-color: rgba(25, 135, 84, 0.15);
+            color: #198754;
+        }
+        
+        .diff-deficit {
+            background-color: rgba(220, 53, 69, 0.15);
+            color: #dc3545;
+        }
+        
+        .diff-equal {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+        }
+        
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        
+        .progress-bar {
+            background-color: var(--primary-orange);
+        }
+        
+        .btn-filter {
+            font-size: 0.85rem;
+            border-radius: 30px;
+            padding: 5px 15px;
+        }
+        
+        .text-orange {
+            color: var(--primary-orange) !important;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-orange);
+            border-color: var(--primary-orange);
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-orange-hover);
+            border-color: var(--primary-orange-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand navbar-brand-orange">🍊 أورانج</span>
+            <div class="navbar-nav me-auto d-flex align-items-center">
+                <h5 class="mb-0 font-weight-bold text-dark me-3">لوحة تحكم الجرد المركزي للمدراء</h5>
+            </div>
+            <div>
+                <a href="index.html" class="btn btn-outline-secondary btn-sm">📲 الانتقال للتطبيق</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid my-4 px-4">
+        
+        <!-- Summary Stats Row -->
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-3 kpi-card">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">جلسات الجرد النشطة حالياً</h6>
+                            <h2 class="font-weight-bold mb-0 text-orange" id="stat-active-sessions">0</h2>
+                        </div>
+                        <span class="kpi-icon">⚡</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 kpi-card">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">إجمالي القطع المجرودة شهرياً</h6>
+                            <h2 class="font-weight-bold mb-0 text-orange" id="stat-total-scanned">0</h2>
+                        </div>
+                        <span class="kpi-icon">📦</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 kpi-card">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">متوسط دقة مخزون الفروع</h6>
+                            <h2 class="font-weight-bold mb-0 text-orange" id="stat-avg-accuracy">0%</h2>
+                        </div>
+                        <span class="kpi-icon">🎯</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace Grid -->
+        <div class="row">
+            
+            <!-- Right Column: Active & Past Sessions List -->
+            <div class="col-lg-4 col-md-5">
+                <div class="card">
+                    <div class="card-header card-header-orange d-flex align-items-center justify-content-between">
+                        <span>📍 جلسات الجرد بالفروع</span>
+                        <button class="btn btn-sm btn-outline-secondary" id="refresh-sessions-btn">🔄 تحديث</button>
+                    </div>
+                    <div class="card-body p-3" style="max-height: 600px; overflow-y: auto;" id="sessions-list-container">
+                        <div class="text-center py-4 text-muted">جاري تحميل جلسات الجرد...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Left Column: Details of Selected Session -->
+            <div class="col-lg-8 col-md-7">
+                <div class="card" id="detail-card-empty">
+                    <div class="card-body py-5 text-center text-muted">
+                        <span style="font-size: 3rem; display: block;" class="mb-3">📊</span>
+                        <h5>يرجى تحديد معرض جرد من القائمة الجانبية لاستعراض الفروقات والنسب التفصيلية.</h5>
+                    </div>
+                </div>
+                
+                <div class="card" id="detail-card-workspace" style="display: none;">
+                    <div class="card-header card-header-orange d-flex align-items-center justify-content-between">
+                        <div>
+                            <span id="detail-outlet-name" class="fs-5">جاري التحميل...</span>
+                            <span class="badge ms-2" id="detail-status-badge">نشط</span>
+                        </div>
+                        <div>
+                            <button id="detail-download-btn" class="btn btn-success btn-sm">
+                                📥 تحميل ملف Excel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Session Metadata Summary -->
+                        <div class="row mb-4 p-3 rounded bg-light">
+                            <div class="col-sm-4 mb-2 mb-sm-0">
+                                <span class="text-muted small d-block">الموظف المسؤول:</span>
+                                <strong id="detail-creator">-</strong>
+                            </div>
+                            <div class="col-sm-4 mb-2 mb-sm-0">
+                                <span class="text-muted small d-block">تاريخ البدء:</span>
+                                <strong id="detail-start-date">-</strong>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="text-muted small d-block">نسبة تطابق المخزون:</span>
+                                <strong id="detail-accuracy-rate" class="text-orange fs-5">-</strong>
+                            </div>
+                        </div>
+
+                        <!-- Mini metrics -->
+                        <div class="row mb-4 text-center">
+                            <div class="col-3">
+                                <div class="p-2 border rounded">
+                                    <span class="text-muted small d-block">المتوقع</span>
+                                    <strong class="fs-5" id="metric-expected">0</strong>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="p-2 border rounded">
+                                    <span class="text-muted small d-block">المجرود</span>
+                                    <strong class="fs-5" id="metric-scanned">0</strong>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="p-2 border rounded bg-light text-danger">
+                                    <span class="small d-block">العجز 🔻</span>
+                                    <strong class="fs-5 text-danger" id="metric-deficit">0</strong>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="p-2 border rounded bg-light text-success">
+                                    <span class="small d-block">الزيادة 🔺</span>
+                                    <strong class="fs-5 text-success" id="metric-surplus">0</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters & Search -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                            <div class="d-flex gap-1 flex-wrap" id="filter-btn-group">
+                                <button class="btn btn-primary btn-filter" data-filter="all">الكل</button>
+                                <button class="btn btn-outline-secondary btn-filter" data-filter="mismatch">الأصناف المتفاوتة فقط</button>
+                                <button class="btn btn-outline-danger btn-filter" data-filter="deficit">العجز فقط 🔻</button>
+                                <button class="btn btn-outline-success btn-filter" data-filter="surplus">الزيادة فقط 🔺</button>
+                            </div>
+                            
+                            <div style="width: 250px;">
+                                <input type="text" id="detail-search-input" class="form-control form-control-sm" placeholder="🔍 بحث عن صنف أو باركود...">
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-bordered table-striped align-middle">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>رقم المنتج</th>
+                                        <th>اسم الصنف</th>
+                                        <th>الباركود</th>
+                                        <th class="text-center">السعر</th>
+                                        <th class="text-center">المتوقع</th>
+                                        <th class="text-center">الفعلي</th>
+                                        <th class="text-center">الفرق</th>
+                                        <th>آخر مسح</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detail-tbody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS (Excel generation) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Custom logic script -->
+    <script src="dashboard.js"></script>
+</body>
+</html>
