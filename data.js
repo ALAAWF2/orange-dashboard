@@ -2282,26 +2282,18 @@ const EMPLOYEES = [
         "name": "حسن طالب",
         "startDate": "2024-03-12",
         "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall و 1203-55- Jabl Omar",
+        "showroom": "1302-14-Al Kamal Mall",
         "showroomDetails": [
             {
-                "name": "1201-08-Makkah Mall",
+                "name": "1302-14-Al Kamal Mall",
                 "manager": "رضوان عطيوي",
                 "codes": [
-                    "1201-C",
-                    "1201-E"
-                ]
-            },
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
+                    "1302-C",
+                    "1302-E"
                 ]
             }
         ],
-        "addressBooks": "1201-C;1201-E;1203-C;1203-E"
+        "addressBooks": "1302-C;1302-E"
     },
     {
         "employeeId": "4085-فراس عبدالستار الخان",
