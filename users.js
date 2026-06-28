@@ -9,5 +9,6 @@ const USERS = {
     "عبدالله السرداح": { "pin": "4618", "role": "Manager", "hide_visitors": false },
     "عبيدة السباعي": { "pin": "1647", "role": "Manager", "hide_visitors": false },
     "علاء": { "pin": "9630", "role": "Admin", "hide_visitors": false },
-    "محمدكلو": { "pin": "4891", "role": "Manager", "hide_visitors": false }
+    "محمدكلو": { "pin": "4891", "role": "Manager", "hide_visitors": false },
+    "الغربية 2": { "pin": "5123", "role": "Manager", "hide_visitors": false }
 };

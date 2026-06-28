@@ -6056,25 +6056,6 @@ const EMPLOYEES = [
         "addressBooks": "1115-C;1115-E"
     },
     {
-        "employeeId": "4888-اماني الحسني",
-        "personnelNumber": "4888",
-        "name": "اماني الحسني",
-        "startDate": "2026-02-25",
-        "manager": "رضوان عطيوي",
-        "showroom": "1202-20-Sitten Street Makkah",
-        "showroomDetails": [
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
-                ]
-            }
-        ],
-        "addressBooks": "1202-C;1202-E"
-    },
-    {
         "employeeId": "4890-بلقيس الزهراني",
         "personnelNumber": "4890",
         "name": "بلقيس الزهراني",
