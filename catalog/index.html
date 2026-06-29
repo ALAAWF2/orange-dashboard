@@ -1810,6 +1810,16 @@
 
           rebuildDataForWarehouse(userWarehouse);
 
+          // Show export button for Platforms showroom account
+          const guestExportBtn = document.getElementById('exportGuestBtn');
+          if (guestExportBtn) {
+            if (userWarehouse === 'TOTAL_WAREHOUSES') {
+              guestExportBtn.style.display = 'inline-block';
+            } else {
+              guestExportBtn.style.display = 'none';
+            }
+          }
+
           // Populate admin outlets dropdown dynamically after loading catalog
           if (userRole === 'admin' || userRole === 'maintenance_admin') {
             const allMalls = [...new Set(window.products.flatMap(p => Object.keys(p.branches || {})))]
@@ -2921,8 +2931,9 @@
         }
 
         // Add Data Rows
-        for (let i = 0; i < filteredProducts.length; i++) {
-          const p = filteredProducts[i];
+        const listToExport = (userWarehouse === 'TOTAL_WAREHOUSES') ? (window.data || []) : filteredProducts;
+        for (let i = 0; i < listToExport.length; i++) {
+          const p = listToExport[i];
           const rowData = {
             name: p.name,
             price: p.price,
