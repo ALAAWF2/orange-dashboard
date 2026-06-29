@@ -1664,25 +1664,6 @@ const EMPLOYEES = [
         "addressBooks": "2102-C;2102-E"
     },
     {
-        "employeeId": "3495-نورة فوزي الوسمي",
-        "personnelNumber": "3495",
-        "name": "نورة فوزي الوسمي",
-        "startDate": "2023-02-14",
-        "manager": "جهاد ايوبي",
-        "showroom": "1602-49-AlAhsa Mall",
-        "showroomDetails": [
-            {
-                "name": "1602-49-AlAhsa Mall",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "1602-C",
-                    "1602-E"
-                ]
-            }
-        ],
-        "addressBooks": "1602-C;1602-E"
-    },
-    {
         "employeeId": "3537-محمد محسن كلاي",
         "personnelNumber": "3537",
         "name": "محمد محسن كلاي",
