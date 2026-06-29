@@ -2323,33 +2323,6 @@ const EMPLOYEES = [
         "addressBooks": "1301-C;1301-E"
     },
     {
-        "employeeId": "4100-رضوان  شياح",
-        "personnelNumber": "4100",
-        "name": "رضوان  شياح",
-        "startDate": "2024-03-16",
-        "manager": "رضوان عطيوي",
-        "showroom": "1202-20-Sitten Street Makkah و 1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
-                ]
-            },
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1202-C;1202-E;1203-C;1203-E"
-    },
-    {
         "employeeId": "4116-روابي رضا الرويثي",
         "personnelNumber": "4116",
         "name": "روابي رضا الرويثي",
@@ -5706,25 +5679,6 @@ const EMPLOYEES = [
         "addressBooks": "1114-C;1114-E"
     },
     {
-        "employeeId": "4862-عبد الرحمن طوخي",
-        "personnelNumber": "4862",
-        "name": "عبد الرحمن طوخي",
-        "startDate": "2026-02-08",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
-    },
-    {
         "employeeId": "4855-مضر علوش",
         "personnelNumber": "4855",
         "name": "مضر علوش",
@@ -6124,25 +6078,6 @@ const EMPLOYEES = [
         "addressBooks": "1801-C;1801-E"
     },
     {
-        "employeeId": "4893-شميم مانغاتو بارامبا",
-        "personnelNumber": "4893",
-        "name": "شميم مانغاتو بارامبا",
-        "startDate": "2026-02-26",
-        "manager": "رضوان عطيوي",
-        "showroom": "1202-20-Sitten Street Makkah",
-        "showroomDetails": [
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
-                ]
-            }
-        ],
-        "addressBooks": "1202-C;1202-E"
-    },
-    {
         "employeeId": "4895-تاريك عباس",
         "personnelNumber": "4895",
         "name": "تاريك عباس",
@@ -6160,25 +6095,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1002-C;1002-E"
-    },
-    {
-        "employeeId": "4926-محمد رشيق تيناكاتو ك",
-        "personnelNumber": "4926",
-        "name": "محمد رشيق تيناكاتو ك",
-        "startDate": "2026-03-12",
-        "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall",
-        "showroomDetails": [
-            {
-                "name": "1201-08-Makkah Mall",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1201-C",
-                    "1201-E"
-                ]
-            }
-        ],
-        "addressBooks": "1201-C;1201-E"
     },
     {
         "employeeId": "4846-محمد سلمان المسدي",
