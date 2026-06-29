@@ -1848,7 +1848,14 @@
               
               if (data && isAuthorizedToEdit && data.status !== 'sent') {
                 cart = {};
-                (data.items || []).forEach(item => { cart[item.code] = item; });
+                (data.items || []).forEach(item => {
+                  cart[item.code] = {
+                    name: item.name,
+                    alias: item.alias,
+                    qty: item.qty,
+                    warehouse: data.warehouse || userWarehouse
+                  };
+                });
                 updateCartBadge();
                 
                 if (data.extras_items && data.extras_items.length > 0) {
@@ -2163,10 +2170,12 @@
       codes.forEach(code => {
         const item = cart[code];
         const pName = item.name || `منتج مخصص (${item.alias})`;
+        const whLabel = item.warehouse === 'warehouse riyadh' ? 'مستودع الرياض' : (item.warehouse === 'Warehouse' ? 'مستودع جدة' : '');
+        const whSuffix = whLabel ? ` | المستودع: ${whLabel}` : '';
         html += `<tr style="border-bottom:1px solid #eee;">
           <td style="padding:8px; text-align:right;">
             <div style="font-weight:bold; color:var(--text-main);">${pName}</div>
-            <div style="font-size:0.8em; color:var(--text-muted);">Code: ${code}</div>
+            <div style="font-size:0.8em; color:var(--text-muted);">Code: ${code}${whSuffix}</div>
           </td>
           <td style="padding:8px; text-align:center; font-weight:bold; color:var(--primary);">${item.qty}</td>
         </tr>`;
@@ -2214,20 +2223,6 @@
         const hasExtras = document.getElementById("extraItemsCheckbox").checked;
         const catalog = window.data || [];
 
-        const ordersPayload = Object.entries(cart).map(([code, d]) => {
-          const p = catalog.find(x => x.code === code);
-          if (p) {
-            return {
-              code: p.code,
-              gofrugal_code: p.gofrugal_code ?? "",
-              name: p.name,
-              alias: d.alias ?? '',
-              qty: Number(d.qty) || 0
-            };
-          }
-          return { alias: d.alias ?? '', qty: Number(d.qty) || 0 };
-        });
-
         // Prepare Extras Payload
         const formattedExtras = hasExtras ? Object.entries(selectedExtras).map(([name, qty]) => {
             const extDef = (window.EXTRAS_LIST || []).find(e => e['البيان'] === name) || {};
@@ -2238,33 +2233,130 @@
             };
         }) : [];
 
-        const orderPayload = {
-          has_extras: hasExtras,
-          user_id: currentUser.id,
-          items: ordersPayload,
-          extras_items: formattedExtras,
-          status: 'pending' // reset to pending if edited
-        };
-
         if (editingOrderId) {
+           const ordersPayload = Object.entries(cart).map(([code, d]) => {
+             const p = catalog.find(x => x.code === code);
+             if (p) {
+               return {
+                 code: p.code,
+                 gofrugal_code: p.gofrugal_code ?? "",
+                 name: p.name,
+                 alias: d.alias ?? '',
+                 qty: Number(d.qty) || 0
+               };
+             }
+             return { alias: d.alias ?? '', qty: Number(d.qty) || 0 };
+           });
+
+           const orderPayload = {
+             has_extras: hasExtras,
+             user_id: currentUser.id,
+             items: ordersPayload,
+             extras_items: formattedExtras,
+             status: 'pending' // reset to pending if edited
+           };
+
            const { error } = await supabaseClient.from('orders').update(orderPayload).eq('id', editingOrderId);
            if (error) throw error;
            showSuccessModal("✅ تم حفظ التعديلات بنجاح");
            setTimeout(() => window.location.href = 'outlet-orders-supabase.html', 1500);
         } else {
-           orderPayload.id = crypto.randomUUID();
-           orderPayload.mall = userMall;
-           orderPayload.warehouse = userWarehouse;
-           const { error } = await supabaseClient.from('orders').insert([orderPayload]);
-           if (error) throw error;
-            showSuccessModal("✅ تم إرسال الطلبية بنجاح");
-            cart = {};
-            selectedExtras = {};
-            updateCartBadge();
-            document.getElementById("extraItemsCheckbox").checked = false;
-            document.getElementById('openExtrasBtn').style.display = 'none';
-            closeOrderModal();
-            renderProducts();
+           const orderPayloads = [];
+           
+           if (userWarehouse === 'TOTAL_WAREHOUSES') {
+             // Split cart into items for Jeddah ('Warehouse') and Riyadh ('warehouse riyadh')
+             const jeddahItems = {};
+             const riyadhItems = {};
+             
+             Object.entries(cart).forEach(([code, d]) => {
+               if (d.warehouse === 'warehouse riyadh') {
+                 riyadhItems[code] = d;
+               } else {
+                 jeddahItems[code] = d;
+               }
+             });
+             
+             if (Object.keys(jeddahItems).length > 0) {
+               orderPayloads.push({
+                 id: crypto.randomUUID(),
+                 mall: userMall,
+                 warehouse: 'Warehouse',
+                 has_extras: hasExtras,
+                 items: Object.entries(jeddahItems).map(([code, d]) => {
+                   const p = catalog.find(x => x.code === code);
+                   return {
+                     code: code,
+                     gofrugal_code: p?.gofrugal_code ?? "",
+                     name: p?.name ?? d.name,
+                     alias: d.alias ?? '',
+                     qty: Number(d.qty) || 0
+                   };
+                 }),
+                 extras_items: formattedExtras,
+                 status: 'pending'
+               });
+             }
+             
+             if (Object.keys(riyadhItems).length > 0) {
+               orderPayloads.push({
+                 id: crypto.randomUUID(),
+                 mall: userMall,
+                 warehouse: 'warehouse riyadh',
+                 has_extras: false,
+                 items: Object.entries(riyadhItems).map(([code, d]) => {
+                   const p = catalog.find(x => x.code === code);
+                   return {
+                     code: code,
+                     gofrugal_code: p?.gofrugal_code ?? "",
+                     name: p?.name ?? d.name,
+                     alias: d.alias ?? '',
+                     qty: Number(d.qty) || 0
+                   };
+                 }),
+                 extras_items: [],
+                 status: 'pending'
+               });
+             }
+           } else {
+             const ordersPayload = Object.entries(cart).map(([code, d]) => {
+               const p = catalog.find(x => x.code === code);
+               if (p) {
+                 return {
+                   code: p.code,
+                   gofrugal_code: p.gofrugal_code ?? "",
+                   name: p.name,
+                   alias: d.alias ?? '',
+                   qty: Number(d.qty) || 0
+                 };
+               }
+               return { alias: d.alias ?? '', qty: Number(d.qty) || 0 };
+             });
+
+             orderPayloads.push({
+               id: crypto.randomUUID(),
+               mall: userMall,
+               warehouse: userWarehouse,
+               has_extras: hasExtras,
+               items: ordersPayload,
+               extras_items: formattedExtras,
+               status: 'pending'
+             });
+           }
+
+           for (const payload of orderPayloads) {
+             payload.user_id = currentUser.id;
+             const { error } = await supabaseClient.from('orders').insert([payload]);
+             if (error) throw error;
+           }
+
+           showSuccessModal("✅ تم إرسال الطلبية بنجاح");
+           cart = {};
+           selectedExtras = {};
+           updateCartBadge();
+           document.getElementById("extraItemsCheckbox").checked = false;
+           document.getElementById('openExtrasBtn').style.display = 'none';
+           closeOrderModal();
+           renderProducts();
          }
        } catch (err) {
         showToast("حدث خطأ أثناء الحفظ", "error");
@@ -2599,6 +2691,27 @@
                    <span class="stat-label">مستودع جدة</span>
                    <span class="stat-value">${getStockForWarehouse(d, 'Jeddah Warehouse')}</span>
                </div>
+          ` : (userWarehouse === 'TOTAL_WAREHOUSES' ? `
+               <div class="stat-item">
+                   <span class="stat-label">مبيعات توتال</span>
+                   <span class="stat-value highlight-orange">${d.sales || 0}</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-label">مبيعات المعرض</span>
+                   <span class="stat-value highlight-green">${getSalesInMall(d.code)}</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-label">مستودع جدة</span>
+                   <span class="stat-value">${getStockForWarehouse(d, 'Jeddah Warehouse')}</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-label">مستودع الرياض</span>
+                   <span class="stat-value">${getStockForWarehouse(d, 'Riyadh Warehouse')}</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-label">الكمية بالمعرض</span>
+                   <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
+               </div>
           ` : `
                <div class="stat-item">
                    <span class="stat-label">مبيعات توتال</span>
@@ -2616,15 +2729,24 @@
                    <span class="stat-label">الكمية بالمعرض</span>
                    <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
                </div>
-          `)}
+          `))}
           </div>
           
           ${isGuestMode ? '' : `
-          <div class="qty-input-group">
-             <span class="cart-input-icon">🛒</span>
-             <input type="number" min="1" placeholder="الكمية المطلوبة"
-               value="${cart[d.code]?.qty ?? ''}"
-               onchange="addToCart('${d.code}', '${safeName}', this.value)">
+          <div class="qty-input-group" style="${userWarehouse === 'TOTAL_WAREHOUSES' ? 'display:flex; flex-direction:column; gap:5px;' : ''}">
+             <div style="display:flex; align-items:center; gap:5px; width:100%;">
+                <span class="cart-input-icon">🛒</span>
+                <input type="number" min="1" placeholder="الكمية المطلوبة" style="width:100%;"
+                  value="${cart[d.code]?.qty ?? ''}"
+                  onchange="addToCart('${d.code}', '${safeName}', this.value, document.getElementById('whSelect_' + '${d.code}')?.value)">
+             </div>
+             ${userWarehouse === 'TOTAL_WAREHOUSES' ? `
+             <select id="whSelect_${d.code}" style="width:100%; font-size:0.85em; padding:6px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit; direction:rtl;"
+               onchange="updateCartItemWarehouse('${d.code}', this.value)">
+               <option value="Warehouse" ${cart[d.code]?.warehouse === 'Warehouse' ? 'selected' : ''}>مستودع جدة</option>
+               <option value="warehouse riyadh" ${cart[d.code]?.warehouse === 'warehouse riyadh' ? 'selected' : ''}>مستودع الرياض</option>
+             </select>
+             ` : ''}
           </div>
           `}
         </div>
@@ -2659,14 +2781,21 @@
       }
     }
 
-    function addToCart(code, name, qty) {
+    function addToCart(code, name, qty, warehouse) {
       const product = (window.data || []).find(p => p.code === code);
       if (qty && parseInt(qty) > 0) {
-        cart[code] = { name, alias: product?.alias ?? '', qty };
+        const wh = warehouse || (document.getElementById(`whSelect_${code}`)?.value) || userWarehouse;
+        cart[code] = { name, alias: product?.alias ?? '', qty, warehouse: wh };
       } else {
         delete cart[code];
       }
       updateCartBadge();
+    }
+
+    function updateCartItemWarehouse(code, warehouse) {
+      if (cart[code]) {
+        cart[code].warehouse = warehouse;
+      }
     }
 
     function updateTotalSales() {
