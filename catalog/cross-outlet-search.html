@@ -4,11 +4,482 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>البحث عبر المعارض</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600&display=swap">
+  <title>البحث متعدد الفروع - أورنج</title>
+  
+  <!-- Bootstrap 5.3.0 RTL -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+  
+  <!-- Google Fonts: Outfit & Noto Kufi Arabic -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Kufi+Arabic:wght@300;400;600;700&display=swap">
+  
+  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Load products from local JSON -->
+
+  <style>
+    :root {
+      --primary: #fe7900;
+      --primary-hover: #e06a00;
+      --primary-light: rgba(254, 121, 0, 0.08);
+      --accent: #27ae60;
+      --accent-hover: #219a52;
+      --dark: #2c3e50;
+      --bg-color: #f8f9fa;
+      --border-color: #e9ecef;
+      --text-main: #2b3a4a;
+      --text-muted: #7f8c8d;
+      --border-radius: 16px;
+      --border-radius-sm: 10px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-family: 'Noto Kufi Arabic', 'Outfit', sans-serif;
+      --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 30px;
+    }
+
+    /* Helper utility for hiding elements */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Navbar styling */
+    .navbar {
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      padding: 12px 0;
+    }
+    .navbar-brand {
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .navbar-brand:hover {
+      color: var(--primary-hover);
+    }
+    .btn-back {
+      font-weight: 600;
+      color: var(--text-main);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--border-radius-sm);
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+    .btn-back:hover {
+      background: var(--border-color);
+      color: black;
+    }
+
+    /* Showroom Banner */
+    .showroom-banner {
+      background: linear-gradient(135deg, var(--primary), #ffa04d);
+      color: white;
+      padding: 14px 20px;
+      border-radius: var(--border-radius-sm);
+      box-shadow: var(--shadow-sm);
+      font-weight: 600;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Search & Filter Card */
+    .filter-card {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .search-input-group {
+      position: relative;
+    }
+    .search-input-group input {
+      padding: 12px 45px 12px 20px;
+      border-radius: var(--border-radius-sm);
+      border: 1.5px solid var(--border-color);
+      font-size: 1em;
+      transition: var(--transition);
+      width: 100%;
+    }
+    .search-input-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .search-input-group .search-icon {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1.1em;
+    }
+
+    .filter-select {
+      padding: 12px 15px;
+      border-radius: var(--border-radius-sm);
+      border: 1.5px solid var(--border-color);
+      background-color: white;
+      color: var(--text-main);
+      font-size: 0.95em;
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .filter-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    /* Status Message & Loader */
+    .status-msg {
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 12px 20px;
+      border-radius: var(--border-radius-sm);
+      margin-bottom: 25px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-error {
+      background: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+
+    .loader-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 0;
+      color: var(--primary);
+      font-weight: 600;
+      gap: 15px;
+    }
+    .spinner {
+      width: 45px;
+      height: 45px;
+      border: 4px solid var(--border-color);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Product Card Grid */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: var(--transition);
+    }
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(254, 121, 0, 0.25);
+    }
+
+    .product-info-row {
+      display: flex;
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      gap: 15px;
+      background: #fafafa;
+    }
+
+    .product-img-wrapper {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--border-radius-sm);
+      border: 1px solid var(--border-color);
+      background: white;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .product-img-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .product-meta {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .product-title {
+      font-weight: 700;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+      color: var(--text-main);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .product-identifiers {
+      font-size: 0.75em;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .product-identifier-badge {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .product-price-badge {
+      align-self: flex-start;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9em;
+      margin-top: 6px;
+    }
+
+    .stocks-section {
+      padding: 15px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stocks-title {
+      font-size: 0.8em;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stocks-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Branch Stock Badges */
+    .branch-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+    }
+    .branch-badge.high-stock {
+      background: rgba(39, 174, 96, 0.08);
+      border-color: rgba(39, 174, 96, 0.2);
+      color: #27ae60;
+    }
+    .branch-badge.medium-stock {
+      background: rgba(242, 153, 74, 0.08);
+      border-color: rgba(242, 153, 74, 0.2);
+      color: #d35400;
+    }
+    .branch-badge.low-stock {
+      background: rgba(231, 76, 60, 0.08);
+      border-color: rgba(231, 76, 60, 0.2);
+      color: #c0392b;
+    }
+
+    .copy-btn {
+      margin: 15px;
+      border-radius: var(--border-radius-sm);
+      font-size: 0.85em;
+      font-weight: 600;
+      padding: 8px 12px;
+      background: #f1f3f5;
+      border: none;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+    .copy-btn:hover {
+      background: var(--border-color);
+    }
+    .copy-btn.copied {
+      background: var(--accent);
+      color: white;
+    }
+
+    @media (max-width: 576px) {
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="index.html">
+        <span style="font-size: 1.3em;">🌐</span>
+        <span>البحث متعدد الفروع</span>
+      </a>
+      <a href="index.html" class="btn-back">
+        <span>⟵</span>
+        <span>العودة للكتالوج</span>
+      </a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Showroom Banner -->
+    <div id="outletInfo" class="showroom-banner hidden">
+      <div>
+        <span>📍 المعرض الحالي: </span>
+        <span id="showroomNameText" style="font-weight: 700;">جاري التحميل...</span>
+      </div>
+    </div>
+
+    <!-- Alert / Status -->
+    <div id="statusMessage" class="status-msg">
+      <span>💡</span>
+      <span id="statusMessageText">الرجاء تسجيل الدخول أولاً للبدء بالبحث...</span>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader-container">
+      <div class="spinner"></div>
+      <div>جاري التحقق من صلاحيات الدخول...</div>
+    </div>
+
+    <!-- Filters Panel -->
+    <div id="filterPanel" class="filter-card hidden">
+      <div class="row g-3">
+        <div class="col-md-6 col-12">
+          <div class="search-input-group">
+            <span class="search-icon">🔍</span>
+            <input id="searchInput" type="text" placeholder="ابحث بالاسم، الكود، الـ Alias أو الكلمات المفتاحية..." autocomplete="off">
+          </div>
+        </div>
+        
+        <div class="col-md-3 col-6">
+          <select id="categoryFilter" onchange="debouncedSearch()" class="filter-select">
+            <option value="">جميع التصنيفات</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 col-6">
+          <select id="stockFilter" onchange="debouncedSearch()" class="filter-select">
+            <option value="1">الكمية بالفرع: قطعة واحدة فأكثر</option>
+            <option value="2">الكمية بالفرع: قطعتين فأكثر</option>
+            <option value="5">الكمية بالفرع: 5 قطع فأكثر</option>
+            <option value="10">الكمية بالفرع: 10 قطع فأكثر</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Grid -->
+    <div id="resultsGrid" class="results-grid"></div>
+  </main>
+
   <script>
+    // ===== Supabase Config =====
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+    });
+
+    // ===== DOM Refs =====
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const stockFilter = document.getElementById('stockFilter');
+    const resultsGrid = document.getElementById('resultsGrid');
+    const statusMessage = document.getElementById('statusMessage');
+    const statusMessageText = document.getElementById('statusMessageText');
+    const outletInfo = document.getElementById('outletInfo');
+    const showroomNameText = document.getElementById('showroomNameText');
+    const loader = document.getElementById('loader');
+    const filterPanel = document.getElementById('filterPanel');
+
+    let productsList = [];
+    let currentOutletName = '';
+    let userChecked = false;
+
+    // ===== Helpers =====
+    function normalize(v) { return (v || '').toString().trim().toLowerCase(); }
+
+    function toggleStatus(message = '', type = 'info') {
+      if (!message) {
+        statusMessage.classList.add('hidden');
+        return;
+      }
+      statusMessageText.textContent = message;
+      statusMessage.className = 'status-msg ' + (type === 'error' ? 'status-error' : '');
+      statusMessage.classList.remove('hidden');
+    }
+
+    // ===== Load Catalog data dynamically after DOM is ready =====
     async function loadLocalCatalog() {
       try {
         let blockedAliases = [];
@@ -21,371 +492,243 @@
             }
           }
         } catch (blockedErr) {
-          console.warn("تعذر جلب قائمة الحجب من السيرفر المحلي:", blockedErr);
+          console.warn("Could not load blocked list from server:", blockedErr);
         }
 
         const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
         if (!productsRes.ok) throw new Error("Failed to load products.json");
-        window.data = await productsRes.json();
+        productsList = await productsRes.json();
 
-        // Filter out disabled items
         if (blockedAliases.length > 0) {
-          window.data = window.data.filter(p => !blockedAliases.includes(String(p.alias)) && !blockedAliases.includes(String(p.code)));
+          productsList = productsList.filter(p => !blockedAliases.includes(String(p.alias)) && !blockedAliases.includes(String(p.code)));
         }
 
-        console.log("✅ products.json loaded:", window.data.length);
+        console.log("✅ Catalog loaded:", productsList.length);
+        populateCategoryFilter();
       } catch (e) {
         console.error("❌ Catalog load failed:", e);
-        window.data = [];
-        document.getElementById('statusMessage').textContent = 'تعذر تحميل بيانات المنتجات.';
-        document.getElementById('statusMessage').classList.remove('hidden');
-        document.getElementById('statusMessage').style.color = '#c0392b';
+        toggleStatus('تعذر تحميل بيانات المنتجات. يرجى إعادة تحميل الصفحة.', 'error');
       }
     }
 
-    // Start loading immediately
-    loadLocalCatalog();
-  </script>
-
-
-  <style>
-    body {
-      font-family: 'Tajawal', Arial, sans-serif;
-      background-color: #fff8f0;
-      margin: 0;
-      padding: 0;
-      color: #2c3e50;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+    function populateCategoryFilter() {
+      const select = document.getElementById('categoryFilter');
+      if (!select) return;
+      
+      const categories = [...new Set(productsList.map(p => p.category).filter(Boolean))].sort();
+      let html = '<option value="">جميع التصنيفات</option>';
+      categories.forEach(cat => {
+        html += `<option value="${cat}">${cat}</option>`;
+      });
+      select.innerHTML = html;
     }
 
-    header {
-      background: linear-gradient(135deg, #f2994a, #f2c94c);
-      color: white;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    // ===== Copy to Clipboard =====
+    function copyProductDetails(btn, name, code, alias) {
+      const text = `المنتج: ${name}\nالكود: ${code}\nAlias: ${alias}`;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '✅ تم النسخ!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          btn.classList.remove('copied');
+        }, 1500);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
     }
 
-    header h1 {
-      margin: 0 0 10px;
-      font-size: 28px;
-      letter-spacing: 1px;
-    }
+    // ===== Rendering Grouped Cards =====
+    function performSearch() {
+      const query = normalize(searchInput.value);
+      const selectedCat = categoryFilter.value;
+      const minStockLimit = Number(stockFilter.value) || 1;
 
-    header p {
-      margin: 0;
-      font-size: 16px;
-    }
-
-    main {
-      flex: 1;
-      max-width: 1100px;
-      margin: 30px auto;
-      padding: 0 20px 40px;
-    }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .actions a {
-      color: #e67e22;
-      text-decoration: none;
-      font-weight: 600;
-      background: rgba(230, 126, 34, 0.12);
-      padding: 10px 14px;
-      border-radius: 8px;
-      transition: background 0.3s ease, color 0.3s ease;
-    }
-
-    .actions a:hover {
-      background: #e67e22;
-      color: #fff;
-    }
-
-    .search-box {
-      flex: 1;
-      min-width: 220px;
-      position: relative;
-    }
-
-    .search-box input {
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 16px;
-      border: 1px solid #f2a365;
-      border-radius: 10px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .search-box input:focus {
-      outline: none;
-      border-color: #e67e22;
-      box-shadow: 0 4px 12px rgba(230, 126, 34, 0.25);
-    }
-
-    .status,
-    .outlet-info {
-      margin-bottom: 15px;
-      padding: 12px 16px;
-      border-radius: 10px;
-      background: rgba(230, 126, 34, 0.08);
-      border: 1px solid rgba(230, 126, 34, 0.2);
-      font-weight: 600;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-
-    thead {
-      background: #f2994a;
-      color: #fff;
-    }
-
-    thead th {
-      padding: 14px;
-      font-size: 15px;
-    }
-
-    tbody td {
-      padding: 12px;
-      border-bottom: 1px solid #f2f2f2;
-    }
-
-    tbody tr:nth-child(even) {
-      background: #fff8f0;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .loader {
-      text-align: center;
-      padding: 40px 0;
-      font-weight: 600;
-      color: #e67e22;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px 0;
-      color: #999;
-      font-size: 14px;
-    }
-  </style>
-</head>
-
-<body>
-  <header>
-    <h1>البحث عن مخزون المعارض الأخرى</h1>
-    <p>اكتب اسم المنتج أو كوده أو الـ Alias لمعرفة الكميات المتاحة في المعارض الأخرى.</p>
-  </header>
-
-  <main>
-    <div class="actions">
-      <div class="search-box">
-        <input id="searchInput" type="text" placeholder="ابحث بالاسم، الكود أو الـ Alias" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
-      </div>
-      <a href="index.html">⟵ العودة إلى الصفحة الرئيسية</a>
-    </div>
-
-    <div id="outletInfo" class="outlet-info hidden"></div>
-    <div id="statusMessage" class="status hidden"></div>
-    <div id="loader" class="loader">جاري التحقق من حالة تسجيل الدخول...</div>
-
-    <table id="resultsTable" class="hidden">
-      <thead>
-        <tr>
-          <th>اسم المنتج</th>
-          <th>الكود</th>
-          <th>Alias</th>
-          <th>المعرض</th>
-          <th>الكمية المتوفرة</th>
-        </tr>
-      </thead>
-      <tbody id="resultsBody"></tbody>
-    </table>
-  </main>
-
-
-
-  <script>
-    // ===== Supabase =====
-    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
-    });
-
-    // ===== DOM refs =====
-    const searchInput = document.getElementById('searchInput');
-    const resultsBody = document.getElementById('resultsBody');
-    const resultsTable = document.getElementById('resultsTable');
-    const statusMessage = document.getElementById('statusMessage');
-    const outletInfo = document.getElementById('outletInfo');
-    const loader = document.getElementById('loader');
-
-    let currentOutletName = '';
-    let userChecked = false;
-
-    // ===== Helpers =====
-    function normalize(v) { return (v || '').toString().trim().toLowerCase(); }
-
-    function toggleStatus(message = '', type = 'info') {
-      if (!message) {
-        statusMessage.classList.add('hidden');
-        statusMessage.textContent = '';
-        statusMessage.style.color = '';
-        return;
-      }
-      statusMessage.textContent = message;
-      statusMessage.classList.remove('hidden');
-      statusMessage.style.color = (type === 'error') ? '#c0392b' : '#e67e22';
-    }
-
-    // ===== Rendering (Lazy) =====
-    function renderResults(query = '') {
-      const src = window.data || [];
-      const q = normalize(query);
-
-      if (!q || q.length < 4) {
-        resultsBody.innerHTML = '';
-        resultsTable.classList.add('hidden');
-        toggleStatus('اكتب 4 أحرف على الأقل من الاسم أو الكود أو الـ alias');
+      // Ensure 3 chars minimum to avoid heavy layout freeze
+      if (!query || query.length < 3) {
+        resultsGrid.innerHTML = '';
+        toggleStatus('💡 اكتب على الأقل 3 أحرف من اسم المنتج أو الكود أو الـ Alias لبدء البحث...', 'info');
         return;
       }
 
-      const rows = [];
+      const matchingCards = [];
 
-      src.forEach(product => {
-        const matches =
-          normalize(product.name).includes(q) ||
-          normalize(product.code) === q ||
-          normalize(product.alias).includes(q);
+      productsList.forEach(product => {
+        // Search filter matching
+        const matchesQuery =
+          normalize(product.name).includes(query) ||
+          normalize(product.code).includes(query) ||
+          normalize(product.alias).includes(query);
 
-        if (!matches) return;
+        if (!matchesQuery) return;
 
-        const branches = Object.entries(product.branches || {});
-        branches.forEach(([branchName, quantity]) => {
+        // Category filter matching
+        if (selectedCat && product.category !== selectedCat) return;
+
+        // Check and build showroom stocks
+        const branchEntries = Object.entries(product.branches || {});
+        const otherBranchStocks = [];
+
+        branchEntries.forEach(([branchName, quantity]) => {
+          const qty = Number(quantity) || 0;
+          if (qty < minStockLimit) return;
+
           const normalizedBranch = normalize(branchName);
           const normalizedOutlet = normalize(currentOutletName);
-          const qty = Number(quantity) || 0;
 
-          if (qty <= 0) return;
+          // Exclude the current showroom's stock
           if (normalizedOutlet && normalizedBranch === normalizedOutlet) return;
+          
+          // Exclude warehouses and transit from showroom stock results
+          if (normalizedBranch === 'warehouse' || normalizedBranch === 'warehouse riyadh' || normalizedBranch === 'transit') return;
 
-          rows.push(`
-            <tr>
-              <td>${product.name}</td>
-              <td>${product.code || ''}</td>
-              <td>${product.alias || ''}</td>
-              <td>${branchName}</td>
-              <td>${qty}</td>
-            </tr>
-          `);
+          otherBranchStocks.push({ branchName, qty });
         });
+
+        // If at least one other branch has stock, show the card
+        if (otherBranchStocks.length > 0) {
+          const imageId = (product.alias && String(product.alias).trim() !== '') ? product.alias : product.code;
+          const imgUrl = product.image_path 
+            ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + product.image_path
+            : `https://res.cloudinary.com/dsp8ysswh/image/upload/w_200,q_auto,f_auto,d_noimage.png/${imageId}.jpg`;
+
+          // Sort branches by stock quantity descending
+          otherBranchStocks.sort((a, b) => b.qty - a.qty);
+
+          const stockBadgesHtml = otherBranchStocks.map(stock => {
+            let stockClass = 'low-stock';
+            if (stock.qty >= 10) stockClass = 'high-stock';
+            else if (stock.qty >= 3) stockClass = 'medium-stock';
+
+            return `
+              <div class="branch-badge ${stockClass}">
+                <span>${stock.branchName}:</span>
+                <strong>${stock.qty} قطعة</strong>
+              </div>
+            `;
+          }).join('');
+
+          matchingCards.push(`
+            <div class="product-card">
+              <div class="product-info-row">
+                <div class="product-img-wrapper">
+                  <img src="${imgUrl}" onerror="this.onerror=null; this.src='https://res.cloudinary.com/dsp8ysswh/image/upload/w_200,q_auto,f_auto/noimage.png';" alt="${product.name}">
+                </div>
+                <div class="product-meta">
+                  <div class="product-title" title="${product.name}">${product.name}</div>
+                  <div class="product-identifiers">
+                    <span class="product-identifier-badge">كود: ${product.code}</span>
+                    <span class="product-identifier-badge">Alias: ${product.alias || '—'}</span>
+                  </div>
+                  <div class="product-price-badge">${product.price} ريال</div>
+                </div>
+              </div>
+              
+              <div class="stocks-section">
+                <div class="stocks-title">
+                  <span>📦</span>
+                  <span>المخزون المتوفر بالمعارض الأخرى:</span>
+                </div>
+                <div class="stocks-grid">
+                  ${stockBadgesHtml}
+                </div>
+              </div>
+
+              <button class="copy-btn" onclick="copyProductDetails(this, '${product.name.replace(/'/g, "\\'")}', '${product.code}', '${product.alias || ''}')">
+                <span>📋</span>
+                <span>نسخ التفاصيل والكود</span>
+              </button>
+            </div>
+          `);
+        }
       });
 
-      resultsBody.innerHTML = rows.join('');
+      resultsGrid.innerHTML = matchingCards.join('');
 
-      if (rows.length === 0) {
-        resultsTable.classList.add('hidden');
-        toggleStatus('لا توجد نتائج مطابقة. جرّب كلمة أخرى.');
+      if (matchingCards.length === 0) {
+        toggleStatus('⚠️ لا توجد نتائج مطابقة أو أن المنتجات المتوفرة ليس لها مخزون في المعارض الأخرى.', 'info');
       } else {
-        resultsTable.classList.remove('hidden');
         toggleStatus('');
       }
     }
 
-    // ديباونس للبحث
-    let typingTimer;
-    searchInput.addEventListener('input', (e) => {
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => renderResults(e.target.value), 250);
-    });
-
-    // ===== Auth flow =====
-    function handleUnauthenticated() {
-      // Don't disable completely, just keep readonly
-      searchInput.setAttribute('readonly', 'true');
-      resultsTable.classList.add('hidden');
-      toggleStatus('الرجاء تسجيل الدخول للوصول إلى البحث عبر المعارض. سيتم توجيهك تلقائياً خلال لحظات...', 'error');
-      outletInfo.classList.add('hidden');
-      outletInfo.textContent = '';
-      setTimeout(() => { window.location.href = 'index.html'; }, 4000);
+    // ===== Debounce helper =====
+    let searchDebounceTimer;
+    function debouncedSearch() {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(performSearch, 300);
     }
 
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      loader.classList.add('hidden');
-      userChecked = true;
+    searchInput.addEventListener('input', debouncedSearch);
 
-      const user = session?.user ?? null;
-      if (!user) {
-        handleUnauthenticated();
-        return;
-      }
+    // ===== Authentication Check =====
+    function handleUnauthenticated() {
+      searchInput.setAttribute('readonly', 'true');
+      filterPanel.classList.add('hidden');
+      resultsGrid.innerHTML = '';
+      toggleStatus('🔒 الرجاء تسجيل الدخول أولاً للوصول إلى البحث. جاري تحويلك للصفحة الرئيسية...', 'error');
+      outletInfo.classList.add('hidden');
+      setTimeout(() => { window.location.href = 'index.html'; }, 3500);
+    }
 
-      // 1. First, unlock the search now that we have a user
-      searchInput.removeAttribute('readonly');
-      toggleStatus('اكتب على الأقل 4 أحرف للبحث في مخزون المعارض الأخرى.');
+    // Initialize Supabase event listener and load catalog
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLocalCatalog();
 
-      // 2. Then, try to fetch the profile for outlet info
-      try {
-        let profile = null;
-        const { data: byId, error: errId } = await supabaseClient
-          .from('profiles').select('*').eq('id', user.id).single();
+      supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        loader.classList.add('hidden');
+        userChecked = true;
 
-        if (!errId && byId) {
-          profile = byId;
-        } else {
-          const { data: byEmail } = await supabaseClient
-            .from('profiles').select('*').eq('email', user.email).single();
-          profile = byEmail;
+        const user = session?.user ?? null;
+        if (!user) {
+          handleUnauthenticated();
+          return;
         }
 
-        currentOutletName = profile?.mall || profile?.branch || profile?.outlet || profile?.warehouse || '';
+        // Unlock panel
+        searchInput.removeAttribute('readonly');
+        filterPanel.classList.remove('hidden');
+        toggleStatus('💡 اكتب على الأقل 3 أحرف من اسم المنتج أو الكود أو الـ Alias لبدء البحث...', 'info');
 
-        if (currentOutletName) {
-          outletInfo.textContent = `المعرض الحالي: ${currentOutletName}`;
-          outletInfo.classList.remove('hidden');
-        } else {
-          outletInfo.textContent = 'لم يتم العثور على اسم المعرض في ملف المستخدم.';
-          outletInfo.classList.remove('hidden');
+        // Load Profile to set userMall
+        try {
+          let profile = null;
+          const { data: byId, error: errId } = await supabaseClient
+            .from('profiles').select('*').eq('id', user.id).single();
+
+          if (!errId && byId) {
+            profile = byId;
+          } else {
+            const { data: byEmail } = await supabaseClient
+              .from('profiles').select('*').eq('email', user.email).single();
+            profile = byEmail;
+          }
+
+          currentOutletName = profile?.mall || profile?.branch || profile?.outlet || profile?.warehouse || '';
+
+          if (currentOutletName) {
+            showroomNameText.textContent = currentOutletName;
+            outletInfo.classList.remove('hidden');
+          } else {
+            showroomNameText.textContent = 'غير محدد في حسابك';
+            outletInfo.classList.remove('hidden');
+          }
+        } catch (error) {
+          console.warn('تنبيه: تعذر جلب ملف المستخدم (سيظل البحث يعمل):', error);
         }
 
-      } catch (error) {
-        console.warn('تنبيه: تعذر جلب بيانات الملف الشخصي (سيظل البحث يعمل):', error);
-      }
-
-      // Trigger initial search if already typed
-      renderResults(searchInput.value);
+        // Run search on load if there's text
+        if (searchInput.value) {
+          performSearch();
+        }
+      });
     });
 
-    // رسالة طوارئ لو تعطل الـ Supabase تماماً
+    // Timeout fallback for auth listener
     setTimeout(() => {
       if (!userChecked) {
-        loader.textContent = 'تحذير: يبدو أن التحقق من الهوية متعثر. جرب تحديث الصفحة أو المتابعة إذا ظهر مربع البحث.';
-        // Fallback: unlock if we suspect a timeout
-        // searchInput.removeAttribute('readonly'); 
+        loader.innerHTML = '<div style="color: #c0392b;">⚠️ تعذر الاتصال بسيرفر التحقق. جرب تحديث الصفحة.</div>';
       }
     }, 6000);
   </script>
