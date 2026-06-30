@@ -5342,18 +5342,18 @@ const EMPLOYEES = [
         "name": "رنا العمري",
         "startDate": "2026-01-04",
         "manager": "محمدكلو",
-        "showroom": "1101-12-Al_Hamra Mall",
+        "showroom": "1114-1114-Malgha Mall",
         "showroomDetails": [
             {
-                "name": "1101-12-Al_Hamra Mall",
+                "name": "1114-1114-Malgha Mall",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1101-C",
-                    "1101-E"
+                    "1114-C",
+                    "1114-E"
                 ]
             }
         ],
-        "addressBooks": "1101-C;1101-E"
+        "addressBooks": "1114-C;1114-E"
     },
     {
         "employeeId": "4807-اثير الخالدي",
@@ -6597,25 +6597,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1006-C;1006-E"
-    },
-    {
-        "employeeId": "4952-زاهي احمد",
-        "personnelNumber": "4952",
-        "name": "زاهي احمد",
-        "startDate": "2026-05-04",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
-        "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            }
-        ],
-        "addressBooks": "1114-C;1114-E"
     },
     {
         "employeeId": "4953-غلا الغامدي",
