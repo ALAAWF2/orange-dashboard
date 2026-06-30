@@ -778,6 +778,12 @@
         <input type="checkbox" id="favOnly" onchange="renderProducts()">
         <span>⭐ المفضلة فقط</span>
       </label>
+
+      <!-- Showroom Stock Only Checkbox -->
+      <label class="styled-checkbox-label" id="showroomStockOnlyLabel" style="display:none;">
+        <input type="checkbox" id="showroomStockOnly" onchange="renderProducts()">
+        <span>📦 المتوفر بالمعرض فقط</span>
+      </label>
     </div>
 
     <!-- Controls / Action Buttons (Restored) -->
@@ -1636,6 +1642,9 @@
         const favOnlyLabel = document.getElementById('favOnlyLabel');
         if (favOnlyLabel) favOnlyLabel.style.display = user ? 'flex' : 'none';
 
+        const showroomStockOnlyLabel = document.getElementById('showroomStockOnlyLabel');
+        if (showroomStockOnlyLabel) showroomStockOnlyLabel.style.display = 'none';
+
         if (user) {
           console.log("Fetching profile for user ID:", user.id);
           try {
@@ -1818,6 +1827,12 @@
             } else {
               guestExportBtn.style.display = 'none';
             }
+          }
+
+          // Show showroom stock only filter for standard user profiles
+          const showroomStockOnlyLabel = document.getElementById('showroomStockOnlyLabel');
+          if (showroomStockOnlyLabel) {
+            showroomStockOnlyLabel.style.display = (userRole === 'user') ? 'flex' : 'none';
           }
 
           // Populate admin outlets dropdown dynamically after loading catalog
@@ -2536,6 +2551,7 @@
       const searchTerm = (searchBarVal || searchInputVal).trim().toLowerCase();
       const newOnly = document.getElementById('newOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
+      const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
 
       // Guest Mode Filter
       const whFilter = document.getElementById('warehouseFilter');
@@ -2565,7 +2581,7 @@
         }
 
         // Stock check (skip for Guest Mode, Admin and Manager roles)
-        if (!isGuestMode && userRole === 'user' && d.stock <= 20) return false;
+        if (!isGuestMode && userRole === 'user' && !showroomStockOnly && d.stock <= 20) return false;
 
         return true;
       }).filter(d =>
@@ -2576,7 +2592,8 @@
           || String(d.name).toLowerCase().includes(searchTerm)) &&
         filterByPrice(d.price, priceRange) &&
         (!newOnly || isNewArrival(d.code)) &&
-        (!favOnly || favorites.has(String(d.code)))
+        (!favOnly || favorites.has(String(d.code))) &&
+        (!showroomStockOnly || getQtyInMall(d) > 0)
       );
 
       console.log("Filtered products:", filteredProducts.length);
