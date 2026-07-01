@@ -2388,25 +2388,6 @@ const EMPLOYEES = [
         "addressBooks": "2101-C;2101-E"
     },
     {
-        "employeeId": "4122-محمدعرفان باثيرامانا",
-        "personnelNumber": "4122",
-        "name": "محمدعرفان باثيرامانا",
-        "startDate": "2024-04-18",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
-    },
-    {
         "employeeId": "4124-بدريه شريف المالكي",
         "personnelNumber": "4124",
         "name": "بدريه شريف المالكي",
