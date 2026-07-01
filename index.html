@@ -1323,7 +1323,7 @@
                 const parts = metadataEndDate.split('-');
                 if (parts.length === 3) {
                     const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    customEnd.setHours(23, 59, 59, 999);
+                    customEnd.setHours(0, 0, 0, 0);
                     
                     let extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
                     if (customEnd.getDate() < 15) {
@@ -1335,7 +1335,7 @@
                                             
                     if (isExtendedMonth && today <= customEnd) {
                         const diffTime = customEnd.getTime() - today.getTime();
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
                         return Math.max(1, diffDays);
                     }
                 }
@@ -3911,13 +3911,7 @@
                 const grandConv = grandVisitors > 0 ? (grandTrans / grandVisitors * 100) : 0;
 
                 // Remaining daily
-                const nowR = new Date();
-                let ldm = new Date(nowR.getFullYear(), nowR.getMonth() + 1, 0).getDate();
-                let td = nowR.getDate();
-                if (nowR.getFullYear() === 2026 && nowR.getMonth() === 2) {
-                    if (td <= 19) { ldm = 19; } else { ldm = 12; td = td - 19; }
-                }
-                let remDays = Math.max(ldm - td + 1, 1);
+                let remDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, startDate);
                 const dailyReq = grandTarget > grandSales ? Math.round((grandTarget - grandSales) / remDays) : 0;
 
                 // === 2. Employee Data ===
@@ -4232,13 +4226,8 @@
                 const grandAvgInv = grandTrans > 0 ? Math.round(grandSales / grandTrans) : 0;
                 const grandConv = grandVisitors > 0 ? (grandTrans / grandVisitors * 100) : 0;
 
-                const nowR = new Date();
-                let ldm = new Date(nowR.getFullYear(), nowR.getMonth() + 1, 0).getDate();
-                let td = nowR.getDate();
-                if (nowR.getFullYear() === 2026 && nowR.getMonth() === 2) {
-                    if (td <= 19) { ldm = 19; } else { ldm = 12; td = td - 19; }
-                }
-                let remDays = Math.max(ldm - td + 1, 1);
+                // Remaining daily
+                let remDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, startDate);
                 const dailyReq = grandTarget > grandSales ? Math.round((grandTarget - grandSales) / remDays) : 0;
 
                 // === 2. Employee Data (combined from all stores) ===
