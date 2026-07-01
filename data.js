@@ -4558,7 +4558,7 @@ const EMPLOYEES = [
         "name": "عريب فرج القحطاني",
         "startDate": "2025-09-03",
         "manager": "عبدالله السرداح",
-        "showroom": "1109-40-Hayat Mall Riyad",
+        "showroom": "1109-40-Hayat Mall Riyad و 1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
@@ -4567,9 +4567,17 @@ const EMPLOYEES = [
                     "1109-C",
                     "1109-E"
                 ]
+            },
+            {
+                "name": "1103-25-Rabwa Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1103-C",
+                    "1103-E"
+                ]
             }
         ],
-        "addressBooks": "1109-C;1109-E"
+        "addressBooks": "1109-C;1109-E;1103-C;1103-E"
     },
     {
         "employeeId": "4689-رنا سعد العنزي",
