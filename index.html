@@ -1315,17 +1315,25 @@
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
         }
 
-        function getRemainingDays(metadataEndDate) {
+        function getRemainingDays(metadataEndDate, currentRangeStart) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            if (metadataEndDate) {
+            if (metadataEndDate && currentRangeStart) {
                 const parts = metadataEndDate.split('-');
                 if (parts.length === 3) {
                     const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    customEnd.setHours(0, 0, 0, 0);
+                    customEnd.setHours(23, 59, 59, 999);
                     
-                    if (today <= customEnd) {
+                    let extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
+                    if (customEnd.getDate() < 15) {
+                        extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+                    }
+                    
+                    const isExtendedMonth = currentRangeStart.getFullYear() === extTargetMonthStart.getFullYear() && 
+                                            currentRangeStart.getMonth() === extTargetMonthStart.getMonth();
+                                            
+                    if (isExtendedMonth && today <= customEnd) {
                         const diffTime = customEnd.getTime() - today.getTime();
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                         return Math.max(1, diffDays);
@@ -1333,8 +1341,19 @@
                 }
             }
 
-            let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            const referenceDate = currentRangeStart || today;
+            let lastDayOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate();
             let todayDate = today.getDate();
+
+            if (referenceDate.getFullYear() < today.getFullYear() || 
+                (referenceDate.getFullYear() === today.getFullYear() && referenceDate.getMonth() < today.getMonth())) {
+                return 1;
+            }
+
+            if (referenceDate.getFullYear() > today.getFullYear() || 
+                (referenceDate.getFullYear() === today.getFullYear() && referenceDate.getMonth() > today.getMonth())) {
+                return lastDayOfMonth;
+            }
 
             if (today.getFullYear() === 2026 && today.getMonth() === 2) {
                 if (todayDate <= 19) {
@@ -2324,6 +2343,21 @@
                     firstDay = new Date(2026, 2, 20);
                 }
 
+                // Check if target is extended (target_end_date is in the database and today is within that period)
+                let targetEndDate = rawData.metadata ? rawData.metadata.target_end_date : null;
+                if (targetEndDate) {
+                    const parts = targetEndDate.split('-');
+                    if (parts.length === 3) {
+                        const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        customEnd.setHours(23, 59, 59, 999);
+                        if (today <= customEnd) {
+                            if (customEnd.getDate() < 15) {
+                                firstDay = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+                            }
+                        }
+                    }
+                }
+
                 // Fix: If yesterday is before start of month (e.g. today is 1st), default End Date to Today
                 if (yesterday < firstDay) {
                     document.getElementById('endDate').value = today.toLocaleDateString('en-CA');
@@ -2637,6 +2671,26 @@
                     currentEnd = new Date(selYear, selMonth, 0);
                     currentEnd.setHours(23, 59, 59, 999);
 
+                    // Check if there is an active target extension for this month
+                    if (rawData.metadata && rawData.metadata.target_end_date) {
+                        const parts = rawData.metadata.target_end_date.split('-');
+                        if (parts.length === 3) {
+                            const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                            customEnd.setHours(23, 59, 59, 999);
+                            
+                            // Determine the month that is being extended (heuristic)
+                            let extTargetMonth = customEnd.getMonth() + 1; // 1-indexed
+                            if (customEnd.getDate() < 15) {
+                                extTargetMonth = extTargetMonth - 1;
+                                if (extTargetMonth === 0) extTargetMonth = 12;
+                            }
+                            
+                            if (parseInt(selMonth) === extTargetMonth && selYear === customEnd.getFullYear()) {
+                                currentEnd = customEnd;
+                            }
+                        }
+                    }
+
                     // Cap at today if future
                     let now = new Date();
                     if (currentEnd > now) currentEnd = now;
@@ -2840,7 +2894,7 @@
                 const compTarget = globalCurr.target;
                 const compPct = compTarget > 0 ? (compSales / compTarget) * 100 : 0;
                 const remainingVal = compTarget > compSales ? (compTarget - compSales) : 0;
-                const remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
+                const remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, currentStart);
 
                 document.getElementById('compSalesVal').textContent = Math.round(compSales).toLocaleString();
                 document.getElementById('compTargetVal').textContent = Math.round(compTarget).toLocaleString();
@@ -2999,7 +3053,7 @@
             ]);
 
             // Calculate Remaining Days
-            let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
+            let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, currentStart);
 
             allStores.forEach(sid => {
                 let name = rawData.stores[sid] || sid;
@@ -3575,7 +3629,7 @@
             const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
             // Calculate Remaining Days for Daily Req
-            let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
+            let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, startDate);
 
             // Build table rows
             let rows = [];

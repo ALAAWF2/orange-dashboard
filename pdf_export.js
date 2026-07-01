@@ -14,27 +14,51 @@ function shouldHideVisitorsGlobal() {
     return currentUser.hide_visitors === true;
 }
 
-function getRemainingDays(metadataEndDate) {
+function getRemainingDays(metadataEndDate, currentRangeStart) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (metadataEndDate) {
+
+    if (metadataEndDate && currentRangeStart) {
         const parts = metadataEndDate.split('-');
         if (parts.length === 3) {
             const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            customEnd.setHours(0, 0, 0, 0);
-            if (today <= customEnd) {
+            customEnd.setHours(23, 59, 59, 999);
+            
+            let extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
+            if (customEnd.getDate() < 15) {
+                extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+            }
+            
+            const isExtendedMonth = currentRangeStart.getFullYear() === extTargetMonthStart.getFullYear() && 
+                                    currentRangeStart.getMonth() === extTargetMonthStart.getMonth();
+                                    
+            if (isExtendedMonth && today <= customEnd) {
                 const diffTime = customEnd.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                 return Math.max(1, diffDays);
             }
         }
     }
-    let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+    const referenceDate = currentRangeStart || today;
+    let lastDayOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate();
     let todayDate = today.getDate();
+
+    if (referenceDate.getFullYear() < today.getFullYear() || 
+        (referenceDate.getFullYear() === today.getFullYear() && referenceDate.getMonth() < today.getMonth())) {
+        return 1;
+    }
+
+    if (referenceDate.getFullYear() > today.getFullYear() || 
+        (referenceDate.getFullYear() === today.getFullYear() && referenceDate.getMonth() > today.getMonth())) {
+        return lastDayOfMonth;
+    }
+
     if (today.getFullYear() === 2026 && today.getMonth() === 2) {
         if (todayDate <= 19) lastDayOfMonth = 19;
         else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
     }
+
     let remainingDays = lastDayOfMonth - todayDate + 1;
     return Math.max(1, remainingDays);
 }
@@ -143,7 +167,7 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         let mStart = new Date(startDate);
         let mEnd = new Date(endDate);
 
-        let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null);
+        let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, mStart);
 
 
         // 1. First Pass: Calculate Header Totals (Target & Sales)

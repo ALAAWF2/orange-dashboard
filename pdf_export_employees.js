@@ -1,26 +1,50 @@
 /* PDF Export Logic for Employees - Final Array Fix - Ver 1.2 */
 
-function getRemainingDays(metadataEndDate) {
+function getRemainingDays(metadataEndDate, currentRangeStart) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (metadataEndDate) {
+
+    if (metadataEndDate && currentRangeStart) {
         const parts = metadataEndDate.split('-');
         if (parts.length === 3) {
             const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            customEnd.setHours(0, 0, 0, 0);
-            if (today <= customEnd) {
+            customEnd.setHours(23, 59, 59, 999);
+            
+            let extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
+            if (customEnd.getDate() < 15) {
+                extTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+            }
+            
+            const isExtendedMonth = currentRangeStart.getFullYear() === extTargetMonthStart.getFullYear() && 
+                                    currentRangeStart.getMonth() === extTargetMonthStart.getMonth();
+                                    
+            if (isExtendedMonth && today <= customEnd) {
                 const diffTime = customEnd.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                 return Math.max(1, diffDays);
             }
         }
     }
-    let lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+    const referenceDate = currentRangeStart || today;
+    let lastDayOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate();
     let todayDate = today.getDate();
+
+    if (referenceDate.getFullYear() < today.getFullYear() || 
+        (referenceDate.getFullYear() === today.getFullYear() && referenceDate.getMonth() < today.getMonth())) {
+        return 1;
+    }
+
+    if (referenceDate.getFullYear() > today.getFullYear() || 
+        (referenceDate.getFullYear() === today.getFullYear() && referenceDate.getMonth() > today.getMonth())) {
+        return lastDayOfMonth;
+    }
+
     if (today.getFullYear() === 2026 && today.getMonth() === 2) {
         if (todayDate <= 19) lastDayOfMonth = 19;
         else { lastDayOfMonth = 12; todayDate = todayDate - 19; }
     }
+
     let remainingDays = lastDayOfMonth - todayDate + 1;
     return Math.max(1, remainingDays);
 }
@@ -90,21 +114,49 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true, 
 
     const yestStrFinal = formatDate(yestDate);
 
+    // Determine active target extension
+    let extEndDate = null;
+    let isExtended = false;
+    let extTargetMonthStart = null;
+    
+    if (window.employeesMetadata && window.employeesMetadata.target_end_date) {
+        const parts = window.employeesMetadata.target_end_date.split('-');
+        if (parts.length === 3) {
+            extEndDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            extEndDate.setHours(23, 59, 59, 999);
+            
+            if (today <= extEndDate) {
+                if (extEndDate.getDate() < 15) {
+                    extTargetMonthStart = new Date(extEndDate.getFullYear(), extEndDate.getMonth() - 1, 1);
+                    isExtended = true;
+                }
+            }
+        }
+    }
+
     // MTD Start (1st of Current Month)
     let monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (isExtended) {
+        monthStart = extTargetMonthStart;
+    }
     // 2026 March: post-Ramadan MTD starts from March 20
-    if (today.getFullYear() === 2026 && today.getMonth() === 2 && today.getDate() > 19) {
+    if (!isExtended && today.getFullYear() === 2026 && today.getMonth() === 2 && today.getDate() > 19) {
         monthStart = new Date(2026, 2, 20);
     }
     const monthStartStr = formatDate(monthStart);
 
     // Previous Month Logic (Robust)
     // 1. Get 1st of Previous Month
-    const prevStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const prevMonthStartStr = formatDate(prevStart);
-
+    let prevStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     // 2. Get Last Day of Previous Month (Day 0 of Current Month)
-    const prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    let prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+    if (isExtended) {
+        prevStart = new Date(extTargetMonthStart.getFullYear(), extTargetMonthStart.getMonth() - 1, 1);
+        prevEnd = new Date(extTargetMonthStart.getFullYear(), extTargetMonthStart.getMonth(), 0);
+    }
+
+    const prevMonthStartStr = formatDate(prevStart);
     const prevMonthEndStr = formatDate(prevEnd);
 
     let pageIndex = 0;
@@ -356,7 +408,7 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true, 
 
             let dailyReq = 0;
             if (!isPrevMode) {
-                let daysLeftLabel = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null);
+                let daysLeftLabel = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null, monthStart);
                 dailyReq = remaining / daysLeftLabel;
             }
 
@@ -402,7 +454,7 @@ async function generateEmployeePDF(targetEmps = null, includeCommission = true, 
         const col2Rem = Math.max(0, col2TotalTarget - col2TotalSales);
         let col2Daily = 0;
         if (!isPrevMode) {
-            let daysLeftEnd = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null);
+            let daysLeftEnd = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null, monthStart);
             col2Daily = col2Rem / daysLeftEnd;
         }
 
