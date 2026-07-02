@@ -2851,6 +2851,18 @@
                 // Targets
                 rawData.targets.forEach(([d, s, v]) => {
                     if (filterFn(d, s)) {
+                        if (rawData.metadata && rawData.metadata.target_end_date) {
+                            const extDate = new Date(rawData.metadata.target_end_date);
+                            const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
+                            const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
+                            
+                            if (start.getFullYear() === extYear && start.getMonth() === extMonth) {
+                                const targetDate = new Date(d);
+                                if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) {
+                                    return; // Skip other month targets during extension!
+                                }
+                            }
+                        }
                         target += v;
                         branchTarget[s] = (branchTarget[s] || 0) + v;
                     }
@@ -3882,7 +3894,19 @@
                     const sales = dayData.sales || 0;
                     const visitors = dayData.visitors || 0;
                     const trans = dayData.trans || 0;
-                    const target = dayData.target || 0;
+                    let target = dayData.target || 0;
+                    if (target > 0 && rawData.metadata && rawData.metadata.target_end_date) {
+                        const extDate = new Date(rawData.metadata.target_end_date);
+                        const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
+                        const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
+                        
+                        if (startDate.getFullYear() === extYear && startDate.getMonth() === extMonth) {
+                            const targetDate = new Date(dateStr);
+                            if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) {
+                                target = 0;
+                            }
+                        }
+                    }
 
                     let lyDate = new Date(loopDate);
                     lyDate.setFullYear(loopDate.getFullYear() - 1);
@@ -4196,7 +4220,20 @@
                         daySales += d.sales || 0;
                         dayVisitors += d.visitors || 0;
                         dayTrans += d.trans || 0;
-                        dayTarget += d.target || 0;
+                        let targetVal = d.target || 0;
+                        if (targetVal > 0 && rawData.metadata && rawData.metadata.target_end_date) {
+                            const extDate = new Date(rawData.metadata.target_end_date);
+                            const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
+                            const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
+                            
+                            if (startDate.getFullYear() === extYear && startDate.getMonth() === extMonth) {
+                                const targetDate = new Date(dateStr);
+                                if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) {
+                                    targetVal = 0;
+                                }
+                            }
+                        }
+                        dayTarget += targetVal;
 
                         // Last Year
                         let lyDate = new Date(loopDate);
