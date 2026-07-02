@@ -1325,6 +1325,39 @@
     </div>
   </div>
 
+  <!-- مودال طلب تحويل بضاعة -->
+  <div id="transferModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:400px; text-align:right;">
+      <button class="modal-close" onclick="closeTransferModal()">×</button>
+      <h3 style="color:#8e44ad; margin-bottom:15px; text-align:center;">طلب تحويل بين المعارض</h3>
+      
+      <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+        <p style="margin:5px 0;"><strong>المنتج:</strong> <span id="transferProductName"></span></p>
+        <p style="margin:5px 0;"><strong>الكود:</strong> <span id="transferProductCode"></span></p>
+        <p style="margin:5px 0;"><strong>المعرض المستلم:</strong> <span id="transferToMall" style="color:var(--primary); font-weight:bold;"></span></p>
+      </div>
+      
+      <div style="margin-bottom:15px;">
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">المعرض المحول منه (المصدر):</label>
+        <select id="transferFromMallSelect" class="styled-select" style="width:100%;" onchange="updateTransferMaxQty()">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+      
+      <div style="margin-bottom:15px;">
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">الكمية المطلوبة:</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="qty-step-btn" onclick="stepTransferQty(1)">+</button>
+          <input id="transferQtyInput" type="number" min="1" value="1" style="text-align:center; width:100%; border:1px solid var(--border-color); border-radius:var(--border-radius-sm); height:42px;">
+          <button type="button" class="qty-step-btn" onclick="stepTransferQty(-1)">-</button>
+        </div>
+        <span id="transferMaxQtyLabel" style="font-size:0.85em; color:var(--text-muted); display:block; margin-top:5px;"></span>
+      </div>
+      
+      <button onclick="submitTransferRequest()" class="btn-purple" style="background:#8e44ad; color:white; width:100%; font-weight:bold; font-size:1.1em; padding:12px; border-radius:var(--border-radius-sm); border:none; cursor:pointer;">إرسال طلب التحويل</button>
+    </div>
+  </div>
+
   <!-- first_seen.json + منطق "جديد" -->
   <script>
     const FIRST_SEEN_URL = "first_seen.json";
@@ -1569,6 +1602,25 @@
         console.error("❌ sales_by_outlet.json load failed:", e);
         window.SALES_BY_OUTLET = {};
       }
+    }
+
+    function getStockShowrooms(product) {
+      const list = [];
+      if (!product || !product.branches) return list;
+      for (const [branchName, qty] of Object.entries(product.branches)) {
+        const bLower = branchName.toLowerCase();
+        if (branchName !== userMall &&
+            qty > 0 &&
+            bLower !== 'warehouse' &&
+            !bLower.includes('riyadh') &&
+            !bLower.includes('مستودع') &&
+            branchName !== '00-GIFTS' &&
+            branchName !== 'PLATFORMS' &&
+            branchName !== 'Transit') {
+          list.push({ name: branchName, qty: Number(qty) || 0 });
+        }
+      }
+      return list;
     }
 
     // ✅ تطبيع اسم المعرض لتفادي اختلافات "-" / مسافات / كيس
@@ -3082,6 +3134,11 @@
              </select>
              ` : ''}
           </div>
+          ${getStockShowrooms(d).length > 0 ? `
+            <button type="button" class="btn-outline" style="width:100%; margin-top:8px; padding:6px 12px; border-color:#8e44ad; color:#8e44ad; font-size:0.85em; font-weight:bold; border-radius:var(--border-radius-sm); border:1px solid #8e44ad; cursor:pointer;" onclick="event.stopPropagation(); openTransferModal('${d.code}')">
+              🔄 طلب تحويل من فروع أخرى
+            </button>
+          ` : ''}
           `}
         </div>
       </div>
@@ -3195,6 +3252,11 @@
         <button class="btn-primary" onclick="addModalQtyToCart('${product.code}','${product.name.replace(/'/g, "\'")}', '${product.alias ?? ''}')">
           🛒 إضافة للسلة المباشرة
         </button>
+        ${getStockShowrooms(product).length > 0 ? `
+          <button class="btn-purple" style="margin-top: 10px; background-color: #8e44ad; color: white; width:100%; border:none; border-radius:var(--border-radius-sm); font-weight:bold; font-size:1.1em; padding:12px; cursor:pointer;" onclick="closeProductModal(); openTransferModal('${product.code}')">
+            🔄 طلب تحويل من فروع أخرى
+          </button>
+        ` : ''}
       </div>
     `}
   `;
@@ -4112,6 +4174,130 @@
         await loadChecklistData();
       }
     }
+  </script>
+
+  <script>
+    let currentTransferProduct = null;
+    let currentTransferShowrooms = [];
+
+    window.openTransferModal = function(code) {
+      const product = (window.data || window.products || []).find(p => p.code === code);
+      if (!product) return;
+      
+      currentTransferProduct = product;
+      currentTransferShowrooms = getStockShowrooms(product);
+      
+      if (currentTransferShowrooms.length === 0) {
+        showToast("لا يوجد مخزون لهذا المنتج في أي فرع آخر", "warning");
+        return;
+      }
+      
+      document.getElementById('transferProductName').textContent = product.name;
+      document.getElementById('transferProductCode').textContent = product.code;
+      document.getElementById('transferToMall').textContent = userMall || "";
+      
+      const select = document.getElementById('transferFromMallSelect');
+      select.innerHTML = currentTransferShowrooms.map(s => 
+        `<option value="${s.name}" data-qty="${s.qty}">${s.name} (المتوفر: ${s.qty})</option>`
+      ).join('');
+      
+      document.getElementById('transferQtyInput').value = 1;
+      updateTransferMaxQty();
+      
+      document.getElementById('transferModal').style.display = 'flex';
+    };
+
+    window.closeTransferModal = function() {
+      document.getElementById('transferModal').style.display = 'none';
+      currentTransferProduct = null;
+      currentTransferShowrooms = [];
+    };
+
+    window.updateTransferMaxQty = function() {
+      const select = document.getElementById('transferFromMallSelect');
+      const selectedOption = select.options[select.selectedIndex];
+      if (!selectedOption) return;
+      
+      const maxQty = parseInt(selectedOption.getAttribute('data-qty')) || 1;
+      document.getElementById('transferMaxQtyLabel').textContent = `الحد الأقصى المتاح للتحويل: ${maxQty} قطعة`;
+      
+      const qtyInput = document.getElementById('transferQtyInput');
+      qtyInput.max = maxQty;
+      if (parseInt(qtyInput.value) > maxQty) {
+        qtyInput.value = maxQty;
+      }
+    };
+
+    window.stepTransferQty = function(delta) {
+      const qtyInput = document.getElementById('transferQtyInput');
+      let v = parseInt(qtyInput.value) || 0;
+      v = Math.max(1, v + delta);
+      
+      const select = document.getElementById('transferFromMallSelect');
+      const selectedOption = select.options[select.selectedIndex];
+      if (selectedOption) {
+        const maxQty = parseInt(selectedOption.getAttribute('data-qty')) || 1;
+        v = Math.min(v, maxQty);
+      }
+      
+      qtyInput.value = v;
+    };
+
+    window.submitTransferRequest = async function() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+          showToast("انتهت جلسة تسجيل الدخول! يرجى إدخال كلمة المرور مجدداً لإرسال طلب التحويل.", "warning");
+          document.getElementById('loginModal').style.display = 'flex';
+          if (typeof loadSavedCredentials === 'function') loadSavedCredentials();
+          return;
+      }
+
+      if (!currentUser) return showToast("يرجى تسجيل الدخول أولاً", "warning");
+      if (!currentTransferProduct) return;
+      
+      const select = document.getElementById('transferFromMallSelect');
+      const fromMall = select.value;
+      const qtyInput = document.getElementById('transferQtyInput');
+      const qty = parseInt(qtyInput.value) || 1;
+      
+      const selectedOption = select.options[select.selectedIndex];
+      const maxQty = parseInt(selectedOption.getAttribute('data-qty')) || 1;
+      
+      if (qty <= 0 || qty > maxQty) {
+        showToast(`الكمية غير صالحة. يجب أن تكون بين 1 و ${maxQty}`, "warning");
+        return;
+      }
+      
+      const spinner = document.getElementById('loadingSpinner');
+      if (spinner) spinner.classList.add('active');
+      
+      try {
+        const transferPayload = {
+          id: crypto.randomUUID(),
+          user_id: currentUser.id,
+          from_mall: fromMall,
+          to_mall: userMall,
+          items: [{
+            code: currentTransferProduct.code,
+            name: currentTransferProduct.name,
+            alias: currentTransferProduct.alias || '',
+            qty: qty
+          }],
+          status: 'pending'
+        };
+        
+        const { error } = await supabaseClient.from('stock_transfers').insert([transferPayload]);
+        if (error) throw error;
+        
+        showSuccessModal("✅ تم إرسال طلب التحويل بنجاح");
+        closeTransferModal();
+      } catch (err) {
+        console.error("Failed to submit transfer request:", err);
+        showToast("فشل إرسال طلب التحويل: " + err.message, "error");
+      } finally {
+        if (spinner) spinner.classList.remove('active');
+      }
+    };
   </script>
 
   <!-- Image Lightbox (fullscreen zoom) -->
