@@ -5562,25 +5562,6 @@ const EMPLOYEES = [
         "addressBooks": "1203-C;1203-E"
     },
     {
-        "employeeId": "4840-ريناد الدوسري",
-        "personnelNumber": "4840",
-        "name": "ريناد الدوسري",
-        "startDate": "2026-01-27",
-        "manager": "محمدكلو",
-        "showroom": "1107-38-Al_Riyadh Park",
-        "showroomDetails": [
-            {
-                "name": "1107-38-Al_Riyadh Park",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1107-C",
-                    "1107-E"
-                ]
-            }
-        ],
-        "addressBooks": "1107-C;1107-E"
-    },
-    {
         "employeeId": "4842-راويه احمد المطيري",
         "personnelNumber": "4842",
         "name": "راويه احمد المطيري",
@@ -6434,25 +6415,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1109-C;1109-E"
-    },
-    {
-        "employeeId": "4947-سعود ناصر",
-        "personnelNumber": "4947",
-        "name": "سعود ناصر",
-        "startDate": "2026-04-21",
-        "manager": "محمدكلو",
-        "showroom": "1107-38-Al_Riyadh Park",
-        "showroomDetails": [
-            {
-                "name": "1107-38-Al_Riyadh Park",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1107-C",
-                    "1107-E"
-                ]
-            }
-        ],
-        "addressBooks": "1107-C;1107-E"
     },
     {
         "employeeId": "4944-منال هلال",
