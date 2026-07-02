@@ -66,6 +66,20 @@ This is a **traditional multi-page application**:
     ├── maintenance.html        # Maintenance requests (Supabase backend)
     ├── stagnant_products.html  # Stagnant product analysis
     │
+    ├── catalog/                # SEPARATE store-facing app (Supabase backend)
+    │   ├── index.html          # Product catalog: cart→orders, favorites, barcode print,
+    │   │                       #   checklist, bottom mobile nav, stock badges, lightbox,
+    │   │                       #   Cache-API smart caching keyed on last_updated.json
+    │   ├── catalog-admin.html  # Admin: block items, orders log + new-order sound alerts,
+    │   │                       #   top-requested-items report, promos, users, audit logs
+    │   ├── generate_catalog.py # ACTIVE daily generator (9AM batch runs this copy;
+    │   │                       #   writes catalog/ files + parent copies, compact JSON)
+    │   ├── orders.html, outlet-orders-supabase.html, cross-outlet-search.html,
+    │   ├── quotation.html, checklist-status.html, weekly-closing*.html, maintenance*.html
+    │   ├── inventory_assistant/  # PWA stock-count app (Realtime + camera barcode)
+    │   └── _archive/           # GITIGNORED — old page versions + sensitive exports.
+    │                           #   Never delete, never re-track in git.
+    │
     ├── admin_logic.js          # Flask API calls, target CRUD, auth
     ├── target_logic.js         # YoY comparison, target aggregation
     ├── excel_export.js         # Excel report generation (SheetJS)

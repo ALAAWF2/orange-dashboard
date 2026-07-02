@@ -5,6 +5,7 @@
   <title>لوحة التحكم وإدارة الكاتالوج</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -443,7 +444,7 @@
       </h3>
       <div style="display: flex; flex-wrap: wrap; gap: 10px;">
         <a href="index.html" class="btn btn-outline" style="background: white;"><i class="fa-solid fa-box-open" style="color: var(--primary); margin-left: 5px;"></i>الكاتالوج الرئيسي</a>
-        <a href="newindex.html" class="btn btn-outline" style="background: white;"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--primary); margin-left: 5px;"></i>الكاتالوج (الواجهة الجديدة)</a>
+        <a href="quotation.html" class="btn btn-outline" style="background: white;"><i class="fa-solid fa-file-invoice" style="color: var(--primary); margin-left: 5px;"></i>عمل عرض سعر</a>
         <a href="outlet-orders-supabase.html" class="btn btn-outline" style="background: white;"><i class="fa-solid fa-clipboard-list" style="color: var(--accent); margin-left: 5px;"></i>طلبات المعرض السابقة</a>
         <a href="cross-outlet-search.html" class="btn btn-outline" style="background: white;"><i class="fa-solid fa-magnifying-glass" style="color: var(--warning); margin-left: 5px;"></i>البحث في المعارض الأخرى</a>
         <a href="weekly-closing.html" class="btn btn-outline" style="background: white;"><i class="fa-solid fa-calculator" style="color: var(--primary); margin-left: 5px;"></i>تقفيلة المبيعات الأسبوعية</a>
@@ -474,7 +475,8 @@
       <button class="tab-btn active" onclick="switchTab('tabBlocked')">🚫 إخفاء وحجب المنتجات</button>
       <button class="tab-btn" onclick="switchTab('tabSync')">⏳ تحديث الكاتالوج الفوري</button>
       <button class="tab-btn" onclick="switchTab('tabImages')">🖼️ المنتجات بدون صور</button>
-      <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
+      <button class="tab-btn" id="tabOrdersBtn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
+      <button class="tab-btn" onclick="switchTab('tabTopItems')">📊 الأصناف الأكثر طلباً</button>
       <button class="tab-btn" onclick="switchTab('tabPromoBarcodes')">🏷️ إدارة العروض والباركود</button>
       <button class="tab-btn" onclick="switchTab('tabUsers')">👥 إدارة الحسابات</button>
       <button class="tab-btn" onclick="switchTab('tabMediaLibrary')">🖼️ مكتبة الصور المرفوعة</button>
@@ -625,6 +627,69 @@
           </thead>
           <tbody id="ordersTableBody">
             <tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل الطلبات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Top requested items report -->
+    <div id="tabTopItems" class="tab-content">
+      <div class="controls-container">
+        <div class="controls-row" style="align-items: flex-end;">
+          <div class="control-group">
+            <label>من تاريخ</label>
+            <input type="date" id="topItemsFrom" onchange="loadTopRequestedItems()">
+          </div>
+          <div class="control-group">
+            <label>إلى تاريخ</label>
+            <input type="date" id="topItemsTo" onchange="loadTopRequestedItems()">
+          </div>
+          <div class="control-group">
+            <label>المستودع</label>
+            <select id="topItemsWarehouse" onchange="loadTopRequestedItems()">
+              <option value="all">الكل</option>
+              <option value="Warehouse">مستودع جدة</option>
+              <option value="warehouse riyadh">مستودع الرياض</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <button onclick="exportTopItemsExcel()" class="btn btn-primary" style="height:44px; display:flex; align-items:center; gap:8px;">
+              📥 تصدير Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-container" style="margin-bottom: 1rem;">
+        <div class="stat-card">
+          <div class="stat-value" id="topItemsOrdersCount">0</div>
+          <div class="stat-title">عدد الطلبيات في الفترة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="topItemsUniqueCount" style="color:var(--primary)">0</div>
+          <div class="stat-title">عدد الأصناف المختلفة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="topItemsTotalQty" style="color:var(--success)">0</div>
+          <div class="stat-title">إجمالي القطع المطلوبة</div>
+        </div>
+      </div>
+
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الكود</th>
+              <th>Alias</th>
+              <th>اسم الصنف</th>
+              <th style="text-align:center;">إجمالي الكمية المطلوبة</th>
+              <th style="text-align:center;">عدد الطلبيات</th>
+              <th style="text-align:center;">عدد المعارض</th>
+            </tr>
+          </thead>
+          <tbody id="topItemsTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">اختر الفترة لعرض التقرير...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1431,7 +1496,11 @@
       } else if (tabId === 'tabImages') {
          renderMissingImagesTable();
       } else if (tabId === 'tabOrders') {
+         clearNewOrdersBadge();
          loadSupabaseOrders();
+      } else if (tabId === 'tabTopItems') {
+         initTopItemsDates();
+         loadTopRequestedItems();
       } else if (tabId === 'tabPromoBarcodes') {
          loadPromoPricesAndBatchItems();
       } else if (tabId === 'tabUsers') {
@@ -1444,6 +1513,206 @@
          initializeChecklistTab();
       }
     }
+
+    // === TAB: Top requested items report ===
+    let topItemsAggregated = [];
+
+    function initTopItemsDates() {
+      const fromEl = document.getElementById('topItemsFrom');
+      const toEl = document.getElementById('topItemsTo');
+      if (!fromEl || !toEl) return;
+      if (!fromEl.value) {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        fromEl.value = d.toISOString().split('T')[0];
+      }
+      if (!toEl.value) {
+        toEl.value = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    async function loadTopRequestedItems() {
+      const tbody = document.getElementById('topItemsTableBody');
+      if (!tbody) return;
+      const fromVal = document.getElementById('topItemsFrom').value;
+      const toVal = document.getElementById('topItemsTo').value;
+      const whVal = document.getElementById('topItemsWarehouse').value;
+
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">جاري تحليل الطلبيات...</td></tr>';
+
+      try {
+        const allOrders = [];
+        let from = 0;
+        const batchSize = 1000;
+        while (true) {
+          let query = supabaseClient.from('orders').select('mall, warehouse, items, created_at');
+          if (whVal !== 'all') query = query.eq('warehouse', whVal);
+          if (fromVal) query = query.gte('created_at', new Date(`${fromVal}T00:00:00`).toISOString());
+          if (toVal) query = query.lte('created_at', new Date(`${toVal}T23:59:59.999`).toISOString());
+          const { data, error } = await query.order('created_at', { ascending: false }).range(from, from + batchSize - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          allOrders.push(...data);
+          if (data.length < batchSize) break;
+          from += batchSize;
+        }
+
+        const agg = {};
+        let totalQty = 0;
+        allOrders.forEach(order => {
+          const items = Array.isArray(order.items) ? order.items : [];
+          const seenInOrder = new Set();
+          items.forEach(item => {
+            const code = String(item.code || '').trim();
+            if (!code) return;
+            const qty = Number(item.qty) || 0;
+            if (!agg[code]) {
+              agg[code] = { code: code, alias: item.alias || '', name: item.name || '', qty: 0, orders: 0, malls: new Set() };
+            }
+            agg[code].qty += qty;
+            totalQty += qty;
+            if (!seenInOrder.has(code)) {
+              agg[code].orders += 1;
+              seenInOrder.add(code);
+            }
+            if (order.mall) agg[code].malls.add(order.mall);
+          });
+        });
+
+        topItemsAggregated = Object.values(agg).sort((a, b) => b.qty - a.qty);
+
+        document.getElementById('topItemsOrdersCount').textContent = allOrders.length.toLocaleString();
+        document.getElementById('topItemsUniqueCount').textContent = topItemsAggregated.length.toLocaleString();
+        document.getElementById('topItemsTotalQty').textContent = totalQty.toLocaleString();
+
+        if (topItemsAggregated.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">لا توجد طلبيات في الفترة المحددة</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = topItemsAggregated.slice(0, 200).map((it, idx) => `
+          <tr>
+            <td style="font-weight:bold; color:${idx < 3 ? 'var(--primary)' : 'inherit'};">${idx + 1}</td>
+            <td style="font-family:monospace;">${it.code}</td>
+            <td style="font-family:monospace;">${it.alias || '—'}</td>
+            <td>${escapeHtmlSafe(it.name)}</td>
+            <td style="text-align:center; font-weight:800; color:var(--primary);">${it.qty.toLocaleString()}</td>
+            <td style="text-align:center;">${it.orders}</td>
+            <td style="text-align:center;">${it.malls.size}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error("Top items report failed:", err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--danger);">فشل تحميل التقرير: ' + escapeHtmlSafe(err.message) + '</td></tr>';
+      }
+    }
+
+    function escapeHtmlSafe(text) {
+      const div = document.createElement('div');
+      div.textContent = text == null ? '' : String(text);
+      return div.innerHTML;
+    }
+
+    function exportTopItemsExcel() {
+      if (!topItemsAggregated.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+      const fromVal = document.getElementById('topItemsFrom').value;
+      const toVal = document.getElementById('topItemsTo').value;
+      const rows = [
+        ['الترتيب', 'الكود', 'Alias', 'اسم الصنف', 'إجمالي الكمية', 'عدد الطلبيات', 'عدد المعارض'],
+        ...topItemsAggregated.map((it, idx) => [idx + 1, it.code, it.alias || '', it.name, it.qty, it.orders, it.malls.size])
+      ];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 50 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'الأصناف الأكثر طلباً');
+      XLSX.writeFile(wb, `top_requested_items_${fromVal}_${toVal}.xlsx`);
+      showToast('تم تصدير التقرير ✅', 'success');
+    }
+
+    // === New order notifications (polling every 60s) ===
+    let _lastSeenOrderTs = localStorage.getItem('admin_orders_last_seen') || null;
+    let _newOrdersCount = 0;
+    const _baseDocTitle = document.title;
+
+    function _getOrdersNavBadge() {
+      const btn = document.getElementById('tabOrdersBtn');
+      if (!btn) return null;
+      let badge = document.getElementById('newOrdersBadge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'newOrdersBadge';
+        badge.style.cssText = 'display:none; margin-right:6px; background:var(--danger); color:#fff; border-radius:99px; min-width:20px; height:20px; font-size:0.75em; font-weight:800; align-items:center; justify-content:center; padding:0 6px; vertical-align:middle;';
+        btn.appendChild(badge);
+      }
+      return badge;
+    }
+
+    function clearNewOrdersBadge() {
+      _newOrdersCount = 0;
+      const badge = _getOrdersNavBadge();
+      if (badge) badge.style.display = 'none';
+      document.title = _baseDocTitle;
+    }
+
+    function playNewOrderSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.65);
+      } catch (e) { /* autoplay policy or no audio — ignore */ }
+    }
+
+    async function checkNewOrders() {
+      try {
+        if (!_lastSeenOrderTs) {
+          const { data } = await supabaseClient.from('orders')
+            .select('created_at').order('created_at', { ascending: false }).limit(1);
+          _lastSeenOrderTs = data?.[0]?.created_at || new Date().toISOString();
+          localStorage.setItem('admin_orders_last_seen', _lastSeenOrderTs);
+          return;
+        }
+        const { data, error } = await supabaseClient.from('orders')
+          .select('id, mall, created_at')
+          .gt('created_at', _lastSeenOrderTs)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        if (error || !data || data.length === 0) return;
+
+        _newOrdersCount += data.length;
+        _lastSeenOrderTs = data[0].created_at;
+        localStorage.setItem('admin_orders_last_seen', _lastSeenOrderTs);
+
+        const badge = _getOrdersNavBadge();
+        if (badge) {
+          badge.textContent = _newOrdersCount;
+          badge.style.display = 'inline-flex';
+        }
+        document.title = `(${_newOrdersCount}) 🔔 ${_baseDocTitle}`;
+        playNewOrderSound();
+        showToast(`🔔 وصلت ${data.length === 1 ? 'طلبية جديدة من ' + data[0].mall : data.length + ' طلبيات جديدة'}`, 'success');
+
+        const ordersTab = document.getElementById('tabOrders');
+        if (ordersTab && ordersTab.classList.contains('active')) {
+          loadSupabaseOrders();
+          clearNewOrdersBadge();
+        }
+      } catch (e) {
+        console.warn('New-orders poll failed:', e);
+      }
+    }
+
+    setTimeout(checkNewOrders, 8000);
+    setInterval(checkNewOrders, 60000);
 
     // === TAB 1: Blocked items logic ===
     function onFilterBlockedChange() {
