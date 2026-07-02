@@ -19,6 +19,14 @@ OUTPUT_FIRST_SEEN = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashb
 OUTPUT_SALES_BY_OUTLET = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/sales_by_outlet.json")
 OUTPUT_LAST_UPDATED = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard/catalog/last_updated.json")
 
+# Parent dashboard copies — admin_panel.html reads first_seen.json and
+# product_analysis.html reads products.json from allorangedashboard/ directly
+PARENT_DIR = Path("C:/Users/ALAA-ORANGE/Desktop/orangedata/allorangedashboard")
+PARENT_PRODUCTS = PARENT_DIR / "products.json"
+PARENT_FIRST_SEEN = PARENT_DIR / "first_seen.json"
+PARENT_SALES_BY_OUTLET = PARENT_DIR / "sales_by_outlet.json"
+PARENT_LAST_UPDATED = PARENT_DIR / "last_updated.json"
+
 TIMEOUT = 120
 BASE_URL = "https://orangepax.operations.eu.dynamics.com/data"
 
@@ -439,14 +447,24 @@ def main():
     # =====================
     print(f"Writing {len(products)} products...")
 
-    OUTPUT_PRODUCTS.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
-    OUTPUT_FIRST_SEEN.write_text(json.dumps(first_seen, ensure_ascii=False, indent=2), encoding="utf-8")
-    OUTPUT_SALES_BY_OUTLET.write_text(json.dumps(sales_by_outlet, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Compact JSON (no indentation) — cuts file size ~25-30% for faster page loads
+    products_json = json.dumps(products, ensure_ascii=False, separators=(",", ":"))
+    first_seen_json = json.dumps(first_seen, ensure_ascii=False, separators=(",", ":"))
+    sales_json = json.dumps(sales_by_outlet, ensure_ascii=False, separators=(",", ":"))
+
+    OUTPUT_PRODUCTS.write_text(products_json, encoding="utf-8")
+    OUTPUT_FIRST_SEEN.write_text(first_seen_json, encoding="utf-8")
+    OUTPUT_SALES_BY_OUTLET.write_text(sales_json, encoding="utf-8")
+
+    PARENT_PRODUCTS.write_text(products_json, encoding="utf-8")
+    PARENT_FIRST_SEEN.write_text(first_seen_json, encoding="utf-8")
+    PARENT_SALES_BY_OUTLET.write_text(sales_json, encoding="utf-8")
 
     # Write last updated timestamp
     last_updated_time = datetime.now(timezone.utc).isoformat()
-    last_updated_data = {"last_updated": last_updated_time}
-    OUTPUT_LAST_UPDATED.write_text(json.dumps(last_updated_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    last_updated_json = json.dumps({"last_updated": last_updated_time}, ensure_ascii=False)
+    OUTPUT_LAST_UPDATED.write_text(last_updated_json, encoding="utf-8")
+    PARENT_LAST_UPDATED.write_text(last_updated_json, encoding="utf-8")
 
     print("DONE")
 

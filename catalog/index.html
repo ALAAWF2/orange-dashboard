@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>جدول البضاعة</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -734,6 +735,165 @@
     .order-summary-table th { background: #f8f9fa; padding: 12px; text-align: right; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
     .order-summary-table td { padding: 12px; border-bottom: 1px solid var(--border-color); text-align: right; }
     .order-summary-table tr:last-child td { border-bottom: none; }
+
+    /* ===== Stock availability badges ===== */
+    .stock-badge {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      z-index: 2;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75em;
+      font-weight: bold;
+      box-shadow: var(--shadow-sm);
+    }
+    .stock-ok  { background: #e8f8ef; color: #1e8e4e; border: 1px solid #b7e4c7; }
+    .stock-low { background: #fff4e0; color: #c05f00; border: 1px solid #ffd9a0; }
+    .stock-out { background: #f1f3f5; color: #868e96; border: 1px solid #dee2e6; }
+
+    /* ===== Skeleton loading placeholders ===== */
+    .skeleton-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+    .skeleton-card .sk-img { height: 180px; }
+    .skeleton-card .sk-line { height: 14px; border-radius: 6px; margin: 12px; }
+    .skeleton-card .sk-line.short { width: 50%; }
+    .sk-shimmer {
+      background: linear-gradient(90deg, #f1f3f5 25%, #e7e9ec 37%, #f1f3f5 63%);
+      background-size: 400% 100%;
+      animation: skShimmer 1.2s ease infinite;
+    }
+    @keyframes skShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+    /* ===== Image lightbox (zoom) ===== */
+    #imageLightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 10, 0.93);
+      z-index: 10005;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #lightboxImg {
+      max-width: 95vw;
+      max-height: 92vh;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      border-radius: 6px;
+    }
+    #lightboxClose {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 2;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 1.6em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #lightboxHint {
+      position: absolute;
+      bottom: 18px;
+      right: 0;
+      left: 0;
+      text-align: center;
+      color: rgba(255,255,255,0.75);
+      font-size: 0.85em;
+      pointer-events: none;
+    }
+    .modal-image { cursor: zoom-in; }
+
+    /* ===== Touch-friendly quantity stepper ===== */
+    .qty-step-btn {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-size: 1.35em;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .qty-step-btn:active { transform: scale(0.92); background: var(--primary); color: white; }
+    .qty-input-group input[type="number"] { height: 42px; text-align: center; font-size: 1.05em; }
+
+    /* ===== Mobile bottom navigation ===== */
+    #bottomNav { display: none; }
+    #bottomNavCartBadge {
+      display: none;
+      position: absolute;
+      top: -6px;
+      left: -10px;
+      background: var(--danger);
+      color: #fff;
+      border-radius: 50%;
+      min-width: 18px;
+      height: 18px;
+      font-size: 0.55em;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      font-weight: bold;
+    }
+    @media (max-width: 768px) {
+      #bottomNav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        z-index: 10000;
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-top: 1px solid var(--border-color);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+        justify-content: space-around;
+      }
+      #bottomNav button {
+        flex: 1;
+        background: none;
+        border: none;
+        font-family: var(--font-family);
+        color: var(--text-muted);
+        font-size: 0.7em;
+        font-weight: bold;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        cursor: pointer;
+        padding: 4px 2px;
+      }
+      #bottomNav button:active { color: var(--primary); }
+      #bottomNav .bn-ico { font-size: 1.75em; line-height: 1.2; position: relative; }
+      body { padding-bottom: 78px !important; }
+      #floatingCartBtn { bottom: 90px !important; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
@@ -1200,11 +1360,64 @@
   </script>
 
   <script>
+    // Skeleton placeholder cards shown while the catalog downloads
+    function renderSkeletons(count = 10) {
+      const container = document.getElementById('productContainer');
+      if (!container) return;
+      container.innerHTML = Array.from({ length: count }).map(() => `
+        <div class="skeleton-card">
+          <div class="sk-img sk-shimmer"></div>
+          <div class="sk-line sk-shimmer"></div>
+          <div class="sk-line sk-shimmer short"></div>
+          <div class="sk-line sk-shimmer"></div>
+        </div>`).join('');
+    }
+
+    // Smart cache: reuse locally stored products.json when last_updated hasn't changed.
+    // Falls back to a normal network fetch when Cache API is unavailable or data is stale.
+    async function loadProductsData(lastUpdatedIso) {
+      const CACHE_NAME = 'catalog-data-v1';
+      const CACHE_KEY = 'products-data';
+      const META_KEY = 'catalog_products_meta';
+
+      try {
+        if (lastUpdatedIso && 'caches' in window && localStorage.getItem(META_KEY) === lastUpdatedIso) {
+          const cache = await caches.open(CACHE_NAME);
+          const cached = await cache.match(CACHE_KEY);
+          if (cached) {
+            console.log("⚡ products.json served from local cache (data unchanged)");
+            return await cached.json();
+          }
+        }
+      } catch (cacheReadErr) {
+        console.warn("Cache read failed, falling back to network:", cacheReadErr);
+      }
+
+      const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
+      if (!productsRes.ok) throw new Error("Failed to load products.json");
+      const data = await productsRes.json();
+
+      try {
+        if (lastUpdatedIso && 'caches' in window) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(CACHE_KEY, new Response(JSON.stringify(data), {
+            headers: { 'Content-Type': 'application/json' }
+          }));
+          localStorage.setItem(META_KEY, lastUpdatedIso);
+        }
+      } catch (cacheWriteErr) {
+        console.warn("Cache write failed (non-fatal):", cacheWriteErr);
+      }
+
+      return data;
+    }
+
     async function loadLocalCatalog() {
       if (catalogLoaded && window.products && window.products.length > 0) {
         console.log("⚡ Using already loaded products catalog (in-memory)");
         return;
       }
+      renderSkeletons();
       try {
         let blockedAliases = [];
         
@@ -1221,11 +1434,13 @@
         }
 
         // Fetch last updated timestamp
+        let lastUpdatedIso = null;
         try {
           const updateRes = await fetch("last_updated.json?_=" + Date.now(), { cache: "no-store" });
           if (updateRes.ok) {
             const updateData = await updateRes.json();
             if (updateData.last_updated) {
+              lastUpdatedIso = updateData.last_updated;
               const dt = new Date(updateData.last_updated);
               const dateStr = dt.toLocaleString('en-US', {
                 year: 'numeric', month: '2-digit', day: '2-digit',
@@ -1251,9 +1466,7 @@
           if (el) el.textContent = `Last Updated: Not Available`;
         }
 
-        const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
-        if (!productsRes.ok) throw new Error("Failed to load products.json");
-        const rawProducts = await productsRes.json();
+        const rawProducts = await loadProductsData(lastUpdatedIso);
         window.allProductsUnfiltered = JSON.parse(JSON.stringify(rawProducts));
         window.products = rawProducts;
 
@@ -1645,6 +1858,17 @@
           if (floatBadge) floatBadge.textContent = count;
         } else {
           floatBtn.style.display = 'none';
+        }
+      }
+
+      // Update Bottom Nav Cart Badge
+      const bnBadge = document.getElementById('bottomNavCartBadge');
+      if (bnBadge) {
+        if (count > 0 && !isGuestMode) {
+          bnBadge.style.display = 'flex';
+          bnBadge.textContent = count;
+        } else {
+          bnBadge.style.display = 'none';
         }
       }
     }
@@ -2061,9 +2285,17 @@
            _activeAuthHandling = false;
         } else {
            await handleAuthUser(null);
-           // Show login modal automatically if no session
-           document.getElementById('loginModal').style.display = 'flex';
-           loadSavedCredentials();
+           // Show login modal automatically if no session.
+           // The modal element is declared near the end of <body>, so during a very
+           // fast session check the DOM may not be parsed yet — retry on DOM ready.
+           const showLoginModal = () => {
+             const lm = document.getElementById('loginModal');
+             if (lm) { lm.style.display = 'flex'; loadSavedCredentials(); return true; }
+             return false;
+           };
+           if (!showLoginModal()) {
+             document.addEventListener('DOMContentLoaded', showLoginModal, { once: true });
+           }
         }
         _authReady = true;
 
@@ -2571,6 +2803,34 @@
       });
     }
 
+    // Colored availability badge: green = in stock, amber = low, gray = out
+    function getStockBadge(d) {
+      const s = isGuestMode
+        ? (Number(d.branches?.['Warehouse']) || 0) + (Number(d.branches?.['warehouse riyadh']) || 0)
+        : (Number(d.stock) || 0);
+      if (s <= 0) return '<span class="stock-badge stock-out">نفذ من المستودع</span>';
+      if (s <= 20) return '<span class="stock-badge stock-low">كمية قليلة</span>';
+      return '<span class="stock-badge stock-ok">متوفر</span>';
+    }
+
+    // +/- quantity stepper on product cards (touch friendly)
+    function stepCardQty(code, name, delta, btn) {
+      const input = btn.parentElement.querySelector('input[type="number"]');
+      if (!input) return;
+      let v = parseInt(input.value) || 0;
+      v = Math.max(0, v + delta);
+      input.value = v > 0 ? v : '';
+      addToCart(code, name, v > 0 ? String(v) : '', document.getElementById('whSelect_' + code)?.value);
+    }
+
+    function stepModalQty(delta) {
+      const input = document.getElementById('modalQtyInput');
+      if (!input) return;
+      let v = parseInt(input.value) || 0;
+      v = Math.max(0, v + delta);
+      input.value = v > 0 ? v : '';
+    }
+
     function renderProducts() {
       console.log("Render start", {
         user: currentUser?.email,
@@ -2714,6 +2974,7 @@
         <div class="product-image-container" onclick="showProductDetails('${d.code}')">
           <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', parseFloat('${d.price}'||0))" title="طباعة الباركود">🖨️</button>
           ${isNewArrival(d.code) ? '<div class="badge-new">✨ جديد</div>' : ''}
+          ${getStockBadge(d)}
           <button class="fav-btn ${favorites.has(String(d.code)) ? 'active' : ''}" data-code="${d.code}" onclick="event.stopPropagation(); toggleFavorite('${d.code}')" title="أضف للمفضلة">${favorites.has(String(d.code)) ? '★' : '☆'}</button>
           <img
             loading="lazy"
@@ -2807,9 +3068,11 @@
           <div class="qty-input-group" style="${userWarehouse === 'TOTAL_WAREHOUSES' ? 'display:flex; flex-direction:column; gap:5px;' : ''}">
              <div style="display:flex; align-items:center; gap:5px; width:100%;">
                 <span class="cart-input-icon">🛒</span>
-                <input type="number" min="1" placeholder="الكمية المطلوبة" style="width:100%;"
+                <button type="button" class="qty-step-btn" onclick="stepCardQty('${d.code}', '${safeName}', 1, this)" title="زيادة الكمية">+</button>
+                <input type="number" min="1" placeholder="الكمية" style="width:100%;"
                   value="${cart[d.code]?.qty ?? ''}"
                   onchange="addToCart('${d.code}', '${safeName}', this.value, document.getElementById('whSelect_' + '${d.code}')?.value)">
+                <button type="button" class="qty-step-btn" onclick="stepCardQty('${d.code}', '${safeName}', -1, this)" title="إنقاص الكمية">−</button>
              </div>
              ${userWarehouse === 'TOTAL_WAREHOUSES' ? `
              <select id="whSelect_${d.code}" style="width:100%; font-size:0.85em; padding:6px; border:1px solid var(--border-color); border-radius:8px; font-family:inherit; direction:rtl;"
@@ -2924,7 +3187,11 @@
     
     ${isGuestMode ? '' : `
       <div style="margin-top:25px;">
-        <input id="modalQtyInput" type="number" min="1" placeholder="حدد الكمية المطلوبة" style="text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+          <button type="button" class="qty-step-btn" onclick="stepModalQty(1)" title="زيادة الكمية">+</button>
+          <input id="modalQtyInput" type="number" min="1" placeholder="حدد الكمية المطلوبة" style="text-align:center;">
+          <button type="button" class="qty-step-btn" onclick="stepModalQty(-1)" title="إنقاص الكمية">−</button>
+        </div>
         <button class="btn-primary" onclick="addModalQtyToCart('${product.code}','${product.name.replace(/'/g, "\'")}', '${product.alias ?? ''}')">
           🛒 إضافة للسلة المباشرة
         </button>
@@ -2937,6 +3204,110 @@
 
     function closeProductModal() { document.getElementById('productModal').style.display = 'none'; }
     document.getElementById('productModal').addEventListener('click', function (e) { if (e.target === this) closeProductModal(); });
+
+    // ===== Image lightbox: fullscreen view with pinch/wheel zoom and pan =====
+    // The overlay element is declared near the end of <body>, so setup must wait
+    // for DOM parsing to finish (this script runs mid-document).
+    function setupLightbox() {
+      const lb = document.getElementById('imageLightbox');
+      const img = document.getElementById('lightboxImg');
+      if (!lb || !img) return;
+
+      let scale = 1, tx = 0, ty = 0;
+      const pointers = new Map();
+      let lastDist = 0, lastTap = 0;
+
+      function apply() { img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`; }
+      function reset() { scale = 1; tx = 0; ty = 0; apply(); }
+
+      window.openLightbox = function (src) {
+        if (!src) return;
+        img.src = src;
+        reset();
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      };
+      window.closeLightbox = function () {
+        lb.style.display = 'none';
+        document.body.style.overflow = '';
+      };
+
+      lb.addEventListener('click', e => { if (e.target === lb) closeLightbox(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && lb.style.display === 'flex') closeLightbox(); });
+
+      lb.addEventListener('wheel', e => {
+        e.preventDefault();
+        scale = Math.min(6, Math.max(1, scale + (e.deltaY < 0 ? 0.3 : -0.3)));
+        if (scale === 1) { tx = 0; ty = 0; }
+        apply();
+      }, { passive: false });
+
+      img.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        img.setPointerCapture(e.pointerId);
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+          const [a, b] = [...pointers.values()];
+          lastDist = Math.hypot(a.x - b.x, a.y - b.y);
+        }
+      });
+
+      img.addEventListener('pointermove', e => {
+        const p = pointers.get(e.pointerId);
+        if (!p) return;
+        if (pointers.size === 2) {
+          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          const [a, b] = [...pointers.values()];
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (lastDist) scale = Math.min(6, Math.max(1, scale * d / lastDist));
+          lastDist = d;
+          apply();
+        } else if (scale > 1) {
+          tx += e.clientX - p.x;
+          ty += e.clientY - p.y;
+          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          apply();
+        }
+      });
+
+      function lift(e) { pointers.delete(e.pointerId); lastDist = 0; }
+      img.addEventListener('pointerup', e => {
+        lift(e);
+        const now = Date.now();
+        if (now - lastTap < 300) {
+          scale = scale > 1 ? 1 : 2.5;
+          if (scale === 1) { tx = 0; ty = 0; }
+          apply();
+        }
+        lastTap = now;
+      });
+      img.addEventListener('pointercancel', lift);
+
+      const modalImg = document.getElementById('modalProductImage');
+      if (modalImg) modalImg.addEventListener('click', function () { openLightbox(this.src); });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupLightbox, { once: true });
+    } else {
+      setupLightbox();
+    }
+
+    // ===== Mobile bottom navigation actions =====
+    function bottomNavSearch() {
+      const sb = document.getElementById('searchBar');
+      if (!sb) return;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      sb.removeAttribute('readonly');
+      setTimeout(() => sb.focus(), 350);
+    }
+
+    function bottomNavCart() {
+      if (isGuestMode || !currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً لاستخدام السلة', 'error');
+        return;
+      }
+      openOrderModal();
+    }
 
     const _closeableModals = ['productModal', 'orderModal', 'extrasModal', 'customProductModal', 'guestExportModal', 'printBarcodeModal', 'loginModal', 'checklistModal'];
     const _overlayCloseModals = ['productModal', 'customProductModal', 'guestExportModal', 'loginModal', 'checklistModal'];
@@ -3742,6 +4113,32 @@
       }
     }
   </script>
+
+  <!-- Image Lightbox (fullscreen zoom) -->
+  <div id="imageLightbox">
+    <button id="lightboxClose" onclick="closeLightbox()" title="إغلاق">✕</button>
+    <img id="lightboxImg" alt="عرض مكبر للمنتج" draggable="false">
+    <div id="lightboxHint">اضغط مرتين أو قرّب بإصبعين للتكبير</div>
+  </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav id="bottomNav" dir="rtl">
+    <button type="button" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+      <span class="bn-ico">🏠</span><span>الرئيسية</span>
+    </button>
+    <button type="button" onclick="bottomNavSearch()">
+      <span class="bn-ico">🔍</span><span>بحث</span>
+    </button>
+    <button type="button" id="bottomNavCartBtn" onclick="bottomNavCart()">
+      <span class="bn-ico">🛒<span id="bottomNavCartBadge"></span></span><span>السلة</span>
+    </button>
+    <button type="button" onclick="location.href='outlet-orders-supabase.html'">
+      <span class="bn-ico">📋</span><span>طلباتي</span>
+    </button>
+    <button type="button" onclick="location.href='maintenance.html'">
+      <span class="bn-ico">🔧</span><span>الصيانة</span>
+    </button>
+  </nav>
 
   <!-- Floating Cart Button -->
   <button id="floatingCartBtn" onclick="openOrderModal()" style="display:none; position:fixed; bottom:25px; left:25px; z-index:999; background:#fe7900; color:white; border:none; border-radius:50%; width:60px; height:60px; font-size:1.6em; box-shadow:0 6px 20px rgba(254,121,0,0.4); cursor:pointer; align-items:center; justify-content:center; transition: transform 0.2s ease, opacity 0.2s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
