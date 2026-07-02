@@ -4135,8 +4135,9 @@
           itemEl.style.marginBottom = '10px';
           
           itemEl.onclick = (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper')) return;
             const checkbox = itemEl.querySelector('input[type="checkbox"]');
+            if (checkbox.disabled) return;
+            if (e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper')) return;
             checkbox.checked = !checkbox.checked;
             handleChecklistToggle(item.id, checkbox.checked, log ? log.id : null);
           };
@@ -4176,25 +4177,40 @@
     async function handleChecklistToggle(itemId, isChecked, logId) {
       if (!currentUser || !userMall) return;
       
-      document.getElementById('checklistLoading').style.display = 'block';
-      document.getElementById('checklistItemsContainer').style.display = 'none';
+      const checkboxes = document.querySelectorAll('#checklistItemsContainer input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.disabled = true);
       
       try {
         if (isChecked) {
           const localDateStr = getLocalDateString();
-          const { error } = await supabaseClient
+          const { data, error } = await supabaseClient
             .from('catalog_checklist_logs')
             .insert({
               item_id: itemId,
               mall: userMall,
               email: currentUser.email,
               checked_date: localDateStr
-            });
+            })
+            .select()
+            .single();
             
           if (error) throw error;
+          
+          todayLogs[itemId] = data;
           showToast("تم حفظ عملية التفقد بنجاح", "success");
         } else {
           if (!logId) {
+            const localLog = todayLogs[itemId];
+            logId = localLog ? localLog.id : null;
+          }
+          
+          if (logId) {
+            const { error } = await supabaseClient
+              .from('catalog_checklist_logs')
+              .delete()
+              .eq('id', logId);
+            if (error) throw error;
+          } else {
             const localDateStr = getLocalDateString();
             const { error } = await supabaseClient
               .from('catalog_checklist_logs')
@@ -4203,21 +4219,20 @@
               .eq('mall', userMall)
               .eq('checked_date', localDateStr);
             if (error) throw error;
-          } else {
-            const { error } = await supabaseClient
-              .from('catalog_checklist_logs')
-              .delete()
-              .eq('id', logId);
-            if (error) throw error;
           }
+          
+          delete todayLogs[itemId];
           showToast("تم إلغاء التفقد", "info");
         }
         
-        await loadChecklistData();
+        renderChecklist();
       } catch (err) {
         console.error("Checklist toggle failed:", err);
         showToast("فشلت عملية حفظ التعديل", "error");
         await loadChecklistData();
+      } finally {
+        const recheckboxes = document.querySelectorAll('#checklistItemsContainer input[type="checkbox"]');
+        recheckboxes.forEach(cb => cb.disabled = false);
       }
     }
   </script>
