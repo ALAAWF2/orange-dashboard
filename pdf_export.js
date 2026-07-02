@@ -178,7 +178,20 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
                 ? getGlobalDayData(storesToProcess, dateStr)
                 : getDayData(storeIdForData, dateStr);
 
-            headerTotalTarget += dayData.target || 0;
+            let targetVal = dayData.target || 0;
+            if (targetVal > 0 && rawData.metadata && rawData.metadata.target_end_date) {
+                const extDate = new Date(rawData.metadata.target_end_date);
+                const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
+                const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
+                
+                if (mStart.getFullYear() === extYear && mStart.getMonth() === extMonth) {
+                    const targetDate = new Date(dateStr);
+                    if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) {
+                        targetVal = 0; // Skip other month targets during extension!
+                    }
+                }
+            }
+            headerTotalTarget += targetVal;
             headerTotalSales += dayData.sales || 0;
             preLoopDate.setDate(preLoopDate.getDate() + 1);
         }
