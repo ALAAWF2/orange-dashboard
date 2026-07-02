@@ -1426,9 +1426,25 @@
         console.warn("Cache read failed, falling back to network:", cacheReadErr);
       }
 
-      const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
-      if (!productsRes.ok) throw new Error("Failed to load products.json");
-      const data = await productsRes.json();
+      let data;
+      try {
+        const productsRes = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
+        if (!productsRes.ok) throw new Error("Failed to load products.json");
+        data = await productsRes.json();
+      } catch (netErr) {
+        // Network failed: serve the last cached copy (stale beats an empty catalog)
+        try {
+          if ('caches' in window) {
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(CACHE_KEY);
+            if (cached) {
+              console.warn("⚠️ products.json fetch failed - serving stale cached copy:", netErr);
+              return await cached.json();
+            }
+          }
+        } catch (cacheFallbackErr) {}
+        throw netErr;
+      }
 
       try {
         if (lastUpdatedIso && 'caches' in window) {
@@ -1530,7 +1546,8 @@
 
       } catch (e) {
         console.error("❌ Catalog load failed:", e);
-        window.products = [];
+        // Keep any previously loaded catalog instead of blanking the grid
+        if (!Array.isArray(window.products)) window.products = [];
       }
     }
 
@@ -1992,7 +2009,11 @@
             }
 
             const fetchResult = await _profileFetchPromises[user.id];
-            
+
+            // Never cache a failed fetch: a transient error (expired JWT, network blip)
+            // would otherwise stick until a full page reload.
+            if (fetchResult.error) delete _profileFetchPromises[user.id];
+
             console.log("Profile fetch result (raw):", JSON.stringify(fetchResult));
             const profile = fetchResult.data;
             const error = fetchResult.error;
@@ -2042,6 +2063,7 @@
             }
           } catch (fetchErr) {
             console.error("Exception during profile fetch:", fetchErr);
+            delete _profileFetchPromises[user.id]; // allow retry on the next auth event
             userWarehouse = "";
             userMall = "";
             userRole = "";
@@ -2364,16 +2386,48 @@
         // ONLY subscribe to changes AFTER initial session is processed to prevent race conditions
         supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
           console.log("Auth event fired:", event, "User:", newSession?.user?.email);
-          
+
           if (event === 'INITIAL_SESSION') return; // Handled manually
-          
+
           if (_activeAuthHandling) {
              console.log("Skipping auth change - already handling auth");
-             return; 
+             return;
           }
-          
-          // Only process meaningful state changes
-          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+
+          // supabase-js re-emits SIGNED_IN on every tab focus / token refresh for the
+          // already-active user. Rebuilding the UI then wipes filters, scroll and grid.
+          // Skip unless the previous handleAuthUser never completed (userWarehouse empty),
+          // in which case re-running acts as a self-heal retry.
+          if (event === 'SIGNED_IN' && newSession?.user?.id && currentUser?.id === newSession.user.id && userWarehouse) {
+            console.log("Same user re-authenticated (focus/refresh) - keeping UI as is");
+            return;
+          }
+
+          // Multi-tab/device refresh-token races emit a transient SIGNED_OUT that recovers
+          // seconds later. Verify the session is really gone before wiping the UI.
+          if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            setTimeout(async () => {
+              try {
+                const { data: { session: recheck } } = await supabaseClient.auth.getSession();
+                if (recheck?.user) {
+                  console.log("Transient SIGNED_OUT ignored - session recovered");
+                  return;
+                }
+              } catch (e) {}
+              if (_activeAuthHandling) return;
+              _activeAuthHandling = true;
+              try {
+                await handleAuthUser(null);
+                const lm = document.getElementById('loginModal');
+                if (lm && !isGuestMode) { lm.style.display = 'flex'; loadSavedCredentials(); }
+              } finally {
+                _activeAuthHandling = false;
+              }
+            }, 3000);
+            return;
+          }
+
+          if (event === 'SIGNED_IN') {
             _activeAuthHandling = true;
             try {
               await handleAuthUser(newSession?.user || null);

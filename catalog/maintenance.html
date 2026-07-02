@@ -686,8 +686,23 @@
 
         supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
           if (event === 'INITIAL_SESSION') return;
-          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+
+          // supabase-js re-emits SIGNED_IN on tab focus/token refresh for the active user:
+          // skip the full re-init so the requests list doesn't reload on every focus
+          if (event === 'SIGNED_IN' && newSession?.user?.id && currentUser?.id === newSession.user.id) return;
+
+          if (event === 'SIGNED_IN') {
             await handleAuthUser(newSession?.user || null);
+          } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            // Multi-tab token-refresh races emit transient SIGNED_OUT that recovers in
+            // seconds: verify the session is really gone before wiping the UI
+            setTimeout(async () => {
+              try {
+                const { data: { session: recheck } } = await supabaseClient.auth.getSession();
+                if (recheck?.user) return;
+              } catch (e) {}
+              await handleAuthUser(null);
+            }, 3000);
           }
         });
       } catch(e) {

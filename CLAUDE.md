@@ -67,9 +67,16 @@ This is a **traditional multi-page application**:
     ├── stagnant_products.html  # Stagnant product analysis
     │
     ├── catalog/                # SEPARATE store-facing app (Supabase backend)
+    │   │                       # supabase-js pinned to @2.110.0 on ALL pages — never
+    │   │                       #   revert to floating @2. Auth listeners are hardened
+    │   │                       #   (2026-07-02): SIGNED_IN re-emissions for the active
+    │   │                       #   user are ignored; SIGNED_OUT re-checks getSession()
+    │   │                       #   after 3s before wiping UI. Keep these guards.
     │   ├── index.html          # Product catalog: cart→orders, favorites, barcode print,
     │   │                       #   checklist, bottom mobile nav, stock badges, lightbox,
     │   │                       #   Cache-API smart caching keyed on last_updated.json
+    │   │                       #   (products.json falls back to stale cache on net fail;
+    │   │                       #   failed profile fetches are never cached)
     │   ├── catalog-admin.html  # Admin: block items, orders log + new-order sound alerts,
     │   │                       #   top-requested-items report, promos, users, audit logs
     │   ├── generate_catalog.py # ACTIVE daily generator (9AM batch runs this copy;

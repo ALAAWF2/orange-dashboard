@@ -577,6 +577,10 @@
 
       // Listen for changes
       supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
+        // supabase-js re-emits SIGNED_IN on tab focus/token refresh for the active user:
+        // skip the rebuild so the orders list doesn't wipe and reload on every focus
+        if (event === 'SIGNED_IN' && newSession?.user?.id && currentUser?.id === newSession.user.id) return;
+
         if (event === 'SIGNED_IN' && newSession?.user) {
           currentUser = newSession.user;
           await fetchUserProfile(currentUser);
@@ -584,11 +588,19 @@
           document.getElementById('authStatus').innerHTML = '';
           loadOrders();
         } else if (event === 'SIGNED_OUT') {
-          currentUser = null;
-          userRole = 'user';
-          userManagedOutlets = [];
-          userMall = '';
-          showAuthError();
+          // Multi-tab token-refresh races emit transient SIGNED_OUT that recovers in
+          // seconds: verify the session is really gone before wiping the UI
+          setTimeout(async () => {
+            try {
+              const { data: { session: recheck } } = await supabaseClient.auth.getSession();
+              if (recheck?.user) return;
+            } catch (e) {}
+            currentUser = null;
+            userRole = 'user';
+            userManagedOutlets = [];
+            userMall = '';
+            showAuthError();
+          }, 3000);
         }
       });
     })();

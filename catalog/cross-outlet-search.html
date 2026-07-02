@@ -676,15 +676,36 @@
     document.addEventListener('DOMContentLoaded', () => {
       loadLocalCatalog();
 
+      let _lastAuthUserId = null;
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
         loader.classList.add('hidden');
         userChecked = true;
 
         const user = session?.user ?? null;
+
+        // supabase-js re-emits SIGNED_IN on tab focus/token refresh for the active user:
+        // keep the search UI and results as they are
+        if (user && user.id === _lastAuthUserId) return;
+
         if (!user) {
+          // Multi-tab token-refresh races emit transient SIGNED_OUT that recovers in
+          // seconds: verify before locking the page and redirecting
+          if (event === 'SIGNED_OUT' && _lastAuthUserId) {
+            setTimeout(async () => {
+              try {
+                const { data: { session: recheck } } = await supabaseClient.auth.getSession();
+                if (recheck?.user) return;
+              } catch (e) {}
+              _lastAuthUserId = null;
+              handleUnauthenticated();
+            }, 3000);
+            return;
+          }
           handleUnauthenticated();
           return;
         }
+
+        _lastAuthUserId = user.id;
 
         // Unlock panel
         searchInput.removeAttribute('readonly');
