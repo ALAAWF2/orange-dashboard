@@ -3940,7 +3940,7 @@
 
   <!-- مودال قائمة التفقد اليومية -->
   <div id="checklistModal" class="modal-overlay" style="z-index: 10090;">
-    <div class="modal-content" style="max-width: 500px; text-align: right; direction: rtl; border: 1px solid rgba(242, 101, 34, 0.15);">
+    <div class="modal-content" style="max-width: 700px; text-align: right; direction: rtl; border: 1px solid rgba(242, 101, 34, 0.15);">
       <button class="modal-close" onclick="closeChecklistModal()">×</button>
       <h3 style="color: var(--primary); margin-bottom: 20px; border-bottom: 2px solid var(--primary-light); padding-bottom: 15px; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.35em;">
         📋 قائمة التفقد اليومية - <span id="checklistMallName" style="color: var(--text-main); font-weight: 800;">المعرض</span>
@@ -3962,7 +3962,7 @@
         <p style="margin-top: 15px; font-weight: 500;">جاري تحميل البنود وسجلات اليوم...</p>
       </div>
 
-      <div id="checklistItemsContainer" style="display: none; max-height: 380px; overflow-y: auto; padding: 5px; margin-bottom: 10px;">
+      <div id="checklistItemsContainer" style="display: none; max-height: 520px; overflow-y: auto; padding: 5px; margin-bottom: 10px;">
         <!-- Checklist items will be injected here -->
       </div>
       
@@ -4081,36 +4081,72 @@
         }
       }
       
-      checklistItems.forEach(item => {
-        const log = todayLogs[item.id];
-        const isChecked = !!log;
-        const checkedTimeStr = isChecked ? formatCheckedTime(log.checked_at) : '';
-        
-        const itemEl = document.createElement('div');
-        itemEl.className = `checklist-item ${isChecked ? 'checked' : ''}`;
-        
-        itemEl.onclick = (e) => {
-          if (e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper')) return;
-          const checkbox = itemEl.querySelector('input[type="checkbox"]');
-          checkbox.checked = !checkbox.checked;
-          handleChecklistToggle(item.id, checkbox.checked, log ? log.id : null);
-        };
-        
-        itemEl.innerHTML = `
-          <div class="checklist-item-right">
-            <div class="checklist-checkbox-wrapper">
-              <input type="checkbox" ${isChecked ? 'checked' : ''} 
-                     onchange="handleChecklistToggle(${item.id}, this.checked, ${log ? log.id : null})">
-              <span class="checklist-checkmark">
-                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </span>
+      const categoryIcons = {
+        'النظافة': '🧼',
+        'الصيانة': '🛠️',
+        'العمليات اليومية': '📋',
+        'الموظفين': '👔',
+        'إجراءات الإغلاق': '🔒',
+        'عام': '📦'
+      };
+
+      const categoryOrder = ['النظافة', 'الصيانة', 'العمليات اليومية', 'الموظفين', 'إجراءات الإغلاق'];
+
+      // Extract unique categories and sort them according to predefined order
+      const uniqueCategories = [...new Set(checklistItems.map(item => item.category || 'عام'))];
+      uniqueCategories.sort((a, b) => {
+        const indexA = categoryOrder.indexOf(a);
+        const indexB = categoryOrder.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      uniqueCategories.forEach(category => {
+        const categoryItems = checklistItems.filter(item => (item.category || 'عام') === category);
+        if (categoryItems.length === 0) return;
+
+        // Render category header
+        const headerEl = document.createElement('div');
+        headerEl.className = 'checklist-category-header';
+        headerEl.style.cssText = 'margin-top: 20px; margin-bottom: 12px; font-weight: 800; color: #fe7900; font-size: 1.05em; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px dashed rgba(254, 121, 0, 0.25); padding-bottom: 6px;';
+        const icon = categoryIcons[category] || '📋';
+        headerEl.innerHTML = `<span>${icon}</span> <span>${category}</span>`;
+        container.appendChild(headerEl);
+
+        categoryItems.forEach(item => {
+          const log = todayLogs[item.id];
+          const isChecked = !!log;
+          const checkedTimeStr = isChecked ? formatCheckedTime(log.checked_at) : '';
+          
+          const itemEl = document.createElement('div');
+          itemEl.className = `checklist-item ${isChecked ? 'checked' : ''}`;
+          itemEl.style.marginBottom = '10px';
+          
+          itemEl.onclick = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper')) return;
+            const checkbox = itemEl.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            handleChecklistToggle(item.id, checkbox.checked, log ? log.id : null);
+          };
+          
+          itemEl.innerHTML = `
+            <div class="checklist-item-right">
+              <div class="checklist-checkbox-wrapper">
+                <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                       onchange="handleChecklistToggle(${item.id}, this.checked, ${log ? log.id : null})">
+                <span class="checklist-checkmark">
+                  <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </span>
+              </div>
+              <span class="checklist-text">${item.text}</span>
             </div>
-            <span class="checklist-text">${item.text}</span>
-          </div>
-          ${isChecked ? `<span class="checklist-meta">✓ تفقد ${checkedTimeStr}</span>` : ''}
-        `;
-        
-        container.appendChild(itemEl);
+            ${isChecked ? `<span class="checklist-meta">✓ تفقد ${checkedTimeStr}</span>` : ''}
+          `;
+          
+          container.appendChild(itemEl);
+        });
       });
       
       document.getElementById('checklistLoading').style.display = 'none';
