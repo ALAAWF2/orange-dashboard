@@ -556,6 +556,7 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
+  <script src="../users.js"></script>
 <script>
     // === Supabase ===
     const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
@@ -575,7 +576,41 @@
 
     // === Init ===
     (async () => {
-      const { data: { session } } = await supabaseClient.auth.getSession();
+      const dashboardUserStr = localStorage.getItem('currentUser');
+      let targetEmail = null;
+      let targetPass = null;
+      
+      if (dashboardUserStr) {
+        try {
+          const dashboardUser = JSON.parse(dashboardUserStr);
+          if (dashboardUser && typeof USERS !== 'undefined' && USERS[dashboardUser.name]) {
+            const matchedUser = USERS[dashboardUser.name];
+            if (matchedUser.email && matchedUser.password) {
+              targetEmail = matchedUser.email;
+              targetPass = matchedUser.password;
+            }
+          }
+        } catch(e) {}
+      }
+
+      let { data: { session } } = await supabaseClient.auth.getSession();
+
+      if (targetEmail && targetPass) {
+        if (!session?.user || session.user.email.toLowerCase() !== targetEmail.toLowerCase()) {
+          try {
+            console.log("Silent login to Supabase from maintenance-admin.html as:", targetEmail);
+            const { data: loginData, error: loginErr } = await supabaseClient.auth.signInWithPassword({
+              email: targetEmail,
+              password: targetPass
+            });
+            if (!loginErr && loginData?.session) {
+              session = loginData.session;
+            }
+          } catch(autoLoginErr) {
+            console.error("Silent login in maintenance-admin.html failed:", autoLoginErr);
+          }
+        }
+      }
       
       const showAuthScreen = (title, subTitle, isError = false) => {
         document.body.style.visibility = 'visible';

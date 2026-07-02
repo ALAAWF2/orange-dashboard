@@ -501,7 +501,7 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <!-- Supabase Logic -->
+  <script src="../users.js"></script>
   <script>
     const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
@@ -514,8 +514,43 @@
     // Run Auth Check
     (async () => {
       showOverlay("جاري التحقق من الصلاحيات...");
-      const { data: { session } } = await supabaseClient.auth.getSession();
       
+      const dashboardUserStr = localStorage.getItem('currentUser');
+      let targetEmail = null;
+      let targetPass = null;
+      
+      if (dashboardUserStr) {
+        try {
+          const dashboardUser = JSON.parse(dashboardUserStr);
+          if (dashboardUser && typeof USERS !== 'undefined' && USERS[dashboardUser.name]) {
+            const matchedUser = USERS[dashboardUser.name];
+            if (matchedUser.email && matchedUser.password) {
+              targetEmail = matchedUser.email;
+              targetPass = matchedUser.password;
+            }
+          }
+        } catch(e) {}
+      }
+
+      let { data: { session } } = await supabaseClient.auth.getSession();
+
+      if (targetEmail && targetPass) {
+        if (!session?.user || session.user.email.toLowerCase() !== targetEmail.toLowerCase()) {
+          try {
+            console.log("Silent login to Supabase from weekly-closing-admin.html as:", targetEmail);
+            const { data: loginData, error: loginErr } = await supabaseClient.auth.signInWithPassword({
+              email: targetEmail,
+              password: targetPass
+            });
+            if (!loginErr && loginData?.session) {
+              session = loginData.session;
+            }
+          } catch(autoLoginErr) {
+            console.error("Silent login in weekly-closing-admin.html failed:", autoLoginErr);
+          }
+        }
+      }
+
       if (!session?.user) {
         showAuthScreen('🔒 تسجيل الدخول المالي', 'يرجى تسجيل الدخول للوصول للوحة المالية.');
         return;
