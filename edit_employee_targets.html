@@ -189,6 +189,11 @@
             font-size: 1.05rem;
             transition: 0.3s;
         }
+        
+        .emp-input.modified {
+            border-color: var(--accent) !important;
+            background-color: #fff8f0;
+        }
 
         .emp-input:focus {
             border-color: var(--accent);
@@ -448,18 +453,16 @@
                 return;
             }
 
-            let finalAuth = localStorage.getItem('auth') || sessionStorage.getItem('auth');
-            const storedIp = localStorage.getItem('serverIp') || sessionStorage.getItem('serverIp');
-
-            // If no stored auth, auto-login using the current dashboard user!
-            if (!finalAuth && typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+            let finalAuth = null;
+            if (currentUser && typeof USERS !== 'undefined' && USERS[currentUser.name]) {
                 const userPin = USERS[currentUser.name].pin;
                 const creds = getUtf8Base64(currentUser.name + ":" + userPin);
                 finalAuth = "Basic " + creds;
-                
-                // Save it for consistent requests
                 localStorage.setItem('auth', finalAuth);
+            } else {
+                finalAuth = localStorage.getItem('auth') || sessionStorage.getItem('auth');
             }
+            const storedIp = localStorage.getItem('serverIp') || sessionStorage.getItem('serverIp');
 
             if (finalAuth) {
                 if (storedIp) API_BASE = storedIp;
@@ -788,24 +791,54 @@
                     <div class="emp-input-container">
                         <input type="number" 
                                 inputmode="decimal" 
-                                class="emp-input" 
+                                class="emp-input target-input-field" 
                                 value="${targetVal}" 
                                 id="target-input-${idx}"
+                                data-emp-id="${emp.id}"
+                                data-emp-name="${emp.name}"
                                 ${isEditAllowed ? '' : 'disabled'}
-                                onchange="saveEmployeeTarget('${emp.id}', '${emp.name}', this.value, this)">
+                                oninput="this.classList.add('modified')">
                         <span class="save-indicator" id="save-indicator-${idx}"><i class="fas fa-check-circle"></i></span>
                     </div>
                 `;
                 container.appendChild(div);
             });
+
+            if (isEditAllowed && emps.length > 0) {
+                const btnContainer = document.createElement('div');
+                btnContainer.className = 'd-flex justify-content-center p-4 border-top bg-light mt-3';
+                btnContainer.innerHTML = `
+                    <button class="btn btn-success fw-bold px-5 py-3 fs-5 text-white" id="btnSaveAll" onclick="saveAllTargets()" style="background-color: var(--success); border: none; border-radius: 8px; font-family: 'Cairo';">
+                        <i class="fas fa-save me-2"></i> حفظ مستهدفات المعرض بالكامل
+                    </button>
+                `;
+                container.appendChild(btnContainer);
+            }
         }
 
-        async function saveEmployeeTarget(empId, empName, amount, inputEl) {
+        async function saveAllTargets() {
+            const btn = document.getElementById('btnSaveAll');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري حفظ المستهدفات...';
+            
             const month = document.getElementById('targetMonth').value;
-            const indicator = inputEl.nextElementSibling;
-
+            const inputs = document.querySelectorAll('.target-input-field');
+            const targets = [];
+            
+            inputs.forEach(inputEl => {
+                const empId = inputEl.getAttribute('data-emp-id');
+                const empName = inputEl.getAttribute('data-emp-name');
+                const amount = parseFloat(inputEl.value) || 0;
+                targets.push({
+                    emp_id: empId,
+                    emp_name: empName,
+                    amount: amount
+                });
+            });
+            
             try {
-                const res = await fetch(`${API_BASE}/api/save_employee_target`, {
+                const res = await fetch(`${API_BASE}/api/save_employee_targets_batch`, {
                     method: 'POST',
                     headers: {
                         'Authorization': authHeader,
@@ -814,24 +847,36 @@
                     },
                     body: JSON.stringify({
                         month: month,
-                        emp_id: empId,
-                        emp_name: empName,
-                        amount: parseFloat(amount) || 0
+                        targets: targets
                     })
                 });
-
+                
                 if (res.ok) {
-                    indicator.classList.add('saved');
-                    // Update local cache
-                    if (!globalEmpTargets[empId]) globalEmpTargets[empId] = {};
-                    globalEmpTargets[empId].amount = amount;
-
-                    setTimeout(() => indicator.classList.remove('saved'), 2000);
+                    targets.forEach(t => {
+                        if (!globalEmpTargets[t.emp_id]) globalEmpTargets[t.emp_id] = {};
+                        globalEmpTargets[t.emp_id].amount = t.amount;
+                    });
+                    
+                    inputs.forEach(inputEl => {
+                        inputEl.classList.remove('modified');
+                    });
+                    
+                    const indicators = document.querySelectorAll('.save-indicator');
+                    indicators.forEach(ind => {
+                        ind.classList.add('saved');
+                        setTimeout(() => ind.classList.remove('saved'), 3000);
+                    });
+                    
+                    alert("تم حفظ مستهدفات المعرض بالكامل بنجاح! 🎉");
                 } else {
-                    alert("فشل حفظ التارجت");
+                    const errJson = await res.json();
+                    alert("فشل الحفظ: " + (errJson.error || "خطأ غير معروف"));
                 }
             } catch (e) {
-                alert("خطأ أثناء الحفظ: " + e.message);
+                alert("خطأ أثناء الاتصال بالسيرفر لحفظ المستهدفات: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
     </script>
