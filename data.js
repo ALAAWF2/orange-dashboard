@@ -1129,16 +1129,8 @@ const EMPLOYEES = [
         "name": "سافاد ثوتوكاد عبدالق",
         "startDate": "2021-11-01",
         "manager": "جهاد ايوبي",
-        "showroom": "2103-42-Dareen Mall Dammam و 2201-36-Al jubail Mall",
+        "showroom": "2201-36-Al jubail Mall",
         "showroomDetails": [
-            {
-                "name": "2103-42-Dareen Mall Dammam",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "2103-C",
-                    "2103-E"
-                ]
-            },
             {
                 "name": "2201-36-Al jubail Mall",
                 "manager": "جهاد ايوبي",
@@ -1148,7 +1140,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "2103-C;2103-E;2201-C;2201-E"
+        "addressBooks": "2201-C;2201-E"
     },
     {
         "employeeId": "2739-محمد شاهيد شيروكارا",
