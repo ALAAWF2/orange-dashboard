@@ -205,7 +205,7 @@ const EMPLOYEES = [
         "name": "محمود محمد خير محجوب",
         "startDate": "2017-02-15",
         "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1203-55- Jabl Omar و 1202-20-Sitten Street Makkah و 1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
             {
                 "name": "1203-55- Jabl Omar",
@@ -213,6 +213,14 @@ const EMPLOYEES = [
                 "codes": [
                     "1203-C",
                     "1203-E"
+                ]
+            },
+            {
+                "name": "1202-20-Sitten Street Makkah",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1202-C",
+                    "1202-E"
                 ]
             },
             {
@@ -224,7 +232,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1203-C;1203-E;1402-C;1402-E"
+        "addressBooks": "1203-C;1203-E;1402-C;1402-E;1202-C;1202-E"
     },
     {
         "employeeId": "0198-معتصم اسماعيل العامر",
@@ -3702,25 +3710,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1904-C;1904-E"
-    },
-    {
-        "employeeId": "4521-مراد الطس",
-        "personnelNumber": "4521",
-        "name": "مراد الطس",
-        "startDate": "2025-03-03",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
     },
     {
         "employeeId": "4532-Ali Khalil Kunayd",
