@@ -211,6 +211,214 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+
+    /* Manager Checklist Section Styles */
+    .manager-section {
+      background: white;
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      padding: 25px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(242, 101, 34, 0.15);
+    }
+
+    .manager-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--primary-light);
+      padding-bottom: 12px;
+    }
+
+    .manager-title {
+      font-size: 1.3em;
+      color: var(--primary-dark);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+
+    .btn-success {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #219653;
+    }
+
+    .add-item-form {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      background: var(--primary-light);
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .form-group label {
+      font-weight: bold;
+      font-size: 0.85em;
+      color: var(--primary-dark);
+    }
+
+    .checklist-items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .checklist-items-table th, .checklist-items-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: right;
+    }
+
+    .checklist-items-table th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+    }
+
+    .checklist-items-table tr:hover {
+      background: #f1f5f9;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn-edit {
+      background: #e0f2fe;
+      color: #0284c7;
+    }
+
+    .action-btn-edit:hover {
+      background: #bae6fd;
+    }
+
+    .action-btn-delete {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .action-btn-delete:hover {
+      background: #fecaca;
+    }
+
+    .toast-notification {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .toast-notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast-success {
+      background: #10b981;
+    }
+
+    .toast-error {
+      background: #ef4444;
+    }
+
+    .inline-edit-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      font-family: inherit;
+    }
+
+    .inline-edit-select {
+      padding: 8px 12px;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      font-family: inherit;
+      background: white;
+    }
   </style>
 </head>
 <body>
@@ -229,6 +437,62 @@
     <div id="statusSection" style="text-align: center; margin-top: 80px;">
       <i class="fa-solid fa-spinner spinner"></i>
       <p>جاري التحقق من الهوية وصلاحيات الدخول...</p>
+    </div>
+
+    <!-- Manager Section (Checklist Items Management) -->
+    <div class="manager-section" id="managerSection" style="display: none;">
+      <div class="manager-header">
+        <div class="manager-title">
+          <i class="fa-solid fa-gear"></i>
+          <span>إدارة بنود التفقد والتشيك ليست (خاص بالمدير)</span>
+        </div>
+        <button id="toggleManagerBtn" onclick="toggleManagerContent()" class="btn btn-secondary">
+          <i class="fa-solid fa-chevron-down"></i> عرض بنود التفقد
+        </button>
+      </div>
+
+      <div id="managerContent" style="display: none;">
+        <!-- Add New Item Form -->
+        <div class="add-item-form">
+          <div class="form-group" style="flex: 2;">
+            <label for="newItemText">نص البند الجديد</label>
+            <input type="text" id="newItemText" placeholder="مثال: التأكد من نظافة الواجهة الأمامية وزجاج المدخل">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label for="newItemCategory">التصنيف</label>
+            <select id="newItemCategory">
+              <option value="النظافة">النظافة</option>
+              <option value="الصيانة">الصيانة</option>
+              <option value="العمليات اليومية">العمليات اليومية</option>
+              <option value="الموظفين">الموظفين</option>
+              <option value="إجراءات الإغلاق">إجراءات الإغلاق</option>
+              <option value="عام">عام</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 0; min-width: auto; justify-content: flex-end;">
+            <button onclick="addManagerChecklistItem()" class="btn btn-primary">
+              <i class="fa-solid fa-plus"></i> إضافة بند
+            </button>
+          </div>
+        </div>
+
+        <!-- Checklist Items List -->
+        <div class="table-responsive">
+          <table class="checklist-items-table">
+            <thead>
+              <tr>
+                <th style="width: 80px; text-align: center;">ID</th>
+                <th>نص البند</th>
+                <th style="width: 200px;">التصنيف</th>
+                <th style="width: 200px; text-align: center;">العمليات</th>
+              </tr>
+            </thead>
+            <tbody id="managerItemsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -449,6 +713,13 @@
         }
         await loadReport();
 
+        // Check if user is Showrooms Manager (m.hamadon@orangebedbath.com) or Admin
+        const canManage = (emailLower === 'm.hamadon@orangebedbath.com' || emailLower === 'alaa.wafae@orangebedbath.com' || userRole === 'admin');
+        if (canManage) {
+          document.getElementById('managerSection').style.display = 'block';
+          await loadChecklistItemsForManagement();
+        }
+
       } catch (err) {
         console.error("Auth check failed:", err);
         showAuthError("⚠️ خطأ في النظام", "فشل التحقق من التخويل الخاص بحسابك.");
@@ -643,6 +914,243 @@
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:red;">❌ فشل تحميل التقرير...</td></tr>';
       }
     }
+
+    // --- Checklist Management Code ---
+    let editingItemId = null;
+    let managerChecklistItems = [];
+
+    async function loadChecklistItemsForManagement() {
+      try {
+        const { data: items, error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        managerChecklistItems = items || [];
+        renderManagerItems(managerChecklistItems);
+      } catch (err) {
+        console.error("Failed to load checklist items for management:", err);
+      }
+    }
+
+    function toggleManagerContent() {
+      const content = document.getElementById('managerContent');
+      const btn = document.getElementById('toggleManagerBtn');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        btn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> إخفاء بنود التفقد';
+      } else {
+        content.style.display = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> عرض بنود التفقد';
+      }
+    }
+
+    function showToastNotification(message, type = 'success') {
+      const toast = document.getElementById('toastNotification');
+      if (!toast) return;
+      toast.className = `toast-notification toast-${type} show`;
+      toast.innerHTML = (type === 'success' ? '<i class="fa-solid fa-circle-check"></i> ' : '<i class="fa-solid fa-circle-exclamation"></i> ') + message;
+      setTimeout(() => {
+        toast.className = 'toast-notification';
+      }, 3000);
+    }
+
+    function renderManagerItems(items) {
+      const tbody = document.getElementById('managerItemsTableBody');
+      if (!tbody) return;
+
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:gray;">لا توجد بنود تفقد مضافة حالياً.</td></tr>';
+        return;
+      }
+
+      const categoryOrder = ['النظافة', 'الصيانة', 'العمليات اليومية', 'الموظفين', 'إجراءات الإغلاق'];
+      const sortedItems = [...items];
+      sortedItems.sort((a, b) => {
+        const indexA = categoryOrder.indexOf(a.category || 'عام');
+        const indexB = categoryOrder.indexOf(b.category || 'عام');
+        if (indexA !== -1 && indexB !== -1) {
+          if (indexA !== indexB) return indexA - indexB;
+          return a.id - b.id;
+        }
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return (a.category || 'عام').localeCompare(b.category || 'عام') || a.id - b.id;
+      });
+
+      tbody.innerHTML = sortedItems.map(item => {
+        const isEditing = editingItemId === item.id;
+        if (isEditing) {
+          return `
+            <tr>
+              <td style="text-align: center; font-weight: bold;">${item.id}</td>
+              <td>
+                <input type="text" id="editItemText_${item.id}" class="inline-edit-input" value="${item.text}">
+              </td>
+              <td>
+                <select id="editItemCategory_${item.id}" class="inline-edit-select">
+                  <option value="النظافة" ${item.category === 'النظافة' ? 'selected' : ''}>النظافة</option>
+                  <option value="الصيانة" ${item.category === 'الصيانة' ? 'selected' : ''}>الصيانة</option>
+                  <option value="العمليات اليومية" ${item.category === 'العمليات اليومية' ? 'selected' : ''}>العمليات اليومية</option>
+                  <option value="الموظفين" ${item.category === 'الموظفين' ? 'selected' : ''}>الموظفين</option>
+                  <option value="إجراءات الإغلاق" ${item.category === 'إجراءات الإغلاق' ? 'selected' : ''}>إجراءات الإغلاق</option>
+                  <option value="عام" ${item.category === 'عام' ? 'selected' : ''}>عام</option>
+                </select>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button onclick="saveManagerChecklistItem(${item.id})" class="btn btn-success" style="padding: 6px 12px; font-size: 0.85em;">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ
+                  </button>
+                  <button onclick="cancelEditManagerItem()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85em;">
+                    <i class="fa-solid fa-xmark"></i> إلغاء
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        } else {
+          return `
+            <tr>
+              <td style="text-align: center; font-weight: bold; color: var(--text-muted);">${item.id}</td>
+              <td style="font-weight: 500;">${item.text}</td>
+              <td style="font-weight: bold; color: var(--primary);">${item.category || 'عام'}</td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button onclick="startEditManagerItem(${item.id})" class="action-btn action-btn-edit">
+                    <i class="fa-solid fa-pen-to-square"></i> تعديل
+                  </button>
+                  <button onclick="deleteManagerChecklistItem(${item.id})" class="action-btn action-btn-delete">
+                    <i class="fa-solid fa-trash"></i> حذف
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+      }).join('');
+    }
+
+    async function addManagerChecklistItem() {
+      const input = document.getElementById('newItemText');
+      const categorySelect = document.getElementById('newItemCategory');
+      const text = input ? input.value.trim() : '';
+      const category = categorySelect ? categorySelect.value : 'عام';
+      if (!text) {
+        showToastNotification("⚠️ الرجاء إدخال نص البند", "error");
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .insert({
+            text: text,
+            category: category,
+            created_by: currentUser.email
+          });
+
+        if (error) throw error;
+
+        showToastNotification("✅ تم إضافة البند بنجاح", "success");
+        if (input) input.value = '';
+        await loadChecklistItemsForManagement();
+        await loadReport(); // Reload the report below
+
+        // Log audit log
+        await supabaseClient.from('catalog_audit_logs').insert({
+          user_email: currentUser.email,
+          action_type: 'CHECKLIST_ITEM_CREATE',
+          details: `Created daily checklist item (${category}): ${text} (via checklist-status.html)`
+        });
+      } catch (err) {
+        console.error("Failed to add checklist item:", err);
+        showToastNotification("❌ فشل إضافة البند (قد يكون مكرراً)", "error");
+      }
+    }
+
+    function startEditManagerItem(itemId) {
+      editingItemId = itemId;
+      renderManagerItems(managerChecklistItems);
+    }
+
+    function cancelEditManagerItem() {
+      editingItemId = null;
+      renderManagerItems(managerChecklistItems);
+    }
+
+    async function saveManagerChecklistItem(itemId) {
+      const textInput = document.getElementById(`editItemText_${itemId}`);
+      const categorySelect = document.getElementById(`editItemCategory_${itemId}`);
+      const text = textInput ? textInput.value.trim() : '';
+      const category = categorySelect ? categorySelect.value : 'عام';
+
+      if (!text) {
+        showToastNotification("⚠️ نص البند لا يمكن أن يكون فارغاً", "error");
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .update({
+            text: text,
+            category: category
+          })
+          .eq('id', itemId);
+
+        if (error) throw error;
+
+        showToastNotification("✅ تم تعديل البند بنجاح", "success");
+        editingItemId = null;
+        await loadChecklistItemsForManagement();
+        await loadReport(); // Reload the report below
+
+        // Log audit log
+        await supabaseClient.from('catalog_audit_logs').insert({
+          user_email: currentUser.email,
+          action_type: 'CHECKLIST_ITEM_UPDATE',
+          details: `Updated daily checklist item ID ${itemId} to (${category}): ${text} (via checklist-status.html)`
+        });
+      } catch (err) {
+        console.error("Failed to update checklist item:", err);
+        showToastNotification("❌ فشل تعديل البند", "error");
+      }
+    }
+
+    async function deleteManagerChecklistItem(itemId) {
+      if (!confirm("هل أنت متأكد من رغبتك في حذف هذا البند؟ سيتم حذف كافة سجلات التفقد المرتبطة به.")) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('catalog_checklist_items')
+          .delete()
+          .eq('id', itemId);
+
+        if (error) throw error;
+
+        showToastNotification("✅ تم حذف البند بنجاح", "success");
+        if (editingItemId === itemId) {
+          editingItemId = null;
+        }
+        await loadChecklistItemsForManagement();
+        await loadReport(); // Reload the report below
+
+        // Log audit log
+        await supabaseClient.from('catalog_audit_logs').insert({
+          user_email: currentUser.email,
+          action_type: 'CHECKLIST_ITEM_DELETE',
+          details: `Deleted daily checklist item ID: ${itemId} (via checklist-status.html)`
+        });
+      } catch (err) {
+        console.error("Failed to delete checklist item:", err);
+        showToastNotification("❌ فشل حذف البند", "error");
+      }
+    }
   </script>
+
+  <!-- Toast Notification Container -->
+  <div id="toastNotification" class="toast-notification"></div>
 </body>
 </html>
