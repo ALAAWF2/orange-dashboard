@@ -532,6 +532,7 @@
 
   </div>
 
+  <script src="../users.js"></script>
   <script>
     const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
@@ -542,7 +543,7 @@
     let userRole = 'user';
     let userManagedOutlets = [];
     let reportShowroomsList = [];
-
+ 
     // Helper to get local date string (Saudi Arabia timezone)
     function getLocalDateString() {
       const d = new Date();
@@ -550,9 +551,9 @@
       const localTime = new Date(d.getTime() - (offset * 60 * 1000));
       return localTime.toISOString().split('T')[0];
     }
-
+ 
     let isSwitchingSession = false;
-
+ 
     async function performAutoLogin() {
       try {
         isSwitchingSession = true;
@@ -560,9 +561,27 @@
           <i class="fa-solid fa-spinner spinner"></i>
           <p>جاري تسجيل الدخول التلقائي للوصول الآمن للتقارير...</p>
         `;
+        
+        let targetEmail = 'supervisor.reader@orangebedbath.com';
+        let targetPass = 'OrangeReader2026!';
+        
+        const dashboardUserStr = localStorage.getItem('currentUser');
+        if (dashboardUserStr) {
+          try {
+            const dashboardUser = JSON.parse(dashboardUserStr);
+            if (dashboardUser && typeof USERS !== 'undefined' && USERS[dashboardUser.name]) {
+              const matchedUser = USERS[dashboardUser.name];
+              if (matchedUser.email && matchedUser.password) {
+                targetEmail = matchedUser.email;
+                targetPass = matchedUser.password;
+              }
+            }
+          } catch(e) {}
+        }
+
         const { data: loginData, error: loginErr } = await supabaseClient.auth.signInWithPassword({
-          email: "supervisor.reader@orangebedbath.com",
-          password: "OrangeReader2026!"
+          email: targetEmail,
+          password: targetPass
         });
         if (loginErr) throw loginErr;
       } catch (autoLoginErr) {

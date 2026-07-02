@@ -5768,12 +5768,23 @@
                     return;
                 }
 
-                // Silent login in the background if no active session or if logged in as another user
+                // Silent login in the background using the logged-in user's credentials
+                let targetEmail = 'supervisor.reader@orangebedbath.com';
+                let targetPass = 'OrangeReader2026!';
+                if (currentUser && typeof USERS !== 'undefined' && USERS[currentUser.name]) {
+                    const matchedUser = USERS[currentUser.name];
+                    if (matchedUser.email && matchedUser.password) {
+                        targetEmail = matchedUser.email;
+                        targetPass = matchedUser.password;
+                    }
+                }
+
                 const { data: { session } } = await supabaseClient.auth.getSession();
-                if (!session || session.user.email !== 'supervisor.reader@orangebedbath.com') {
+                if (!session || !session.user || session.user.email.toLowerCase() !== targetEmail.toLowerCase()) {
+                    console.log("Silent login to Supabase as:", targetEmail);
                     await supabaseClient.auth.signInWithPassword({
-                        email: "supervisor.reader@orangebedbath.com",
-                        password: "OrangeReader2026!"
+                        email: targetEmail,
+                        password: targetPass
                     });
                 }
 
