@@ -2227,7 +2227,10 @@
           }
 
           const checklistBtn = document.getElementById('checklistBtn');
-          if (checklistBtn) checklistBtn.style.display = (userRole === 'user' && userMall) ? 'inline-flex' : 'none';
+          if (checklistBtn) {
+            const isValidShowroom = userMall && userMall !== 'إجمالي المستودعات';
+            checklistBtn.style.display = (isValidShowroom && (userRole === 'user' || userRole === 'manager' || userRole === 'admin' || userRole === 'maintenance_admin')) ? 'inline-flex' : 'none';
+          }
 
           const checklistReportBtn = document.getElementById('checklistReportBtn');
           if (checklistReportBtn) {
@@ -2293,6 +2296,13 @@
       // Re-run the data loading targeting the new regional warehouse
       rebuildDataForWarehouse(userWarehouse);
       renderProducts();
+
+      // Update checklist button visibility on outlet change
+      const checklistBtn = document.getElementById('checklistBtn');
+      if (checklistBtn) {
+        const isValidShowroom = userMall && userMall !== 'إجمالي المستودعات';
+        checklistBtn.style.display = (isValidShowroom && (userRole === 'user' || userRole === 'manager' || userRole === 'admin' || userRole === 'maintenance_admin')) ? 'inline-flex' : 'none';
+      }
     };
 
     // Handle initial session first

@@ -686,6 +686,14 @@
     .bc-clear-btn { background: var(--danger-light); color: var(--danger); border: none; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.78em; transition: var(--transition); }
     .bc-clear-btn:hover { background: var(--danger); color: white; }
     .bc-queue-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .bc-add-section { padding: 12px; border-bottom: 1px solid var(--border-color); background: #fff; }
+    .bc-manual-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .bc-manual-row input[type="text"] { flex: 1; min-width: 0; width: auto; padding: 8px 12px; font-size: 0.85em; }
+    .bc-manual-qty { width: 60px; text-align: center; padding: 8px; font-size: 0.85em; font-weight: 800; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: inherit; }
+    .bc-manual-qty:focus { border-color: var(--primary); outline: none; }
+    .bc-add-btn { padding: 0 14px; }
+    #bcPasteInput { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px dashed var(--info); border-radius: 8px; font-family: inherit; font-size: 0.8em; resize: vertical; background: #fafbfc; color: var(--text-main); }
+    #bcPasteInput:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
     .bc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fafbfc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; }
     .bc-item-info { flex: 1; min-width: 0; }
     .bc-item-name { font-weight: 700; font-size: 0.88em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -759,6 +767,7 @@
   <div class="header-container">
     <h1><i class="fa-solid fa-boxes-stacked"></i> قائمة الطلبات والتحويلات</h1>
     <div class="header-actions">
+      <button class="btn btn-barcode" onclick="openBarcodeModal()"><i class="fa-solid fa-barcode"></i> مركز الباركود</button>
       <button class="icon-btn" id="refreshBtn" onclick="refreshCurrent()" title="تحديث"><i class="fa-solid fa-rotate"></i></button>
       <a href="../index.html" class="back-btn"><i class="fa-solid fa-house"></i> <span>الداشبورد</span></a>
       <a href="index.html" class="back-btn"><i class="fa-solid fa-arrow-right"></i> <span>الكاتالوج</span></a>
@@ -1027,6 +1036,14 @@
             <div class="bc-queue-head">
               <span><i class="fa-solid fa-list"></i> قائمة الطباعة</span>
               <button class="bc-clear-btn" onclick="clearBarcodeQueue()"><i class="fa-solid fa-trash-can"></i> مسح الكل</button>
+            </div>
+            <div class="bc-add-section">
+              <div class="bc-manual-row">
+                <input type="text" id="bcManualInput" placeholder="كود أو Alias..." onkeydown="if(event.key==='Enter') addManualToBarcodeQueue()">
+                <input type="number" id="bcManualQty" class="bc-manual-qty" value="1" min="1">
+                <button class="btn btn-primary bc-add-btn" onclick="addManualToBarcodeQueue()"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <textarea id="bcPasteInput" placeholder="أو الصق من Excel: الكود [Tab] الكمية، كل سطر صنف..." rows="2" onpaste="handleBarcodeExcelPaste(event)"></textarea>
             </div>
             <div class="bc-queue-list" id="barcodeQueueList"></div>
           </div>
@@ -2076,7 +2093,7 @@
       priceSource: 'promo', customPrice: '', separatorPerMall: true
     };
     let promoPriceMap = null;
-    let catalogPriceMap = null;
+    let catalogIndex = null;
 
     function escapeHtml(str) {
       return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2099,25 +2116,39 @@
       return promoPriceMap;
     }
 
-    async function loadCatalogPrices() {
-      if (catalogPriceMap !== null) return catalogPriceMap;
+    async function loadCatalog() {
+      if (catalogIndex !== null) return catalogIndex;
       try {
         const res = await fetch('products.json?_=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        catalogPriceMap = {};
+        catalogIndex = {};
         (data || []).forEach(p => {
-          const pr = Number(p.price);
-          if (pr > 0) {
-            if (p.code != null) catalogPriceMap[String(p.code).trim()] = pr;
-            if (p.alias) catalogPriceMap[String(p.alias).trim()] = pr;
-          }
+          const entry = {
+            code: String(p.code ?? ''),
+            name: p.name || '',
+            alias: p.alias || '',
+            price: Number(p.price) || 0
+          };
+          [entry.code, entry.alias].filter(Boolean).forEach(k => {
+            const key = k.trim().toLowerCase();
+            if (key && !catalogIndex[key]) catalogIndex[key] = entry;
+          });
         });
       } catch (e) {
-        console.error('Failed to load catalog prices:', e);
-        catalogPriceMap = {};
+        console.error('Failed to load catalog:', e);
+        catalogIndex = {};
       }
-      return catalogPriceMap;
+      return catalogIndex;
+    }
+
+    function findCatalogProduct(codeOrAlias) {
+      if (!catalogIndex) return null;
+      const k = String(codeOrAlias || '').trim().toLowerCase();
+      if (!k) return null;
+      if (catalogIndex[k]) return catalogIndex[k];
+      const alt = k.startsWith('kit-') ? k.substring(4) : 'kit-' + k;
+      return catalogIndex[alt] || null;
     }
 
     function lookupPriceByCode(map, code, alias) {
@@ -2136,7 +2167,8 @@
     }
 
     function getCatalogPriceFor(code, alias) {
-      return lookupPriceByCode(catalogPriceMap, code, alias);
+      const p = findCatalogProduct(code) || (alias ? findCatalogProduct(alias) : null);
+      return (p && p.price > 0) ? p.price : null;
     }
 
     function resolveBarcodeValue(item) {
@@ -2200,13 +2232,72 @@
       showToast(`أُضيفت أصناف من ${ids.length} طلبية`, 'success', 2000);
     }
 
+    function addBarcodeItemByCode(codeOrAlias, qty, mall) {
+      const product = findCatalogProduct(codeOrAlias);
+      const code = product ? product.code : codeOrAlias;
+      const name = product ? (splitName(product.name)[0] || product.name || code) : codeOrAlias;
+      const alias = product ? product.alias : '';
+      const key = (String(code) + '|' + (mall || '')).toLowerCase();
+      const existing = barcodeQueue.find(q => (String(q.code) + '|' + (q.mall || '')).toLowerCase() === key);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        barcodeQueue.push({ code, name, alias, qty, mall: mall || '' });
+      }
+    }
+
+    async function addManualToBarcodeQueue() {
+      const input = document.getElementById('bcManualInput').value.trim();
+      const qty = parseInt(document.getElementById('bcManualQty').value) || 1;
+      if (!input) { showToast('أدخل كود أو Alias', 'info'); return; }
+      await loadCatalog();
+      addBarcodeItemByCode(input, qty, '');
+      document.getElementById('bcManualInput').value = '';
+      document.getElementById('bcManualQty').value = '1';
+      renderBarcodeQueue();
+      renderBarcodePreview();
+      document.getElementById('bcManualInput').focus();
+    }
+
+    function handleBarcodeExcelPaste(event) {
+      event.preventDefault();
+      const pastedData = (event.clipboardData || window.clipboardData).getData('Text');
+      if (!pastedData) return;
+      processBarcodePaste(pastedData);
+    }
+
+    async function processBarcodePaste(pastedData) {
+      const rows = pastedData.split(/\r?\n/);
+      await loadCatalog();
+      let added = 0;
+      rows.forEach(row => {
+        const cols = row.split(/\t/);
+        if (cols.length > 0 && cols[0].trim() !== '') {
+          const codeOrAlias = cols[0].trim();
+          let qty = 1;
+          if (cols.length > 1 && cols[1].trim() !== '') {
+            qty = parseInt(cols[1].replace(/,/g, '').trim());
+            if (isNaN(qty) || qty <= 0) qty = 1;
+          }
+          addBarcodeItemByCode(codeOrAlias, qty, '');
+          added++;
+        }
+      });
+      if (added > 0) {
+        renderBarcodeQueue();
+        renderBarcodePreview();
+        document.getElementById('bcPasteInput').value = '';
+        showToast(`أُضيف ${added} صنف من Excel`, 'success', 2000);
+      }
+    }
+
     async function openBarcodeModal() {
       document.getElementById('barcodeModal').classList.add('active');
       renderBarcodeQueue();
       renderBarcodePreview();
-      if (labelOptions.priceSource === 'promo' && (promoPriceMap === null || catalogPriceMap === null)) {
+      if (labelOptions.priceSource === 'promo' && (promoPriceMap === null || catalogIndex === null)) {
         document.getElementById('bcPreviewNote').textContent = 'جاري تحميل الأسعار...';
-        await Promise.all([loadPromoPrices(), loadCatalogPrices()]);
+        await Promise.all([loadPromoPrices(), loadCatalog()]);
         renderBarcodePreview();
       }
     }
@@ -2242,7 +2333,7 @@
     async function onPriceSourceChange(val) {
       labelOptions.priceSource = val;
       document.getElementById('optCustomPrice').style.display = val === 'custom' ? '' : 'none';
-      if (val === 'promo') await Promise.all([loadPromoPrices(), loadCatalogPrices()]);
+      if (val === 'promo') await Promise.all([loadPromoPrices(), loadCatalog()]);
       renderBarcodePreview();
     }
 
