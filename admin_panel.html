@@ -947,6 +947,9 @@
                             <p class="text-muted small mb-0">تعديل مستهدفات الفروع الإجمالية وتوزيع مستهدفات الموظفين الفردية وتصحيح زوار الفرع اليومية والساعات المباشرة.</p>
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <button class="btn btn-orange-premium btn-sm fw-bold px-3 py-2" onclick="showImportTargetsModal()" style="border-radius: 8px;">
+                                <i class="fa-solid fa-file-import me-1"></i> استيراد من إكسل 📤
+                            </button>
                             <button class="btn btn-outline-success btn-sm fw-bold px-3 py-2" onclick="exportTargetsExcel()" style="border-radius: 8px;">
                                 <i class="fa-solid fa-file-excel me-1"></i> تحميل التارجت (إكسل) 📥
                             </button>
@@ -1421,6 +1424,83 @@
     <!-- Close mainContentWrapper -->
     </div>
     <!-- Close outer layout wrapper d-flex -->
+    </div>
+
+    <!-- Bulk Import Targets Modal -->
+    <div class="modal fade" id="importTargetsModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); direction: rtl;">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-white border" style="border-radius: 16px; border: 2px solid var(--orange) !important;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-orange"><i class="fa-solid fa-file-import me-2"></i> استيراد المستهدفات من إكسل</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="margin-right: auto; margin-left: 0;"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info text-dark border-info-subtle mb-4" style="background-color: #e8f4fd;">
+                        <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+                        يمكنك استيراد مستهدفات الفروع ومستهدفات الموظفين دفعة واحدة. يرجى التأكد من اختيار الشهر الصحيح قبل البدء.
+                    </div>
+                    
+                    <!-- Month Selector inside modal -->
+                    <div class="mb-4 d-flex align-items-center gap-3">
+                        <label class="fw-bold small text-muted text-nowrap">شهر التارجت المستهدف:</label>
+                        <input type="month" id="importTargetMonth" class="form-control" style="width: 180px;">
+                    </div>
+
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-pills mb-3 gap-2" id="importTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold btn-sm" id="upload-tab" data-bs-toggle="pill" data-bs-target="#upload-pane" type="button" role="tab" aria-controls="upload-pane" aria-selected="true"><i class="fa-solid fa-file-excel me-1"></i> تحميل ملف Excel</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold btn-sm" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-pane" type="button" role="tab" aria-controls="paste-pane" aria-selected="false"><i class="fa-solid fa-clipboard me-1"></i> لصق من Excel</button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content border p-3 rounded" style="background: #fdfdfd;" id="importTabContent">
+                        <!-- Upload Pane -->
+                        <div class="tab-pane fade show active" id="upload-pane" role="tabpanel" aria-labelledby="upload-tab" tabindex="0">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small">اختر ملف Excel (.xlsx, .xls) المصدر:</label>
+                                <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="form-control">
+                                <div class="form-text small text-muted mt-2">
+                                    * يجب أن يحتوي الملف على شيت باسم <strong>مستهدفات الفروع</strong> (يحتوي على أعمدة: كود المعرض/اسم المعرض، والتارجت) <br>
+                                    أو شيت باسم <strong>مستهدفات الموظفين</strong> (يحتوي على أعمدة: الرقم الوظيفي، والتارجت).
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paste Pane -->
+                        <div class="tab-pane fade" id="paste-pane" role="tabpanel" aria-labelledby="paste-tab" tabindex="0">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small">نوع البيانات المنسوخة:</label>
+                                <div class="d-flex gap-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="pasteType" id="pasteTypeStore" value="store" checked>
+                                        <label class="form-check-label fw-bold" for="pasteTypeStore">
+                                            مستهدفات الفروع (Showrooms)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="pasteType" id="pasteTypeEmp" value="employee">
+                                        <label class="form-check-label fw-bold" for="pasteTypeEmp">
+                                            مستهدفات الموظفين (Employees)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <label class="form-label fw-bold text-muted small">الصق الخلايا هنا مباشرة (Copy-Paste من إكسل):</label>
+                                <textarea id="pasteTextInput" class="form-control" rows="8" placeholder="الصق الأعمدة هنا...&#10;مثال للفروع:&#10;Dhahran Mall-27	1250000&#10;Meem Plaza Riyadh-50	650000&#10;&#10;مثال للموظفين:&#10;12345	محمد علي	40000" style="font-family: monospace; font-size: 13px;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-orange-premium btn-sm px-4" onclick="processBulkImport()"><i class="fa-solid fa-cloud-arrow-up me-1"></i> بدء المعالجة والحفظ</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Email Settings Management Modal -->
@@ -4852,6 +4932,205 @@
             } catch (e) {
                 console.error(e);
                 alert("تعذر تصدير المستهدفات: " + e.message);
+            }
+        }
+
+        function showImportTargetsModal() {
+            const currentMonth = document.getElementById('targetMonth').value;
+            document.getElementById('importTargetMonth').value = currentMonth;
+            
+            // Clear inputs
+            document.getElementById('excelFileInput').value = '';
+            document.getElementById('pasteTextInput').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('importTargetsModal'));
+            modal.show();
+        }
+
+        async function processBulkImport() {
+            const month = document.getElementById('importTargetMonth').value;
+            if (!month) {
+                alert("الرجاء تحديد الشهر أولاً.");
+                return;
+            }
+
+            const activeTab = document.querySelector('#importTab .nav-link.active').id;
+            let storeTargets = [];
+            let employeeTargets = [];
+
+            if (activeTab === 'upload-tab') {
+                // Read file
+                const fileInput = document.getElementById('excelFileInput');
+                const file = fileInput.files[0];
+                if (!file) {
+                    alert("الرجاء اختيار ملف إكسل أولاً.");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Parse Showrooms
+                        const wsStores = workbook.Sheets["مستهدفات الفروع"];
+                        if (wsStores) {
+                            const json = XLSX.utils.sheet_to_json(wsStores);
+                            json.forEach(row => {
+                                const outlet = row["اسم المعرض"] || row["Showroom Name"] || row["المعرض"];
+                                const code = row["كود المعرض"] || row["Store Code"] || row["الكود"];
+                                const target = parseFloat(row["التارجت (SAR)"] || row["Target"] || row["المستهدف"] || 0);
+                                if (outlet && target > 0) {
+                                    storeTargets.push({ outlet, amount: target });
+                                } else if (code && target > 0) {
+                                    // Map code to outlet name
+                                    const outletName = findStoreOutletNameByCode(code);
+                                    if (outletName) {
+                                        storeTargets.push({ outlet: outletName, amount: target });
+                                    }
+                                }
+                            });
+                        }
+
+                        // Parse Employees
+                        const wsEmps = workbook.Sheets["مستهدفات الموظفين"];
+                        if (wsEmps) {
+                            const json = XLSX.utils.sheet_to_json(wsEmps);
+                            json.forEach(row => {
+                                const empId = String(row["الرقم الوظيفي"] || row["Employee ID"] || row["كود الموظف"] || "");
+                                const empName = row["اسم الموظف"] || row["Employee Name"] || row["الاسم"] || "Unknown";
+                                const target = parseFloat(row["التارجت (SAR)"] || row["Target"] || row["المستهدف"] || 0);
+                                if (empId && target > 0) {
+                                    employeeTargets.push({ emp_id: empId, emp_name: empName, amount: target });
+                                }
+                            });
+                        }
+
+                        if (storeTargets.length === 0 && employeeTargets.length === 0) {
+                            alert("لم يتم العثور على أي مستهدفات صالحة في شيتات الملف. يرجى التأكد من مطابقة أسماء الشيتات (مستهدفات الفروع / مستهدفات الموظفين) وأسماء الأعمدة.");
+                            return;
+                        }
+
+                        await sendBulkTargets(month, storeTargets, employeeTargets);
+
+                    } catch (err) {
+                        console.error(err);
+                        alert("خطأ أثناء قراءة ملف الإكسل: " + err.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+
+            } else {
+                // Paste tab
+                const text = document.getElementById('pasteTextInput').value.trim();
+                if (!text) {
+                    alert("الرجاء لصق البيانات أولاً.");
+                    return;
+                }
+
+                const lines = text.split('\n');
+                const pasteType = document.querySelector('input[name="pasteType"]:checked').value;
+
+                lines.forEach(line => {
+                    const parts = line.split('\t');
+                    if (parts.length < 2) return;
+                    
+                    if (pasteType === 'store') {
+                        // Store paste: OutletName/Code | Target
+                        const key = parts[0].trim();
+                        const amountStr = parts[parts.length - 1].replace(/,/g, '').trim();
+                        const target = parseFloat(amountStr);
+                        if (key && !isNaN(target) && target > 0) {
+                            // Match code or outlet name
+                            let outletName = key;
+                            if (/^\d+$/.test(key)) {
+                                outletName = findStoreOutletNameByCode(key) || key;
+                            }
+                            storeTargets.push({ outlet: outletName, amount: target });
+                        }
+                    } else {
+                        // Employee paste: ID | Name | Target (or ID | Target)
+                        const empId = parts[0].trim();
+                        let empName = "Unknown";
+                        let target = 0;
+                        
+                        if (parts.length >= 3) {
+                            empName = parts[1].trim();
+                            const amountStr = parts[2].replace(/,/g, '').trim();
+                            target = parseFloat(amountStr);
+                        } else {
+                            const amountStr = parts[1].replace(/,/g, '').trim();
+                            target = parseFloat(amountStr);
+                        }
+
+                        if (empId && !isNaN(target) && target > 0) {
+                            employeeTargets.push({ emp_id: empId, emp_name: empName, amount: target });
+                        }
+                    }
+                });
+
+                if (storeTargets.length === 0 && employeeTargets.length === 0) {
+                    alert("لم يتم العثور على أي مستهدفات صالحة في النص الملصق.");
+                    return;
+                }
+
+                await sendBulkTargets(month, storeTargets, employeeTargets);
+            }
+        }
+
+        // Helper to find store outlet name by code
+        function findStoreOutletNameByCode(code) {
+            if (!mgmtData || !mgmtData.stores) return null;
+            const cleanCode = String(code).trim();
+            if (mgmtData.stores[cleanCode]) {
+                return mgmtData.stores[cleanCode];
+            }
+            let foundName = null;
+            Object.entries(mgmtData.stores).forEach(([k, v]) => {
+                if (String(k) === cleanCode) {
+                    foundName = v;
+                }
+            });
+            return foundName;
+        }
+
+        async function sendBulkTargets(month, storeTargets, employeeTargets) {
+            try {
+                // Show loading spinner
+                const saveBtn = document.querySelector('button[onclick="processBulkImport()"]');
+                const origHtml = saveBtn.innerHTML;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري الحفظ...`;
+
+                const res = await fetch(`${API_BASE}/api/save_bulk_targets`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month, store_targets: storeTargets, employee_targets: employeeTargets })
+                });
+
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = origHtml;
+
+                if (res.ok) {
+                    const result = await res.json();
+                    alert(`✅ تم استيراد المستهدفات بنجاح!\n- الفروع التي تم تحديثها: ${result.processed_stores}\n- الموظفين الذين تم تحديثهم: ${result.processed_employees}`);
+                    
+                    // Hide modal
+                    const modalEl = document.getElementById('importTargetsModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    
+                    // Refresh data
+                    fetchTargetsData();
+                    loadShowroomPerformance();
+                    loadAuditLogs();
+                } else {
+                    const err = await res.json();
+                    alert("خطأ أثناء الحفظ: " + err.error);
+                }
+            } catch (e) {
+                alert("خطأ اتصال: " + e.message);
             }
         }
 
