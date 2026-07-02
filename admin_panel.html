@@ -1461,7 +1461,12 @@
                         <!-- Upload Pane -->
                         <div class="tab-pane fade show active" id="upload-pane" role="tabpanel" aria-labelledby="upload-tab" tabindex="0">
                             <div class="mb-3">
-                                <label class="form-label fw-bold text-muted small">اختر ملف Excel (.xlsx, .xls) المصدر:</label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label fw-bold text-muted small mb-0">اختر ملف Excel (.xlsx, .xls) المصدر:</label>
+                                    <a href="sample_targets_template.xlsx" download class="btn btn-link btn-sm text-decoration-none fw-bold p-0 text-success" style="font-size: 13px;">
+                                        <i class="fa-solid fa-file-excel me-1"></i> تحميل النموذج الفارغ 📥
+                                    </a>
+                                </div>
                                 <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="form-control">
                                 <div class="form-text small text-muted mt-2">
                                     * يجب أن يحتوي الملف على شيت باسم <strong>مستهدفات الفروع</strong> (يحتوي على أعمدة: كود المعرض/اسم المعرض، والتارجت) <br>
@@ -5033,7 +5038,23 @@
                 const pasteType = document.querySelector('input[name="pasteType"]:checked').value;
 
                 lines.forEach(line => {
-                    const parts = line.split('\t');
+                    line = line.trim();
+                    if (!line) return;
+
+                    let parts = [];
+                    if (line.includes('\t')) {
+                        parts = line.split('\t');
+                    } else if (/\s{2,}/.test(line)) {
+                        parts = line.split(/\s{2,}/);
+                    } else {
+                        const match = line.match(/^([\s\S]+?)\s+([\d,.]+)\s*$/);
+                        if (match) {
+                            parts = [match[1], match[2]];
+                        } else {
+                            parts = line.split(/\s+/);
+                        }
+                    }
+
                     if (parts.length < 2) return;
                     
                     if (pasteType === 'store') {
@@ -5060,7 +5081,7 @@
                             const amountStr = parts[2].replace(/,/g, '').trim();
                             target = parseFloat(amountStr);
                         } else {
-                            const amountStr = parts[1].replace(/,/g, '').trim();
+                            const amountStr = parts[parts.length - 1].replace(/,/g, '').trim();
                             target = parseFloat(amountStr);
                         }
 
