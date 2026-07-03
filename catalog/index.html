@@ -965,6 +965,12 @@
         <span>✨ عرض الجديد فقط</span>
       </label>
 
+      <!-- Promo Only Checkbox (hidden for guests: RLS blocks anon promo prices) -->
+      <label class="styled-checkbox-label" id="promoOnlyLabel">
+        <input type="checkbox" id="promoOnly" onchange="renderProducts()">
+        <span>🏷️ العروض فقط</span>
+      </label>
+
       <!-- Favorites Only Checkbox -->
       <label class="styled-checkbox-label" id="favOnlyLabel" style="display:none;">
         <input type="checkbox" id="favOnly" onchange="renderProducts()">
@@ -2547,7 +2553,7 @@
       if (userInfo) userInfo.textContent = 'وضع التصفح (زائر)';
 
       // Hide User Controls
-      const hideIds = ['sendOrderBtn', 'crossOutletSearchBtn', 'customProductBtn', 'myOrdersBtn', 'checklistBtn', 'checklistReportBtn'];
+      const hideIds = ['sendOrderBtn', 'crossOutletSearchBtn', 'customProductBtn', 'myOrdersBtn', 'checklistBtn', 'checklistReportBtn', 'promoOnlyLabel'];
       hideIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -2970,6 +2976,7 @@
       const searchInputVal = document.getElementById('searchInput')?.value || '';
       const searchTerm = (searchBarVal || searchInputVal).trim().toLowerCase();
       const newOnly = document.getElementById('newOnly')?.checked;
+      const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
       const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
 
@@ -3012,6 +3019,7 @@
           || String(d.name).toLowerCase().includes(searchTerm)) &&
         filterByPrice(d.price, priceRange) &&
         (!newOnly || isNewArrival(d.code)) &&
+        (!promoOnly || getPromoPrice(d.code, d.alias) !== null) &&
         (!favOnly || favorites.has(String(d.code))) &&
         (!showroomStockOnly || getQtyInMall(d) > 0)
       );
@@ -3085,6 +3093,7 @@
       container.innerHTML =
         productsToShow.map(d => {
           const safeName = String(d.name || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+          const promoPrice = getPromoPrice(d.code, d.alias);
           return `
       <div class="product">
         <div class="product-image-container" onclick="showProductDetails('${d.code}')">
@@ -3104,7 +3113,13 @@
           <h4 class="product-title" title="${d.name}">${d.name}</h4>
           
           <div class="product-price-row">
-            <span class="product-price">${d.price} <span>ريال</span></span>
+            ${promoPrice !== null
+              ? `<span class="product-price" style="color:#e74c3c;">${promoPrice} <span>ريال</span></span>` +
+                (Number(promoPrice) < Number(d.price)
+                  ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:0.85em; margin-right:6px;">${d.price}</span>`
+                  : '') +
+                `<span style="background:#e74c3c; color:#fff; border-radius:6px; padding:1px 7px; font-size:0.72em; font-weight:800; margin-right:4px;">عرض</span>`
+              : `<span class="product-price">${d.price} <span>ريال</span></span>`}
           </div>
           
           <div class="product-tags">

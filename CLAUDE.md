@@ -77,6 +77,8 @@ This is a **traditional multi-page application**:
     │   │                       #   Cache-API smart caching keyed on last_updated.json
     │   │                       #   (products.json falls back to stale cache on net fail;
     │   │                       #   failed profile fetches are never cached)
+    │   │                       #   Promo-only filter + on-card promo price display
+    │   │                       #   (promoOnlyLabel hidden in guest mode)
     │   ├── catalog-admin.html  # Admin: block items, orders log + new-order sound alerts,
     │   │                       #   top-requested-items report, promos, users, audit logs
     │   ├── generate_catalog.py # ACTIVE daily generator (9AM batch runs this copy;
