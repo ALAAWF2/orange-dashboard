@@ -3109,6 +3109,16 @@
           const promoPrice = getPromoPrice(d.code, d.alias);
           const dynOffer = getDynamicsOffer(d.code);
           const safeOffer = dynOffer ? String(dynOffer).replace(/'/g, "&#39;").replace(/"/g, "&quot;") : '';
+          const dynDealPrice = getDynamicsDealPrice(d.code);
+          const dynOriginalPrice = getDynamicsOriginalPrice(d.code);
+          // Effective promotional price: explicit manual override (Supabase) wins,
+          // otherwise fall back to the Dynamics deal price.
+          const effectivePromoPrice = (promoPrice !== null) ? promoPrice : dynDealPrice;
+          // Original price to show struck-through: the catalog price by default,
+          // but the Dynamics original_price is more accurate for offer items.
+          const effectiveOriginalPrice = (promoPrice !== null)
+            ? Number(d.price)
+            : (dynOriginalPrice !== null ? dynOriginalPrice : Number(d.price));
           return `
       <div class="product">
         <div class="product-image-container" onclick="showProductDetails('${d.code}')">
@@ -3128,12 +3138,12 @@
           <h4 class="product-title" title="${d.name}">${d.name}</h4>
           
           <div class="product-price-row">
-            ${promoPrice !== null
-              ? `<span class="product-price" style="color:#e74c3c;">${promoPrice} <span>ريال</span></span>` +
-                (Number(promoPrice) < Number(d.price)
-                  ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:0.85em; margin-right:6px;">${d.price}</span>`
+            ${(effectivePromoPrice !== null)
+              ? `<span class="product-price" style="color:#e74c3c;">${effectivePromoPrice} <span>ريال</span></span>` +
+                (Number(effectivePromoPrice) < Number(effectiveOriginalPrice)
+                  ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:0.85em; margin-right:6px;">${effectiveOriginalPrice}</span>`
                   : '') +
-                `<span style="background:#e74c3c; color:#fff; border-radius:6px; padding:1px 7px; font-size:0.72em; font-weight:800; margin-right:4px;">عرض</span>`
+                `<span title="${safeOffer}" style="background:#e74c3c; color:#fff; border-radius:6px; padding:1px 7px; font-size:0.72em; font-weight:800; margin-right:4px; cursor:help;">عرض</span>`
               : `<span class="product-price">${d.price} <span>ريال</span></span>` +
                 (dynOffer
                   ? `<span title="${safeOffer}" style="background:#fdecea; color:#c0392b; border:1px solid #e74c3c; border-radius:6px; padding:1px 7px; font-size:0.72em; font-weight:800; margin-right:4px; cursor:help;">🏷️ عرض</span>`
@@ -3324,7 +3334,23 @@
       };
 
       modalDetails.innerHTML = `
-    <p><strong>السعر:</strong> <span class="val" style="color:var(--primary); font-size:1.2em;">${product.price} ريال</span></p>
+    ${(() => {
+        const promoPrice = getPromoPrice(product.code, product.alias);
+        const dynDealPrice = getDynamicsDealPrice(product.code);
+        const dynOriginalPrice = getDynamicsOriginalPrice(product.code);
+        const dynOfferName = getDynamicsOffer(product.code);
+        const effPromo = (promoPrice !== null) ? promoPrice : dynDealPrice;
+        const effOriginal = (promoPrice !== null) ? Number(product.price) : (dynOriginalPrice !== null ? dynOriginalPrice : Number(product.price));
+        if (effPromo !== null && Number(effPromo) < Number(effOriginal)) {
+          const safeOfferName = dynOfferName ? String(dynOfferName).replace(/'/g, "&#39;").replace(/"/g, "&quot;") : '';
+          return `<p><strong>السعر:</strong> <span class="val" style="color:#e74c3c; font-size:1.2em;">${effPromo} ريال</span> <span style="text-decoration:line-through; color:var(--text-muted); font-size:0.9em; margin-right:6px;">${effOriginal}</span>${safeOfferName ? ` <span title="${safeOfferName}" style="background:#e74c3c; color:#fff; border-radius:6px; padding:1px 7px; font-size:0.75em; font-weight:800; cursor:help;">عرض</span>` : ''}</p>`;
+        }
+        if (dynOfferName) {
+          const safeOfferName = String(dynOfferName).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+          return `<p><strong>السعر:</strong> <span class="val" style="color:var(--primary); font-size:1.2em;">${product.price} ريال</span> <span title="${safeOfferName}" style="background:#fdecea; color:#c0392b; border:1px solid #e74c3c; border-radius:6px; padding:1px 7px; font-size:0.75em; font-weight:800; cursor:help;">🏷️ عرض</span></p>`;
+        }
+        return `<p><strong>السعر:</strong> <span class="val" style="color:var(--primary); font-size:1.2em;">${product.price} ريال</span></p>`;
+      })()}
     <p><strong>الكود:</strong> <span class="val">${product.code}</span></p>
     <p><strong>Alias:</strong> <span class="val">${product.alias || '—'}</span></p>
     <p><strong>التصنيف:</strong> <span class="val">${product.category}</span></p>
@@ -3641,13 +3667,40 @@
       return null;
     }
 
-    // Active Dynamics POS offer name for an item (from active_offers.json), or null
-    function getDynamicsOffer(code) {
+    // Look up the raw offer entry (object) for an item, or null.
+    // Handles both the new enriched format ({offer_name, deal_price, ...})
+    // and the legacy plain-string format for backward compatibility.
+    function getDynamicsOfferEntry(code) {
       const c = String(code).trim();
       if (dynamicsOffers[c] !== undefined) return dynamicsOffers[c];
       const cAlt = c.toUpperCase().startsWith("KIT-") ? c.substring(4) : "KIT-" + c;
       if (dynamicsOffers[cAlt] !== undefined) return dynamicsOffers[cAlt];
       return null;
+    }
+
+    // Active Dynamics POS offer name for an item (from active_offers.json), or null
+    function getDynamicsOffer(code) {
+      const entry = getDynamicsOfferEntry(code);
+      if (!entry) return null;
+      if (typeof entry === 'string') return entry;
+      return entry.offer_name || null;
+    }
+
+    // Numeric promotional price for a Dynamics offer item, or null when the
+    // offer has no price (e.g. "buy 2 get 1 free").
+    function getDynamicsDealPrice(code) {
+      const entry = getDynamicsOfferEntry(code);
+      if (!entry || typeof entry === 'string') return null;
+      const dp = Number(entry.deal_price);
+      return dp > 0 ? dp : null;
+    }
+
+    // Original (pre-discount) price for a Dynamics offer item, or null.
+    function getDynamicsOriginalPrice(code) {
+      const entry = getDynamicsOfferEntry(code);
+      if (!entry || typeof entry === 'string') return null;
+      const op = Number(entry.original_price);
+      return op > 0 ? op : null;
     }
 
     function printItemBarcode(code, name, alias, price) {
