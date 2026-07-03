@@ -15,16 +15,140 @@
     
     <style>
         :root {
+            /* Colors */
             --orange: #fe7900;
             --orange-glow: rgba(254, 121, 0, 0.15);
-            --bg-light: #f5f7fb;
-            --card-light: rgba(255, 255, 255, 0.9);
-            --border-light: rgba(0, 0, 0, 0.08);
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
+            --orange-50: #fff7ed;
+            --orange-100: #ffedd5;
+            --orange-200: #fed7aa;
+            --orange-300: #fdba74;
+            --orange-400: #fb923c;
+            --orange-500: #fe7900;
+            --orange-600: #ea580c;
+            --orange-700: #c2410c;
+            --orange-800: #9a3412;
+            --orange-900: #7c2d12;
+            
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            /* Semantic Colors */
             --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.15);
             --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
             --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.15);
+            --info: #3b82f6;
+            --info-glow: rgba(59, 130, 246, 0.15);
+
+            /* App Surfaces (Light Mode default) */
+            --bg-body: var(--gray-50);
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --border-color: var(--gray-200);
+            --text-main: var(--gray-800);
+            --text-secondary: var(--gray-550);
+            
+            /* Spacing Scale */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            
+            /* Typography Scale */
+            --font-xs: 0.75rem;   /* 12px */
+            --font-sm: 0.8125rem; /* 13px */
+            --font-md: 0.875rem;  /* 14px */
+            --font-lg: 1rem;      /* 16px */
+            --font-xl: 1.125rem;  /* 18px */
+            --font-2xl: 1.375rem; /* 22px */
+            --font-3xl: 1.75rem;  /* 28px */
+            
+            /* Shadows & Radii */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            /* Legacy compatibility mappings */
+            --bg-light: var(--bg-body);
+            --card-light: var(--bg-card);
+            --border-light: var(--border-color);
+            --text-dark: var(--text-main);
+            --text-muted: var(--text-secondary);
+        }
+
+        /* Utility classes for premium design system */
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .text-start-num {
+            text-align: left !important;
+            direction: ltr !important;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .table-sticky-header {
+            position: relative;
+        }
+        .table-sticky-header thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--gray-100) !important;
+        }
+        
+        /* Sidebar section headers styling */
+        .sidebar-section-header {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 18px 6px 18px;
+            margin-top: 10px;
+            border-bottom: 1px dashed rgba(0,0,0,0.04);
+            display: block;
+        }
+        
+        .sidebar-wrapper.collapsed .sidebar-section-header {
+            display: none;
+        }
+        
+        /* Placeholder content helper */
+        .placeholder-tab-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .placeholder-tab-icon {
+            font-size: 4rem;
+            color: var(--orange-300);
+            margin-bottom: 20px;
+            animation: pulse-glow 2s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { transform: scale(1); filter: drop-shadow(0 0 2px var(--orange-glow)); }
+            to { transform: scale(1.05); filter: drop-shadow(0 0 10px var(--orange)); }
         }
 
         body {
@@ -577,13 +701,31 @@
                     <i class="fa-solid fa-angles-right"></i>
                 </button>
             </div>
-            
             <div class="sidebar-menu flex-grow-1 p-3 overflow-y-auto">
                 <div class="nav flex-column nav-pills" id="adminSidebarTabs" role="tablist">
+                    <!-- غرفة العمليات -->
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-content" type="button" role="tab">
+                        <i class="fa-solid fa-house"></i>
+                        <span class="nav-text">غرفة العمليات</span>
+                    </button>
+                    
+                    <span class="sidebar-section-header">── التشغيل اليومي ──</span>
+                    
                     <button class="nav-link active text-start mb-2 d-flex align-items-center gap-3" id="sales-tab" data-bs-toggle="tab" data-bs-target="#sales-content" type="button" role="tab">
                         <i class="fa-solid fa-shop"></i>
                         <span class="nav-text">أداء المعارض اليومي</span>
                     </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts-content" type="button" role="tab">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="nav-text">مركز التنبيهات <span class="badge bg-danger rounded-pill ms-1" style="font-size:0.7rem; padding: 3px 6px;">جديد</span></span>
+                    </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="dispatch-tab" data-bs-toggle="tab" data-bs-target="#dispatch-content" type="button" role="tab">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span class="nav-text">إرسال تقارير الفروع</span>
+                    </button>
+                    
+                    <span class="sidebar-section-header">── إدارة البيانات ──</span>
+                    
                     <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="targets-tab" data-bs-toggle="tab" data-bs-target="#targets-content" type="button" role="tab">
                         <i class="fa-solid fa-bullseye"></i>
                         <span class="nav-text">تعديل التارجت والزوار</span>
@@ -592,37 +734,43 @@
                         <i class="fa-solid fa-id-card"></i>
                         <span class="nav-text">إدارة الموظفين</span>
                     </button>
-                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-content" type="button" role="tab">
-                        <i class="fa-solid fa-circle-exclamation"></i>
-                        <span class="nav-text">تدقيق الأخطاء والسجلات</span>
-                    </button>
-                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="pipeline-tab" data-bs-toggle="tab" data-bs-target="#pipeline-content" type="button" role="tab">
-                        <i class="fa-solid fa-terminal"></i>
-                        <span class="nav-text">حالة السيرفر والمزامنة</span>
-                    </button>
-                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content" type="button" role="tab">
-                        <i class="fa-solid fa-users-gear"></i>
-                        <span class="nav-text">إدارة المستخدمين والـ PINs</span>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="uncategorized-tab" data-bs-toggle="tab" data-bs-target="#uncategorized-content" type="button" role="tab">
+                        <i class="fa-solid fa-box-open"></i>
+                        <span class="nav-text">منتجات غير مصنفة <span class="badge bg-danger rounded-pill ms-1" id="uncategorizedBadgeCount" style="display:none; font-size:0.7rem; padding: 3px 6px;">0</span></span>
                     </button>
                     <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="offers-tab" data-bs-toggle="tab" data-bs-target="#offers-content" type="button" role="tab">
                         <i class="fa-solid fa-tags"></i>
                         <span class="nav-text">عروض النظام والخصومات</span>
                     </button>
-                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="uncategorized-tab" data-bs-toggle="tab" data-bs-target="#uncategorized-content" type="button" role="tab">
-                        <i class="fa-solid fa-box-open"></i>
-                        <span class="nav-text">منتجات غير مصنفة <span class="badge bg-danger rounded-pill ms-1" id="uncategorizedBadgeCount" style="display:none; font-size:0.7rem; padding: 3px 6px;">0</span></span>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="calendar-tab" data-bs-toggle="tab" data-bs-target="#calendar-content" type="button" role="tab">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span class="nav-text">تقويم الأحداث <span class="badge bg-secondary rounded-pill ms-1" style="font-size:0.7rem; padding: 3px 6px;">قريباً</span></span>
                     </button>
-                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="dispatch-tab" data-bs-toggle="tab" data-bs-target="#dispatch-content" type="button" role="tab">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        <span class="nav-text">إرسال تقارير الفروع</span>
+                    
+                    <span class="sidebar-section-header">── النظام ──</span>
+                    
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="pipeline-tab" data-bs-toggle="tab" data-bs-target="#pipeline-content" type="button" role="tab">
+                        <i class="fa-solid fa-terminal"></i>
+                        <span class="nav-text">خط الأنابيب والصحة</span>
                     </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-content" type="button" role="tab">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span class="nav-text">التدقيق والسجلات</span>
+                    </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content" type="button" role="tab">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span class="nav-text">المستخدمون والصلاحيات</span>
+                    </button>
+                    
+                    <span class="sidebar-section-header">── الذكاء ──</span>
+                    
                     <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="ai-chat-tab" data-bs-toggle="tab" data-bs-target="#ai-chat-content" type="button" role="tab">
                         <i class="fa-solid fa-robot"></i>
-                        <span class="nav-text">المساعد الذكي (AI Chat) 🤖</span>
+                        <span class="nav-text">المساعد الذكي 🤖</span>
                     </button>
                 </div>
             </div>
-            
+
             <div class="sidebar-footer p-3 border-top bg-light mt-auto">
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <i class="fa-solid fa-circle-user text-muted fs-4"></i>
@@ -707,6 +855,53 @@
                 </div>
 
                 <div class="tab-content" id="adminTabContent">
+                    <!-- Tab [NEW]: غرفة العمليات -->
+                    <div class="tab-pane fade" id="dashboard-content" role="tabpanel">
+                        <div class="glass-card mb-4">
+                            <div class="placeholder-tab-content">
+                                <div class="placeholder-tab-icon">
+                                    <i class="fa-solid fa-house-laptop"></i>
+                                </div>
+                                <h3 class="fw-bold mb-2">🏠 غرفة العمليات والتحكم</h3>
+                                <p class="text-muted" style="max-width: 500px; margin: 0 auto 20px auto;">
+                                    يجري العمل حالياً على بناء هذه الشاشة الافتتاحية الموحدة لتلخيص صحة النظام العام وتنبيهات الأجهزة وتدفق المبيعات اليومي.
+                                </p>
+                                <button class="btn btn-orange-premium btn-sm" onclick="bootstrap.Tab.getInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> الانتقال إلى أداء المعارض اليومي</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab [NEW]: مركز التنبيهات -->
+                    <div class="tab-pane fade" id="alerts-content" role="tabpanel">
+                        <div class="glass-card mb-4">
+                            <div class="placeholder-tab-content">
+                                <div class="placeholder-tab-icon">
+                                    <i class="fa-solid fa-bell-concierge"></i>
+                                </div>
+                                <h3 class="fw-bold mb-2">⚠️ مركز التنبيهات وإدارة القنوات</h3>
+                                <p class="text-muted" style="max-width: 500px; margin: 0 auto 20px auto;">
+                                    سيسمح لك هذا التبويب بتهيئة عتبات التحذير من انحراف المبيعات، ومراقبة العدادات المتعطلة، وكتم التنبيهات لمدراء المناطق.
+                                </p>
+                                <button class="btn btn-outline-dark btn-sm" onclick="bootstrap.Tab.getInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للرئيسية</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab [NEW]: تقويم الأحداث -->
+                    <div class="tab-pane fade" id="calendar-content" role="tabpanel">
+                        <div class="glass-card mb-4">
+                            <div class="placeholder-tab-content">
+                                <div class="placeholder-tab-icon">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </div>
+                                <h3 class="fw-bold mb-2">📅 تقويم الأحداث ومستهدفات المواسم</h3>
+                                <p class="text-muted" style="max-width: 500px; margin: 0 auto 20px auto;">
+                                    بوابة إدارة الفترات الموسمية (رمضان، الأعياد) لضبط إزاحة تواريخ المقارنة وإسناد فروقات مبيعات الأيام والسنوات السابقة.
+                                </p>
+                                <button class="btn btn-outline-dark btn-sm" onclick="bootstrap.Tab.getInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للرئيسية</button>
+                            </div>
+                        </div>
+                    </div>
             
 
 
@@ -1925,26 +2120,40 @@
             // Detect Active API Server URL first!
             await detectActiveApiBase();
 
-            // Load All Data Files
-            await loadAllSystemData();
-            
-            // Populate Portal managers and employees dropdown
-            populateEmployeesDropdowns();
-            
-            // Run Tabs loading
-            loadShowroomPerformance();
-            fetchTargetsData();
-            renderEmployeesTable();
-            runLiveAuditing();
-            loadAuditLogs();
-            loadPipelineLogs();
-            loadSensmaxBattery();
-            loadUsersData(); // Load Alaa user management data
-            loadShowroomsData(); // Load Alaa store assignments mapping
-            loadOffersData(); // Load Dynamics offers data
-            loadUnmappedProductsData(); // Load unmapped products catalog
-            loadDispatchShowroomsData(); // Load showrooms for report dispatch
-            loadSystemSettings(); // Load manager target editing permission
+            // Bind tab change events to lazy load content and update hash/localstorage
+            const tabElements = document.querySelectorAll('#adminSidebarTabs button[data-bs-toggle="tab"]');
+            tabElements.forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', async (event) => {
+                    const targetId = event.target.getAttribute('data-bs-target');
+                    localStorage.setItem('activeAdminTab', targetId);
+                    history.replaceState(null, null, targetId);
+                    
+                    try {
+                        await loadTabContent(targetId);
+                    } catch (e) {
+                        console.error("Error lazy loading tab: " + targetId, e);
+                    }
+                });
+            });
+
+            // Determine which tab to activate initially
+            let initialTab = window.location.hash;
+            if (!initialTab || !document.querySelector(initialTab)) {
+                initialTab = localStorage.getItem('activeAdminTab');
+            }
+            if (!initialTab || !document.querySelector(initialTab)) {
+                initialTab = '#sales-content'; // Default active tab
+            }
+
+            // Activate initial tab in the DOM (this will trigger shown.bs.tab and lazy load its content)
+            const initialTabButton = document.querySelector(`button[data-bs-target="${initialTab}"]`);
+            if (initialTabButton) {
+                const triggerEl = new bootstrap.Tab(initialTabButton);
+                triggerEl.show();
+            } else {
+                // Fallback direct load
+                await loadTabContent('#sales-content');
+            }
         });
 
         // Logout
@@ -1953,22 +2162,126 @@
             window.location.href = 'login.html';
         }
 
-        // Load data.json and employees.json
-        async function loadAllSystemData() {
+        let loadedTabs = {};
+        let mgmtDataTimestamp = null;
+        let empDataTimestamp = null;
+
+        async function ensureMgmtDataLoaded() {
             try {
-                const [mgmtRes, empRes] = await Promise.all([
-                    fetch('management_data.json?t=' + Date.now()),
-                    fetch('employees_data.json?t=' + Date.now())
-                ]);
+                // Fetch last_updated.json first (small, fast check)
+                const updateRes = await fetch('last_updated.json?t=' + Date.now());
+                if (!updateRes.ok) throw new Error("تعذر جلب ملف تحديث البيانات");
+                const updateJson = await updateRes.json();
+                const serverTimestamp = updateJson.last_updated;
+                
+                if (mgmtData && mgmtDataTimestamp === serverTimestamp) {
+                    return; // Already loaded and matches latest server data
+                }
+                
+                const mgmtRes = await fetch('management_data.json?v=' + serverTimestamp);
+                if (!mgmtRes.ok) throw new Error("تعذر جلب ملف البيانات الإدارية");
                 mgmtData = await mgmtRes.json();
-                empData = await empRes.json();
+                mgmtDataTimestamp = serverTimestamp;
+                
+                // Clear tab load cache since base data changed
+                loadedTabs = {};
                 
                 // Set MTD KPIs
                 document.getElementById('kpiActiveStores').textContent = Object.keys(mgmtData.stores).filter(id => !['0', '1013'].includes(id)).length;
-                document.getElementById('kpiTotalEmployees').textContent = typeof EMPLOYEES !== "undefined" ? EMPLOYEES.length : 0;
             } catch (e) {
-                console.error("Failed to load JSON files:", e);
+                console.error("Failed to load management data:", e);
+                throw e;
             }
+        }
+
+        async function ensureEmpDataLoaded() {
+            try {
+                // Fetch last_updated.json first (small, fast check)
+                const updateRes = await fetch('last_updated.json?t=' + Date.now());
+                if (!updateRes.ok) throw new Error("تعذر جلب ملف تحديث البيانات");
+                const updateJson = await updateRes.json();
+                const serverTimestamp = updateJson.last_updated;
+                
+                if (empData && empDataTimestamp === serverTimestamp) {
+                    return; // Already loaded and matches latest server data
+                }
+                
+                const empRes = await fetch('employees_data.json?v=' + serverTimestamp);
+                if (!empRes.ok) throw new Error("تعذر جلب ملف الموظفين");
+                empData = await empRes.json();
+                empDataTimestamp = serverTimestamp;
+                
+                // Clear tab load cache since base data changed
+                loadedTabs = {};
+                
+                // Set Employee KPIs & Dropdowns
+                document.getElementById('kpiTotalEmployees').textContent = typeof EMPLOYEES !== "undefined" ? EMPLOYEES.length : 0;
+                populateEmployeesDropdowns();
+            } catch (e) {
+                console.error("Failed to load employees data:", e);
+                throw e;
+            }
+        }
+
+        // Maintain compatibility with existing code calling loadAllSystemData()
+        async function loadAllSystemData() {
+            await Promise.all([
+                ensureMgmtDataLoaded(),
+                ensureEmpDataLoaded()
+            ]);
+        }
+
+        async function loadTabContent(tabId, forceRefresh = false) {
+            if (loadedTabs[tabId] && !forceRefresh) {
+                return; // Already loaded and not forced to refresh
+            }
+            
+            // Map tab content panels to their load functions
+            switch (tabId) {
+                case '#sales-content':
+                    await ensureMgmtDataLoaded();
+                    loadShowroomPerformance();
+                    break;
+                case '#targets-content':
+                    await ensureEmpDataLoaded();
+                    await loadSystemSettings();
+                    await fetchTargetsData();
+                    break;
+                case '#employees-content':
+                    renderEmployeesTable(); // Uses EMPLOYEES from data.js
+                    break;
+                case '#audit-content':
+                    await runLiveAuditing();
+                    await loadAuditLogs();
+                    break;
+                case '#pipeline-content':
+                    await loadPipelineLogs();
+                    await loadSensmaxBattery();
+                    break;
+                case '#users-content':
+                    await loadUsersData();
+                    await loadShowroomsData();
+                    break;
+                case '#offers-content':
+                    await loadOffersData(forceRefresh);
+                    break;
+                case '#uncategorized-content':
+                    await loadUnmappedProductsData(forceRefresh);
+                    break;
+                case '#dispatch-content':
+                    await loadDispatchShowroomsData();
+                    break;
+                case '#ai-chat-content':
+                    // Smart Assistant initialization if any (none required)
+                    break;
+                // Placeholders do not have dynamic data loading
+                case '#dashboard-content':
+                case '#alerts-content':
+                case '#calendar-content':
+                    break;
+            }
+            
+            loadedTabs[tabId] = true;
         }
 
         // ==========================================
