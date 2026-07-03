@@ -866,7 +866,7 @@
                                 <p class="text-muted" style="max-width: 500px; margin: 0 auto 20px auto;">
                                     يجري العمل حالياً على بناء هذه الشاشة الافتتاحية الموحدة لتلخيص صحة النظام العام وتنبيهات الأجهزة وتدفق المبيعات اليومي.
                                 </p>
-                                <button class="btn btn-orange-premium btn-sm" onclick="bootstrap.Tab.getInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> الانتقال إلى أداء المعارض اليومي</button>
+                                <button class="btn btn-orange-premium btn-sm" onclick="bootstrap.Tab.getOrCreateInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> الانتقال إلى أداء المعارض اليومي</button>
                             </div>
                         </div>
                     </div>
@@ -882,7 +882,7 @@
                                 <p class="text-muted" style="max-width: 500px; margin: 0 auto 20px auto;">
                                     سيسمح لك هذا التبويب بتهيئة عتبات التحذير من انحراف المبيعات، ومراقبة العدادات المتعطلة، وكتم التنبيهات لمدراء المناطق.
                                 </p>
-                                <button class="btn btn-outline-dark btn-sm" onclick="bootstrap.Tab.getInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للرئيسية</button>
+                                <button class="btn btn-outline-dark btn-sm" onclick="bootstrap.Tab.getOrCreateInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للرئيسية</button>
                             </div>
                         </div>
                     </div>
@@ -898,7 +898,7 @@
                                 <p class="text-muted" style="max-width: 500px; margin: 0 auto 20px auto;">
                                     بوابة إدارة الفترات الموسمية (رمضان، الأعياد) لضبط إزاحة تواريخ المقارنة وإسناد فروقات مبيعات الأيام والسنوات السابقة.
                                 </p>
-                                <button class="btn btn-outline-dark btn-sm" onclick="bootstrap.Tab.getInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للرئيسية</button>
+                                <button class="btn btn-outline-dark btn-sm" onclick="bootstrap.Tab.getOrCreateInstance(document.getElementById('sales-tab')).show()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للرئيسية</button>
                             </div>
                         </div>
                     </div>
@@ -1982,7 +1982,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     
     <!-- Dynamically Generated data.js which contains unique global employees and mapping values -->
-    <script src="data.js?t=<?= time() ?>"></script>
+    <script src="data.js"></script>
     
     <script>
         // Authentication check
@@ -2120,6 +2120,12 @@
             // Detect Active API Server URL first!
             await detectActiveApiBase();
 
+            // Initialize D365 static mappings and KPI from data.js
+            if (typeof EMPLOYEES !== "undefined") {
+                document.getElementById('kpiTotalEmployees').textContent = EMPLOYEES.length;
+            }
+            populateEmployeesDropdowns();
+
             // Bind tab change events to lazy load content and update hash/localstorage
             const tabElements = document.querySelectorAll('#adminSidebarTabs button[data-bs-toggle="tab"]');
             tabElements.forEach(tabEl => {
@@ -2145,11 +2151,16 @@
                 initialTab = '#sales-content'; // Default active tab
             }
 
-            // Activate initial tab in the DOM (this will trigger shown.bs.tab and lazy load its content)
+            // Activate initial tab in the DOM
             const initialTabButton = document.querySelector(`button[data-bs-target="${initialTab}"]`);
             if (initialTabButton) {
-                const triggerEl = new bootstrap.Tab(initialTabButton);
-                triggerEl.show();
+                if (initialTabButton.classList.contains('active')) {
+                    // Tab is already active in HTML - show() will NOT fire shown.bs.tab event
+                    await loadTabContent(initialTab);
+                } else {
+                    const triggerEl = bootstrap.Tab.getOrCreateInstance(initialTabButton);
+                    triggerEl.show();
+                }
             } else {
                 // Fallback direct load
                 await loadTabContent('#sales-content');
@@ -2163,16 +2174,30 @@
         }
 
         let loadedTabs = {};
+        let currentVersionTimestamp = null;
         let mgmtDataTimestamp = null;
         let empDataTimestamp = null;
 
-        async function ensureMgmtDataLoaded() {
+        async function getVersionTimestamp() {
+            if (currentVersionTimestamp) {
+                return currentVersionTimestamp;
+            }
             try {
                 // Fetch last_updated.json first (small, fast check)
                 const updateRes = await fetch('last_updated.json?t=' + Date.now());
                 if (!updateRes.ok) throw new Error("تعذر جلب ملف تحديث البيانات");
                 const updateJson = await updateRes.json();
-                const serverTimestamp = updateJson.last_updated;
+                currentVersionTimestamp = updateJson.last_updated;
+                return currentVersionTimestamp;
+            } catch (e) {
+                console.error("Failed to fetch last_updated.json", e);
+                return Date.now().toString(); // fallback
+            }
+        }
+
+        async function ensureMgmtDataLoaded() {
+            try {
+                const serverTimestamp = await getVersionTimestamp();
                 
                 if (mgmtData && mgmtDataTimestamp === serverTimestamp) {
                     return; // Already loaded and matches latest server data
@@ -2183,8 +2208,9 @@
                 mgmtData = await mgmtRes.json();
                 mgmtDataTimestamp = serverTimestamp;
                 
-                // Clear tab load cache since base data changed
-                loadedTabs = {};
+                // Clear specific tab load cache since management data changed
+                delete loadedTabs['#sales-content'];
+                delete loadedTabs['#targets-content'];
                 
                 // Set MTD KPIs
                 document.getElementById('kpiActiveStores').textContent = Object.keys(mgmtData.stores).filter(id => !['0', '1013'].includes(id)).length;
@@ -2196,11 +2222,7 @@
 
         async function ensureEmpDataLoaded() {
             try {
-                // Fetch last_updated.json first (small, fast check)
-                const updateRes = await fetch('last_updated.json?t=' + Date.now());
-                if (!updateRes.ok) throw new Error("تعذر جلب ملف تحديث البيانات");
-                const updateJson = await updateRes.json();
-                const serverTimestamp = updateJson.last_updated;
+                const serverTimestamp = await getVersionTimestamp();
                 
                 if (empData && empDataTimestamp === serverTimestamp) {
                     return; // Already loaded and matches latest server data
@@ -2211,8 +2233,8 @@
                 empData = await empRes.json();
                 empDataTimestamp = serverTimestamp;
                 
-                // Clear tab load cache since base data changed
-                loadedTabs = {};
+                // Clear specific tab load cache since employee data changed
+                delete loadedTabs['#targets-content'];
                 
                 // Set Employee KPIs & Dropdowns
                 document.getElementById('kpiTotalEmployees').textContent = typeof EMPLOYEES !== "undefined" ? EMPLOYEES.length : 0;
@@ -2638,6 +2660,7 @@
                 
                 if (res.ok) {
                     alert(`✅ تم تحديث تارجت معرض "${outletName}" بنجاح!`);
+                    currentVersionTimestamp = null;
                     mgmtDataTimestamp = null;
                     empDataTimestamp = null;
                     loadedTabs = {};
@@ -2671,6 +2694,7 @@
 
                 if (res.ok) {
                     alert(`✅ تم تحديث تارجت الموظف "${empName}" بنجاح!`);
+                    currentVersionTimestamp = null;
                     mgmtDataTimestamp = null;
                     empDataTimestamp = null;
                     loadedTabs = {};
@@ -4043,6 +4067,7 @@
 
                 alert("✅ تم حفظ التعديلات والمزامنة بنجاح!");
                 bootstrap.Modal.getInstance(document.getElementById('visitorModal')).hide();
+                currentVersionTimestamp = null;
                 mgmtDataTimestamp = null;
                 empDataTimestamp = null;
                 loadedTabs = {};
@@ -4082,7 +4107,8 @@
             `;
 
             try {
-                const res = await fetch('offers_data.json?t=' + Date.now());
+                const serverTimestamp = await getVersionTimestamp();
+                const res = await fetch('offers_data.json?v=' + serverTimestamp);
                 if (!res.ok) throw new Error("تعذر جلب ملف العروض");
                 allOffersCache = await res.json();
                 
@@ -4272,10 +4298,11 @@
             `;
 
             try {
+                const serverTimestamp = await getVersionTimestamp();
                 const [prodRes, catRes, firstSeenRes] = await Promise.all([
-                    fetch('ceo_data/products.json?t=' + Date.now()),
-                    fetch('categories_map.json?t=' + Date.now()).catch(() => null),
-                    fetch('first_seen.json?t=' + Date.now()).catch(() => null)
+                    fetch('ceo_data/products.json?v=' + serverTimestamp),
+                    fetch('categories_map.json?v=' + serverTimestamp).catch(() => null),
+                    fetch('first_seen.json?v=' + serverTimestamp).catch(() => null)
                 ]);
 
                 if (!prodRes.ok) throw new Error("تعذر جلب ملف كتالوج المنتجات products.json");
@@ -5476,6 +5503,7 @@
                     if (modal) modal.hide();
                     
                     // Reset cache
+                    currentVersionTimestamp = null;
                     mgmtDataTimestamp = null;
                     empDataTimestamp = null;
                     loadedTabs = {};
