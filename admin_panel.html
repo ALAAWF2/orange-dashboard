@@ -2638,9 +2638,16 @@
                 
                 if (res.ok) {
                     alert(`✅ تم تحديث تارجت معرض "${outletName}" بنجاح!`);
-                    fetchTargetsData();
+                    mgmtDataTimestamp = null;
+                    empDataTimestamp = null;
+                    loadedTabs = {};
+                    
+                    await ensureMgmtDataLoaded();
                     loadShowroomPerformance();
-                    loadAuditLogs();
+                    fetchTargetsData();
+                    if (loadedTabs['#audit-content']) {
+                        loadAuditLogs();
+                    }
                 } else {
                     const err = await res.json();
                     alert("خطأ: " + err.error);
@@ -2664,8 +2671,15 @@
 
                 if (res.ok) {
                     alert(`✅ تم تحديث تارجت الموظف "${empName}" بنجاح!`);
+                    mgmtDataTimestamp = null;
+                    empDataTimestamp = null;
+                    loadedTabs = {};
+                    
+                    await ensureEmpDataLoaded();
                     fetchTargetsData();
-                    loadAuditLogs();
+                    if (loadedTabs['#audit-content']) {
+                        loadAuditLogs();
+                    }
                 } else {
                     const err = await res.json();
                     alert("خطأ: " + err.error);
@@ -4029,9 +4043,15 @@
 
                 alert("✅ تم حفظ التعديلات والمزامنة بنجاح!");
                 bootstrap.Modal.getInstance(document.getElementById('visitorModal')).hide();
-                loadAllSystemData();
+                mgmtDataTimestamp = null;
+                empDataTimestamp = null;
+                loadedTabs = {};
+                
+                await loadAllSystemData();
                 loadShowroomPerformance();
-                runLiveAuditing();
+                if (loadedTabs['#audit-content']) {
+                    runLiveAuditing();
+                }
             } catch (e) {
                 alert("Error saving: " + e.message);
             }
@@ -5455,10 +5475,17 @@
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
                     
-                    // Refresh data
+                    // Reset cache
+                    mgmtDataTimestamp = null;
+                    empDataTimestamp = null;
+                    loadedTabs = {};
+                    
                     fetchTargetsData();
+                    await ensureMgmtDataLoaded();
                     loadShowroomPerformance();
-                    loadAuditLogs();
+                    if (loadedTabs['#audit-content']) {
+                        loadAuditLogs();
+                    }
                 } else {
                     const err = await res.json();
                     alert("خطأ أثناء الحفظ: " + err.error);
