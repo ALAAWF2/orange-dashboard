@@ -1546,6 +1546,18 @@
           console.warn("Failed to load promo prices from Supabase:", promoDbErr);
         }
 
+        // Load items under active Dynamics POS offers (generated every 15 min)
+        try {
+          const offersRes = await fetch("active_offers.json?_=" + Date.now(), { cache: "no-store" });
+          if (offersRes.ok) {
+            const offersData = await offersRes.json();
+            dynamicsOffers = offersData.items || {};
+            console.log("✅ Active Dynamics offers loaded:", Object.keys(dynamicsOffers).length);
+          }
+        } catch (offersErr) {
+          console.warn("Failed to load active offers (non-fatal):", offersErr);
+        }
+
         batchPrintItems = [];
         catalogLoaded = true;
 
@@ -1859,6 +1871,7 @@
     let favorites = new Set();
     let editingOrderId = null; // Track order being edited
     let promoPrices = {};
+    let dynamicsOffers = {}; // item_id -> active POS offer name (from active_offers.json)
     let batchPrintItems = [];
     let logoutTimer;
     let submitting = false;
@@ -3019,7 +3032,7 @@
           || String(d.name).toLowerCase().includes(searchTerm)) &&
         filterByPrice(d.price, priceRange) &&
         (!newOnly || isNewArrival(d.code)) &&
-        (!promoOnly || getPromoPrice(d.code, d.alias) !== null) &&
+        (!promoOnly || getPromoPrice(d.code, d.alias) !== null || getDynamicsOffer(d.code) !== null) &&
         (!favOnly || favorites.has(String(d.code))) &&
         (!showroomStockOnly || getQtyInMall(d) > 0)
       );
@@ -3094,6 +3107,8 @@
         productsToShow.map(d => {
           const safeName = String(d.name || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
           const promoPrice = getPromoPrice(d.code, d.alias);
+          const dynOffer = getDynamicsOffer(d.code);
+          const safeOffer = dynOffer ? String(dynOffer).replace(/'/g, "&#39;").replace(/"/g, "&quot;") : '';
           return `
       <div class="product">
         <div class="product-image-container" onclick="showProductDetails('${d.code}')">
@@ -3119,7 +3134,10 @@
                   ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:0.85em; margin-right:6px;">${d.price}</span>`
                   : '') +
                 `<span style="background:#e74c3c; color:#fff; border-radius:6px; padding:1px 7px; font-size:0.72em; font-weight:800; margin-right:4px;">عرض</span>`
-              : `<span class="product-price">${d.price} <span>ريال</span></span>`}
+              : `<span class="product-price">${d.price} <span>ريال</span></span>` +
+                (dynOffer
+                  ? `<span title="${safeOffer}" style="background:#fdecea; color:#c0392b; border:1px solid #e74c3c; border-radius:6px; padding:1px 7px; font-size:0.72em; font-weight:800; margin-right:4px; cursor:help;">🏷️ عرض</span>`
+                  : '')}
           </div>
           
           <div class="product-tags">
@@ -3620,6 +3638,15 @@
       if (promoPrices[c] !== undefined) return promoPrices[c];
       if (promoPrices[cAlt] !== undefined) return promoPrices[cAlt];
       if (a && promoPrices[a] !== undefined) return promoPrices[a];
+      return null;
+    }
+
+    // Active Dynamics POS offer name for an item (from active_offers.json), or null
+    function getDynamicsOffer(code) {
+      const c = String(code).trim();
+      if (dynamicsOffers[c] !== undefined) return dynamicsOffers[c];
+      const cAlt = c.toUpperCase().startsWith("KIT-") ? c.substring(4) : "KIT-" + c;
+      if (dynamicsOffers[cAlt] !== undefined) return dynamicsOffers[cAlt];
       return null;
     }
 
