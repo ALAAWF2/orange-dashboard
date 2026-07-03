@@ -1546,6 +1546,15 @@
 
             <!-- Tab 3: Employee Dynamics 365 Mappings Portal -->
             <div class="tab-pane fade" id="employees-content" role="tabpanel">
+                <!-- Unmapped Salespeople Section (D365 Portal Integration) -->
+                <div id="unmappedAlertSection" class="glass-card mb-4 border border-danger-subtle" style="display: none; background: rgba(220,53,69,0.05);">
+                    <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-triangle-exclamation"></i> أكواد مبيعات غير معينة (نشطة اليوم)</h6>
+                    <p class="text-muted small mb-3">أكواد المبيعات التالية لها حركات بيع نشطة اليوم ولكنها غير مربوطة بأي موظف في Dynamics 365. يرجى ربطها فوراً لضمان احتساب العمولات والمستهدفات بشكل صحيح.</p>
+                    <div class="row g-3" id="unmappedPortalContainer">
+                        <!-- Dynamic list of unmapped codes -->
+                    </div>
+                </div>
+
                 <div class="glass-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
@@ -1555,7 +1564,7 @@
                     </div>
 
                     <!-- Filter Options Panel -->
-                    <div class="row g-2 mb-4">
+                    <div class="row g-2 mb-3">
                         <div class="col-md-3">
                             <input type="text" id="empSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو رقم الموظف..." oninput="renderEmployeesTable()">
                         </div>
@@ -1574,6 +1583,18 @@
                         </div>
                     </div>
 
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div class="form-check form-switch ms-2" style="direction: rtl;">
+                            <input class="form-check-input" type="checkbox" id="empNoSales30Days" onchange="renderEmployeesTable()">
+                            <label class="form-check-label small text-muted fw-bold me-4" for="empNoSales30Days">
+                                <i class="fa-solid fa-user-slash me-1 text-danger"></i> إظهار الموظفين بلا مبيعات منذ 30 يوماً (الخاملين)
+                            </label>
+                        </div>
+                        <button class="btn btn-outline-success fw-bold btn-sm py-2 px-3" onclick="exportEmployeesToExcel()">
+                            <i class="fa-solid fa-file-excel me-1"></i> تصدير الموظفين المفلترين إلى إكسل 📥
+                        </button>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-premium text-center align-middle" id="employeesTable">
                             <thead>
@@ -1583,11 +1604,12 @@
                                     <th>المعارض النشط فيها (D365 Showrooms)</th>
                                     <th>تاريخ المباشرة</th>
                                     <th>مدير المنطقة</th>
-                                    <th>الإجراءات الإدارية</th>
+                                    <th>آخر مبيعات فعلية</th>
+                                    <th>الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="employeesTableBody">
-                                <!-- Injected dynamically from data.js -->
+                                <!-- Injected dynamically -->
                             </tbody>
                         </table>
                     </div>
@@ -2685,7 +2707,9 @@
                     await fetchTargetsData();
                     break;
                 case '#employees-content':
-                    renderEmployeesTable(); // Uses EMPLOYEES from data.js
+                    await ensureEmpDataLoaded();
+                    loadUnmappedSalespeoplePortal();
+                    renderEmployeesTable();
                     break;
                 case '#audit-content':
                     await runLiveAuditing();
