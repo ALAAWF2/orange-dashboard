@@ -339,7 +339,7 @@
         async function fetchLogs() {
             const container = document.getElementById('logsContainer');
             try {
-                const res = await fetch(`${API_BASE}/api/audit_logs`, {
+                const res = await fetch(`${API_BASE}/api/audit_logs?limit=10000`, {
                     headers: {
                         'Authorization': authHeader,
                         'ngrok-skip-browser-warning': 'true'
@@ -356,7 +356,8 @@
                     throw new Error("فشل الاتصال بالسيرفر: " + res.status);
                 }
 
-                allLogs = await res.json();
+                const data = await res.json();
+                allLogs = Array.isArray(data) ? data : (data.logs || []);
                 renderLogs(allLogs);
 
             } catch (e) {
