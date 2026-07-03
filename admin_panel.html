@@ -1502,6 +1502,22 @@
                         </div>
                     </div>
                 </div>
+                <!-- Bulk Target Copy & Growth Panel -->
+                <div class="glass-card mb-4 border-start border-4 border-success">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-copy text-success me-2"></i> ترحيل مستهدفات الفروع والموظفين جماعياً</h5>
+                            <p class="text-muted small mb-0">نسخ مستهدفات الشهر السابق للشهر الحالي مع تطبيق نسبة نمو اختيارية لجميع الفروع وموظفيها بضغطة واحدة.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap" style="direction: rtl;">
+                            <div class="input-group" style="width: 170px;">
+                                <span class="input-group-text bg-dark border-secondary text-light" style="font-size: 0.8rem;">نمو %</span>
+                                <input type="number" id="bulkGrowthPercent" class="form-control form-control-dark" value="5" min="-50" max="100" style="font-size: 0.85rem;">
+                            </div>
+                            <button class="btn btn-success btn-sm px-3 py-2 fw-bold" onclick="copyLastMonthTargetsBulk()"><i class="fa-solid fa-clone me-1"></i> ترحيل وحفظ جماعي 💾</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="glass-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -1523,7 +1539,6 @@
                     </div>
 
                     <div id="targetSettingsContainer" class="accordion">
-                        <!-- Loaded dynamically as branch cards with editable store and employee target lists -->
                         <div class="text-center py-5 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> جاري تحميل بيانات المستهدفات...</div>
                     </div>
                 </div>
@@ -2196,6 +2211,38 @@
                         <button class="btn btn-success w-100 py-2 fw-bold" onclick="submitEmpAdd()"><i class="fa-solid fa-square-plus"></i> تأكيد إضافة الموظف للمعرض</button>
                     </div>
  
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Link Salesperson to Employee Modal -->
+    <div class="modal fade" id="linkSalespersonModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); z-index: 1090;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-white border" style="border-radius: 16px; border: 2px solid var(--orange) !important;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-orange"><i class="fa-solid fa-link me-2 text-orange"></i> ربط كود مبيعات بموظف</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="linkSalespersonForm" onsubmit="submitSalespersonLink(event)">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">كود المبيعات (Sales Group):</label>
+                            <input type="text" id="linkSalesGroup" class="form-control form-control-dark" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">الرقم الوظيفي (Personnel Number):</label>
+                            <select id="linkEmployeeSelect" class="form-select form-control-dark" onchange="onLinkEmployeeSelectChange()" required>
+                                <option value="">اختر الموظف من Dynamics 365...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">الاسم بالعربي (Arabic Name):</label>
+                            <input type="text" id="linkArabicName" class="form-control form-control-dark" required>
+                        </div>
+                        <button type="submit" class="btn btn-orange-premium w-100 py-2 fw-bold"><i class="fa-solid fa-save"></i> حفظ عملية الربط</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -3105,8 +3152,66 @@
                     // Sort alphabetically
                     storeEmployees.sort((a, b) => a.name.localeCompare(b.name));
                     
+                    // Calculate last year's sales for the same month
+                    const prevYear = selYear - 1;
+                    const prevMonthStr = `${prevYear}-${String(selMonth).padStart(2, '0')}`;
+                    let prevMtdSales = 0;
+                    if (window.mgmtData && window.mgmtData.sales) {
+                        window.mgmtData.sales.forEach(([date, sid, amt]) => {
+                            if (matchSCode(sid) === matchSCode(storeCode) && date.startsWith(prevMonthStr)) {
+                                prevMtdSales += amt;
+                            }
+                        });
+                    }
+
+                    // Calculate sum of employee targets
+                    let sumEmpTargets = 0;
+                    storeEmployees.forEach(emp => {
+                        const empTargetObj = data.employee_targets_raw?.[emp.id] || { amount: 0 };
+                        sumEmpTargets += empTargetObj.amount || 0;
+                    });
+                    
+                    const isConsistent = Math.abs(sumEmpTargets - store.target) <= 5;
+                    const diffAmount = store.target - sumEmpTargets;
+                    
+                    let warningBadgeHtml = '';
+                    let warningAlertHtml = '';
+                    if (!isConsistent) {
+                        warningBadgeHtml = `
+                            <span class="badge bg-danger-glow text-danger ms-3" title="مجموع مستهدفات الموظفين لا يتطابق مع تارجت المعرض!">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i> فجوة: ${formatSAR(diffAmount)}
+                            </span>
+                        `;
+                        warningAlertHtml = `
+                            <div class="alert alert-danger-glow border-danger text-danger py-2 px-3 small d-flex justify-content-between align-items-center mb-3">
+                                <span>
+                                    <i class="fa-solid fa-triangle-exclamation me-2"></i> 
+                                    مجموع مستهدفات الموظفين (${formatSAR(sumEmpTargets)}) لا يتطابق مع تارجت المعرض (${formatSAR(store.target)}). 
+                                    الفارق: <strong>${formatSAR(diffAmount)}</strong>
+                                </span>
+                            </div>
+                        `;
+                    }
+                    
                     let empRowsHtml = '';
                     storeEmployees.forEach(emp => {
+                        // Calculate employee sales for the same month last year (LY)
+                        let empLYSales = 0;
+                        const prevYearMonthStr = `${selYear - 1}-${String(selMonth).padStart(2, '0')}`;
+                        const records = employeeHistory[emp.storeCode] || [];
+                        records.forEach(rec => {
+                            const [date, rawName, sales] = rec;
+                            if (date.startsWith(prevYearMonthStr)) {
+                                let empId = rawName;
+                                if (rawName.includes('-')) {
+                                    empId = rawName.split('-')[0].trim();
+                                }
+                                if (empId === emp.id) {
+                                    empLYSales += sales || 0;
+                                }
+                            }
+                        });
+
                         // Get current MTD employee target
                         const empTargetObj = data.employee_targets_raw?.[emp.id] || { amount: 0 };
                         empRowsHtml += `
@@ -3114,6 +3219,7 @@
                                 <div class="col-12 col-md-4 mb-2 mb-md-0">
                                     <span class="fw-bold">${emp.name}</span>
                                     <small class="text-muted d-block">كود: ${emp.id}</small>
+                                    <small class="text-muted d-block mt-1">السنة الماضية (LY): <strong class="text-info">${formatSAR(empLYSales)}</strong></small>
                                 </div>
                                 <div class="col-7 col-md-5">
                                     <div class="input-group">
@@ -3139,7 +3245,10 @@
                             <button class="accordion-button accordion-button-dark collapsed d-flex justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${store.id}">
                                 <div class="d-flex justify-content-between w-100 align-items-center">
                                     <span><i class="fa-solid fa-store text-orange me-2"></i> ${store.outlet}</span>
-                                    <span class="text-muted small ms-4">تارجت المعرض الحالي: <strong class="text-warning">${formatSAR(store.target)}</strong></span>
+                                    <div class="d-flex align-items-center">
+                                        ${warningBadgeHtml}
+                                        <span class="text-muted small ms-4">تارجت المعرض الحالي: <strong class="text-warning">${formatSAR(store.target)}</strong></span>
+                                    </div>
                                 </div>
                             </button>
                         </h2>
@@ -3149,7 +3258,7 @@
                                 <div class="row align-items-center mb-4 p-3 bg-dark rounded border border-secondary">
                                     <div class="col-12 col-md-4 mb-2 mb-md-0">
                                         <h6 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-pen-to-square"></i> تعديل تارجت الفرع الإجمالي</h6>
-                                        <small class="text-muted">أدخل تارجت المعرض للشهر الحالي</small>
+                                        <small class="text-muted">مبيعات السنة الماضية (LY): <strong class="text-info">${formatSAR(prevMtdSales)}</strong></small>
                                     </div>
                                     <div class="col-7 col-md-5">
                                         <div class="input-group">
@@ -3166,6 +3275,7 @@
 
                                 <!-- Employee Targets -->
                                 <h6 class="fw-bold mb-3 text-orange"><i class="fa-solid fa-users-gear"></i> مستهدفات الموظفين بالمعرض:</h6>
+                                ${warningAlertHtml}
                                 ${empRowsHtml}
                                 ${storeEmployees.length > 0 ? `
                                 <div class="text-start mt-3">
@@ -3337,13 +3447,39 @@
             tbody.innerHTML = '';
 
             if (typeof EMPLOYEES === "undefined") {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-danger py-4">ملف المزامنة data.js مفقود أو معطوب.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-danger py-4">ملف المزامنة data.js مفقود أو معطوب.</td></tr>';
                 return;
             }
 
             const selectedManager = document.getElementById('empManagerFilter').value;
             const selectedShowroom = document.getElementById('empShowroomFilter').value;
             const searchQuery = document.getElementById('empSearchInput').value.trim().toLowerCase();
+            const hideActiveEmps = document.getElementById('empNoSales30Days').checked;
+
+            // Build last sales dates map
+            const employeeHistory = empData ? (empData.history || {}) : {};
+            const lastSalesDatesMap = {};
+            Object.entries(employeeHistory).forEach(([storeCode, records]) => {
+                records.forEach(rec => {
+                    const [date, rawName, sales] = rec;
+                    if ((sales || 0) > 0) {
+                        let empId = rawName;
+                        if (rawName.includes('-')) {
+                            empId = rawName.split('-')[0].trim();
+                        }
+                        if (!lastSalesDatesMap[empId] || date > lastSalesDatesMap[empId]) {
+                            lastSalesDatesMap[empId] = date;
+                        }
+                    }
+                });
+            });
+
+            let cutoffDateStr = "";
+            if (hideActiveEmps) {
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - 30);
+                cutoffDateStr = `${cutoffDate.getFullYear()}-${String(cutoffDate.getMonth() + 1).padStart(2, '0')}-${String(cutoffDate.getDate()).padStart(2, '0')}`;
+            }
 
             // Perform robust multi-layer filtering
             const filtered = EMPLOYEES.filter(emp => {
@@ -3365,6 +3501,14 @@
                     if (!nameMatch && !personnelMatch) return false;
                 }
 
+                // 4. Filter by No Sales in Last 30 Days
+                if (hideActiveEmps) {
+                    const lastSale = lastSalesDatesMap[emp.personnelNumber] || "";
+                    if (lastSale && lastSale >= cutoffDateStr) {
+                        return false;
+                    }
+                }
+
                 return true;
             });
 
@@ -3372,12 +3516,14 @@
             updateEmployeeStats();
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-4">لا يوجد موظفون مطابقة لخيارات التصفية والبحث المحددة.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-muted py-4">لا يوجد موظفون مطابقة لخيارات التصفية والبحث المحددة.</td></tr>';
                 return;
             }
 
             filtered.forEach(emp => {
                 const showroomsBadges = emp.showroomDetails.map(s => `<span class="badge bg-secondary me-1 py-1" style="font-size:0.75rem;">${s.name}</span>`).join("");
+                const lastSaleDate = lastSalesDatesMap[emp.personnelNumber] || 'لا توجد مبيعات';
+                const lastSaleClass = lastSaleDate === 'لا توجد مبيعات' ? 'text-muted small' : 'fw-bold text-success';
                 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -3386,6 +3532,7 @@
                     <td class="text-start">${showroomsBadges}</td>
                     <td>${emp.startDate}</td>
                     <td class="text-warning">${emp.manager || 'غير معين'}</td>
+                    <td class="${lastSaleClass}">${lastSaleDate}</td>
                     <td>
                         <button class="btn btn-outline-warning btn-sm" onclick="openEmpManageModal('${emp.personnelNumber}')">
                              ⚙️ إدارة <i class="fa-solid fa-gears ms-1"></i>
@@ -3394,6 +3541,231 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        async function loadUnmappedSalespeoplePortal() {
+            const alertSection = document.getElementById('unmappedAlertSection');
+            const container = document.getElementById('unmappedPortalContainer');
+            if (!alertSection || !container) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/it_diagnostics?days=1`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) throw new Error("Failed to load unmapped salespeople");
+                
+                const data = await res.json();
+                const list = data.unmapped_salespeople || [];
+                
+                if (list.length === 0) {
+                    alertSection.style.display = 'none';
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                alertSection.style.display = 'block';
+                container.innerHTML = '';
+                
+                list.forEach(emp => {
+                    const card = document.createElement('div');
+                    card.className = 'col-12 col-md-4';
+                    card.innerHTML = `
+                        <div class="p-3 bg-dark border border-danger-subtle rounded d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-danger fs-6">${emp.sales_group}</strong>
+                                <small class="text-muted d-block mt-1">المعرض: ${emp.branch}</small>
+                                <small class="text-muted d-block">مبيعات اليوم: <strong class="text-warning">${formatSAR(emp.sales_amount)}</strong></small>
+                            </div>
+                            <button class="btn btn-outline-danger btn-sm fw-bold px-3 py-2" onclick="openLinkSalespersonModal('${emp.sales_group}')">
+                                <i class="fa-solid fa-link me-1"></i> ربط الكود ⚙️
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                
+            } catch (e) {
+                console.error("Error loading unmapped salespeople for portal:", e);
+            }
+        }
+
+        function openLinkSalespersonModal(salesGroup) {
+            const sGroupInput = document.getElementById('linkSalesGroup');
+            if (!sGroupInput) return;
+            
+            sGroupInput.value = salesGroup;
+            populateLinkEmployeeSelect();
+            
+            document.getElementById('linkEmployeeSelect').value = '';
+            document.getElementById('linkArabicName').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('linkSalespersonModal'));
+            modal.show();
+        }
+
+        function populateLinkEmployeeSelect() {
+            const select = document.getElementById('linkEmployeeSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">اختر الموظف من Dynamics 365...</option>';
+            
+            if (typeof EMPLOYEES !== 'undefined' && EMPLOYEES.length > 0) {
+                const sorted = [...EMPLOYEES].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+                sorted.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.personnelNumber;
+                    opt.textContent = `${emp.name} (${emp.personnelNumber})`;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        function onLinkEmployeeSelectChange() {
+            const select = document.getElementById('linkEmployeeSelect');
+            const nameInput = document.getElementById('linkArabicName');
+            if (!select || !nameInput) return;
+            
+            const selectedOpt = select.options[select.selectedIndex];
+            if (selectedOpt && select.value) {
+                const text = selectedOpt.textContent;
+                const name = text.substring(0, text.lastIndexOf('(')).trim();
+                nameInput.value = name;
+            } else {
+                nameInput.value = '';
+            }
+        }
+
+        async function submitSalespersonLink(event) {
+            event.preventDefault();
+            
+            const sales_group = document.getElementById('linkSalesGroup').value;
+            const employee_id = document.getElementById('linkEmployeeSelect').value;
+            const arabic_name = document.getElementById('linkArabicName').value.trim();
+            
+            if (!sales_group || !employee_id || !arabic_name) {
+                showToast("الرجاء ملء جميع الحقول المطلوبة", "warning");
+                return;
+            }
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const origText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جاري الحفظ...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/save_employee_mapping`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        sales_group: sales_group,
+                        employee_id: employee_id,
+                        arabic_name: arabic_name
+                    })
+                });
+                
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || "فشل الاتصال بالخادم لحفظ الربط");
+                }
+                
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                
+                showToast(`تم ربط كود المبيعات ${sales_group} بالموظف ${arabic_name} بنجاح!`, "success");
+                
+                const modalEl = document.getElementById('linkSalespersonModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                
+                loadUnmappedSalespeoplePortal();
+                syncD365Portal();
+                
+            } catch (err) {
+                console.error(err);
+                showToast("حدث خطأ أثناء حفظ الربط: " + err.message, "danger");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origText;
+            }
+        }
+
+        function exportEmployeesToExcel() {
+            if (typeof EMPLOYEES === "undefined") {
+                showToast("بيانات الموظفين غير متوفرة للتصدير", "warning");
+                return;
+            }
+            
+            const selectedManager = document.getElementById('empManagerFilter').value;
+            const selectedShowroom = document.getElementById('empShowroomFilter').value;
+            const searchQuery = document.getElementById('empSearchInput').value.trim().toLowerCase();
+            const hideActiveEmps = document.getElementById('empNoSales30Days').checked;
+            
+            let cutoffDateStr = "";
+            if (hideActiveEmps) {
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - 30);
+                cutoffDateStr = `${cutoffDate.getFullYear()}-${String(cutoffDate.getMonth() + 1).padStart(2, '0')}-${String(cutoffDate.getDate()).padStart(2, '0')}`;
+            }
+            
+            const employeeHistory = empData ? (empData.history || {}) : {};
+            const lastSalesDatesMap = {};
+            Object.entries(employeeHistory).forEach(([storeCode, records]) => {
+                records.forEach(rec => {
+                    const [date, rawName, sales] = rec;
+                    if ((sales || 0) > 0) {
+                        let empId = rawName;
+                        if (rawName.includes('-')) {
+                            empId = rawName.split('-')[0].trim();
+                        }
+                        if (!lastSalesDatesMap[empId] || date > lastSalesDatesMap[empId]) {
+                            lastSalesDatesMap[empId] = date;
+                        }
+                    }
+                });
+            });
+            
+            const filtered = EMPLOYEES.filter(emp => {
+                if (selectedManager !== 'all' && emp.manager !== selectedManager) return false;
+                if (selectedShowroom !== 'all') {
+                    const hasShowroom = emp.showroomDetails && emp.showroomDetails.some(s => s.name === selectedShowroom);
+                    if (!hasShowroom) return false;
+                }
+                if (searchQuery) {
+                    const nameMatch = emp.name && emp.name.toLowerCase().includes(searchQuery);
+                    const personnelMatch = emp.personnelNumber && emp.personnelNumber.toLowerCase().includes(searchQuery);
+                    if (!nameMatch && !personnelMatch) return false;
+                }
+                if (hideActiveEmps) {
+                    const lastSale = lastSalesDatesMap[emp.personnelNumber] || "";
+                    if (lastSale && lastSale >= cutoffDateStr) return false;
+                }
+                return true;
+            });
+            
+            if (filtered.length === 0) {
+                showToast("لا توجد بيانات موظفين مطابقة لتصديرها", "warning");
+                return;
+            }
+            
+            const exportData = filtered.map(emp => ({
+                "اسم الموظف": emp.name,
+                "الرقم الوظيفي": emp.personnelNumber,
+                "المعارض النشط بها": emp.showroomDetails.map(s => s.name).join(', '),
+                "تاريخ المباشرة": emp.startDate,
+                "مدير المنطقة": emp.manager || 'غير معين',
+                "آخر مبيعات فعلية": lastSalesDatesMap[emp.personnelNumber] || 'لا توجد مبيعات'
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "الموظفون المفلترون");
+            
+            const dateStr = new Date().toISOString().substring(0, 10);
+            XLSX.writeFile(wb, `تقرير_موظفي_الفروع_${dateStr}.xlsx`);
+            showToast("تم تصدير ملف الإكسل بنجاح!", "success");
         }
 
         function populateEmpManageModal(personnelNum) {
@@ -6362,6 +6734,99 @@
                     btn.disabled = false;
                     btn.innerHTML = origHtml;
                 }
+            }
+        }
+
+        async function copyLastMonthTargetsBulk() {
+            const currentMonthStr = document.getElementById('targetMonth').value; // YYYY-MM
+            if (!currentMonthStr) return;
+            
+            const [year, month] = currentMonthStr.split('-').map(Number);
+            let prevYear = year;
+            let prevMonth = month - 1;
+            if (prevMonth === 0) {
+                prevMonth = 12;
+                prevYear = year - 1;
+            }
+            const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+            
+            const growthInput = document.getElementById('bulkGrowthPercent');
+            const growthMultiplier = 1 + (parseFloat(growthInput.value || 0) / 100);
+            
+            if (!confirm(`هل أنت متأكد من ترحيل مستهدفات شهر ${prevMonthStr} إلى شهر ${currentMonthStr} مع تطبيق نسبة نمو (${growthInput.value}%) لجميع الفروع والموظفين؟`)) {
+                return;
+            }
+            
+            showToast("جاري جلب مستهدفات الشهر السابق...", "info");
+            
+            try {
+                const prevRes = await fetch(`${API_BASE}/api/targets?month=${prevMonthStr}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                
+                if (!prevRes.ok) throw new Error("تعذر جلب مستهدفات الشهر السابق");
+                const prevData = await prevRes.json();
+                
+                const store_targets = [];
+                const employee_targets = [];
+                
+                prevData.stores.forEach(st => {
+                    if (st.target > 0) {
+                        store_targets.push({
+                            store_id: st.id,
+                            store_name: st.outlet,
+                            amount: Math.round(st.target * growthMultiplier)
+                        });
+                    }
+                });
+                
+                if (prevData.employee_targets_raw) {
+                    Object.entries(prevData.employee_targets_raw).forEach(([empId, obj]) => {
+                        if (obj.amount > 0) {
+                            employee_targets.push({
+                                emp_id: empId,
+                                emp_name: obj.employee_name || "Unknown",
+                                amount: Math.round(obj.amount * growthMultiplier)
+                            });
+                        }
+                    });
+                }
+                
+                if (store_targets.length === 0 && employee_targets.length === 0) {
+                    showToast("لم يتم العثور على أي مستهدفات مسجلة في الشهر السابق للترحيل", "warning");
+                    return;
+                }
+                
+                showToast(`جاري حفظ ${store_targets.length} معارض و ${employee_targets.length} موظفين...`, "info");
+                
+                const saveRes = await fetch(`${API_BASE}/api/save_bulk_targets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        month: currentMonthStr,
+                        store_targets: store_targets,
+                        employee_targets: employee_targets
+                    })
+                });
+                
+                if (!saveRes.ok) {
+                    const errText = await saveRes.text();
+                    throw new Error(errText || "فشل حفظ الترحيل الجماعي");
+                }
+                
+                const saveJson = await saveRes.json();
+                if (saveJson.error) throw new Error(saveJson.error);
+                
+                showToast("تم ترحيل وحفظ المستهدفات لجميع الفروع والموظفين بنجاح!", "success");
+                fetchTargetsData();
+                
+            } catch (err) {
+                console.error(err);
+                showToast("حدث خطأ أثناء الترحيل الجماعي: " + err.message, "danger");
             }
         }
 
