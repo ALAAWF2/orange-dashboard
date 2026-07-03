@@ -1502,23 +1502,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Bulk Target Copy & Growth Panel -->
-                <div class="glass-card mb-4 border-start border-4 border-success">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                        <div>
-                            <h5 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-copy text-success me-2"></i> ترحيل مستهدفات الفروع والموظفين جماعياً</h5>
-                            <p class="text-muted small mb-0">نسخ مستهدفات الشهر السابق للشهر الحالي مع تطبيق نسبة نمو اختيارية لجميع الفروع وموظفيها بضغطة واحدة.</p>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap" style="direction: rtl;">
-                            <div class="input-group" style="width: 170px;">
-                                <span class="input-group-text bg-dark border-secondary text-light" style="font-size: 0.8rem;">نمو %</span>
-                                <input type="number" id="bulkGrowthPercent" class="form-control form-control-dark" value="5" min="-50" max="100" style="font-size: 0.85rem;">
-                            </div>
-                            <button class="btn btn-success btn-sm px-3 py-2 fw-bold" onclick="copyLastMonthTargetsBulk()"><i class="fa-solid fa-clone me-1"></i> ترحيل وحفظ جماعي 💾</button>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="glass-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -6759,100 +6742,6 @@
                     btn.innerHTML = origHtml;
                 }
             }
-        }
-
-        async function copyLastMonthTargetsBulk() {
-            const currentMonthStr = document.getElementById('targetMonth').value; // YYYY-MM
-            if (!currentMonthStr) return;
-            
-            const [year, month] = currentMonthStr.split('-').map(Number);
-            let prevYear = year;
-            let prevMonth = month - 1;
-            if (prevMonth === 0) {
-                prevMonth = 12;
-                prevYear = year - 1;
-            }
-            const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-            
-            const growthInput = document.getElementById('bulkGrowthPercent');
-            const growthMultiplier = 1 + (parseFloat(growthInput.value || 0) / 100);
-            
-            if (!confirm(`هل أنت متأكد من ترحيل مستهدفات شهر ${prevMonthStr} إلى شهر ${currentMonthStr} مع تطبيق نسبة نمو (${growthInput.value}%) لجميع الفروع والموظفين؟`)) {
-                return;
-            }
-            
-            showToast("جاري جلب مستهدفات الشهر السابق...", "info");
-            
-            try {
-                const prevRes = await fetch(`${API_BASE}/api/targets?month=${prevMonthStr}`, {
-                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
-                });
-                
-                if (!prevRes.ok) throw new Error("تعذر جلب مستهدفات الشهر السابق");
-                const prevData = await prevRes.json();
-                
-                const store_targets = [];
-                const employee_targets = [];
-                
-                prevData.stores.forEach(st => {
-                    if (st.target > 0) {
-                        store_targets.push({
-                            store_id: st.id,
-                            store_name: st.outlet,
-                            amount: Math.round(st.target * growthMultiplier)
-                        });
-                    }
-                });
-                
-                if (prevData.employee_targets_raw) {
-                    Object.entries(prevData.employee_targets_raw).forEach(([empId, obj]) => {
-                        if (obj.amount > 0) {
-                            employee_targets.push({
-                                emp_id: empId,
-                                emp_name: obj.employee_name || "Unknown",
-                                amount: Math.round(obj.amount * growthMultiplier)
-                            });
-                        }
-                    });
-                }
-                
-                if (store_targets.length === 0 && employee_targets.length === 0) {
-                    showToast("لم يتم العثور على أي مستهدفات مسجلة في الشهر السابق للترحيل", "warning");
-                    return;
-                }
-                
-                showToast(`جاري حفظ ${store_targets.length} معارض و ${employee_targets.length} موظفين...`, "info");
-                
-                const saveRes = await fetch(`${API_BASE}/api/save_bulk_targets`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': authHeader,
-                        'ngrok-skip-browser-warning': 'true'
-                    },
-                    body: JSON.stringify({
-                        month: currentMonthStr,
-                        store_targets: store_targets,
-                        employee_targets: employee_targets
-                    })
-                });
-                
-                if (!saveRes.ok) {
-                    const errText = await saveRes.text();
-                    throw new Error(errText || "فشل حفظ الترحيل الجماعي");
-                }
-                
-                const saveJson = await saveRes.json();
-                if (saveJson.error) throw new Error(saveJson.error);
-                
-                showToast("تم ترحيل وحفظ المستهدفات لجميع الفروع والموظفين بنجاح!", "success");
-                fetchTargetsData();
-                
-            } catch (err) {
-                console.error(err);
-                showToast("حدث خطأ أثناء الترحيل الجماعي: " + err.message, "danger");
-            }
-        }
 
         // ==============================================
         // OVERVIEW / MISSION CONTROL (TAB 2.2/4.1) & UTILITIES
