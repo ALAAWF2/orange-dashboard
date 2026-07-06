@@ -4515,25 +4515,6 @@ const EMPLOYEES = [
         "addressBooks": "1101-C;1101-E"
     },
     {
-        "employeeId": "4701-فاطمه حسين المويل",
-        "personnelNumber": "4701",
-        "name": "فاطمه حسين المويل",
-        "startDate": "2025-09-14",
-        "manager": "جهاد ايوبي",
-        "showroom": "2103-42-Dareen Mall Dammam",
-        "showroomDetails": [
-            {
-                "name": "2103-42-Dareen Mall Dammam",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "2103-C",
-                    "2103-E"
-                ]
-            }
-        ],
-        "addressBooks": "2103-C;2103-E"
-    },
-    {
         "employeeId": "4684-عريب فرج القحطاني",
         "personnelNumber": "4684",
         "name": "عريب فرج القحطاني",
