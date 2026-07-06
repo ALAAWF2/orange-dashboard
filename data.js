@@ -752,18 +752,18 @@ const EMPLOYEES = [
         "name": "صالح",
         "startDate": "2021-08-02",
         "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall",
+        "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
-                "name": "1102-15-Riyadh Othaim Mall",
+                "name": "1109-40-Hayat Mall Riyad",
                 "manager": "عبدالله السرداح",
                 "codes": [
-                    "1102-C",
-                    "1102-E"
+                    "1109-C",
+                    "1109-E"
                 ]
             }
         ],
-        "addressBooks": "1102-C;1102-E"
+        "addressBooks": "1109-C;1109-E"
     },
     {
         "employeeId": "1544-محمد شاجاهان فالاثود",
