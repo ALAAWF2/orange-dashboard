@@ -1,6 +1,6 @@
 /**
  * sw.js - Service Worker for Inventory Assistant (مساعد الجرد)
- * Implements offline caching (Network First, Cache Fallback) for PWA support.
+ * Implements robust offline caching (Network First, Cache Fallback) restricted to app assets and CDNs.
  */
 
 const CACHE_NAME = "inventory-assistant-v2";
@@ -14,6 +14,14 @@ const ASSETS = [
     "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0",
     "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
     "https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap"
+];
+
+// Domains we are allowed to intercept and cache
+const ALLOWED_DOMAINS = [
+    self.location.origin,
+    "cdn.jsdelivr.net",
+    "fonts.googleapis.com",
+    "fonts.gstatic.com"
 ];
 
 self.addEventListener("install", (e) => {
@@ -39,10 +47,18 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (event) => {
-    if (event.request.url.includes("supabase.co")) {
-        event.respondWith(fetch(event.request));
-        return;
-    }
+    // Only intercept GET requests
+    if (event.request.method !== "GET") return;
+
+    // Only intercept HTTP/HTTPS schemes
+    if (!event.request.url.startsWith("http")) return;
+
+    // Exclude Supabase calls completely
+    if (event.request.url.includes("supabase.co")) return;
+
+    // Check if the domain is in our allowed list (app files and CDN libraries)
+    const isAllowed = ALLOWED_DOMAINS.some(domain => event.request.url.includes(domain));
+    if (!isAllowed) return; // Let the browser handle other domains natively (prevents Cloudflare/analytics errors)
 
     event.respondWith(
         fetch(event.request)
@@ -50,13 +66,21 @@ self.addEventListener("fetch", (event) => {
                 if (response && response.status === 200) {
                     const responseToCache = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
+                        cache.put(event.request, responseToCache).catch((err) => {
+                            console.warn("ServiceWorker cache put failed:", err);
+                        });
                     });
                 }
                 return response;
             })
             .catch(() => {
-                return caches.match(event.request);
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    // Let it fail naturally if not cached
+                    throw new Error("Network request failed and resource is not cached.");
+                });
             })
     );
 });
