@@ -1002,25 +1002,6 @@ const EMPLOYEES = [
         "addressBooks": "1201-C;1201-E"
     },
     {
-        "employeeId": "2680-فايزة صالح الرشيدي",
-        "personnelNumber": "2680",
-        "name": "فايزة صالح الرشيدي",
-        "startDate": "2021-10-12",
-        "manager": "عبدالله السرداح",
-        "showroom": "1801-19-Hail Othaim Mall",
-        "showroomDetails": [
-            {
-                "name": "1801-19-Hail Othaim Mall",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1801-C",
-                    "1801-E"
-                ]
-            }
-        ],
-        "addressBooks": "1801-C;1801-E"
-    },
-    {
         "employeeId": "2714-محمد رشيق ثيرلامباتا",
         "personnelNumber": "2714",
         "name": "محمد رشيق ثيرلامباتا",
@@ -5210,25 +5191,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1401-C;1401-E;1402-C;1402-E"
-    },
-    {
-        "employeeId": "4691-محمد باسيل",
-        "personnelNumber": "4691",
-        "name": "محمد باسيل",
-        "startDate": "2025-09-10",
-        "manager": "عبدالله السرداح",
-        "showroom": "1103-25-Rabwa Othaim Mall",
-        "showroomDetails": [
-            {
-                "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1103-C",
-                    "1103-E"
-                ]
-            }
-        ],
-        "addressBooks": "1103-C;1103-E"
     },
     {
         "employeeId": "4796-أسماء ضيف الله",
