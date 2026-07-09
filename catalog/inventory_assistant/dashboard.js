@@ -524,10 +524,10 @@ async function downloadSelectedSessionExcel() {
                 rowObj[`الباركود ${i + 1}`] = barcodes[i] || "";
             }
             
-            rowObj["السعر (Price)"] = item.price;
-            rowObj["الكمية الموجودة بالمعرض (Expected)"] = item.expected_qty;
-            rowObj["الكمية الفعلية بالجرد (Counted)"] = item.counted_qty;
-            rowObj["الفرق (Difference)"] = item.counted_qty - item.expected_qty;
+            rowObj["السعر (Price)"] = Number(item.price) || 0;
+            rowObj["الكمية الموجودة بالمعرض (Expected)"] = Number(item.expected_qty) || 0;
+            rowObj["الكمية الفعلية بالجرد (Counted)"] = Number(item.counted_qty) || 0;
+            rowObj["الفرق (Difference)"] = (Number(item.counted_qty) || 0) - (Number(item.expected_qty) || 0);
             rowObj["آخر مسح بواسطة"] = item.scanned_by || "";
             
             rows.push(rowObj);

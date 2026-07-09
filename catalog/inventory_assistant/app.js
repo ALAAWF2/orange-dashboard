@@ -1,6 +1,6 @@
 /**
  * app.js - Collaborative Inventory Assistant (مساعد الجرد الجماعي)
- * Responsive mobile-friendly client-side logic with Supabase, Realtime & html5-qrcode.
+ * Offline-first client-side logic with Supabase, Realtime, PWA caching, and Local Barcodes Cache.
  */
 
 // Supabase Configuration
@@ -11,24 +11,15 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 // State Variables
 let stockByOutlet = {};
 let currentOutlet = "";
-let scannedItems = []; // Array of { item_id, name, old_item_id, price, barcode, expected_qty, counted_qty, scanned_by }
-let html5Qrcode = null;
-let currentCameraId = null;
-let camerasList = [];
-let isScanning = false;
-let scanLock = false;
-let lastScannedBarcode = "";
-let lastScanTime = 0;
+let scannedItems = []; // Array of { item_id, name, old_item_id, price, barcode, expected_qty, counted_qty, scanned_by, is_pending_sync }
+let localBarcodesCache = {};
+let offlineQueue = []; // Array of { barcode, amount, timestamp }
 
 // Collaborative Session State
 let employeeName = "";
 let activeSessionId = null;
 let realtimeChannel = null;
 let currentActiveSession = null;
-
-// Torch / Flashlight State
-let isTorchSupported = false;
-let isTorchOn = false;
 
 // Audio Feedbacks
 function playBeep(type = 'success') {
@@ -42,16 +33,16 @@ function playBeep(type = 'success') {
 
         if (type === 'success') {
             oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // High pitch A5
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
             gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.1); // Short 100ms beep
+            oscillator.stop(audioCtx.currentTime + 0.1);
         } else if (type === 'error') {
             oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(220, audioCtx.currentTime); // Low pitch A3
+            oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
             gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.3); // Longer 300ms buzz
+            oscillator.stop(audioCtx.currentTime + 0.3);
         }
     } catch (e) {
         console.error("Audio beep error:", e);
@@ -66,27 +57,9 @@ function showFeedback(message, isError = false) {
     feedbackEl.className = isError ? "mt-2 text-center fw-bold text-danger" : "mt-2 text-center fw-bold text-success";
     feedbackEl.innerText = message;
     
-    // Auto-hide feedback after 2.5 seconds
     setTimeout(() => {
         feedbackEl.style.display = "none";
     }, 2500);
-}
-
-// Visual flash overlay directly on camera viewfinder
-function triggerFlashFeedback(itemName, isError = false) {
-    const flashEl = document.getElementById("scanner-flash");
-    const textEl = document.getElementById("scanner-flash-text");
-    if (!flashEl || !textEl) return;
-    
-    flashEl.style.backgroundColor = isError ? "rgba(220, 53, 69, 0.35)" : "rgba(25, 135, 84, 0.35)";
-    textEl.style.display = "block";
-    textEl.className = isError ? "text-white fw-bold px-3 py-2 rounded-pill bg-danger" : "text-white fw-bold px-3 py-2 rounded-pill bg-success";
-    textEl.innerText = itemName;
-    
-    setTimeout(() => {
-        flashEl.style.backgroundColor = "rgba(0, 0, 0, 0)";
-        textEl.style.display = "none";
-    }, 800);
 }
 
 // Render inventory items in table
@@ -105,12 +78,11 @@ function renderTable() {
     let totalQty = 0;
     let html = "";
     
-    // Sort items by update date descending so newly scanned items appear at the top
     const sortedItems = [...scannedItems].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
 
     sortedItems.forEach((item) => {
-        totalQty += item.counted_qty;
-        const diff = item.counted_qty - item.expected_qty;
+        totalQty += Number(item.counted_qty) || 0;
+        const diff = (Number(item.counted_qty) || 0) - (Number(item.expected_qty) || 0);
         
         let diffClass = "diff-equal";
         let diffSign = "";
@@ -121,14 +93,14 @@ function renderTable() {
             diffClass = "diff-deficit";
         }
         
-        // Display who last scanned this item
         const scannerName = item.scanned_by ? ` (بواسطة ${item.scanned_by})` : "";
+        const pendingBadge = item.is_pending_sync ? ' <span class="badge bg-warning text-dark small" style="font-size: 0.65rem;">انتظار المزامنة ⏳</span>' : '';
         
         html += `
             <tr class="scanned-row" id="row-${item.item_id}">
                 <td><strong>${item.item_id}</strong></td>
                 <td>
-                    ${item.name}
+                    ${item.name}${pendingBadge}
                     <div class="text-muted small d-block d-md-none" style="font-size: 0.75rem;">${scannerName}</div>
                 </td>
                 <td><code class="text-dark">${item.barcode}</code></td>
@@ -165,6 +137,20 @@ window.adjustQty = async function(itemId, change) {
         const diff = newQty - item.counted_qty;
         if (diff === 0) return;
         
+        if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
+            item.counted_qty = newQty;
+            item.scanned_by = employeeName;
+            item.updated_at = new Date().toISOString();
+            item.is_pending_sync = true;
+            
+            offlineQueue.push({ barcode: item.barcode, amount: diff, timestamp: Date.now() });
+            localStorage.setItem(`offline_queue_${activeSessionId}`, JSON.stringify(offlineQueue));
+            localStorage.setItem(`offline_scanned_items_${activeSessionId}`, JSON.stringify(scannedItems));
+            
+            renderTable();
+            return;
+        }
+        
         const { error } = await supabaseClient.rpc('increment_session_item', {
             p_session_id: activeSessionId,
             p_item_id: item.item_id,
@@ -189,6 +175,22 @@ window.updateItemQty = async function(itemId, val) {
     const parsed = parseInt(val, 10);
     const item = scannedItems.find(i => i.item_id === itemId);
     if (item && !isNaN(parsed) && parsed >= 1) {
+        if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
+            const diff = parsed - item.counted_qty;
+            item.counted_qty = parsed;
+            item.scanned_by = employeeName;
+            item.updated_at = new Date().toISOString();
+            item.is_pending_sync = true;
+            
+            if (diff !== 0) {
+                offlineQueue.push({ barcode: item.barcode, amount: diff, timestamp: Date.now() });
+                localStorage.setItem(`offline_queue_${activeSessionId}`, JSON.stringify(offlineQueue));
+            }
+            localStorage.setItem(`offline_scanned_items_${activeSessionId}`, JSON.stringify(scannedItems));
+            renderTable();
+            return;
+        }
+        
         const { error } = await supabaseClient
             .from('inventory_session_items')
             .update({ 
@@ -209,6 +211,18 @@ window.updateItemQty = async function(itemId, val) {
 // Remove Item from session in Supabase
 window.removeItem = async function(itemId) {
     if (confirm("هل أنت متأكد من حذف هذا الصنف من الجرد؟")) {
+        if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
+            const item = scannedItems.find(i => i.item_id === itemId);
+            if (item) {
+                offlineQueue = offlineQueue.filter(s => s.barcode !== item.barcode);
+                localStorage.setItem(`offline_queue_${activeSessionId}`, JSON.stringify(offlineQueue));
+            }
+            scannedItems = scannedItems.filter(i => i.item_id !== itemId);
+            localStorage.setItem(`offline_scanned_items_${activeSessionId}`, JSON.stringify(scannedItems));
+            renderTable();
+            return;
+        }
+        
         const { error } = await supabaseClient
             .from('inventory_session_items')
             .delete()
@@ -227,7 +241,6 @@ async function lookupItem(code) {
     const cleanCode = code.trim();
     if (!cleanCode) return null;
     
-    // First, lookup by barcode
     let { data, error } = await supabaseClient
         .from("dynamics_barcodes")
         .select("*")
@@ -242,7 +255,6 @@ async function lookupItem(code) {
         return data[0];
     }
     
-    // Second, lookup by item_id (ProductNumber) directly
     let { data: itemData, error: itemError } = await supabaseClient
         .from("dynamics_barcodes")
         .select("*")
@@ -265,24 +277,30 @@ async function handleScan(barcode) {
     const cleanBarcode = barcode.trim();
     if (!cleanBarcode || !activeSessionId) return;
     
-    // Play success beep immediately to feel responsive
     playBeep('success');
-    triggerFlashFeedback("جاري البحث... ⏳");
     
-    // Find expected quantity from local cached stock
-    let dbItem = null;
-    let expected = 0;
+    // Check if offline
+    if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
+        handleOfflineScan(cleanBarcode);
+        return;
+    }
     
-    // Lookup item in database
-    dbItem = await lookupItem(cleanBarcode);
+    // Online Scan Flow
+    showFeedback("جاري البحث... ⏳");
+    
+    let dbItem = localBarcodesCache[cleanBarcode] || await lookupItem(cleanBarcode);
     
     let itemId = cleanBarcode;
     let name = "صنف غير معرف بالنظام ⚠️";
     let old_item_id = "";
     let price = 0.0;
     let actualBarcode = cleanBarcode;
+    let expected = 0;
     
     if (dbItem) {
+        localBarcodesCache[cleanBarcode] = dbItem;
+        localBarcodesCache[dbItem.item_id] = dbItem;
+        
         itemId = dbItem.item_id;
         name = dbItem.barcode_description || dbItem.search_name || "صنف بدون اسم";
         old_item_id = dbItem.old_item_id || "";
@@ -291,7 +309,6 @@ async function handleScan(barcode) {
         expected = (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][dbItem.item_id]) || 0;
     }
     
-    // Perform safe concurrent increment via RPC stored procedure
     const { error } = await supabaseClient.rpc('increment_session_item', {
         p_session_id: activeSessionId,
         p_item_id: itemId,
@@ -308,12 +325,302 @@ async function handleScan(barcode) {
         console.error("Error inserting scanned item:", error);
         playBeep('error');
         showFeedback("خطأ أثناء تسجيل المسح في قاعدة البيانات!", true);
-        triggerFlashFeedback("خطأ في التسجيل ❌", true);
     } else {
         showFeedback(`تم مسح: ${name}`);
-        triggerFlashFeedback(name);
     }
 }
+
+// Handle Offline Scan
+function handleOfflineScan(barcode) {
+    let dbItem = localBarcodesCache[barcode];
+    
+    let itemId = barcode;
+    let name = "صنف غير معرف مؤقتاً (جاري التحقق عند الاتصال) ⚠️";
+    let old_item_id = "";
+    let price = 0.0;
+    let actualBarcode = barcode;
+    let expected = 0;
+    
+    if (dbItem) {
+        itemId = dbItem.item_id;
+        name = dbItem.barcode_description || dbItem.search_name || "صنف بدون اسم";
+        old_item_id = dbItem.old_item_id || "";
+        price = parseFloat(dbItem.price) || 0.0;
+        actualBarcode = dbItem.barcode || barcode;
+        expected = (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][dbItem.item_id]) || 0;
+    }
+    
+    const existingIndex = scannedItems.findIndex(i => i.item_id === itemId);
+    if (existingIndex !== -1) {
+        scannedItems[existingIndex].counted_qty += 1;
+        scannedItems[existingIndex].scanned_by = employeeName;
+        scannedItems[existingIndex].updated_at = new Date().toISOString();
+        scannedItems[existingIndex].is_pending_sync = true;
+    } else {
+        scannedItems.push({
+            session_id: activeSessionId,
+            item_id: itemId,
+            name: name,
+            barcode: actualBarcode,
+            old_item_id: old_item_id,
+            price: price,
+            expected_qty: expected,
+            counted_qty: 1,
+            scanned_by: employeeName,
+            updated_at: new Date().toISOString(),
+            is_pending_sync: true
+        });
+    }
+    
+    localStorage.setItem(`offline_scanned_items_${activeSessionId}`, JSON.stringify(scannedItems));
+    
+    offlineQueue.push({ barcode: barcode, amount: 1, timestamp: Date.now() });
+    localStorage.setItem(`offline_queue_${activeSessionId}`, JSON.stringify(offlineQueue));
+    
+    renderTable();
+    showFeedback(`تم الحفظ محلياً: ${name}`);
+}
+
+// Reload active session data from Supabase
+async function reloadSessionData() {
+    if (!activeSessionId || activeSessionId.toString().startsWith("offline_")) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from("inventory_session_items")
+            .select("*")
+            .eq("session_id", activeSessionId);
+            
+        if (!error && data) {
+            scannedItems = data;
+            renderTable();
+        }
+    } catch (e) {
+        console.warn("Failed to reload session data:", e);
+    }
+}
+
+// Pre-fetch all barcodes expected in current outlet
+async function populateLocalBarcodesCache() {
+    if (!currentOutlet || !stockByOutlet[currentOutlet] || !navigator.onLine) return;
+    
+    const itemIds = Object.keys(stockByOutlet[currentOutlet]);
+    if (itemIds.length === 0) return;
+    
+    console.log(`Pre-fetching ${itemIds.length} barcodes for offline mode...`);
+    
+    const batchSize = 1000;
+    for (let i = 0; i < itemIds.length; i += batchSize) {
+        const batch = itemIds.slice(i, i + batchSize);
+        const { data, error } = await supabaseClient
+            .from("dynamics_barcodes")
+            .select("*")
+            .in("item_id", batch);
+            
+        if (!error && data) {
+            data.forEach(item => {
+                localBarcodesCache[item.barcode] = item;
+                localBarcodesCache[item.item_id] = item;
+            });
+        }
+    }
+    
+    localStorage.setItem(`barcodes_cache_${currentOutlet}`, JSON.stringify(localBarcodesCache));
+    console.log("Offline barcodes cache updated:", Object.keys(localBarcodesCache).length);
+}
+
+// Sync Offline Scan Queue to Supabase
+async function syncOfflineQueue() {
+    if (offlineQueue.length === 0 || !navigator.onLine) return;
+    
+    console.log(`Syncing ${offlineQueue.length} offline scans...`);
+    const banner = document.getElementById("connection-status-banner");
+    if (banner) {
+        banner.className = "alert alert-warning text-center mb-0 py-2 fw-bold";
+        banner.innerHTML = `⏳ جاري مزامنة ${offlineQueue.length} عمليات مسح مع السحابة...`;
+        banner.style.display = "block";
+    }
+    
+    const toProcess = [...offlineQueue];
+    
+    for (const scan of toProcess) {
+        try {
+            let dbItem = localBarcodesCache[scan.barcode];
+            let itemId = scan.barcode;
+            let name = "صنف غير معرف بالنظام ⚠️";
+            let old_item_id = "";
+            let price = 0.0;
+            let actualBarcode = scan.barcode;
+            let expected = 0;
+            
+            if (dbItem) {
+                itemId = dbItem.item_id;
+                name = dbItem.barcode_description || dbItem.search_name || "صنف بدون اسم";
+                old_item_id = dbItem.old_item_id || "";
+                price = parseFloat(dbItem.price) || 0.0;
+                actualBarcode = dbItem.barcode || scan.barcode;
+                expected = (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][dbItem.item_id]) || 0;
+            } else {
+                const onlineDbItem = await lookupItem(scan.barcode);
+                if (onlineDbItem) {
+                    localBarcodesCache[scan.barcode] = onlineDbItem;
+                    localBarcodesCache[onlineDbItem.item_id] = onlineDbItem;
+                    
+                    itemId = onlineDbItem.item_id;
+                    name = onlineDbItem.barcode_description || onlineDbItem.search_name || "صنف بدون اسم";
+                    old_item_id = onlineDbItem.old_item_id || "";
+                    price = parseFloat(onlineDbItem.price) || 0.0;
+                    actualBarcode = onlineDbItem.barcode || scan.barcode;
+                    expected = (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][onlineDbItem.item_id]) || 0;
+                }
+            }
+            
+            const { error } = await supabaseClient.rpc('increment_session_item', {
+                p_session_id: activeSessionId,
+                p_item_id: itemId,
+                p_name: name,
+                p_barcode: actualBarcode,
+                p_old_item_id: old_item_id,
+                p_price: price,
+                p_expected_qty: expected,
+                p_amount: scan.amount,
+                p_scanned_by: employeeName
+            });
+            
+            if (!error) {
+                offlineQueue = offlineQueue.filter(s => s.timestamp !== scan.timestamp);
+                localStorage.setItem(`offline_queue_${activeSessionId}`, JSON.stringify(offlineQueue));
+            }
+        } catch (e) {
+            console.error("Failed to sync scan event:", e);
+        }
+    }
+    
+    await reloadSessionData();
+    
+    if (offlineQueue.length === 0) {
+        if (banner) {
+            banner.className = "alert alert-success text-center mb-0 py-2 fw-bold";
+            banner.innerHTML = "🟢 تم مزامنة جميع عمليات المسح المحلية بنجاح!";
+            setTimeout(() => {
+                banner.style.display = "none";
+            }, 3000);
+        }
+    } else {
+        if (banner) {
+            banner.className = "alert alert-danger text-center mb-0 py-2 fw-bold";
+            banner.innerHTML = `⚠️ فشل مزامنة بعض القطع (${offlineQueue.length} متبقية). يرجى التحقق من الاتصال.`;
+        }
+    }
+}
+
+// Sync temporary Offline Session to Supabase Cloud
+window.syncOfflineSessionToCloud = async function() {
+    if (!navigator.onLine || !activeSessionId || !activeSessionId.toString().startsWith("offline_")) return;
+    
+    const banner = document.getElementById("connection-status-banner");
+    if (banner) {
+        banner.className = "alert alert-warning text-center mb-0 py-2 fw-bold";
+        banner.innerHTML = "⏳ جاري تهيئة الجلسة السحابية ورفع البينات... يرجى الانتظار.";
+    }
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from("inventory_sessions")
+            .insert({
+                outlet: currentOutlet,
+                created_by: employeeName,
+                status: "active"
+            })
+            .select();
+            
+        if (error) {
+            alert("حدث خطأ أثناء إنشاء الجلسة السحابية: " + error.message);
+            updateOnlineStatus();
+            return;
+        }
+        
+        const realSessionId = data[0].id;
+        
+        if (scannedItems.length > 0) {
+            if (banner) {
+                banner.innerHTML = `⏳ جاري رفع ${scannedItems.length} صنف إلى الجلسة السحابية...`;
+            }
+            
+            for (const item of scannedItems) {
+                const { error: itemErr } = await supabaseClient.rpc('increment_session_item', {
+                    p_session_id: realSessionId,
+                    p_item_id: item.item_id,
+                    p_name: item.name,
+                    p_barcode: item.barcode,
+                    p_old_item_id: item.old_item_id || "",
+                    p_price: parseFloat(item.price) || 0.0,
+                    p_expected_qty: item.expected_qty,
+                    p_amount: item.counted_qty,
+                    p_scanned_by: item.scanned_by || employeeName
+                });
+                
+                if (itemErr) {
+                    console.error("Error syncing offline session item:", itemErr);
+                }
+            }
+        }
+        
+        localStorage.removeItem(`offline_scanned_items_${activeSessionId}`);
+        localStorage.removeItem(`offline_queue_${activeSessionId}`);
+        
+        activeSessionId = realSessionId;
+        offlineQueue = [];
+        
+        await reloadSessionData();
+        subscribeToSession(activeSessionId);
+        await populateLocalBarcodesCache();
+        
+        if (banner) {
+            banner.className = "alert alert-success text-center mb-0 py-2 fw-bold";
+            banner.innerHTML = "🟢 تم مزامنة ورفع الجلسة المحلية إلى السحاب بنجاح!";
+            setTimeout(() => {
+                banner.style.display = "none";
+            }, 3000);
+        }
+    } catch (e) {
+        console.error("Offline session sync failed:", e);
+        alert("فشل مزامنة الجلسة: " + e.message);
+        updateOnlineStatus();
+    }
+};
+
+// Monitor Online/Offline Connection Status
+function updateOnlineStatus() {
+    const banner = document.getElementById("connection-status-banner");
+    if (!banner) return;
+    
+    if (navigator.onLine) {
+        if (activeSessionId && !activeSessionId.toString().startsWith("offline_")) {
+            if (offlineQueue.length > 0) {
+                syncOfflineQueue();
+            } else {
+                banner.className = "alert alert-success text-center mb-0 py-2 fw-bold";
+                banner.innerHTML = "🟢 تم استعادة الاتصال بالإنترنت بنجاح!";
+                setTimeout(() => {
+                    banner.style.display = "none";
+                }, 3000);
+            }
+        } else if (activeSessionId && activeSessionId.toString().startsWith("offline_")) {
+            banner.className = "alert alert-warning text-center mb-0 py-2 fw-bold";
+            banner.innerHTML = '🟢 تم اكتشاف اتصال بالإنترنت! <button class="btn btn-sm btn-success ms-2 fw-bold" onclick="syncOfflineSessionToCloud()">مزامنة ورفع الجلسة إلى السحاب ☁️</button>';
+            banner.style.display = "block";
+        } else {
+            checkActiveSession();
+        }
+    } else {
+        banner.className = "alert alert-danger text-center mb-0 py-2 fw-bold";
+        banner.innerHTML = "⚠️ انقطع الاتصال بالإنترنت! يرجى التوقف عن المسح أو بدء جرد أوفلاين لتجنب فقدان البيانات.";
+        banner.style.display = "block";
+    }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
 
 // Subscribe to Supabase Realtime changes for the current session
 function subscribeToSession(sessionId) {
@@ -340,7 +647,6 @@ function subscribeToSession(sessionId) {
                         scannedItems[idx] = newItem;
                     }
                     
-                    // Audio and flash feedback ONLY if the scan was performed by someone else!
                     if (newItem.scanned_by !== employeeName) {
                         playBeep('success');
                         showFeedback(`قام الزميل ${newItem.scanned_by} بمسح: ${newItem.name}`);
@@ -351,7 +657,6 @@ function subscribeToSession(sessionId) {
                         const oldQty = scannedItems[idx].counted_qty;
                         scannedItems[idx] = newItem;
                         
-                        // Audio feedback if quantity was increased by someone else!
                         if (newItem.counted_qty > oldQty && newItem.scanned_by !== employeeName) {
                             playBeep('success');
                             showFeedback(`تحديث كمية من ${newItem.scanned_by}: ${newItem.name} (${newItem.counted_qty})`);
@@ -366,21 +671,17 @@ function subscribeToSession(sessionId) {
                 renderTable();
             }
         )
-        .subscribe((status) => {
-            console.log(`Subscription status for session ${sessionId}:`, status);
-        });
+        .subscribe();
 }
 
-// Generate Excel file rows representing multiple barcodes in columns
+// Generate Excel file rows representing multiple barcodes in columns (with explicit numbers casting)
 async function generateExcelRows() {
     if (scannedItems.length === 0) return [];
     
-    // Get unique list of scanned item IDs
     const itemIds = scannedItems.map(item => item.item_id).filter(id => id && !id.includes("⚠️"));
     
     let allBarcodes = [];
-    if (itemIds.length > 0) {
-        // Query Supabase for all barcodes associated with these item IDs
+    if (itemIds.length > 0 && navigator.onLine) {
         const { data, error } = await supabaseClient
             .from("dynamics_barcodes")
             .select("*")
@@ -391,7 +692,6 @@ async function generateExcelRows() {
         }
     }
     
-    // Create lookup map of barcodes by item_id
     const barcodesMap = {};
     allBarcodes.forEach(b => {
         if (!barcodesMap[b.item_id]) {
@@ -402,7 +702,6 @@ async function generateExcelRows() {
         }
     });
     
-    // Find maximum number of barcodes for any scanned item
     let maxBarcodesCount = 1;
     scannedItems.forEach(item => {
         const barcodes = barcodesMap[item.item_id] || [item.barcode];
@@ -413,27 +712,23 @@ async function generateExcelRows() {
     
     const rows = [];
     scannedItems.forEach(item => {
-        // Find all barcodes for this item
         let barcodes = barcodesMap[item.item_id] || [item.barcode];
         if (barcodes.length === 0) barcodes = [item.barcode];
         
-        // Build base row object
         const rowObj = {
             "رقم المنتج (Item ID)": item.item_id,
             "اسم الصنف (Item Name)": item.name,
             "الكود البديل (Alias)": item.old_item_id
         };
         
-        // Add barcode columns dynamically (الباركود 1، الباركود 2، إلخ)
         for (let i = 0; i < maxBarcodesCount; i++) {
             rowObj[`الباركود ${i + 1}`] = barcodes[i] || "";
         }
         
-        // Add stock and difference columns
-        rowObj["السعر (Price)"] = item.price;
-        rowObj["الكمية الموجودة بالمعرض (Expected)"] = item.expected_qty;
-        rowObj["الكمية الفعلية بالجرد (Counted)"] = item.counted_qty;
-        rowObj["الفرق (Difference)"] = item.counted_qty - item.expected_qty;
+        rowObj["السعر (Price)"] = Number(item.price) || 0;
+        rowObj["الكمية الموجودة بالمعرض (Expected)"] = Number(item.expected_qty) || 0;
+        rowObj["الكمية الفعلية بالجرد (Counted)"] = Number(item.counted_qty) || 0;
+        rowObj["الفرق (Difference)"] = (Number(item.counted_qty) || 0) - (Number(item.expected_qty) || 0);
         
         rows.push(rowObj);
     });
@@ -444,13 +739,9 @@ async function generateExcelRows() {
 // Generate Excel file buffer
 async function getExcelBlob(rows) {
     const ws = XLSX.utils.json_to_sheet(rows);
-    
-    // Set Sheet Direction to RTL
     ws['!dir'] = 'rtl';
-    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "تقرير الجرد");
-    
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     return {
         blob: new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
@@ -458,54 +749,42 @@ async function getExcelBlob(rows) {
     };
 }
 
-// On Page Load
-window.addEventListener("DOMContentLoaded", async () => {
+// Active session status check
+async function checkActiveSession() {
     const select = document.getElementById("showroom-select");
     const nameInput = document.getElementById("employee-name-input");
+    if (!select || !nameInput) return;
+    currentOutlet = select.value;
+    employeeName = nameInput.value.trim();
     
-    // Load stored employee name if exists
-    const storedName = localStorage.getItem("inventory_employee_name");
-    if (storedName && nameInput) {
-        nameInput.value = storedName;
+    if (!currentOutlet) {
+        hideSessionButtons();
+        return;
     }
-
-    // 1. Fetch expected showroom stock mapping
+    
+    const offlineBtn = document.getElementById("start-offline-session-btn");
+    
+    if (!navigator.onLine) {
+        hideSessionButtons();
+        if (offlineBtn) offlineBtn.style.display = "block";
+        
+        const cached = localStorage.getItem(`barcodes_cache_${currentOutlet}`);
+        if (cached) {
+            localBarcodesCache = JSON.parse(cached);
+        }
+        
+        const statusArea = document.getElementById("session-status-area");
+        const statusMsg = document.getElementById("session-status-message");
+        if (statusMsg) {
+            statusMsg.innerHTML = "🔌 أنت غير متصل بالإنترنت حالياً. يمكنك بدء جلسة جرد محلية وسيتم حفظ البيانات على هذا الجهاز ومزامنتها فور عودة الشبكة.";
+        }
+        if (statusArea) statusArea.style.display = "block";
+        return;
+    } else {
+        if (offlineBtn) offlineBtn.style.display = "none";
+    }
+    
     try {
-        const response = await fetch("data/stock_by_outlet.json");
-        if (response.ok) {
-            stockByOutlet = await response.json();
-            
-            // Populate select dropdown with showroom/outlet names
-            if (select) {
-                select.innerHTML = '<option value="" disabled selected>-- اختر معرض الجرد --</option>';
-                
-                Object.keys(stockByOutlet).sort().forEach(outlet => {
-                    const option = document.createElement("option");
-                    option.value = outlet;
-                    option.textContent = outlet;
-                    select.appendChild(option);
-                });
-            }
-        } else {
-            console.error("Failed to load showroom stock.");
-            alert("خطأ: لم يتم العثور على ملف مخزون المعارض. يرجى تشغيل سكربت المزامنة أولاً.");
-        }
-    } catch (e) {
-        console.error("Error fetching stock map:", e);
-        alert("خطأ أثناء تحميل بيانات المخزون: " + e.message);
-    }
-    
-    // Active session status check
-    async function checkActiveSession() {
-        if (!select || !nameInput) return;
-        currentOutlet = select.value;
-        employeeName = nameInput.value.trim();
-        
-        if (!currentOutlet) {
-            hideSessionButtons();
-            return;
-        }
-        
         const { data, error } = await supabaseClient
             .from("inventory_sessions")
             .select("*")
@@ -545,46 +824,95 @@ window.addEventListener("DOMContentLoaded", async () => {
             if (joinBtn) joinBtn.style.display = "none";
             if (overrideBtn) overrideBtn.style.display = "none";
         }
+    } catch (e) {
+        console.error("Failed to query active session:", e);
     }
+}
+
+function hideSessionButtons() {
+    if (document.getElementById("session-status-area")) document.getElementById("session-status-area").style.display = "none";
+    if (document.getElementById("start-session-btn")) document.getElementById("start-session-btn").style.display = "none";
+    if (document.getElementById("join-session-btn")) document.getElementById("join-session-btn").style.display = "none";
+    if (document.getElementById("override-session-btn")) document.getElementById("override-session-btn").style.display = "none";
+    if (document.getElementById("start-offline-session-btn")) document.getElementById("start-offline-session-btn").style.display = "none";
+}
+
+function validateSelection() {
+    const select = document.getElementById("showroom-select");
+    const nameInput = document.getElementById("employee-name-input");
+    employeeName = nameInput.value.trim();
+    currentOutlet = select.value;
     
-    function hideSessionButtons() {
-        if (document.getElementById("session-status-area")) document.getElementById("session-status-area").style.display = "none";
-        if (document.getElementById("start-session-btn")) document.getElementById("start-session-btn").style.display = "none";
-        if (document.getElementById("join-session-btn")) document.getElementById("join-session-btn").style.display = "none";
-        if (document.getElementById("override-session-btn")) document.getElementById("override-session-btn").style.display = "none";
+    if (!employeeName) {
+        alert("يرجى إدخال اسم الموظف المسؤول أولاً!");
+        nameInput.focus();
+        return false;
     }
-    
-    function validateSelection() {
-        employeeName = nameInput.value.trim();
-        currentOutlet = select.value;
-        
-        if (!employeeName) {
-            alert("يرجى إدخال اسم الموظف المسؤول أولاً!");
-            nameInput.focus();
-            return false;
-        }
-        if (!currentOutlet) {
-            alert("يرجى اختيار المعرض أولاً!");
-            select.focus();
-            return false;
-        }
-        return true;
+    if (!currentOutlet) {
+        alert("يرجى اختيار المعرض أولاً!");
+        select.focus();
+        return false;
     }
+    return true;
+}
+
+async function enterWorkspace() {
+    document.getElementById("showroom-selection-card").style.display = "none";
+    document.getElementById("inventory-workspace").style.display = "block";
+    document.getElementById("active-outlet-name").innerText = currentOutlet;
     
-    async function enterWorkspace() {
-        document.getElementById("showroom-selection-card").style.display = "none";
-        document.getElementById("inventory-workspace").style.display = "block";
-        document.getElementById("active-outlet-name").innerText = currentOutlet;
-        
-        renderTable();
+    renderTable();
+    
+    if (activeSessionId && !activeSessionId.toString().startsWith("offline_")) {
         subscribeToSession(activeSessionId);
-        initCamerasAndStart();
+        populateLocalBarcodesCache();
+    }
+    
+    const input = document.getElementById("manual-barcode-input");
+    if (input) {
+        input.focus();
+    }
+    
+    updateOnlineStatus();
+}
+
+// On Page Load
+window.addEventListener("DOMContentLoaded", async () => {
+    const select = document.getElementById("showroom-select");
+    const nameInput = document.getElementById("employee-name-input");
+    
+    const storedName = localStorage.getItem("inventory_employee_name");
+    if (storedName && nameInput) {
+        nameInput.value = storedName;
+    }
+
+    try {
+        const response = await fetch("data/stock_by_outlet.json");
+        if (response.ok) {
+            stockByOutlet = await response.json();
+            
+            if (select) {
+                select.innerHTML = '<option value="" disabled selected>-- اختر معرض الجرد --</option>';
+                
+                Object.keys(stockByOutlet).sort().forEach(outlet => {
+                    const option = document.createElement("option");
+                    option.value = outlet;
+                    option.textContent = outlet;
+                    select.appendChild(option);
+                });
+            }
+        } else {
+            console.error("Failed to load showroom stock.");
+            alert("خطأ: لم يتم العثور على ملف مخزون المعارض. يرجى تشغيل سكربت المزامنة أولاً.");
+        }
+    } catch (e) {
+        console.error("Error fetching stock map:", e);
     }
     
     if (select) select.addEventListener("change", checkActiveSession);
     if (nameInput) nameInput.addEventListener("input", checkActiveSession);
     
-    // 2. Start Session click event
+    // Start Session click event
     const startSessionBtn = document.getElementById("start-session-btn");
     if (startSessionBtn) {
         startSessionBtn.addEventListener("click", async () => {
@@ -607,11 +935,12 @@ window.addEventListener("DOMContentLoaded", async () => {
             
             activeSessionId = data[0].id;
             scannedItems = [];
+            offlineQueue = [];
             await enterWorkspace();
         });
     }
     
-    // 3. Join Session click event
+    // Join Session click event
     const joinSessionBtn = document.getElementById("join-session-btn");
     if (joinSessionBtn) {
         joinSessionBtn.addEventListener("click", async () => {
@@ -631,11 +960,12 @@ window.addEventListener("DOMContentLoaded", async () => {
             }
             
             scannedItems = data || [];
+            offlineQueue = [];
             await enterWorkspace();
         });
     }
     
-    // 4. Override Session click event
+    // Override Session click event
     const overrideSessionBtn = document.getElementById("override-session-btn");
     if (overrideSessionBtn) {
         overrideSessionBtn.addEventListener("click", async () => {
@@ -664,61 +994,24 @@ window.addEventListener("DOMContentLoaded", async () => {
             
             activeSessionId = data[0].id;
             scannedItems = [];
+            offlineQueue = [];
             await enterWorkspace();
         });
     }
     
-    // Toggle Camera click event
-    if (document.getElementById("toggle-camera-btn")) {
-        document.getElementById("toggle-camera-btn").addEventListener("click", async () => {
-            if (isScanning) {
-                await stopScanning();
-            } else {
-                if (currentCameraId) {
-                    await startScanning(currentCameraId);
-                } else {
-                    alert("لم يتم العثور على كاميرات نشطة.");
-                }
-            }
-        });
-    }
-
-    // Switch Camera click event
-    if (document.getElementById("switch-camera-btn")) {
-        document.getElementById("switch-camera-btn").addEventListener("click", async () => {
-            if (camerasList.length <= 1) return;
+    // Start Offline Session click event
+    const startOfflineBtn = document.getElementById("start-offline-session-btn");
+    if (startOfflineBtn) {
+        startOfflineBtn.addEventListener("click", async () => {
+            if (!validateSelection()) return;
+            localStorage.setItem("inventory_employee_name", employeeName);
             
-            const currentIndex = camerasList.findIndex(c => c.id === currentCameraId);
-            const nextIndex = (currentIndex + 1) % camerasList.length;
-            currentCameraId = camerasList[nextIndex].id;
+            const outletClean = currentOutlet.replace(/\s+/g, '_');
+            activeSessionId = "offline_" + outletClean + "_" + Date.now();
+            scannedItems = JSON.parse(localStorage.getItem(`offline_scanned_items_${activeSessionId}`)) || [];
+            offlineQueue = JSON.parse(localStorage.getItem(`offline_queue_${activeSessionId}`)) || [];
             
-            if (isScanning) {
-                await startScanning(currentCameraId);
-            } else {
-                showFeedback(`تم التبديل إلى الكاميرا: ${camerasList[nextIndex].label || nextIndex + 1}`);
-            }
-        });
-    }
-    
-    // Toggle Torch click event
-    if (document.getElementById("toggle-torch-btn")) {
-        document.getElementById("toggle-torch-btn").addEventListener("click", async () => {
-            if (!html5Qrcode || !isScanning || !isTorchSupported) return;
-            const torchBtn = document.getElementById("toggle-torch-btn");
-            try {
-                isTorchOn = !isTorchOn;
-                await html5Qrcode.applyVideoConstraints({
-                    advanced: [{ torch: isTorchOn }]
-                });
-                if (torchBtn) {
-                    torchBtn.innerText = isTorchOn ? "🔦 إطفاء الفلاش" : "🔦 تشغيل الفلاش";
-                    torchBtn.className = isTorchOn ? "btn btn-light btn-lg text-dark border" : "btn btn-warning btn-lg";
-                }
-            } catch (err) {
-                console.error("Failed to toggle torch:", err);
-                isTorchOn = !isTorchOn;
-                showFeedback("الفلاش غير مدعوم على هذه الكاميرا!", true);
-            }
+            await enterWorkspace();
         });
     }
     
@@ -740,6 +1033,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById("clear-current-inventory")) {
         document.getElementById("clear-current-inventory").addEventListener("click", async () => {
             if (confirm("هل أنت متأكد من مسح جميع الأصناف المجرودة الحالية في هذه الجلسة؟ لا يمكن التراجع.")) {
+                if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
+                    scannedItems = [];
+                    offlineQueue = [];
+                    localStorage.setItem(`offline_scanned_items_${activeSessionId}`, JSON.stringify([]));
+                    localStorage.setItem(`offline_queue_${activeSessionId}`, JSON.stringify([]));
+                    renderTable();
+                    return;
+                }
                 const { error } = await supabaseClient
                     .from("inventory_session_items")
                     .delete()
@@ -776,6 +1077,11 @@ window.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
             
+            if (!navigator.onLine) {
+                alert("أنت غير متصل بالإنترنت حالياً! يرجى تحميل ملف Excel يدوياً ومشاركته.");
+                return;
+            }
+            
             const btn = document.getElementById("whatsapp-share-btn");
             const originalText = btn.innerText;
             btn.disabled = true;
@@ -796,12 +1102,10 @@ window.addEventListener("DOMContentLoaded", async () => {
                         upsert: false
                     });
                     
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
                 
                 const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/inventory-reports/${fileName}`;
-                const totalQty = scannedItems.reduce((acc, item) => acc + item.counted_qty, 0);
+                const totalQty = scannedItems.reduce((acc, item) => acc + (Number(item.counted_qty) || 0), 0);
                 const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
                 
                 const textMsg = `📋 *محضر جرد مشترك (مسودة) - معرض أورانج*\n` +
@@ -833,7 +1137,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     const completeSessionBtn = document.getElementById("complete-session-btn");
     if (completeSessionBtn) {
         completeSessionBtn.addEventListener("click", async () => {
+            if (activeSessionId && activeSessionId.toString().startsWith("offline_")) {
+                alert("يرجى مزامنة الجلسة السحابية أولاً عند عودة الإنترنت لإغلاقها بشكل نهائي سحابياً.");
+                return;
+            }
+            
             if (!confirm("⚠️ هل أنت متأكد من إغلاق جلسة الجرد نهائياً لجميع الموظفين؟ لا يمكن مسح أصناف إضافية بعد الإغلاق.")) {
+                return;
+            }
+            
+            if (!navigator.onLine) {
+                alert("يتطلب إغلاق الجلسة وجود اتصال بالإنترنت للرفع النهائي.");
                 return;
             }
             
@@ -843,7 +1157,6 @@ window.addEventListener("DOMContentLoaded", async () => {
             btn.innerText = "جاري إغلاق الجلسة ورفع التقرير النهائي... ⏳";
             
             try {
-                // 1. Mark session as completed
                 const { error: sessionErr } = await supabaseClient
                     .from("inventory_sessions")
                     .update({ status: "completed" })
@@ -851,7 +1164,6 @@ window.addEventListener("DOMContentLoaded", async () => {
                     
                 if (sessionErr) throw sessionErr;
                 
-                // 2. Generate and Upload Excel Report
                 const rows = await generateExcelRows();
                 const { blob, workbook } = await getExcelBlob(rows);
                 
@@ -869,7 +1181,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                 if (uploadErr) throw uploadErr;
                 
                 const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/inventory-reports/${fileName}`;
-                const totalQty = scannedItems.reduce((acc, item) => acc + item.counted_qty, 0);
+                const totalQty = scannedItems.reduce((acc, item) => acc + (Number(item.counted_qty) || 0), 0);
                 const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
                 
                 const textMsg = `🔒 *تقرير جرد نهائي مغلق لمعرض أورانج*\n` +
@@ -909,194 +1221,4 @@ window.addEventListener("DOMContentLoaded", async () => {
             }
         });
     }
-
 });
-
-// Initialize Camera Devices
-function initCamerasAndStart() {
-    Html5Qrcode.getCameras().then(async (devices) => {
-        if (devices && devices.length > 0) {
-            camerasList = devices;
-            currentCameraId = devices[0].id;
-            
-            // Try to find the back camera automatically
-            const backCamera = devices.find(d => 
-                d.label.toLowerCase().includes("back") || 
-                d.label.toLowerCase().includes("rear") || 
-                d.label.toLowerCase().includes("environment") ||
-                d.label.toLowerCase().includes("خلفية")
-            );
-            
-            if (backCamera) {
-                currentCameraId = backCamera.id;
-            }
-            
-            if (devices.length > 1) {
-                const switchBtn = document.getElementById("switch-camera-btn");
-                if (switchBtn) switchBtn.style.display = "inline-block";
-            }
-            
-            await startScanning(currentCameraId);
-        } else {
-            console.warn("No cameras found.");
-            alert("تنبيه: لم نتمكن من العثور على أي كاميرا متصلة.");
-        }
-    }).catch(err => {
-        console.error("Error listing cameras:", err);
-    });
-}
-
-// Check if the current camera supports a torch (flashlight)
-function checkTorchCapability() {
-    try {
-        const capabilities = html5Qrcode.getRunningTrackCapabilities();
-        const torchBtn = document.getElementById("toggle-torch-btn");
-        if (capabilities.torch) {
-            isTorchSupported = true;
-            isTorchOn = false;
-            if (torchBtn) {
-                torchBtn.style.display = "inline-block";
-                torchBtn.innerText = "🔦 تشغيل الفلاش";
-                torchBtn.className = "btn btn-warning btn-lg";
-            }
-        } else {
-            isTorchSupported = false;
-            if (torchBtn) torchBtn.style.display = "none";
-        }
-    } catch (e) {
-        console.warn("Torch capability check failed:", e);
-        isTorchSupported = false;
-        const torchBtn = document.getElementById("toggle-torch-btn");
-        if (torchBtn) torchBtn.style.display = "none";
-    }
-}
-
-// Start Camera Scanning
-async function startScanning(cameraId) {
-    try {
-        if (!html5Qrcode) {
-            html5Qrcode = new Html5Qrcode("reader");
-        }
-        
-        if (isScanning) {
-            await html5Qrcode.stop();
-        }
-        
-        const config = {
-            fps: 20,
-            qrbox: function(width, height) {
-                return { width: width * 0.75, height: height * 0.60 };
-            },
-            aspectRatio: 1.2
-        };
-        
-        await html5Qrcode.start(
-            { deviceId: { exact: cameraId } },
-            config,
-            onScanSuccess
-        );
-        
-        isScanning = true;
-        scanLock = false;
-        if (document.querySelector(".scanner-laser")) document.querySelector(".scanner-laser").style.display = "block";
-        const toggleBtn = document.getElementById("toggle-camera-btn");
-        if (toggleBtn) {
-            toggleBtn.innerText = "🛑 إيقاف الكاميرا";
-            toggleBtn.className = "btn btn-danger btn-lg flex-fill";
-        }
-        checkTorchCapability();
-        
-    } catch (err) {
-        console.error("Failed to start camera:", err);
-        try {
-            await html5Qrcode.start(
-                { facingMode: "environment" },
-                { fps: 20, qrbox: { width: 280, height: 180 }, aspectRatio: 1.2 },
-                onScanSuccess
-            );
-            isScanning = true;
-            scanLock = false;
-            if (document.querySelector(".scanner-laser")) document.querySelector(".scanner-laser").style.display = "block";
-            const toggleBtn = document.getElementById("toggle-camera-btn");
-            if (toggleBtn) {
-                toggleBtn.innerText = "🛑 إيقاف الكاميرا";
-                toggleBtn.className = "btn btn-danger btn-lg flex-fill";
-            }
-            checkTorchCapability();
-        } catch (fallbackErr) {
-            console.error("Fallback start failed:", fallbackErr);
-        }
-    }
-}
-
-// Stop Camera Scanning
-async function stopScanning() {
-    if (html5Qrcode && isScanning) {
-        try {
-            await html5Qrcode.stop();
-            isScanning = false;
-            isTorchOn = false;
-            isTorchSupported = false;
-            const torchBtn = document.getElementById("toggle-torch-btn");
-            if (torchBtn) {
-                torchBtn.style.display = "none";
-                torchBtn.innerText = "🔦 تشغيل الفلاش";
-                torchBtn.className = "btn btn-warning btn-lg";
-            }
-            if (document.querySelector(".scanner-laser")) document.querySelector(".scanner-laser").style.display = "none";
-            const toggleBtn = document.getElementById("toggle-camera-btn");
-            if (toggleBtn) {
-                toggleBtn.innerText = "📷 تشغيل الكاميرا";
-                toggleBtn.className = "btn btn-primary btn-lg flex-fill";
-            }
-        } catch (err) {
-            console.error("Error stopping camera:", err);
-        }
-    }
-}
-
-// Global Scan Lock State
-let globalScanLock = false;
-
-// Scan Success Handler with Paced Cooldown Lock
-async function onScanSuccess(decodedText, decodedResult) {
-    if (globalScanLock) return;
-    
-    const cleanBarcode = decodedText.trim();
-    
-    // Activate global lock immediately to prevent double scans or accidental adjacent scans
-    globalScanLock = true;
-    
-    // Vibration feedback on mobile devices for physical confirmation
-    if (navigator.vibrate) {
-        navigator.vibrate(100); 
-    }
-    
-    // Temporarily hide the scanning laser line to visually show it is paused
-    const laser = document.querySelector(".scanner-laser");
-    if (laser) {
-        laser.style.display = "none";
-    }
-    
-    // Process the scanned barcode
-    await handleScan(cleanBarcode);
-    
-    // Unlock scanning and show the laser line after 2 seconds
-    setTimeout(() => {
-        globalScanLock = false;
-        if (isScanning && laser) {
-            laser.style.display = "block";
-        }
-    }, 2000);
-}
-
-// Register Service Worker for PWA installation support
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(reg => {
-            console.log('Service Worker registered successfully!', reg.scope);
-        }).catch(err => {
-            console.warn('Service Worker registration failed:', err);
-        });
-    });
-}
