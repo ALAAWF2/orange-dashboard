@@ -126,6 +126,7 @@ The Python scripts located in the root `orangedata/` are **NOT** optional side-t
    - Sales occurring after midnight (up to 3:00 AM) are shifted to the *previous* date. This is critical for all calculations.
    - **Ramadan Exception**: During Ramadan dates (e.g., Feb 18 - Mar 20, 2026), visitor counting hours and sales targets drastically shift. Always verify if a date falls within Ramadan (`metadata.ramadan_dates` in JSON) before modifying time-series extraction logic. The Python scripts natively handle these shifts.
 3. **Data Refresh**: A 15-minute scheduled Python task updates the JSON data files. **Never edit the data JSON files manually.**
+4. **Freshness / caching contract (2026-07-09)**: pages fetch data JSONs with **stable URLs — never add cache-busting params** (`?t=Date.now()` etc.). The Flask server (Flask 3) serves every file with `Cache-Control: no-cache` + `ETag`, so the browser revalidates on each open: 304 when unchanged (near-zero transfer), fresh 200 the moment data changes. The generator only rewrites files whose data actually changed, so ETags are meaningful. `data_version.json` (gitignored, written at the end of every 15-min cycle) is the pipeline heartbeat for "last updated" indicators — note `last_updated.json` is DAILY (catalog generator) and must not be used as a version anchor for 15-min data. Exceptions keeping their own scheme: `admin_panel.html`, `check_error.html` (deliberate cache-bypass diagnostic).
 
 ---
 

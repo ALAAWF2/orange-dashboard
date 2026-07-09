@@ -22,11 +22,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchData() {
     try {
-        const res = await fetch('management_data.json?t=' + Date.now());
+        const res = await fetch('management_data.json');
         if (!res.ok) throw new Error("Failed to load management data");
         rawData = await res.json();
 
-        const empRes = await fetch('employees_data.json?t=' + Date.now());
+        const empRes = await fetch('employees_data.json');
         if (empRes.ok) {
             employeesData = await empRes.json();
             calculateCurrentEmployees();

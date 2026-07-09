@@ -1058,7 +1058,7 @@
             // Show loading inside modal isn't great if it's not open, but usually called when open.
             // Better: just fetch silently unless active search.
             try {
-                const res = await fetch('products.json?t=' + Date.now());
+                const res = await fetch('products.json');
                 if (res.ok) {
                     inqCatalog = await res.json();
                     console.log("Inquiry Catalog Loaded:", inqCatalog.length, "items");
@@ -1102,7 +1102,7 @@
             // Let's load it if not loaded.
             if (!window.liveStockDataLoaded) {
                 try {
-                    const res = await fetch('stock_data.json?t=' + Date.now());
+                    const res = await fetch('stock_data.json');
                     if (res.ok) {
                         window.liveStockData = await res.json();
                     }
@@ -1385,9 +1385,9 @@
             try {
                 // Fetch all data files including products catalog
                 const [resAnalysis, resMgmt, resProducts] = await Promise.all([
-                    fetch('data/products/product_analysis_data.json?t=' + Date.now()),
-                    fetch('management_data.json?t=' + Date.now()),
-                    fetch('products.json?t=' + Date.now()).then(r => r.ok ? r.json() : []).catch(() => [])
+                    fetch('data/products/product_analysis_data.json'),
+                    fetch('management_data.json'),
+                    fetch('products.json').then(r => r.ok ? r.json() : []).catch(() => [])
                 ]);
 
                 if (!resAnalysis.ok || !resMgmt.ok) throw new Error("Failed to load data");
@@ -1424,7 +1424,7 @@
         async function loadStoreData(sid) {
             try {
                 const filename = 'data/products/product_analysis_store_' + sid + '.json';
-                const res = await fetch(filename + '?t=' + Date.now());
+                const res = await fetch(filename);
                 if (!res.ok) throw new Error("Store data not found");
                 activeStoreData = await res.json();
             } catch (e) {
