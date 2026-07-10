@@ -900,6 +900,18 @@ function subscribeToSession(sessionId) {
         .subscribe();
 }
 
+// Helper to cast cell values to Numbers if they are purely numeric and do not have leading zeros
+function formatExcelCell(val) {
+    if (val === undefined || val === null || val === "") return "";
+    const str = String(val).trim();
+    if (/^\d+$/.test(str)) {
+        if (str.length === 1 || str[0] !== '0') {
+            return Number(str);
+        }
+    }
+    return str;
+}
+
 // Generate Excel file rows representing multiple barcodes in columns (with explicit numbers casting)
 async function generateExcelRows() {
     if (scannedItems.length === 0) return [];
@@ -942,13 +954,13 @@ async function generateExcelRows() {
         if (barcodes.length === 0) barcodes = [item.barcode];
         
         const rowObj = {
-            "رقم المنتج (Item ID)": item.item_id,
+            "رقم المنتج (Item ID)": formatExcelCell(item.item_id),
             "اسم الصنف (Item Name)": item.name,
-            "الكود البديل (Alias)": item.old_item_id
+            "الكود البديل (Alias)": formatExcelCell(item.old_item_id)
         };
         
         for (let i = 0; i < maxBarcodesCount; i++) {
-            rowObj[`الباركود ${i + 1}`] = barcodes[i] || "";
+            rowObj[`الباركود ${i + 1}`] = formatExcelCell(barcodes[i]);
         }
         
         rowObj["السعر (Price)"] = Number(item.price) || 0;
