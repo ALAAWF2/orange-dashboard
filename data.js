@@ -2190,25 +2190,6 @@ const EMPLOYEES = [
         "addressBooks": "1401-C;1401-E"
     },
     {
-        "employeeId": "4016-شروق علي الشهري",
-        "personnelNumber": "4016",
-        "name": "شروق علي الشهري",
-        "startDate": "2024-03-02",
-        "manager": "اماني عسيري",
-        "showroom": "1903-43-Mujan Park",
-        "showroomDetails": [
-            {
-                "name": "1903-43-Mujan Park",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1903-C",
-                    "1903-E"
-                ]
-            }
-        ],
-        "addressBooks": "1903-C;1903-E"
-    },
-    {
         "employeeId": "4025-أسماء عبدالله الحجور",
         "personnelNumber": "4025",
         "name": "أسماء عبدالله الحجور",
@@ -4317,25 +4298,6 @@ const EMPLOYEES = [
         "addressBooks": "1109-C;1109-E"
     },
     {
-        "employeeId": "4663-رحمه احمد القرني",
-        "personnelNumber": "4663",
-        "name": "رحمه احمد القرني",
-        "startDate": "2025-08-05",
-        "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New",
-        "showroomDetails": [
-            {
-                "name": "1901-21-Abha Al_Rashid Mall New",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1901-C",
-                    "1901-E"
-                ]
-            }
-        ],
-        "addressBooks": "1901-C;1901-E"
-    },
-    {
         "employeeId": "4673-رويده سالم الحربي",
         "personnelNumber": "4673",
         "name": "رويده سالم الحربي",
@@ -6056,25 +6018,6 @@ const EMPLOYEES = [
         "addressBooks": "1302-C;1302-E"
     },
     {
-        "employeeId": "4930-ياره حسين",
-        "personnelNumber": "4930",
-        "name": "ياره حسين",
-        "startDate": "2026-04-06",
-        "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New",
-        "showroomDetails": [
-            {
-                "name": "1901-21-Abha Al_Rashid Mall New",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1901-C",
-                    "1901-E"
-                ]
-            }
-        ],
-        "addressBooks": "1901-C;1901-E"
-    },
-    {
         "employeeId": "4931-غاده الشهراني",
         "personnelNumber": "4931",
         "name": "غاده الشهراني",
@@ -6684,25 +6627,6 @@ const EMPLOYEES = [
         "personnelNumber": "4964",
         "name": "عائشة الشهري",
         "startDate": "2026-05-20",
-        "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New",
-        "showroomDetails": [
-            {
-                "name": "1901-21-Abha Al_Rashid Mall New",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1901-C",
-                    "1901-E"
-                ]
-            }
-        ],
-        "addressBooks": "1901-C;1901-E"
-    },
-    {
-        "employeeId": "4965-اسيل زايد",
-        "personnelNumber": "4965",
-        "name": "اسيل زايد",
-        "startDate": "2026-05-19",
         "manager": "اماني عسيري",
         "showroom": "1901-21-Abha Al_Rashid Mall New",
         "showroomDetails": [
