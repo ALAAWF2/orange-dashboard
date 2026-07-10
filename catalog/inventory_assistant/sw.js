@@ -3,7 +3,7 @@
  * Implements robust offline caching (Network First, Cache Fallback) restricted to app assets and CDNs.
  */
 
-const CACHE_NAME = "inventory-assistant-v2";
+const CACHE_NAME = "inventory-assistant-v3";
 const ASSETS = [
     "./",
     "./index.html",
@@ -13,6 +13,7 @@ const ASSETS = [
     "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css",
     "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0",
     "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+    "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js",
     "https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap"
 ];
 

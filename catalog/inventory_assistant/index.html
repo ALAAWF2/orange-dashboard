@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مساعد الجرد - شركة أورانج</title>
+    <title>مساعد الجرد الذكي - شركة أورانج</title>
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <!-- Bootstrap 5.3.0 RTL -->
@@ -14,21 +14,25 @@
         :root {
             --bs-primary: #fe7900;
             --orange-hover: #e06a00;
-            --dark-bg: #1c1c1e;
-            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --dark-bg: #121214;
+            --card-bg: rgba(30, 30, 32, 0.7);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             --border-radius-sm: 8px;
             --border-radius-lg: 16px;
+            --text-light: #f5f5f7;
+            --text-muted: #8e8e93;
+            --border-color: rgba(255, 255, 255, 0.1);
         }
 
         body {
             font-family: 'Tajawal', sans-serif;
-            background-color: #f5f5f7;
-            color: #333;
-            padding-bottom: 80px; /* Space for sticky actions on mobile */
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            padding-bottom: 40px;
         }
 
         .navbar {
-            background-color: var(--dark-bg);
+            background-color: #1c1c1e;
             border-bottom: 3px solid var(--bs-primary);
         }
 
@@ -46,10 +50,13 @@
         }
 
         .card {
-            border: none;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
             border-radius: var(--border-radius-lg);
             box-shadow: var(--card-shadow);
             margin-bottom: 20px;
+            color: var(--text-light);
         }
 
         .btn-primary {
@@ -63,45 +70,36 @@
             border-color: var(--orange-hover);
         }
 
-        /* Scanner Area Styles */
-        #reader {
-            width: 100%;
-            height: 100%;
-        }
-
-        #reader video {
-            object-fit: cover !important;
-            border-radius: var(--border-radius-lg);
-        }
-
-        .scanner-laser {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background-color: var(--bs-primary);
-            box-shadow: 0 0 10px var(--bs-primary);
-            animation: scanning 2s linear infinite;
-            z-index: 10;
-        }
-
-        @keyframes scanning {
-            0% { top: 0%; }
-            50% { top: 100%; }
-            100% { top: 0%; }
-        }
-
         /* Scanned Item List Row */
         .scanned-row {
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .scanned-row.just-added {
-            background-color: rgba(254, 121, 0, 0.15);
+            background-color: rgba(254, 121, 0, 0.25) !important;
         }
 
-        /* Mobile Responsive adjustments */
+        /* Focus Glow for Scanner Input */
+        #manual-barcode-input:focus {
+            border-color: var(--bs-primary) !important;
+            box-shadow: 0 0 15px rgba(254, 121, 0, 0.4) !important;
+        }
+
+        /* Table custom styling for dark mode */
+        .table {
+            color: var(--text-light);
+            border-color: var(--border-color);
+        }
+        .table-striped>tbody>tr:nth-of-type(odd)>* {
+            --bs-table-color-type: var(--text-light);
+            --bs-table-bg-type: rgba(255, 255, 255, 0.02);
+        }
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-color-type: var(--text-light);
+            --bs-table-bg-type: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Mobile adjustments */
         @media (max-width: 576px) {
             .container {
                 padding-left: 8px;
@@ -114,10 +112,6 @@
             }
             .table-responsive {
                 font-size: 0.82rem;
-            }
-            .btn-action-group {
-                flex-direction: column;
-                gap: 10px;
             }
         }
 
@@ -139,6 +133,33 @@
             background-color: #dc3545;
             color: #fff;
         }
+
+        /* Widescreen Laptop Grid Layout */
+        @media (min-width: 992px) {
+            .widescreen-container {
+                display: grid;
+                grid-template-columns: 380px 1fr;
+                gap: 24px;
+                align-items: start;
+            }
+            .sticky-sidebar {
+                position: sticky;
+                top: 85px;
+            }
+        }
+
+        /* custom select and inputs for dark mode */
+        .form-control, .form-select {
+            background-color: #1c1c1e;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #1c1c1e;
+            color: #fff;
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 8px rgba(254, 121, 0, 0.25);
+        }
     </style>
 </head>
 <body>
@@ -156,10 +177,10 @@
     <div id="connection-status-banner" class="alert text-center mb-0 py-2 fw-bold" style="display: none; border-radius: 0; z-index: 9999; font-size: 1.1rem;"></div>
 
     <!-- Main Container -->
-    <div class="container my-4">
+    <div class="container-fluid my-4 px-4">
         
         <!-- Step 1: Select Showroom & Join/Start Session -->
-        <div class="card p-3" id="showroom-selection-card">
+        <div class="card p-4 mx-auto" id="showroom-selection-card" style="max-width: 600px;">
             <h5 class="card-title font-weight-bold mb-3">📍 اختيار معرض الجرد</h5>
             
             <div class="mb-3">
@@ -198,80 +219,157 @@
 
         <!-- Step 2: Scanner & Inputs (Initially Hidden) -->
         <div id="inventory-workspace" style="display: none;">
-            
-            <!-- Statistics Card -->
-            <div class="card p-3 text-white bg-dark">
-                <div class="row align-items-center">
-                    <div class="col-8">
-                        <h6 class="mb-1 text-muted">المعرض الجاري جرده:</h6>
-                        <h4 id="active-outlet-name" class="brand-orange fw-bold mb-0">-</h4>
-                    </div>
-                    <div class="col-4 text-start">
-                        <h6 class="mb-1 text-muted">إجمالي الممسوح:</h6>
-                        <h4 id="total-scanned-qty" class="fw-bold mb-0">0</h4>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Barcode Scanner Card -->
-            <div class="card p-3">
-                <h5 class="card-title font-weight-bold mb-3">🔍 مسح وقراءة الباركود</h5>
+            <div class="widescreen-container">
                 
-                <!-- Manual Entry Form -->
-                <form id="manual-barcode-form" class="row g-2 align-items-center">
-                    <div class="col-8 col-sm-9">
-                        <input type="text" id="manual-barcode-input" class="form-control form-control-lg" placeholder="ضع مؤشر الكتابة هنا ثم امسح الباركود بالـ Scanner..." autocomplete="off">
+                <!-- Right Column (Sidebar - Inputs & Session Info) -->
+                <div class="sticky-sidebar">
+                    
+                    <!-- Statistics Card -->
+                    <div class="card p-3 text-white bg-dark">
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h6 class="mb-1 text-muted" style="font-size: 0.85rem;">المعرض الجاري جرده:</h6>
+                                <h4 id="active-outlet-name" class="brand-orange fw-bold mb-0">-</h4>
+                            </div>
+                            <div class="col-4 text-start">
+                                <h6 class="mb-1 text-muted" style="font-size: 0.85rem;">إجمالي الممسوح:</h6>
+                                <h4 id="total-scanned-qty" class="fw-bold mb-0">0</h4>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-4 col-sm-3">
-                        <button type="submit" class="btn btn-primary btn-lg w-100">إدخال 🔍</button>
-                    </div>
-                </form>
-                <div id="scan-feedback" class="mt-2 text-center fw-bold" style="display: none;"></div>
-            </div>
 
-            <!-- Current Inventory Table -->
-            <div class="card p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="card-title font-weight-bold mb-0">📦 قائمة المواد المجرودة</h5>
-                    <button id="clear-current-inventory" class="btn btn-sm btn-outline-danger">مسح الكل 🗑️</button>
-                </div>
-                
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>رقم المنتج</th>
-                                <th>اسم الصنف</th>
-                                <th>الباركود</th>
-                                <th class="text-center">المتوقع</th>
-                                <th class="text-center">الفعلي</th>
-                                <th class="text-center">الفرق</th>
-                                <th class="text-center">الإجراء</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventory-tbody">
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">لم يتم جرد أي مواد بعد. ابدأ بمسح الباركود!</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Action Footer -->
-            <div class="card p-3">
-                <h5 class="card-title font-weight-bold mb-3">💾 حفظ وإنهاء الجلسة</h5>
-                <div class="d-flex flex-column gap-2">
-                    <div class="d-flex gap-2 btn-action-group">
-                        <button id="download-excel-btn" class="btn btn-success btn-lg flex-fill">
-                            📥 تحميل Excel
-                        </button>
-                        <button id="whatsapp-share-btn" class="btn btn-info btn-lg flex-fill text-white" style="background-color: #25d366; border-color: #25d366;">
-                            💬 مشاركة واتساب
-                        </button>
+                    <!-- Active Zone/Shelf Selection Card -->
+                    <div class="card p-3">
+                        <h5 class="card-title font-weight-bold mb-3" style="font-size: 1.1rem;">📍 منطقة / رف الجرد الحالية</h5>
+                        <div class="d-flex gap-2">
+                            <select id="zone-select" class="form-select form-select-lg">
+                                <option value="العام">العام (الافتراضي)</option>
+                                <option value="المستودع الرئيسي">المستودع الرئيسي</option>
+                                <option value="رف العرض 1">رف العرض 1</option>
+                                <option value="رف العرض 2">رف العرض 2</option>
+                                <option value="طاولة الهواتف">طاولة الهواتف</option>
+                                <option value="الكاونتر">الكاونتر</option>
+                            </select>
+                            <button id="add-zone-btn" class="btn btn-outline-primary" type="button" title="إضافة منطقة جديدة">+</button>
+                        </div>
                     </div>
-                    <button id="complete-session-btn" class="btn btn-danger btn-lg w-100 mt-2">
-                        🔒 إغلاق جلسة الجرد نهائياً للجميع
+
+                    <!-- Barcode Scanner Card -->
+                    <div class="card p-3">
+                        <h5 class="card-title font-weight-bold mb-3" style="font-size: 1.1rem;">🔍 مسح وقراءة الباركود</h5>
+                        
+                        <!-- Manual Entry Form -->
+                        <form id="manual-barcode-form" class="row g-2 align-items-center">
+                            <div class="col-8">
+                                <input type="text" id="manual-barcode-input" class="form-control form-control-lg" placeholder="امسح الباركود..." autocomplete="off">
+                            </div>
+                            <div class="col-4">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">إدخال 🔍</button>
+                            </div>
+                        </form>
+                        <div id="scan-feedback" class="mt-2 text-center fw-bold" style="display: none;"></div>
+                        
+                        <div class="text-center mt-2">
+                            <small class="text-muted" style="font-size: 0.78rem;">💡 حقل المسح نشط دائماً. اضغط F9 للتركيز يدوياً.</small>
+                        </div>
+                    </div>
+
+                    <!-- Action Footer -->
+                    <div class="card p-3">
+                        <h5 class="card-title font-weight-bold mb-3" style="font-size: 1.1rem;">💾 حفظ وإنهاء الجلسة</h5>
+                        <div class="d-flex flex-column gap-2">
+                            
+                            <!-- Excel Import -->
+                            <div class="mb-3">
+                                <label for="excel-import-input" class="form-label small text-muted">📥 استيراد مسودة جرد سابقة (Excel):</label>
+                                <input type="file" id="excel-import-input" class="form-control form-control-sm" accept=".xlsx, .xls">
+                            </div>
+                            
+                            <div class="d-flex gap-2 btn-action-group">
+                                <button id="download-excel-btn" class="btn btn-success btn-lg flex-fill">
+                                    📥 تحميل Excel
+                                </button>
+                                <button id="whatsapp-share-btn" class="btn btn-info btn-lg flex-fill text-white" style="background-color: #25d366; border-color: #25d366;">
+                                    💬 مشاركة
+                                </button>
+                            </div>
+                            <button id="complete-session-btn" class="btn btn-danger btn-lg w-100 mt-2">
+                                🔒 إغلاق جلسة الجرد نهائياً
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Left Column (Main Inventory Table) -->
+                <div class="table-content-area">
+                    
+                    <!-- Current Inventory Table Card -->
+                    <div class="card p-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                            <h5 class="card-title font-weight-bold mb-0">📦 قائمة المواد المجرودة</h5>
+                            
+                            <!-- Toolbar Filters -->
+                            <div class="d-flex align-items-center gap-2">
+                                <!-- Zone Filter -->
+                                <select id="table-zone-filter" class="form-select form-select-sm" style="width: 160px;">
+                                    <option value="all">كل المناطق</option>
+                                    <option value="current">المنطقة النشطة حالياً</option>
+                                </select>
+                                
+                                <!-- Discrepancy Filter -->
+                                <select id="table-diff-filter" class="form-select form-select-sm" style="width: 140px;">
+                                    <option value="all">كل الأصناف</option>
+                                    <option value="mismatch">المتفاوتة ⚠️</option>
+                                    <option value="deficit">العجز 🔻</option>
+                                    <option value="surplus">الزيادة 🔺</option>
+                                </select>
+                                
+                                <button id="clear-current-inventory" class="btn btn-sm btn-outline-danger">مسح الكل 🗑️</button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-dark table-bordered table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>رقم المنتج</th>
+                                        <th>اسم الصنف</th>
+                                        <th>الباركود</th>
+                                        <th class="text-center">المتوقع</th>
+                                        <th class="text-center">الفعلي</th>
+                                        <th class="text-center">الفرق</th>
+                                        <th class="text-center">الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-tbody">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">لم يتم جرد أي مواد بعد. ابدأ بمسح الباركود!</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
+    <!-- SheetJS (Excel generation) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- IndexedDB LocalForage -->
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+
+</body>
+</html>لجرد نهائياً للجميع
                     </button>
                 </div>
             </div>

@@ -360,10 +360,25 @@ function renderDetailTable() {
         const lastUpdated = item.updated_at ? new Date(item.updated_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : "-";
         const scannerName = item.scanned_by ? ` (بواسطة ${item.scanned_by})` : "";
 
+        // Build zone breakdown badges
+        let zoneBadges = "";
+        if (item.zone_breakdown && Object.keys(item.zone_breakdown).length > 0) {
+            zoneBadges = '<div class="mt-1 d-flex flex-wrap gap-1">';
+            for (const [zone, qty] of Object.entries(item.zone_breakdown)) {
+                if (qty > 0) {
+                    zoneBadges += `<span class="badge bg-secondary" style="font-size:0.75rem;">${zone}: ${qty}</span>`;
+                }
+            }
+            zoneBadges += '</div>';
+        }
+
         html += `
             <tr>
                 <td><strong>${item.item_id}</strong></td>
-                <td>${item.name}</td>
+                <td>
+                    <div>${item.name}</div>
+                    ${zoneBadges}
+                </td>
                 <td><code class="text-dark">${item.barcode}</code></td>
                 <td class="text-center">${item.price ? parseFloat(item.price).toFixed(2) : "0.00"}</td>
                 <td class="text-center fw-bold text-muted">${item.expected_qty}</td>
@@ -508,6 +523,15 @@ async function downloadSelectedSessionExcel() {
                 maxBarcodesCount = barcodes.length;
             }
         });
+
+        // Find all unique zones in selectedSessionItems
+        const zonesInSession = new Set();
+        selectedSessionItems.forEach(item => {
+            if (item.zone_breakdown) {
+                Object.keys(item.zone_breakdown).forEach(z => zonesInSession.add(z));
+            }
+        });
+        const sortedZones = Array.from(zonesInSession).sort();
         
         const rows = [];
         selectedSessionItems.forEach(item => {
@@ -526,7 +550,13 @@ async function downloadSelectedSessionExcel() {
             
             rowObj["السعر (Price)"] = Number(item.price) || 0;
             rowObj["الكمية الموجودة بالمعرض (Expected)"] = Number(item.expected_qty) || 0;
-            rowObj["الكمية الفعلية بالجرد (Counted)"] = Number(item.counted_qty) || 0;
+            
+            // Add zone columns dynamically
+            sortedZones.forEach(z => {
+                rowObj[`الكمية في (${z})`] = (item.zone_breakdown && item.zone_breakdown[z]) || 0;
+            });
+
+            rowObj["إجمالي الكمية الفعلية (Counted)"] = Number(item.counted_qty) || 0;
             rowObj["الفرق (Difference)"] = (Number(item.counted_qty) || 0) - (Number(item.expected_qty) || 0);
             rowObj["آخر مسح بواسطة"] = item.scanned_by || "";
             
