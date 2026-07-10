@@ -1409,6 +1409,16 @@
                     </select>
                 </div>
 
+                <!-- Comparison Reference Filter -->
+                <div class="col-md">
+                    <label class="form-label small text-muted fw-bold">مرجع المقارنة (Comparison)</label>
+                    <select id="compRefFilter" class="form-select form-select-sm" onchange="updateDashboard()">
+                        <option value="last_year">السنة الماضية</option>
+                        <option value="last_month">الشهر الماضي</option>
+                        <option value="last_week">الأسبوع الماضي</option>
+                    </select>
+                </div>
+
                 <!-- Branch Filter -->
                 <div class="col-md">
                     <label class="form-label small text-muted fw-bold">المعرض / الفرع</label>
@@ -1884,7 +1894,7 @@
         </div>
 
         <!-- Row 3: Detailed Table -->
-        <div class="row mt-4">
+        <div class="row mt-4" id="detailed-report-row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="section-title mb-0">تفاصيل الفروع (Detailed Report)</h5>
@@ -1909,6 +1919,7 @@
                                 <tr>
                                     <th class="text-center">#</th>
                                     <th onclick="setSort('name')" style="cursor: pointer;">الفرع (Branch) ↕</th>
+                                    <th class="text-center">أداء 14 يوم (Trend)</th>
                                     <th class="text-center" onclick="setSort('val')" style="cursor: pointer;">المبيعات
                                         (Sales) ↕</th>
                                     <th class="text-center" onclick="setSort('prevVal')" style="cursor: pointer;">مبيعات
@@ -1918,6 +1929,8 @@
                                     <th class="text-center" onclick="setSort('ach')" style="cursor: pointer;">
                                         التحقيق (%)
                                         ↕</th>
+                                    <th class="text-center" onclick="setSort('forecast')" style="cursor: pointer;">توقع الإغلاق (Forecast) ↕</th>
+                                    <th class="text-center" onclick="setSort('expectedGap')" style="cursor: pointer;">الفجوة المتوقعة (Gap) ↕</th>
                                     <th class="text-center" onclick="setSort('growth')" style="cursor: pointer;">النمو
                                         (Growth %) ↕</th>
                                     <th class="text-center" onclick="setSort('absGrowth')" style="cursor: pointer;">قيمة
@@ -2089,78 +2102,6 @@
             </div>
         </div>
 
-        <!-- Branch Daily Details Modal (NEW) -->
-        <div class="modal fade" id="branchDailyModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header" style="background-color: #fe7900; color: white;">
-                        <div>
-                            <h5 class="modal-title fw-bold" id="branchDailyTitle">تفاصيل الفرع</h5>
-                            <small id="branchDailyPeriod" class="opacity-75">الفترة</small>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-0 bg-light">
-                        <!-- KPI Summary -->
-                        <div class="row g-2 p-3 bg-white border-bottom">
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <div class="text-muted small">إجمالي المبيعات</div>
-                                    <div class="fs-4 fw-bold text-success" id="bdTotalSales">0</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <div class="text-muted small">الهدف</div>
-                                    <div class="fs-4 fw-bold" id="bdTarget">0</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <div class="text-muted small">التحقيق</div>
-                                    <div class="fs-4 fw-bold" id="bdAchievement">0%</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <div class="text-muted small">اليومية المتبقية</div>
-                                    <div class="fs-4 fw-bold text-danger" id="bdDailyReq">0</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Daily Table -->
-                        <div class="table-responsive" style="max-height: 60vh;">
-                            <table class="table table-striped table-hover mb-0 align-middle">
-                                <thead class="table-dark sticky-top">
-                                    <tr>
-                                        <th class="text-center">التاريخ</th>
-                                        <th class="text-center">اليوم</th>
-                                        <th class="text-center">المبيعات</th>
-                                        <th class="text-center opacity-50">السنة السابقة</th>
-                                        <th class="text-center">النمو %</th>
-                                        <th class="text-center">الفواتير</th>
-                                        <th class="text-center">متوسط الفاتورة</th>
-                                        <th class="text-center">الزوار</th>
-                                        <th class="text-center opacity-50">السنة السابقة</th>
-                                        <th class="text-center">قيمة العميل</th>
-                                        <th class="text-center">التحويل %</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="branchDailyBody">
-                                    <!-- JS Populated -->
-                                </tbody>
-                                <tfoot id="branchDailyFoot" class="table-warning fw-bold">
-                                    <!-- JS Populated -->
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -2195,6 +2136,105 @@
             'Online': 'أونلاين',
             'Unknown': 'غير معروف'
         };
+
+        function getGraduatedColorForAch(ach) {
+            const val = Math.min(100, Math.max(0, ach));
+            const hue = val * 1.2; // 0 -> 0, 100 -> 120
+            return `hsla(${hue}, 85%, 40%, 1)`;
+        }
+
+        function getGraduatedColorForGrowth(growth) {
+            const val = Math.min(30, Math.max(-30, growth));
+            const pct = (val + 30) / 60;
+            const hue = pct * 120;
+            return `hsla(${hue}, 85%, 40%, 1)`;
+        }
+
+        function getSparklineDates(endDateStr) {
+            const dates = [];
+            const end = new Date(endDateStr);
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date(end);
+                d.setDate(end.getDate() - i);
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                dates.push(`${yyyy}-${mm}-${dd}`);
+            }
+            return dates;
+        }
+
+        function generateSparklineSVG(salesData) {
+            if (!salesData || salesData.length === 0) return '';
+            const max = Math.max(...salesData);
+            const min = Math.min(...salesData);
+            const range = max - min;
+            const points = salesData.map((val, idx) => {
+                const x = (idx / (salesData.length - 1)) * 80 + 5; 
+                let y = 15; 
+                if (range > 0) {
+                    y = 25 - ((val - min) / range) * 20; 
+                }
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            });
+            return `
+                <svg width="90" height="30" viewBox="0 0 90 30" style="overflow: visible; display: block; margin: 0 auto;">
+                    <polyline fill="none" stroke="var(--primary, #fe7900)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${points.join(' ')}" />
+                    <circle cx="${points[points.length-1].split(',')[0]}" cy="${points[points.length-1].split(',')[1]}" r="2.5" fill="var(--primary, #fe7900)" />
+                </svg>
+            `;
+        }
+
+        function copyWhatsappSummary(storeName, yesterdaySales, mtdSales, target, achievement, conversion, visitors, bills) {
+            const text = `*تقرير مبيعات معرض Orange - ${storeName}* 🍊
+---------------------------------------
+📅 مبيعات أمس: *${Math.round(yesterdaySales).toLocaleString('ar-SA')} ر.س*
+📈 مبيعات الشهر (MTD): *${Math.round(mtdSales).toLocaleString('ar-SA')} ر.س*
+🎯 المستهدف المطلوب: *${Math.round(target).toLocaleString('ar-SA')} ر.س*
+📊 تحقيق المستهدف: *${achievement.toFixed(1)}%*
+🛒 معدل التحويل (CR): *${conversion.toFixed(2)}%*
+👥 إجمالي الزوار: *${visitors.toLocaleString('ar-SA')} زائر*
+🧾 عدد الفواتير: *${bills.toLocaleString('ar-SA')} فاتورة*`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`تم نسخ ملخص واتساب لمعرض ${storeName}!`);
+            }).catch(e => {
+                console.error(e);
+                alert("تعذر نسخ النص");
+            });
+        }
+
+        function showToast(message) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.position = 'fixed';
+                container.style.top = '20px';
+                container.style.right = '20px';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.style.background = '#198754';
+            toast.style.color = '#fff';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '6px';
+            toast.style.marginBottom = '10px';
+            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            toast.style.fontSize = '0.9rem';
+            toast.style.fontWeight = 'bold';
+            toast.style.direction = 'rtl';
+            toast.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+            toast.innerText = message;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.5s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
 
         function setSort(col) {
             if (currentSort.col === col) {
@@ -2563,13 +2603,13 @@
 
         // Helper to open Branch Details with current filter dates
         function openBranchDetails(sid, encodedName) {
-            let url = `branch_details.html?sid=${sid}&name=${encodedName}`;
-            if (window.dashboardState && window.dashboardState.start && window.dashboardState.end) {
-                const sStr = window.dashboardState.start.toLocaleDateString('en-CA');
-                const eStr = window.dashboardState.end.toLocaleDateString('en-CA');
-                url += `&start=${sStr}&end=${eStr}`;
+            const branchFilter = document.getElementById('branchFilter');
+            if (branchFilter) {
+                branchFilter.value = sid;
+                updateDashboard();
+                const el = document.getElementById('detailed-report-row');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
             }
-            window.open(url, '_blank');
         }
 
         function updateDashboard() {
@@ -2603,18 +2643,55 @@
                 currentEnd = new Date(e);
                 currentEnd.setHours(23, 59, 59, 999);
 
-                // Prev: Same dates, 1 year ago
-                prevStart = new Date(currentStart);
-                prevStart.setFullYear(prevStart.getFullYear() - 1);
+                const compRef = document.getElementById('compRefFilter') ? document.getElementById('compRefFilter').value : 'last_year';
 
-                prevEnd = new Date(currentEnd);
-                prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+                if (compRef === 'last_year') {
+                    // Prev: Same dates, 1 year ago
+                    prevStart = new Date(currentStart);
+                    prevStart.setFullYear(prevStart.getFullYear() - 1);
 
-                // Custom Logic for Ramadan 2026 (Feb and March), and April (+5 days)
-                if (currentStart.getFullYear() === 2026 && (currentStart.getMonth() === 1 || currentStart.getMonth() === 2)) {
-                    // Shift Previous Year Dates by +11 days
-                    prevStart.setDate(prevStart.getDate() + 11);
-                    prevEnd.setDate(prevEnd.getDate() + 11);
+                    prevEnd = new Date(currentEnd);
+                    prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+
+                    // Automatic Ramadan Offset Adjustment
+                    if (rawData.metadata && rawData.metadata.ramadan_dates) {
+                        const rDates = rawData.metadata.ramadan_dates;
+                        const startYear = currentStart.getFullYear();
+                        const targetYear = prevStart.getFullYear();
+                        const currR = rDates.find(r => r.year === startYear && r.event === 'Ramadan');
+                        const targetR = rDates.find(r => r.year === targetYear && r.event === 'Ramadan');
+
+                        if (currR && targetR) {
+                            const rStartCurr = new Date(currR.start);
+                            const rEndCurr = new Date(currR.end);
+                            // Check if current selection starts within current Ramadan
+                            if (currentStart >= rStartCurr && currentStart <= rEndCurr) {
+                                const startOffset = Math.round((currentStart - rStartCurr) / (1000 * 60 * 60 * 24));
+                                const duration = Math.round((currentEnd - currentStart) / (1000 * 60 * 60 * 24));
+                                const rStartTarget = new Date(targetR.start);
+
+                                prevStart = new Date(rStartTarget);
+                                prevStart.setDate(rStartTarget.getDate() + startOffset);
+
+                                prevEnd = new Date(prevStart);
+                                prevEnd.setDate(prevStart.getDate() + duration);
+                            }
+                        }
+                    }
+                } else if (compRef === 'last_month') {
+                    // Prev: Same dates, 1 month ago
+                    prevStart = new Date(currentStart);
+                    prevStart.setMonth(prevStart.getMonth() - 1);
+
+                    prevEnd = new Date(currentEnd);
+                    prevEnd.setMonth(prevEnd.getMonth() - 1);
+                } else if (compRef === 'last_week') {
+                    // Prev: Same dates, 1 week ago
+                    prevStart = new Date(currentStart);
+                    prevStart.setDate(prevStart.getDate() - 7);
+
+                    prevEnd = new Date(currentEnd);
+                    prevEnd.setDate(prevEnd.getDate() - 7);
                 }
 
             } else if (mode === 'ramadan') {
@@ -3066,6 +3143,19 @@
             // Calculate Remaining Days
             let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, currentStart);
 
+            // Pre-create sales map for O(1) lookups
+            const salesMap = {};
+            if (rawData && rawData.sales) {
+                rawData.sales.forEach(r => {
+                    salesMap[`${r[0]}_${r[1]}`] = r[2];
+                });
+            }
+
+            // Calculate days in current selection
+            let daysDiff = Math.ceil((currentEnd - currentStart) / (1000 * 60 * 60 * 24)) + 1;
+            daysDiff = Math.max(1, daysDiff);
+            let totalDaysInMonth = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0).getDate();
+
             allStores.forEach(sid => {
                 let name = rawData.stores[sid] || sid;
 
@@ -3097,8 +3187,24 @@
                 // New Metrics
                 let absGrowth = val - prevVal;
 
+                // Calculate Yesterday's Sales
+                let today = new Date();
+                let yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                let yesterdayStr = yesterday.toISOString().split('T')[0];
+                let yesterdaySales = salesMap[`${yesterdayStr}_${sid}`] || 0;
+
+                // Calculate Sparkline Data
+                const sparklineDates = getSparklineDates(document.getElementById('endDate').value);
+                const sparklineData = sparklineDates.map(dStr => salesMap[`${dStr}_${sid}`] || 0);
+                const sparklineSVG = generateSparklineSVG(sparklineData);
+
+                // Run-rate Forecast and Expected Gap
+                let forecast = target > 0 ? (val / daysDiff) * totalDaysInMonth : 0;
+                let expectedGap = target > 0 ? forecast - target : 0;
+
                 branchList.push({
-                    sid, name, val, prevVal, growth, absGrowth, target, trans, visitors, prevVisitors, ach, avgInv, conv, custVal, prevCustVal, dailyReq
+                    sid, name, val, prevVal, growth, absGrowth, target, trans, visitors, prevVisitors, ach, avgInv, conv, custVal, prevCustVal, dailyReq, yesterdaySales, sparklineSVG, forecast, expectedGap
                 });
             });
 
@@ -3139,6 +3245,12 @@
                 const mCustValLY = mPrevVisitors > 0 ? mPrevVal / mPrevVisitors : 0;
                 const mConv = mVisitors > 0 ? (mTrans / mVisitors) * 100 : 0;
 
+                const mForecast = mTarget > 0 ? (mVal / daysDiff) * totalDaysInMonth : 0;
+                const mExpectedGap = mTarget > 0 ? mForecast - mTarget : 0;
+                const mAchColor = getGraduatedColorForAch(mAch);
+                const mGrowthColor = getGraduatedColorForGrowth(mGrowth);
+                const mExpectedGapColor = mExpectedGap >= 0 ? '#198754' : '#dc3545';
+
                 const mgrRow = document.createElement('tr');
                 mgrRow.className = 'manager-group-row';
                 mgrRow.style.cursor = 'pointer';
@@ -3147,14 +3259,17 @@
                 mgrRow.setAttribute('onclick', `toggleManagerDrillDown('${mgrLabel.replace(/'/g, "\\'")}', ${JSON.stringify(mgrStoreIds)})`);
                 mgrRow.innerHTML = `
                     <td class="text-center"><span class="mgr-icon"><i class="bi bi-person-badge"></i></span></td>
-                    <td>\u0645\u062c\u0645\u0648\u0639 \u0645\u0639\u0627\u0631\u0636 ${mgrLabel} <span class="mgr-stores-count">${branchList.length} \u0645\u0639\u0631\u0636</span> <span class="toggle-arrow" id="mgr-summary-arrow">\u25b6</span></td>
+                    <td>مجموع معارض ${mgrLabel} <span class="mgr-stores-count">${branchList.length} معرض</span> <span class="toggle-arrow" id="mgr-summary-arrow">▶</span></td>
+                    <td class="text-center">-</td>
                     <td class="text-center">${mVal.toLocaleString()}</td>
                     <td class="text-center" style="opacity:0.7">${mPrevVal.toLocaleString()}</td>
                     <td class="text-center">${mTarget.toLocaleString()}</td>
-                    <td class="text-center" style="color:${mAch >= 100 ? '#4ade80' : '#fbbf24'}">${mAch.toFixed(1)}%</td>
-                    <td class="text-center" dir="ltr" style="color:${mGrowth >= 0 ? '#4ade80' : '#f87171'}">${mGrowth.toFixed(1)}%</td>
-                    <td class="text-center" dir="ltr" style="color:${mAbsGrowth >= 0 ? '#4ade80' : '#f87171'}">${mAbsGrowth.toLocaleString()}</td>
-                    <td class="text-center" style="color:#f87171">${mDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="text-center fw-bold" style="color:${mAchColor}">${mAch.toFixed(1)}%</td>
+                    <td class="text-center fw-bold" style="color:${mExpectedGapColor}">${Math.round(mForecast).toLocaleString()}</td>
+                    <td class="text-center fw-bold" style="color:${mExpectedGapColor}" dir="ltr">${mExpectedGap >= 0 ? '+' : ''}${Math.round(mExpectedGap).toLocaleString()}</td>
+                    <td class="text-center fw-bold" dir="ltr" style="color:${mGrowthColor}">${mGrowth.toFixed(1)}%</td>
+                    <td class="text-center fw-bold" dir="ltr" style="color:${mAbsGrowth >= 0 ? '#198754' : '#dc3545'}">${mAbsGrowth.toLocaleString()}</td>
+                    <td class="text-center fw-bold text-danger">${mDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td class="text-center">${mTrans.toLocaleString()}</td>
                     <td class="text-center">${mAvgInv.toFixed(0)}</td>
                     <td class="text-center">${shouldHideVisitors() ? '-' : mVisitors.toLocaleString()}</td>
@@ -3172,14 +3287,27 @@
                 tr.id = `store-row-${b.sid}`;
                 const safeName = b.name.replace(/'/g, "\\'");
                 tr.setAttribute('onclick', `toggleStoreDrillDown('${b.sid}', '${safeName}')`);
+
+                const achColor = getGraduatedColorForAch(b.ach);
+                const growthColor = getGraduatedColorForGrowth(b.growth);
+                const expectedGapColor = b.expectedGap >= 0 ? '#198754' : '#dc3545';
+
                 tr.innerHTML = `
                     <td class="text-center"><span class="rank-badge">${i + 1}</span></td>
-                    <td class="fw-bold fs-6 text-primary store-name-toggle" id="store-toggle-${b.sid}">${b.name} <span class="toggle-arrow">▶</span></td>
+                    <td class="fw-bold fs-6 text-primary store-name-toggle" id="store-toggle-${b.sid}">
+                        ${b.name} <span class="toggle-arrow">▶</span>
+                        <button class="btn btn-sm btn-link p-0 ms-2 text-success" onclick="event.stopPropagation(); copyWhatsappSummary('${safeName}', ${b.yesterdaySales}, ${b.val}, ${b.target}, ${b.ach}, ${b.conv}, ${b.visitors}, ${b.trans})" title="نسخ ملخص واتساب">
+                            <i class="bi bi-whatsapp"></i>
+                        </button>
+                    </td>
+                    <td class="text-center" style="padding: 2px;">${b.sparklineSVG}</td>
                     <td class="text-center">${b.val.toLocaleString()}</td>
                     <td class="text-center text-muted">${b.prevVal.toLocaleString()}</td>
                     <td class="text-center">${b.target.toLocaleString()}</td>
-                    <td class="text-center ${b.ach >= 100 ? 'text-success' : 'text-warning'} fw-bold">${b.ach.toFixed(1)}%</td>
-                    <td class="text-center ${b.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.growth.toFixed(1)}%</td>
+                    <td class="text-center fw-bold" style="color: ${achColor}">${b.ach.toFixed(1)}%</td>
+                    <td class="text-center fw-bold" style="color: ${expectedGapColor}">${Math.round(b.forecast).toLocaleString()}</td>
+                    <td class="text-center fw-bold" style="color: ${expectedGapColor}" dir="ltr">${b.expectedGap >= 0 ? '+' : ''}${Math.round(b.expectedGap).toLocaleString()}</td>
+                    <td class="text-center fw-bold" style="color: ${growthColor}" dir="ltr">${b.growth.toFixed(1)}%</td>
                     <td class="text-center ${b.absGrowth >= 0 ? 'text-success' : 'text-danger'} fw-bold" dir="ltr">${b.absGrowth.toLocaleString()}</td>
                     <td class="text-center fw-bold text-danger">${(b.dailyReq || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td class="text-center">${b.trans.toLocaleString()}</td>
@@ -3224,16 +3352,24 @@
                 let tCustValLY = tPrevVisitors > 0 ? tPrevVal / tPrevVisitors : 0;
                 let tConv = tVisitors > 0 ? (tTrans / tVisitors) * 100 : 0;
 
+                let tForecast = tTarget > 0 ? (tVal / daysDiff) * totalDaysInMonth : 0;
+                let tExpectedGap = tTarget > 0 ? tForecast - tTarget : 0;
+                let tAchColor = getGraduatedColorForAch(tAch);
+                let tGrowthColor = getGraduatedColorForGrowth(tGrowth);
+                let tExpectedGapColor = tExpectedGap >= 0 ? '#198754' : '#dc3545';
+
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="text-center" colspan="2">الإجمالي (Total)</td>
+                    <td class="text-center" colspan="3">الإجمالي (Total)</td>
                     <td class="text-center">${tVal.toLocaleString()}</td>
                     <td class="text-center text-light opacity-75">${tPrevVal.toLocaleString()}</td>
                     <td class="text-center">${tTarget.toLocaleString()}</td>
-                    <td class="text-center ${tAch >= 100 ? 'text-success' : 'text-warning'}">${tAch.toFixed(1)}%</td>
-                    <td class="text-center ${tGrowth >= 0 ? 'text-success' : 'text-danger'}" dir="ltr">${tGrowth.toFixed(1)}%</td>
-                    <td class="text-center ${tAbsGrowth >= 0 ? 'text-success' : 'text-danger'}" dir="ltr">${tAbsGrowth.toLocaleString()}</td>
-                    <td class="text-center text-danger">${tDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="text-center fw-bold" style="color:${tAchColor}">${tAch.toFixed(1)}%</td>
+                    <td class="text-center fw-bold" style="color:${tExpectedGapColor}">${Math.round(tForecast).toLocaleString()}</td>
+                    <td class="text-center fw-bold" style="color:${tExpectedGapColor}" dir="ltr">${tExpectedGap >= 0 ? '+' : ''}${Math.round(tExpectedGap).toLocaleString()}</td>
+                    <td class="text-center fw-bold" dir="ltr" style="color:${tGrowthColor}">${tGrowth.toFixed(1)}%</td>
+                    <td class="text-center fw-bold ${tAbsGrowth >= 0 ? 'text-success' : 'text-danger'}" dir="ltr">${tAbsGrowth.toLocaleString()}</td>
+                    <td class="text-center fw-bold text-danger">${tDailyReq.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                     <td class="text-center">${tTrans.toLocaleString()}</td>
                     <td class="text-center">${tAvgInv.toFixed(0)}</td>
                     <td class="text-center">${shouldHideVisitors() ? '-' : tVisitors.toLocaleString()}</td>
@@ -3621,139 +3757,7 @@
             });
         }
 
-        // --- Branch Daily Details Popup ---
-        function showBranchDailyDetails(storeId, storeName) {
-            if (!rawData || !window.dashboardState) {
-                alert("البيانات غير جاهزة بعد");
-                return;
-            }
 
-            const startDate = new Date(window.dashboardState.start);
-            const endDate = new Date(window.dashboardState.end);
-
-            // Update Modal Title
-            document.getElementById('branchDailyTitle').textContent = storeName;
-            document.getElementById('branchDailyPeriod').textContent =
-                `${startDate.toLocaleDateString('en-CA')} إلى ${endDate.toLocaleDateString('en-CA')}`;
-
-            // Day names for display
-            const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-
-            // Calculate Remaining Days for Daily Req
-            let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, startDate);
-
-            // Build table rows
-            let rows = [];
-            let grandTotalSales = 0, grandSalesLY = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTrans = 0, grandTarget = 0;
-
-            let loopDate = new Date(startDate);
-            while (loopDate <= endDate) {
-                const dateStr = loopDate.toLocaleDateString('en-CA');
-                const dayData = getDayData(storeId, dateStr);
-
-                const sales = dayData.sales || 0;
-                const visitors = dayData.visitors || 0;
-                const trans = dayData.trans || 0;
-                const target = dayData.target || 0;
-
-                // Last Year Data
-                let lyDate = new Date(loopDate);
-                lyDate.setFullYear(loopDate.getFullYear() - 1);
-
-                // Custom Shift for Ramadan 2026 (Feb and March)
-                if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
-                    lyDate.setDate(lyDate.getDate() + 11);
-                }
-
-                const lyDateStr = lyDate.toLocaleDateString('en-CA');
-                const lyData = getDayData(storeId, lyDateStr);
-
-                const salesLY = lyData.sales || 0;
-                const visitorsLY = lyData.visitors || 0;
-
-                // Calculations
-                const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100) : (sales > 0 ? 100 : 0);
-                const avgInv = trans > 0 ? Math.round(sales / trans) : 0;
-                const custVal = visitors > 0 ? Math.round(sales / visitors) : 0;
-                const conv = visitors > 0 ? ((trans / visitors) * 100) : 0;
-
-                // Day name
-                const dayName = dayNames[loopDate.getDay()];
-
-                rows.push({
-                    date: dateStr,
-                    dayName,
-                    sales, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv, custVal
-                });
-
-                grandTotalSales += sales;
-                grandSalesLY += salesLY;
-                grandVisitors += visitors;
-                grandVisitorsLY += visitorsLY;
-                grandTrans += trans;
-                grandTarget += target;
-
-                loopDate.setDate(loopDate.getDate() + 1);
-            }
-
-            // Update KPIs
-            const achPct = grandTarget > 0 ? ((grandTotalSales / grandTarget) * 100) : 0;
-            let dailyReq = 0;
-            if (grandTarget > grandTotalSales) {
-                dailyReq = (grandTarget - grandTotalSales) / remainingDays;
-            }
-
-            document.getElementById('bdTotalSales').textContent = grandTotalSales.toLocaleString();
-            document.getElementById('bdTarget').textContent = grandTarget.toLocaleString();
-            document.getElementById('bdAchievement').textContent = achPct.toFixed(1) + '%';
-            document.getElementById('bdAchievement').className = achPct >= 100 ? 'fs-4 fw-bold text-success' : 'fs-4 fw-bold text-warning';
-            document.getElementById('bdDailyReq').textContent = Math.round(dailyReq).toLocaleString();
-
-            // Render Table Body
-            const tbody = document.getElementById('branchDailyBody');
-            tbody.innerHTML = rows.map(r => `
-                <tr>
-                    <td class="text-center">${r.date}</td>
-                    <td class="text-center">${r.dayName}</td>
-                    <td class="text-center fw-bold">${r.sales.toLocaleString()}</td>
-                    <td class="text-center text-muted">${r.salesLY.toLocaleString()}</td>
-                    <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
-                    <td class="text-center">${r.trans.toLocaleString()}</td>
-                    <td class="text-center">${r.avgInv.toLocaleString()}</td>
-                    <td class="text-center fw-bold">
-                        ${shouldHideVisitors() ? '-' : `<a href="#" onclick="showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary hover-opacity-75" title="عرض تفاصيل الزوار بالساعة">${r.visitors.toLocaleString()} <i class="bi bi-clock-history small"></i></a>`}
-                    </td>
-                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : r.visitorsLY.toLocaleString()}</td>
-                    <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
-                    <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
-                </tr>
-            `).join('');
-
-            // Render Footer (Totals)
-            const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100) : 0;
-            const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
-            const grandCustVal = grandVisitors > 0 ? Math.round(grandTotalSales / grandVisitors) : 0;
-            const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100) : 0;
-
-            document.getElementById('branchDailyFoot').innerHTML = `
-                <tr>
-                    <td class="text-center" colspan="2">الإجمالي</td>
-                    <td class="text-center">${grandTotalSales.toLocaleString()}</td>
-                    <td class="text-center">${grandSalesLY.toLocaleString()}</td>
-                    <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
-                    <td class="text-center">${grandTrans.toLocaleString()}</td>
-                    <td class="text-center">${grandAvgInv.toLocaleString()}</td>
-                    <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitors.toLocaleString()}</td>
-                    <td class="text-center">${shouldHideVisitors() ? '-' : grandVisitorsLY.toLocaleString()}</td>
-                    <td class="text-center fw-bold">${grandCustVal.toLocaleString()}</td>
-                    <td class="text-center">${grandConv.toFixed(1) + '%'}</td>
-                </tr>
-            `;
-
-            // Show Modal
-            const modal = new bootstrap.Modal(document.getElementById('branchDailyModal'));
-            modal.show();
-        }
 
 
 
