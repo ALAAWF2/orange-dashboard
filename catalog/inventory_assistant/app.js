@@ -152,14 +152,13 @@ function renderTable() {
         const expected = Number(item.expected_qty) || 0;
         
         let displayQty = totalCounted;
-        let isEditable = true;
+        let inputTitle = `تعديل الكمية في المنطقة النشطة (${activeZone})`;
         let zoneBadgeHtml = "";
 
         if (activeTableZoneFilter === "current") {
             displayQty = (item.zone_breakdown && item.zone_breakdown[activeZone]) || 0;
         } else {
-            isEditable = false; // Disable editing when showing all zones to prevent ambiguity
-            
+            inputTitle = `تعديل الكمية الإجمالية (سيتم تطبيق التغيير على المنطقة النشطة: ${activeZone})`;
             // Build zone breakdown badges
             if (item.zone_breakdown && Object.keys(item.zone_breakdown).length > 0) {
                 const parts = Object.entries(item.zone_breakdown)
@@ -194,8 +193,8 @@ function renderTable() {
                 <td class="text-center">${expected}</td>
                 <td class="text-center" style="width: 120px;">
                     <input type="number" class="form-control form-control-sm text-center fw-bold" 
-                        value="${displayQty}" min="1" 
-                        ${!isEditable ? 'readonly disabled title="اختر عرض المنطقة النشطة لتعديل هذا الرف"' : ''}
+                        value="${displayQty}" min="0" 
+                        title="${inputTitle}"
                         onfocus="this.select()"
                         onchange="updateItemQty('${item.item_id}', this.value)">
                 </td>
@@ -204,8 +203,8 @@ function renderTable() {
                 </td>
                 <td class="text-center">
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-secondary" ${!isEditable ? 'disabled' : ''} onclick="adjustQty('${item.item_id}', 1)">+</button>
-                        <button class="btn btn-outline-secondary" ${!isEditable ? 'disabled' : ''} onclick="adjustQty('${item.item_id}', -1)">-</button>
+                        <button class="btn btn-outline-secondary" onclick="adjustQty('${item.item_id}', 1)">+</button>
+                        <button class="btn btn-outline-secondary" onclick="adjustQty('${item.item_id}', -1)">-</button>
                         <button class="btn btn-danger" onclick="removeItem('${item.item_id}')">🗑️</button>
                     </div>
                 </td>
@@ -283,12 +282,24 @@ window.updateItemQty = async function(itemId, val) {
     const item = scannedItems.find(i => i.item_id === itemId);
     if (item && !isNaN(parsed) && parsed >= 0) {
         const currentZoneQty = (item.zone_breakdown && item.zone_breakdown[activeZone]) || 0;
-        const diff = parsed - currentZoneQty;
+        
+        let diff = 0;
+        let newZoneQty = 0;
+        if (activeTableZoneFilter === "current") {
+            newZoneQty = parsed;
+            diff = newZoneQty - currentZoneQty;
+        } else {
+            const totalCounted = Number(item.counted_qty) || 0;
+            const requestedDiff = parsed - totalCounted;
+            newZoneQty = Math.max(0, currentZoneQty + requestedDiff);
+            diff = newZoneQty - currentZoneQty;
+        }
+        
         if (diff === 0) return;
         
         if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
             if (!item.zone_breakdown) item.zone_breakdown = {};
-            item.zone_breakdown[activeZone] = parsed;
+            item.zone_breakdown[activeZone] = newZoneQty;
             item.counted_qty = (item.counted_qty || 0) + diff;
             item.scanned_by = employeeName;
             item.updated_at = new Date().toISOString();
@@ -308,7 +319,7 @@ window.updateItemQty = async function(itemId, val) {
             return;
         }
         
-        if (parsed === 0) {
+        if (newZoneQty === 0 && Object.keys(item.zone_breakdown || {}).length <= 1) {
             await removeItem(itemId, true);
             return;
         }
@@ -317,7 +328,7 @@ window.updateItemQty = async function(itemId, val) {
             p_session_id: activeSessionId,
             p_item_id: item.item_id,
             p_zone: activeZone,
-            p_qty: parsed,
+            p_qty: newZoneQty,
             p_scanned_by: employeeName
         });
             
@@ -1072,28 +1083,7 @@ function validateSelection() {
 }
 
 // Strict Focus Lock & Keyboard Shortcuts Setup
-let focusLockInterval = null;
 function initLaptopUX() {
-    // Focus lock interval
-    if (focusLockInterval) clearInterval(focusLockInterval);
-    focusLockInterval = setInterval(() => {
-        if (!activeSessionId) return;
-        const barcodeInput = document.getElementById("manual-barcode-input");
-        const activeEl = document.activeElement;
-        
-        // If focus is not on input/select, bring it back to scanner
-        const isInteractive = activeEl && (
-            activeEl.tagName === "INPUT" || 
-            activeEl.tagName === "SELECT" || 
-            activeEl.tagName === "BUTTON" ||
-            activeEl.isContentEditable
-        );
-        
-        if (barcodeInput && !isInteractive) {
-            barcodeInput.focus();
-        }
-    }, 1500);
-
     // Keyboard Shortcuts Listener
     window.addEventListener("keydown", (e) => {
         if (!activeSessionId) return;
@@ -1123,7 +1113,7 @@ function initLaptopUX() {
     });
 }
 
-// Excel Import Handler
+// Excel Import Handler (Fuzzy Matching & Auto-catalog Resolution)
 async function handleExcelImport(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -1133,25 +1123,93 @@ async function handleExcelImport(e) {
         try {
             const data = new Uint8Array(evt.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
-            
-            if (jsonData.length === 0) {
-                alert("الملف المرفوع فارغ!");
-                return;
-            }
             
             let importCount = 0;
-            for (const row of jsonData) {
-                const itemId = row["رقم المنتج (Item ID)"] || row["رقم المنتج"] || row["Item ID"];
-                const counted = parseInt(row["الكمية الفعلية بالجرد (Counted)"] || row["الكمية الفعلية"] || row["الكمية"] || row["Counted"], 10);
-                const name = row["اسم الصنف (Item Name)"] || row["اسم الصنف"] || row["Item Name"] || "صنف مستورد";
-                const barcode = row["الباركود 1"] || row["الباركود"] || row["Barcode"] || itemId;
+            
+            // Loop through all sheets in the uploaded workbook
+            for (const sheetName of workbook.SheetNames) {
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                if (jsonData.length === 0) continue;
                 
-                if (itemId && !isNaN(counted) && counted > 0) {
-                    importCount++;
+                // Inspect headers of this sheet
+                const firstRow = jsonData[0];
+                const headers = Object.keys(firstRow);
+                
+                // Find matching column keys (case-insensitive & synonyms)
+                let itemIdKey = headers.find(k => {
+                    const ck = k.trim().toLowerCase();
+                    return ck.includes("رقم المنتج") || ck.includes("item id") || ck === "item number" || ck === "item_number" || ck === "sku";
+                });
+                
+                let barcodeKey = headers.find(k => {
+                    const ck = k.trim().toLowerCase();
+                    return ck.includes("الباركود") || ck.includes("barcode") || ck === "bar code" || ck === "scan";
+                });
+                
+                let qtyKey = headers.find(k => {
+                    const ck = k.trim().toLowerCase();
+                    return ck === "الكمية الفعلية" || ck === "الكمية" || ck === "counted" || ck === "qty" || ck === "quantity" || ck === "العدد";
+                });
+                
+                let nameKey = headers.find(k => {
+                    const ck = k.trim().toLowerCase();
+                    return ck.includes("اسم الصنف") || ck.includes("item name") || ck === "item_name" || ck === "name";
+                });
+
+                // Skip this sheet if it doesn't have a valid quantity column (prevents importing catalogs like "Data" sheet)
+                if (!qtyKey) continue;
+
+                console.log(`Importing from sheet: ${sheetName}`);
+                
+                for (const row of jsonData) {
+                    let rawItemId = itemIdKey ? String(row[itemIdKey] || "").trim() : "";
+                    let rawBarcode = barcodeKey ? String(row[barcodeKey] || "").trim() : "";
+                    let counted = parseInt(row[qtyKey], 10);
                     
+                    // Fallback to barcode if item ID is empty, or vice versa
+                    let searchKey = rawItemId || rawBarcode;
+                    if (!searchKey || isNaN(counted) || counted <= 0) continue;
+                    
+                    importCount++;
+
+                    // Resolve item details from localBarcodesCache or Database catalog
+                    let dbItem = localBarcodesCache[searchKey];
+                    
+                    let itemId = searchKey;
+                    let name = nameKey && row[nameKey] ? String(row[nameKey]).trim() : "صنف مستورد";
+                    let barcode = rawBarcode || searchKey;
+                    let old_item_id = "";
+                    let price = 0.0;
+                    let expected = 0;
+                    
+                    if (dbItem) {
+                        itemId = dbItem.item_id;
+                        name = dbItem.barcode_description || dbItem.search_name || name;
+                        barcode = dbItem.barcode || barcode;
+                        old_item_id = dbItem.old_item_id || "";
+                        price = parseFloat(dbItem.price) || 0.0;
+                        expected = (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][dbItem.item_id]) || 0;
+                    } else {
+                        // Attempt lookup (online or fallback)
+                        let resolvedItem = null;
+                        if (navigator.onLine && !activeSessionId.toString().startsWith("offline_")) {
+                            resolvedItem = await lookupItem(searchKey);
+                        }
+                        if (resolvedItem) {
+                            localBarcodesCache[resolvedItem.barcode] = resolvedItem;
+                            localBarcodesCache[resolvedItem.item_id] = resolvedItem;
+                            
+                            itemId = resolvedItem.item_id;
+                            name = resolvedItem.barcode_description || resolvedItem.search_name || name;
+                            barcode = resolvedItem.barcode || barcode;
+                            old_item_id = resolvedItem.old_item_id || "";
+                            price = parseFloat(resolvedItem.price) || 0.0;
+                            expected = (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][resolvedItem.item_id]) || 0;
+                        }
+                    }
+                    
+                    // Merge/Insert Logic
                     if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
                         let existing = scannedItems.find(i => i.item_id === itemId);
                         if (existing) {
@@ -1167,9 +1225,9 @@ async function handleExcelImport(e) {
                                 item_id: itemId,
                                 name: name,
                                 barcode: barcode,
-                                old_item_id: "",
-                                price: 0.0,
-                                expected_qty: (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][itemId]) || 0,
+                                old_item_id: old_item_id,
+                                price: price,
+                                expected_qty: expected,
                                 counted_qty: counted,
                                 scanned_by: employeeName,
                                 updated_at: new Date().toISOString(),
@@ -1184,9 +1242,9 @@ async function handleExcelImport(e) {
                             p_item_id: itemId,
                             p_name: name,
                             p_barcode: barcode,
-                            p_old_item_id: "",
-                            p_price: 0.0,
-                            p_expected_qty: (stockByOutlet[currentOutlet] && stockByOutlet[currentOutlet][itemId]) || 0,
+                            p_old_item_id: old_item_id,
+                            p_price: price,
+                            p_expected_qty: expected,
                             p_amount: counted,
                             p_scanned_by: employeeName,
                             p_zone: activeZone
@@ -1195,6 +1253,11 @@ async function handleExcelImport(e) {
                 }
             }
             
+            if (importCount === 0) {
+                alert("لم يتم العثور على أوراق عمل (Sheets) تحتوي على أعمدة جرد صالحة أو كميات أكبر من الصفر.");
+                return;
+            }
+
             if (!navigator.onLine || activeSessionId.toString().startsWith("offline_")) {
                 await offlineStore.setItem(`offline_scanned_items_${activeSessionId}`, scannedItems);
                 await offlineStore.setItem(`offline_queue_${activeSessionId}`, offlineQueue);
