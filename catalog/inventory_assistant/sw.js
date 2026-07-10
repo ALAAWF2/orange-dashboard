@@ -3,7 +3,7 @@
  * Implements robust offline caching (Network First, Cache Fallback) restricted to app assets and CDNs.
  */
 
-const CACHE_NAME = "inventory-assistant-v3";
+const CACHE_NAME = "inventory-assistant-v4";
 const ASSETS = [
     "./",
     "./index.html",
