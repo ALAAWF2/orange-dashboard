@@ -1425,6 +1425,16 @@
             </div>
         </div>
 
+        <!-- Smart Narrative Card -->
+        <div class="card border-0 shadow-sm p-3 mb-4" id="narrativeCard" style="display: none; background: #fff8f2; border-right: 5px solid var(--orange-primary) !important;">
+            <div class="d-flex align-items-center gap-3">
+                <span class="fs-4">📢</span>
+                <div class="fw-medium text-dark" id="narrativeText" style="font-size: 0.95rem; line-height: 1.6;">
+                    جاري تحميل ملخص السرد التلقائي...
+                </div>
+            </div>
+        </div>
+
         <div class="row mb-4" id="companyTargetProgressRow" style="display: none;">
             <div class="col-12">
                 <div class="card border-0 shadow-sm p-4" style="border-radius: var(--card-radius); background: white; border-right: 5px solid #fe7900 !important; color: #212529;">
@@ -2206,6 +2216,214 @@
             renderDailyReport();
         }
 
+        function displayNarrative(text) {
+            const card = document.getElementById('narrativeCard');
+            const txtEl = document.getElementById('narrativeText');
+            if (card && txtEl && text) {
+                txtEl.textContent = text;
+                card.style.display = 'block';
+            }
+        }
+
+        function setupDashboardData() {
+            if (!rawData) return;
+            
+            // 1. Update Time
+            let genTime = rawData.metadata.generated_at.split(' ')[1];
+            let shortTime = genTime.split(':').slice(0, 2).join(':');
+            document.getElementById('lastUpdate').textContent = shortTime;
+
+            // 2. Calculate Today's Sales
+            calculateTodayHeader();
+
+            // Populate Filters
+            const bSelect = document.getElementById('branchFilter');
+            const cSelect = document.getElementById('cityFilter');
+            const mSelect = document.getElementById('managerFilter');
+            
+            bSelect.innerHTML = '<option value="all">كافة الفروع</option>';
+            cSelect.innerHTML = '<option value="all">الكل</option>';
+            mSelect.innerHTML = '<option value="all">الكل</option>';
+
+            const storeIds = Object.keys(rawData.stores);
+            const cities = new Set();
+            const managers = new Set();
+
+            storeIds.sort((a, b) => (rawData.stores[a] || '').localeCompare(rawData.stores[b] || ''));
+
+            storeIds.forEach(sid => {
+                let opt = document.createElement('option');
+                opt.value = sid;
+                opt.textContent = rawData.stores[sid] || sid;
+                bSelect.appendChild(opt);
+
+                let meta = rawData.store_meta ? rawData.store_meta[sid] : null;
+                if (meta) {
+                    if (meta.city && meta.city !== 'Unknown') cities.add(meta.city);
+                    if (meta.manager && meta.manager !== 'Unknown') managers.add(meta.manager);
+                }
+            });
+
+            [...cities].sort().forEach(c => {
+                let opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                cSelect.appendChild(opt);
+            });
+
+            [...managers].sort().forEach(m => {
+                let opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                mSelect.appendChild(opt);
+            });
+
+            // Set Dates Default
+            let today = new Date();
+            let yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            if (today.getFullYear() === 2026 && today.getMonth() === 2 && today.getDate() >= 20) {
+                firstDay = new Date(2026, 2, 20);
+            }
+
+            let targetEndDate = rawData.metadata ? rawData.metadata.target_end_date : null;
+            if (targetEndDate) {
+                const parts = targetEndDate.split('-');
+                if (parts.length === 3) {
+                    const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    customEnd.setHours(23, 59, 59, 999);
+                    if (today <= customEnd) {
+                        if (customEnd.getDate() < 15) {
+                            firstDay = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+                        }
+                    }
+                }
+            }
+
+            if (yesterday < firstDay) {
+                document.getElementById('endDate').value = today.toLocaleDateString('en-CA');
+            } else {
+                document.getElementById('endDate').value = yesterday.toLocaleDateString('en-CA');
+            }
+
+            document.getElementById('startDate').value = firstDay.toLocaleDateString('en-CA');
+
+            toggleFilterMode();
+
+            if (currentUser.role !== 'Admin') {
+                document.getElementById('managerFilter').parentElement.style.display = 'none';
+                mSelect.value = currentUser.name;
+                mSelect.disabled = true;
+            }
+
+            if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
+                const btnTarget = document.getElementById('btnSetTarget');
+                if (btnTarget) btnTarget.style.display = 'inline-block';
+            }
+
+            if (currentUser && (currentUser.role === 'Manager' || currentUser.role === 'Admin' || currentUser.name === 'Sales Manager')) {
+                const btnChecklist = document.getElementById('dashboardChecklistBtn');
+                if (btnChecklist) btnChecklist.style.display = 'inline-flex';
+
+                const panel = document.getElementById('dashboardChecklistPanel');
+                if (panel) {
+                    panel.style.display = 'block';
+                    loadDashboardChecklist();
+                }
+            }
+
+            if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
+                const btnBooFF = document.getElementById('booffReportBtn');
+                if (btnBooFF) btnBooFF.style.display = 'inline-flex';
+                const btnYoY = document.getElementById('yoyReportBtn');
+                if (btnYoY) btnYoY.style.display = 'inline-flex';
+                const ringRow = document.getElementById('companyTargetProgressRow');
+                if (ringRow) ringRow.style.display = 'flex';
+                const compRow = document.getElementById('areaManagersComparisonRow');
+                if (compRow) compRow.style.display = 'flex';
+            }
+
+            if (currentUser && (currentUser.name === 'علاء' || currentUser.name === 'Sales Manager')) {
+                const cityRow = document.getElementById('cityHeatmapRow');
+                if (cityRow) cityRow.style.display = 'flex';
+                const tooltip = document.getElementById('mapTooltip');
+                if (tooltip) {
+                    const container = tooltip.parentElement;
+                    document.querySelectorAll('.city-marker').forEach(marker => {
+                        const getCityData = () => {
+                            const cityName = marker.getAttribute('data-city');
+                            return globalCityList.find(c => c.city === cityName);
+                        };
+                        marker.addEventListener('mouseover', () => {
+                            const c = getCityData();
+                            if (!c) return;
+                            tooltip.innerHTML = getTooltipHtml(c);
+                            tooltip.style.opacity = '1';
+                        });
+                        marker.addEventListener('mousemove', (e) => {
+                            const c = getCityData();
+                            if (!c) return;
+                            const rect = container.getBoundingClientRect();
+                            let x = e.clientX - rect.left;
+                            let y = e.clientY - rect.top;
+                            const tooltipWidth = tooltip.offsetWidth || 220;
+                            const tooltipHeight = tooltip.offsetHeight || 300;
+                            if (x + tooltipWidth + 20 > rect.width) {
+                                x = x - tooltipWidth - 20;
+                            } else {
+                                x = x + 20;
+                            }
+                            if (y + tooltipHeight + 20 > rect.height) {
+                                y = y - tooltipHeight - 10;
+                            } else {
+                                y = y + 10;
+                            }
+                            tooltip.style.left = x + 'px';
+                            tooltip.style.top = y + 'px';
+                        });
+                        marker.addEventListener('mouseout', () => {
+                            tooltip.style.opacity = '0';
+                        });
+                    });
+                }
+            }
+
+            if (currentUser.name === 'Sales Manager') {
+                const btnA3 = document.getElementById('a3CompBtn');
+                if (btnA3) btnA3.style.display = 'inline-flex';
+            }
+
+            if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
+                if (currentUser.name === 'Sales Manager') {
+                    const fm = document.getElementById('filterMode');
+                    const exists = Array.from(fm.options).some(opt => opt.value === 'ramadan');
+                    if (!exists) {
+                        const opt = document.createElement('option');
+                        opt.value = 'ramadan';
+                        opt.textContent = 'مقارنة رمضان (Ramadan)';
+                        fm.appendChild(opt);
+                    }
+                }
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const storeParam = params.get('store_id') || params.get('branch');
+            if (storeParam) {
+                const bSelect = document.getElementById('branchFilter');
+                if (bSelect) {
+                    const exists = Array.from(bSelect.options).some(opt => opt.value === storeParam);
+                    if (exists) {
+                        bSelect.value = storeParam;
+                    }
+                }
+            }
+
+            updateDashboard();
+        }
+
         async function init() {
             // Init Month Filter
             const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -2217,229 +2435,51 @@
                 mSelect.appendChild(opt);
             });
 
+            let summaryLoaded = false;
+
+            // Step 1: Fetch light summary.json for fast initial render
             try {
-                const res = await fetch('management_data.json');
-                rawData = await res.json();
-
-                // 1. Update Time (Show Time Only or Date+Time)
-                // User asked for "Time of last update"
-                let genTime = rawData.metadata.generated_at.split(' ')[1]; // HH:MM:SS
-                // Remove seconds if desired, but seconds are fine. 
-                // Let's format it nicer: HH:MM
-                let shortTime = genTime.split(':').slice(0, 2).join(':');
-                document.getElementById('lastUpdate').textContent = shortTime;
-
-                // 2. Calculate Today's Sales (Global or Filtered?)
-                // Usually Header KPI is Global (for the logged in user's scope)
-                calculateTodayHeader();
-
-                // Populate Filters (Branch, City, Manager)
-                const bSelect = document.getElementById('branchFilter');
-                const cSelect = document.getElementById('cityFilter');
-                const mSelect = document.getElementById('managerFilter');
-
-                const storeIds = Object.keys(rawData.stores);
-                const cities = new Set();
-                const managers = new Set();
-
-                // Sort by Name
-                storeIds.sort((a, b) => (rawData.stores[a] || '').localeCompare(rawData.stores[b] || ''));
-
-                storeIds.forEach(sid => {
-                    // Branch
-                    let opt = document.createElement('option');
-                    opt.value = sid;
-                    opt.textContent = rawData.stores[sid] || sid;
-                    bSelect.appendChild(opt);
-
-                    // Collect Meta
-                    let meta = rawData.store_meta ? rawData.store_meta[sid] : null;
-                    if (meta) {
-                        if (meta.city && meta.city !== 'Unknown') cities.add(meta.city);
-                        if (meta.manager && meta.manager !== 'Unknown') managers.add(meta.manager);
+                const summaryRes = await fetch('summary.json');
+                if (summaryRes.ok) {
+                    rawData = await summaryRes.json();
+                    summaryLoaded = true;
+                    console.log("Summary data loaded successfully.");
+                    
+                    if (rawData.metadata && rawData.metadata.narrative) {
+                        displayNarrative(rawData.metadata.narrative);
                     }
-                });
-
-                // Populate City
-                [...cities].sort().forEach(c => {
-                    let opt = document.createElement('option');
-                    opt.value = c;
-                    opt.textContent = c;
-                    cSelect.appendChild(opt);
-                });
-
-                // Populate Manager
-                [...managers].sort().forEach(m => {
-                    let opt = document.createElement('option');
-                    opt.value = m;
-                    opt.textContent = m;
-                    mSelect.appendChild(opt);
-                });
-
-                // Set Dates Default for Custom Range (Month Start -> Yesterday)
-                let today = new Date();
-                let yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-
-                // Start date: Start of this month
-                let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-
-                // March 2026 exception: default to Eid period (March 20+)
-                if (today.getFullYear() === 2026 && today.getMonth() === 2 && today.getDate() >= 20) {
-                    firstDay = new Date(2026, 2, 20);
+                    
+                    setupDashboardData();
                 }
+            } catch (e) {
+                console.warn("Failed to load summary.json, will wait for management_data.json", e);
+            }
 
-                // Check if target is extended (target_end_date is in the database and today is within that period)
-                let targetEndDate = rawData.metadata ? rawData.metadata.target_end_date : null;
-                if (targetEndDate) {
-                    const parts = targetEndDate.split('-');
-                    if (parts.length === 3) {
-                        const customEnd = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                        customEnd.setHours(23, 59, 59, 999);
-                        if (today <= customEnd) {
-                            if (customEnd.getDate() < 15) {
-                                firstDay = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
-                            }
-                        }
+            // Step 2: Fetch full management_data.json in background
+            try {
+                const fullRes = await fetch('management_data.json');
+                if (fullRes.ok) {
+                    const fullData = await fullRes.json();
+                    rawData = fullData;
+                    console.log("Full management_data.json loaded successfully in background.");
+                    
+                    if (rawData.metadata && rawData.metadata.narrative) {
+                        displayNarrative(rawData.metadata.narrative);
+                    }
+                    
+                    if (!summaryLoaded) {
+                        setupDashboardData();
+                    } else {
+                        calculateTodayHeader();
+                        updateDashboard();
                     }
                 }
-
-                // Fix: If yesterday is before start of month (e.g. today is 1st), default End Date to Today
-                if (yesterday < firstDay) {
-                    document.getElementById('endDate').value = today.toLocaleDateString('en-CA');
-                } else {
-                    document.getElementById('endDate').value = yesterday.toLocaleDateString('en-CA');
+            } catch (e) {
+                console.error("Failed to load full management_data.json:", e);
+                if (!summaryLoaded) {
+                    alert("تعذر تحميل البيانات. يرجى محاولة تحديث الصفحة.");
                 }
-
-                document.getElementById('startDate').value = firstDay.toLocaleDateString('en-CA');
-
-                // Ensure UI reflects Custom Mode
-                toggleFilterMode();
-
-                // Apply Permissions
-                if (currentUser.role !== 'Admin') {
-                    // Hide Manager Filter
-                    document.getElementById('managerFilter').parentElement.style.display = 'none';
-                    // Force Select (Visual)
-                    mSelect.value = currentUser.name;
-                    mSelect.disabled = true;
-                }
-
-                // Show Target Button for Sales Manager
-                if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
-                    const btnTarget = document.getElementById('btnSetTarget');
-                    if (btnTarget) btnTarget.style.display = 'inline-block';
-                }
-
-                // Show Checklist Button for Managers and Admin/Sales Manager
-                if (currentUser && (currentUser.role === 'Manager' || currentUser.role === 'Admin' || currentUser.name === 'Sales Manager')) {
-                    const btnChecklist = document.getElementById('dashboardChecklistBtn');
-                    if (btnChecklist) btnChecklist.style.display = 'inline-flex';
-
-                    // Show and Load the Checklist Panel on Main Dashboard
-                    const panel = document.getElementById('dashboardChecklistPanel');
-                    if (panel) {
-                        panel.style.display = 'block';
-                        loadDashboardChecklist();
-                    }
-                }
-
-                if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
-                    const btnBooFF = document.getElementById('booffReportBtn');
-                    if (btnBooFF) btnBooFF.style.display = 'inline-flex';
-                    const btnYoY = document.getElementById('yoyReportBtn');
-                    if (btnYoY) btnYoY.style.display = 'inline-flex';
-                    const ringRow = document.getElementById('companyTargetProgressRow');
-                    if (ringRow) ringRow.style.display = 'flex';
-                    const compRow = document.getElementById('areaManagersComparisonRow');
-                    if (compRow) compRow.style.display = 'flex';
-                }
-
-                // Show City Heatmap Row only for Alaa and Sales Manager
-                if (currentUser && (currentUser.name === 'علاء' || currentUser.name === 'Sales Manager')) {
-                    const cityRow = document.getElementById('cityHeatmapRow');
-                    if (cityRow) cityRow.style.display = 'flex';
-                    const tooltip = document.getElementById('mapTooltip');
-                    if (tooltip) {
-                        const container = tooltip.parentElement;
-                        document.querySelectorAll('.city-marker').forEach(marker => {
-                            const getCityData = () => {
-                                const cityName = marker.getAttribute('data-city');
-                                return globalCityList.find(c => c.city === cityName);
-                            };
-                            marker.addEventListener('mouseover', () => {
-                                const c = getCityData();
-                                if (!c) return;
-                                tooltip.innerHTML = getTooltipHtml(c);
-                                tooltip.style.opacity = '1';
-                            });
-                            marker.addEventListener('mousemove', (e) => {
-                                const c = getCityData();
-                                if (!c) return;
-                                const rect = container.getBoundingClientRect();
-                                let x = e.clientX - rect.left;
-                                let y = e.clientY - rect.top;
-                                const tooltipWidth = tooltip.offsetWidth || 220;
-                                const tooltipHeight = tooltip.offsetHeight || 300;
-                                if (x + tooltipWidth + 20 > rect.width) {
-                                    x = x - tooltipWidth - 20;
-                                } else {
-                                    x = x + 20;
-                                }
-                                if (y + tooltipHeight + 20 > rect.height) {
-                                    y = y - tooltipHeight - 10;
-                                } else {
-                                    y = y + 10;
-                                }
-                                tooltip.style.left = x + 'px';
-                                tooltip.style.top = y + 'px';
-                            });
-                            marker.addEventListener('mouseout', () => {
-                                tooltip.style.opacity = '0';
-                            });
-                        });
-                    }
-                }
-
-
-
-                // Show A3 Comparison Button for Sales Manager only
-                if (currentUser.name === 'Sales Manager') {
-                    const btnA3 = document.getElementById('a3CompBtn');
-                    if (btnA3) btnA3.style.display = 'inline-flex';
-                }
-
-                // [CUSTOM REQUEST] Add Ramadan Filter for Sales Manager ONLY
-                if (currentUser.name === 'Sales Manager' || currentUser.role === 'Admin') {
-                    // Note: User asked for "Sales Manager" specifically, but Admin role check is safer/broader.
-                    // Adjusted to be strict on name if preferred, but usually Role is better. 
-                    // User said: "When sales manager logs in..."
-                    // The login for Sales Manager has role 'Admin' (see users.js).
-                    // So we can check for that, or specific name. Let's use specific name to be precise to the request.
-                    if (currentUser.name === 'Sales Manager') {
-                        const fm = document.getElementById('filterMode');
-                        const opt = document.createElement('option');
-                        opt.value = 'ramadan';
-                        opt.textContent = 'مقارنة رمضان (Ramadan)';
-                        fm.appendChild(opt);
-                    }
-                }
-
-                // Support query parameter store_id/branch to auto filter on load
-                const params = new URLSearchParams(window.location.search);
-                const storeParam = params.get('store_id') || params.get('branch');
-                if (storeParam) {
-                    const bSelect = document.getElementById('branchFilter');
-                    if (bSelect) {
-                        const exists = Array.from(bSelect.options).some(opt => opt.value === storeParam);
-                        if (exists) {
-                            bSelect.value = storeParam;
-                        }
-                    }
-                }
-
-                updateDashboard();
-            } catch (e) { console.error(e); }
+            }
         }
 
         // Toggle UI
