@@ -3745,24 +3745,47 @@
     }
 
 
+    function findCatalogProduct(keyword) {
+      const cleanKeyword = String(keyword).trim().toLowerCase();
+      const baseKeyword = cleanKeyword.startsWith("kit-") ? cleanKeyword.substring(4) : cleanKeyword;
+      const kitKeyword = "kit-" + baseKeyword;
+      const sources = [
+        window.data || [],
+        window.products || [],
+        window.allProductsUnfiltered || []
+      ];
+      for (const list of sources) {
+        if (list.length === 0) continue;
+        let match = list.find(p => String(p.code).toLowerCase() === kitKeyword);
+        if (match) return match;
+        match = list.find(p => p.alias && String(p.alias).toLowerCase() === kitKeyword);
+        if (match) return match;
+        match = list.find(p => String(p.code).toLowerCase() === baseKeyword);
+        if (match) return match;
+        match = list.find(p => p.alias && String(p.alias).toLowerCase() === baseKeyword);
+        if (match) return match;
+      }
+      return null;
+    }
+
     function addManualBarcodeItem(code, name, alias, price, qty) {
       qty = parseInt(qty);
       if (isNaN(qty) || qty <= 0) qty = 1;
 
-      const searchKeyword = String(code).trim().toLowerCase();
-      const altKeyword = searchKeyword.startsWith("kit-") ? searchKeyword.substring(4) : "kit-" + searchKeyword;
+      const product = findCatalogProduct(code);
+      let resolvedCode = product ? product.code : code;
+      let resolvedName = product ? product.name : (name || "منتج غير معروف");
+      let resolvedAlias = product ? (product.alias || "") : (alias || "");
+      let resolvedPrice = product ? (product.price || 0) : (price || 0);
 
-      // Override price if this is a special promo item
-      const overridePrice = getPromoPrice(code, alias);
+      const overridePrice = getPromoPrice(resolvedCode, resolvedAlias);
       if (overridePrice !== null) {
-        price = overridePrice;
+        resolvedPrice = overridePrice;
       }
 
       const existing = batchPrintItems.find(item => {
         const itemCode = String(item.code).trim().toLowerCase();
-        const itemAlias = item.alias ? String(item.alias).trim().toLowerCase() : "";
-        return itemCode === searchKeyword || itemCode === altKeyword ||
-               (itemAlias && (itemAlias === searchKeyword || itemAlias === altKeyword));
+        return itemCode === String(resolvedCode).trim().toLowerCase();
       });
 
       if (existing) {
@@ -3772,54 +3795,13 @@
           existing.price = existingOverride;
         }
       } else {
-        // If name and price are not provided, try to find them in the data
-        if (!name || typeof price === 'undefined') {
-          // Find in window.data first, then fallback to window.products
-          const dataSource = (window.data && window.data.length > 0) ? window.data : (window.products || []);
-          let product = dataSource.find(p =>
-            String(p.code).trim().toLowerCase() === searchKeyword ||
-            String(p.code).trim().toLowerCase() === altKeyword ||
-            (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
-          );
-
-          // Fallback to window.products if not found in window.data (due to warehouse stock filtering)
-          if (!product && window.products) {
-            product = window.products.find(p =>
-              String(p.code).trim().toLowerCase() === searchKeyword ||
-              String(p.code).trim().toLowerCase() === altKeyword ||
-              (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
-            );
-          }
-
-          // Fallback to window.allProductsUnfiltered if not found in window.products (due to product blocking)
-          if (!product && window.allProductsUnfiltered) {
-            product = window.allProductsUnfiltered.find(p =>
-              String(p.code).trim().toLowerCase() === searchKeyword ||
-              String(p.code).trim().toLowerCase() === altKeyword ||
-              (p.alias && (String(p.alias).trim().toLowerCase() === searchKeyword || String(p.alias).trim().toLowerCase() === altKeyword))
-            );
-          }
-
-          if (product) {
-            // Keep the user's entered code format (with or without KIT-)
-            name = product.name;
-            alias = product.alias || '';
-            price = product.price || 0;
-          } else {
-            // If product is not found, we can still add it but without name/price
-            name = name || "منتج غير معروف";
-            alias = alias || "";
-            price = price || 0;
-          }
-        }
-
-        // Double check special promo price override after resolving from DB
-        const finalOverride = getPromoPrice(code, alias);
-        if (finalOverride !== null) {
-          price = finalOverride;
-        }
-
-        batchPrintItems.push({ code, name, alias, price, qty });
+        batchPrintItems.push({
+          code: resolvedCode,
+          name: resolvedName,
+          alias: resolvedAlias,
+          price: resolvedPrice,
+          qty: qty
+        });
       }
     }
 
@@ -3828,25 +3810,15 @@
         showToast("الرجاء إضافة منتجات للطباعة.", "warning");
         return;
       }
-      // --- LOGIC: Handle KIT items for all in batch ---
       const printWindow = window.open('', '_blank', 'width=600,height=400');
       let labelsHtml = "";
       let totalLabels = 0;
 
-      // First pass to calculate total labels for page breaks
       batchPrintItems.forEach(item => { totalLabels += item.qty; });
       let currentLabelCount = 0;
 
       for (const item of batchPrintItems) {
         let barcodeValue = item.code;
-        const upperCode = String(item.code).toUpperCase();
-        if (upperCode.startsWith('KIT-')) {
-          if (item.alias && String(item.alias).trim() !== '') {
-            barcodeValue = item.alias; // Use alias if it exists
-          } else {
-            barcodeValue = item.code.substring(4); // Otherwise just remove 'KIT-'
-          }
-        }
 
         for (let i = 0; i < item.qty; i++) {
           currentLabelCount++;
@@ -3885,7 +3857,7 @@
               padding: 0 !important; 
               text-align: center;
               width: 50mm;
-              height: 25mm; /* Important to avoid overflow adding extra pages */
+              height: 25mm;
             }
             .label-container {
               width: 50mm;
