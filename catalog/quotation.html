@@ -465,7 +465,7 @@
                   العرض ساري لمدة 15 يوم من تاريخه
                 </td>
                 <td colspan="2" rowspan="2" style="border: 1px solid #000; padding: 6px; text-align: start; vertical-align: top; font-weight: bold; height: 35px;" id="sheetFooterSign">
-                  توقيع المبيعات:
+                  رقم الحساب:<br>SA4910000010461829000300
                 </td>
               </tr>
               <tr>
@@ -539,7 +539,7 @@
         smLabelDate: "التاريخ:",
         sheetTableHeadPreview: ["تسلسل", "رقم الصنف", "الصورة", "الشرح", "الكمية", "سعر المبيع", "المجموع"],
         sheetFooterMsg: "العرض ساري لمدة 15 يوم من تاريخه",
-        sheetSignature: "توقيع المبيعات",
+        sheetSignature: "رقم الحساب:<br>SA4910000010461829000300",
         sheetFooterCR: "رقم السجل التجاري 4030148891",
         sheetFooterBox: "P.O.Box 118961 Jeddah 21312 KSA<br>Tel: +966 12 6658899 | Fax: +966 12 6659469",
         sheetFooterAddr: "جدة- طريق المدينة النازل حي الروضة سوق جدة الدولي",
@@ -581,7 +581,7 @@
         smLabelDate: "Date:",
         sheetTableHeadPreview: ["S.No", "Item Code", "Image", "Description", "Qty", "Unit Price", "Total"],
         sheetFooterMsg: "Offer valid for 15 days from date",
-        sheetSignature: "Authorized Signature",
+        sheetSignature: "Bank Account:<br>SA4910000010461829000300",
         sheetFooterCR: "C.R. Number 4030148891",
         sheetFooterBox: "P.O.Box 118961 Jeddah 21312 KSA<br>Tel: +966 12 6658899 | Fax: +966 12 6659469",
         sheetFooterAddr: "Jeddah - Madinah Road Southbound, Al-Rawdah Dist, Jeddah International Market",
@@ -746,7 +746,7 @@
       document.getElementById('sheetFooterCompName').textContent = t.sheetHeaderComp;
       document.getElementById('sheetFooterTotalPiecesLabel').textContent = t.totalPieces;
       document.getElementById('sheetFooterMsg').textContent = t.sheetFooterMsg;
-      document.getElementById('sheetFooterSign').textContent = t.sheetSignature + (currentLang === 'ar' ? " :" : ":");
+      document.getElementById('sheetFooterSign').innerHTML = t.sheetSignature;
       document.getElementById('sheetFooterCR').textContent = t.sheetFooterCR;
       document.getElementById('sheetFooterBox').innerHTML = t.sheetFooterBox;
       document.getElementById('sheetFooterAddr').textContent = t.sheetFooterAddr;
@@ -1196,25 +1196,63 @@
 
       const metaYStart = 43;
       doc.setLineWidth(0.2);
-      doc.setDrawColor(180);
+      doc.setDrawColor(0);
 
       if (isAr) {
-        // Arabic Grid (Labels on right, dotted lines or text on left)
-        doc.text(`${t.smLabelName}  ${name}`, pageWidth - 15, metaYStart, { align: 'right' });
-        doc.text(`${t.smLabelComp}  ${comp}`, pageWidth - 15, metaYStart + 7, { align: 'right' });
-        doc.text(`${t.smLabelMob}  ${mob}`, pageWidth - 15, metaYStart + 14, { align: 'right' });
+        // Set line style for dotted lines
+        doc.setLineDashPattern([0.5, 1], 0); // dotted line pattern: 0.5mm dash, 1mm space
 
+        // Draw the dotted lines
+        doc.line(105, metaYStart + 1, 175, metaYStart + 1); // Name line
+        doc.line(105, metaYStart + 8, 175, metaYStart + 8); // Company line
+        doc.line(105, metaYStart + 15, 175, metaYStart + 15); // Mobile line
+        doc.line(15, metaYStart + 1, 65, metaYStart + 1); // Date line
+
+        // Reset dash pattern to solid
+        doc.setLineDashPattern([], 0);
+
+        // Labels
+        doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.text(t.smLabelName, 195, metaYStart, { align: 'right' });
+        doc.text(t.smLabelComp, 195, metaYStart + 7, { align: 'right' });
+        doc.text(t.smLabelMob, 195, metaYStart + 14, { align: 'right' });
+        doc.text(t.smLabelDate, 80, metaYStart, { align: 'right' });
+
+        // Values on top of the lines
+        doc.text(name, 173, metaYStart, { align: 'right' });
+        doc.text(comp, 173, metaYStart + 7, { align: 'right' });
+        
+        // Mobile and Date are numbers/dates (always LTR format in PDF rendering)
         doc.setFont('helvetica', 'normal');
-        doc.text(formattedDate, 15, metaYStart, { align: 'left' });
-        doc.setFont(fontName, 'normal');
-        doc.text(t.smLabelDate, 38, metaYStart, { align: 'left' });
+        doc.text(mob, 107, metaYStart + 14, { align: 'left' });
+        doc.text(formattedDate, 17, metaYStart, { align: 'left' });
       } else {
-        // English Grid (Labels on left, text on right)
-        doc.text(`${t.smLabelName}  ${name}`, 15, metaYStart, { align: 'left' });
-        doc.text(`${t.smLabelComp}  ${comp}`, 15, metaYStart + 7, { align: 'left' });
-        doc.text(`${t.smLabelMob}  ${mob}`, 15, metaYStart + 14, { align: 'left' });
+        // Set line style for dotted lines
+        doc.setLineDashPattern([0.5, 1], 0);
 
-        doc.text(`${t.smLabelDate}  ${formattedDate}`, pageWidth - 15, metaYStart, { align: 'right' });
+        // Draw the dotted lines
+        doc.line(35, metaYStart + 1, 105, metaYStart + 1); // Name line
+        doc.line(35, metaYStart + 8, 105, metaYStart + 8); // Company line
+        doc.line(35, metaYStart + 15, 105, metaYStart + 15); // Mobile line
+        doc.line(145, metaYStart + 1, 195, metaYStart + 1); // Date line
+
+        // Reset dash pattern to solid
+        doc.setLineDashPattern([], 0);
+
+        // Labels
+        doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.text(t.smLabelName, 15, metaYStart, { align: 'left' });
+        doc.text(t.smLabelComp, 15, metaYStart + 7, { align: 'left' });
+        doc.text(t.smLabelMob, 15, metaYStart + 14, { align: 'left' });
+        doc.text(t.smLabelDate, 130, metaYStart, { align: 'left' });
+
+        // Values
+        doc.text(name, 37, metaYStart, { align: 'left' });
+        doc.text(comp, 37, metaYStart + 7, { align: 'left' });
+        doc.text(mob, 37, metaYStart + 14, { align: 'left' });
+        doc.text(formattedDate, 147, metaYStart, { align: 'left' });
       }
 
       // 3. Build AutoTable rows & columns
@@ -1270,6 +1308,37 @@
         autoTableRows.push(row);
       });
 
+      const totalColsCount = includeImages ? 7 : 6;
+      
+      // Append totals rows to table body
+      if (isAr) {
+        autoTableRows.push([
+          { content: exclVat.toFixed(2), colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } },
+          { content: t.totalExclVat, colSpan: totalColsCount - 2, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]);
+        autoTableRows.push([
+          { content: vat.toFixed(2), colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } },
+          { content: t.vatAmount, colSpan: totalColsCount - 2, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]);
+        autoTableRows.push([
+          { content: totalInclVat.toFixed(2), colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [242, 242, 242] } },
+          { content: t.totalInclVat, colSpan: totalColsCount - 2, styles: { halign: 'right', fontStyle: 'bold', fillColor: [242, 242, 242] } }
+        ]);
+      } else {
+        autoTableRows.push([
+          { content: t.totalExclVat, colSpan: totalColsCount - 1, styles: { halign: 'left', fontStyle: 'bold' } },
+          { content: exclVat.toFixed(2), colSpan: 1, styles: { halign: 'center', fontStyle: 'bold' } }
+        ]);
+        autoTableRows.push([
+          { content: t.vatAmount, colSpan: totalColsCount - 1, styles: { halign: 'left', fontStyle: 'bold' } },
+          { content: vat.toFixed(2), colSpan: 1, styles: { halign: 'center', fontStyle: 'bold' } }
+        ]);
+        autoTableRows.push([
+          { content: t.totalInclVat, colSpan: totalColsCount - 1, styles: { halign: 'left', fontStyle: 'bold', fillColor: [242, 242, 242] } },
+          { content: totalInclVat.toFixed(2), colSpan: 1, styles: { halign: 'center', fontStyle: 'bold', fillColor: [242, 242, 242] } }
+        ]);
+      }
+
       // Build autotable styles
       const tableStyleOptions = {
         startY: metaYStart + 22,
@@ -1292,6 +1361,10 @@
         },
         columnStyles: {},
         didDrawCell: function(data) {
+          // Skip custom totals rows
+          if (data.row.section === 'body' && data.row.index >= draftItems.length) {
+            return;
+          }
           // Draw Image inside the cell if it's the image column
           if (includeImages && data.cell.section === 'body') {
             // Arabic image col is index 4, English image col is index 2
@@ -1328,21 +1401,21 @@
         tableStyleOptions.styles.halign = 'right';
         if (includeImages) {
           tableStyleOptions.columnStyles = {
-            0: { halign: 'center', width: 22 }, // total
-            1: { halign: 'center', width: 20 }, // price
-            2: { halign: 'center', width: 15 }, // qty
+            0: { halign: 'center', width: 20 }, // total
+            1: { halign: 'center', width: 22 }, // price
+            2: { halign: 'center', width: 18 }, // qty
             3: { halign: 'right', width: 68 },  // desc
-            4: { halign: 'center', width: 20 }, // image
-            5: { halign: 'center', font: 'helvetica', width: 25 }, // code
+            4: { halign: 'center', width: 18 }, // image
+            5: { halign: 'center', font: 'helvetica', width: 24 }, // code
             6: { halign: 'center', width: 10 }  // index
           };
         } else {
           tableStyleOptions.columnStyles = {
-            0: { halign: 'center', width: 22 }, // total
-            1: { halign: 'center', width: 20 }, // price
-            2: { halign: 'center', width: 15 }, // qty
-            3: { halign: 'right', width: 88 },  // desc
-            4: { halign: 'center', font: 'helvetica', width: 25 }, // code
+            0: { halign: 'center', width: 20 }, // total
+            1: { halign: 'center', width: 22 }, // price
+            2: { halign: 'center', width: 18 }, // qty
+            3: { halign: 'right', width: 86 },  // desc
+            4: { halign: 'center', font: 'helvetica', width: 24 }, // code
             5: { halign: 'center', width: 10 }  // index
           };
         }
@@ -1351,21 +1424,21 @@
         if (includeImages) {
           tableStyleOptions.columnStyles = {
             0: { halign: 'center', width: 10 }, // index
-            1: { halign: 'center', font: 'helvetica', width: 25 }, // code
-            2: { halign: 'center', width: 20 }, // image
+            1: { halign: 'center', font: 'helvetica', width: 24 }, // code
+            2: { halign: 'center', width: 18 }, // image
             3: { halign: 'left', width: 68 },   // desc
-            4: { halign: 'center', width: 15 }, // qty
-            5: { halign: 'center', width: 20 }, // price
-            6: { halign: 'center', width: 22 }  // total
+            4: { halign: 'center', width: 18 }, // qty
+            5: { halign: 'center', width: 22 }, // price
+            6: { halign: 'center', width: 20 }  // total
           };
         } else {
           tableStyleOptions.columnStyles = {
             0: { halign: 'center', width: 10 }, // index
-            1: { halign: 'center', font: 'helvetica', width: 25 }, // code
-            2: { halign: 'left', width: 88 },   // desc
-            3: { halign: 'center', width: 15 }, // qty
-            4: { halign: 'center', width: 20 }, // price
-            5: { halign: 'center', width: 22 }  // total
+            1: { halign: 'center', font: 'helvetica', width: 24 }, // code
+            2: { halign: 'left', width: 86 },   // desc
+            3: { halign: 'center', width: 18 }, // qty
+            4: { halign: 'center', width: 22 }, // price
+            5: { halign: 'center', width: 20 }  // total
           };
         }
       }
@@ -1379,55 +1452,19 @@
 
       // Generate Table
       doc.autoTable(tableStyleOptions);
-      
+
       // Reset font style to normal immediately to avoid autoTable font style persistence
       doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
       
       // Calculate final Y position after table
       let finalY = doc.lastAutoTable.finalY + 5;
 
-      // 4. Render Totals Box (mimicking right aligned summary blocks in Excel)
-      const summaryBoxWidth = 80;
-      const summaryBoxX = isAr ? 15 : pageWidth - summaryBoxWidth - 15;
-      doc.setFontSize(9);
-      doc.setLineWidth(0.1);
-      
-      const renderSummaryRow = (label, val, y) => {
-        doc.setDrawColor(0);
-        doc.rect(summaryBoxX, y, summaryBoxWidth, 6);
-        doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
-        
-        if (isAr) {
-          // Label on right, value on left
-          doc.text(label, summaryBoxX + summaryBoxWidth - 2, y + 4.5, { align: 'right' });
-          doc.text(val, summaryBoxX + 2, y + 4.5, { align: 'left' });
-        } else {
-          // Label on left, value on right
-          doc.text(label, summaryBoxX + 2, y + 4.5, { align: 'left' });
-          doc.text(val, summaryBoxX + summaryBoxWidth - 2, y + 4.5, { align: 'right' });
-        }
-      };
-
-      renderSummaryRow(t.totalExclVat, exclVat.toFixed(2), finalY);
-      renderSummaryRow(t.vatAmount, vat.toFixed(2), finalY + 6);
-      
-      doc.setDrawColor(0);
-      doc.rect(summaryBoxX, finalY + 12, summaryBoxWidth, 6);
-      doc.setFont(hasFont ? fontName : 'helvetica', 'normal');
-      if (isAr) {
-        doc.text(t.totalInclVat, summaryBoxX + summaryBoxWidth - 2, finalY + 16.5, { align: 'right' });
-        doc.text(totalInclVat.toFixed(2), summaryBoxX + 2, finalY + 16.5, { align: 'left' });
-      } else {
-        doc.text(t.totalInclVat, summaryBoxX + 2, finalY + 16.5, { align: 'left' });
-        doc.text(totalInclVat.toFixed(2), summaryBoxX + summaryBoxWidth - 2, finalY + 16.5, { align: 'right' });
-      }
-
       const footerTableHeight = 42;
-      if (finalY + footerTableHeight + 25 > pageHeight - 15) {
+      if (finalY + footerTableHeight + 15 > pageHeight - 15) {
         doc.addPage();
         finalY = 20;
       } else {
-        finalY += 22;
+        finalY += 8;
       }
 
       const xStart = 15;
@@ -1471,9 +1508,17 @@
       doc.rect(xStart + col1Width + col2Width, y2, col3Width + col4Width, r2Height + r3Height);
       doc.setFontSize(8.5);
       if (isAr) {
-        doc.text("توقيع المبيعات:", xStart + col1Width + col2Width + col3Width + col4Width - 2, y2 + 4.5, { align: 'right' });
+        doc.text("رقم الحساب:", xStart + col1Width + col2Width + col3Width + col4Width - 2, y2 + 4.5, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text("SA4910000010461829000300", xStart + col1Width + col2Width + col3Width + col4Width - 2, y2 + 10, { align: 'right' });
+        doc.setFont(fontName, 'normal');
       } else {
-        doc.text("Authorized Signature:", xStart + col1Width + col2Width + 2, y2 + 4.5, { align: 'left' });
+        doc.text("Bank Account Number:", xStart + col1Width + col2Width + 2, y2 + 4.5, { align: 'left' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text("SA4910000010461829000300", xStart + col1Width + col2Width + 2, y2 + 10, { align: 'left' });
+        doc.setFont(fontName, 'normal');
       }
 
       const y3 = y2 + r2Height;
