@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -223,6 +225,59 @@
         .logout-btn:hover {
             background: #fff5f5;
         }
+
+        /* Custom Tabs Styling */
+        .custom-tabs .nav-link {
+            border: none;
+            color: #4f4f4f;
+            font-weight: 700;
+            padding: 12px 24px;
+            border-radius: 10px;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        .custom-tabs .nav-link.active {
+            background-color: var(--primary);
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(254, 121, 0, 0.2);
+        }
+
+        .custom-tabs .nav-link:hover:not(.active) {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Checkbox list styling */
+        .employee-checkbox-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 6px 12px;
+            margin-bottom: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+
+        .employee-checkbox-item:hover {
+            background-color: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .badge-success-custom {
+            background-color: #d1e7dd;
+            color: #198754;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 
@@ -245,124 +300,224 @@
     <!-- Main Content -->
     <div class="container-fluid dashboard-container">
         
-        <!-- Filters Panel -->
-        <div class="filter-card">
-            <div class="row align-items-end g-3">
-                <div class="col-md-3">
-                    <label class="form-label fw-bold text-muted small">تاريخ البداية</label>
-                    <input type="date" id="startDate" class="form-control py-2">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold text-muted small">تاريخ النهاية</label>
-                    <input type="date" id="endDate" class="form-control py-2">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-muted small d-block">فترات سريعة</label>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button onclick="setFilterDates('today')" class="btn btn-outline-custom py-2">اليوم</button>
-                        <button onclick="setFilterDates('yesterday')" class="btn btn-outline-custom py-2">أمس</button>
-                        <button onclick="setFilterDates('last7days')" class="btn btn-outline-custom py-2">آخر 7 أيام</button>
-                        <button onclick="setFilterDates('thisMonth')" class="btn btn-outline-custom py-2 active">هذا الشهر</button>
-                        <button onclick="setFilterDates('lastMonth')" class="btn btn-outline-custom py-2">الشهر الماضي</button>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <button onclick="loadFinancialData()" class="btn btn-primary-custom w-100 py-2"><i class="fa-solid fa-rotate me-1"></i> عرض البيانات</button>
-                </div>
-            </div>
-        </div>
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs custom-tabs mb-4 border-0" id="financeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax-panel" type="button" role="tab" aria-controls="tax-panel" aria-selected="true"><i class="fa-solid fa-percent me-1"></i> تقرير ضريبة المبيعات</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance()"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
+            </li>
+        </ul>
 
-        <!-- KPI Cards Row -->
-        <div class="row g-4 mb-4">
-            <div class="col-md">
-                <div class="kpi-card kpi-gross">
-                    <div class="kpi-icon-container">
-                        <i class="fa-solid fa-money-bill-wave"></i>
-                    </div>
-                    <div class="kpi-info">
-                        <h6>المبيعات شاملة الضريبة (Gross)</h6>
-                        <h3 id="kpiGross">0.00</h3>
+        <div class="tab-content" id="financeTabsContent">
+            
+            <!-- Tab 1: Tax Report -->
+            <div class="tab-pane fade show active" id="tax-panel" role="tabpanel" aria-labelledby="tax-tab">
+                
+                <!-- Filters Panel -->
+                <div class="filter-card">
+                    <div class="row align-items-end g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-muted small">تاريخ البداية</label>
+                            <input type="date" id="startDate" class="form-control py-2">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-muted small">تاريخ النهاية</label>
+                            <input type="date" id="endDate" class="form-control py-2">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-muted small d-block">فترات سريعة</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button onclick="setFilterDates('today')" class="btn btn-outline-custom py-2">اليوم</button>
+                                <button onclick="setFilterDates('yesterday')" class="btn btn-outline-custom py-2">أمس</button>
+                                <button onclick="setFilterDates('last7days')" class="btn btn-outline-custom py-2">آخر 7 أيام</button>
+                                <button onclick="setFilterDates('thisMonth')" class="btn btn-outline-custom py-2 active">هذا الشهر</button>
+                                <button onclick="setFilterDates('lastMonth')" class="btn btn-outline-custom py-2">الشهر الماضي</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button onclick="loadFinancialData()" class="btn btn-primary-custom w-100 py-2"><i class="fa-solid fa-rotate me-1"></i> عرض البيانات</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-md">
-                <div class="kpi-card kpi-net">
-                    <div class="kpi-icon-container">
-                        <i class="fa-solid fa-chart-line"></i>
+
+                <!-- KPI Cards Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md">
+                        <div class="kpi-card kpi-gross">
+                            <div class="kpi-icon-container">
+                                <i class="fa-solid fa-money-bill-wave"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>المبيعات شاملة الضريبة (Gross)</h6>
+                                <h3 id="kpiGross">0.00</h3>
+                            </div>
+                        </div>
                     </div>
-                    <div class="kpi-info">
-                        <h6>المبيعات الصافية قبل الضريبة (Net)</h6>
-                        <h3 id="kpiNet">0.00</h3>
+                    <div class="col-md">
+                        <div class="kpi-card kpi-net">
+                            <div class="kpi-icon-container">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>المبيعات الصافية قبل الضريبة (Net)</h6>
+                                <h3 id="kpiNet">0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="kpi-card kpi-vat">
+                            <div class="kpi-icon-container">
+                                <i class="fa-solid fa-percent"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>ضريبة القيمة المضافة المحصلة (VAT)</h6>
+                                <h3 id="kpiVat">0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md">
+                        <div class="kpi-card kpi-returns">
+                            <div class="kpi-icon-container">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>المرتجعات شاملة الضريبة</h6>
+                                <h3 id="kpiReturns">0.00</h3>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-md">
-                <div class="kpi-card kpi-vat">
-                    <div class="kpi-icon-container">
-                        <i class="fa-solid fa-percent"></i>
+
+                <div class="row g-4">
+                    <!-- Store Tax Table Panel -->
+                    <div class="col-lg-8">
+                        <div class="content-panel h-100">
+                            <div class="panel-title">
+                                <span>تقرير الضريبة على مستوى الفروع والمبيعات</span>
+                                <button onclick="downloadExcelReport()" class="btn btn-success btn-sm px-3 py-2 fw-bold" style="border-radius: 8px;">
+                                    <i class="fa-solid fa-file-excel me-1"></i> تصدير تقرير الضرائب (Excel)
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-custom">
+                                    <thead>
+                                        <tr>
+                                            <th>المعرض</th>
+                                            <th class="text-end">شامل الضريبة (Gross)</th>
+                                            <th class="text-end">قبل الضريبة (Net)</th>
+                                            <th class="text-end">مبلغ الضريبة (VAT)</th>
+
+                                            <th class="text-end">المرتجع شامل الضريبة</th>
+                                            <th class="text-end">عدد الفواتير</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="financialTableBody">
+                                        <!-- JS Populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div class="kpi-info">
-                        <h6>ضريبة القيمة المضافة المحصلة (VAT)</h6>
-                        <h3 id="kpiVat">0.00</h3>
+
+                    <!-- VAT Classification Chart Panel -->
+                    <div class="col-lg-4">
+                        <div class="content-panel h-100">
+                            <div class="panel-title">توزيع مبيعات المعارض ضريبياً</div>
+                            <div class="d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                                <canvas id="vatChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md">
-                <div class="kpi-card kpi-returns">
-                    <div class="kpi-icon-container">
-                        <i class="fa-solid fa-rotate-left"></i>
-                    </div>
-                    <div class="kpi-info">
-                        <h6>المرتجعات شاملة الضريبة</h6>
-                        <h3 id="kpiReturns">0.00</h3>
+            <!-- Tab 2: Prizes & Payouts -->
+            <div class="tab-pane fade" id="prizes-panel" role="tabpanel" aria-labelledby="prizes-tab">
+                
+                <!-- Filters Prizes -->
+                <div class="filter-card">
+                    <div class="row align-items-end g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-muted small">تاريخ العمليات المشمولة</label>
+                            <input type="date" id="prizesDate" class="form-control py-2">
+                        </div>
+                        <div class="col-md-3">
+                            <button onclick="loadPrizesPerformance()" class="btn btn-primary-custom py-2"><i class="fa-solid fa-rotate me-1"></i> عرض الفروع المحققة</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="row g-4">
-            <!-- Store Tax Table Panel -->
-            <div class="col-lg-8">
-                <div class="content-panel h-100">
+                <!-- Prizes KPI Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="kpi-card kpi-net" style="border-right-color: #0d6efd;">
+                            <div class="kpi-icon-container" style="background-color: #e7f1ff; color: #0d6efd;">
+                                <i class="fa-solid fa-shop"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>الفروع المحققة للهدف اليوم</h6>
+                                <h3 id="prizesAchievedStores">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="kpi-card kpi-vat" style="border-right-color: #ffc107;">
+                            <div class="kpi-icon-container" style="background-color: #fff8e1; color: #ffc107;">
+                                <i class="fa-solid fa-gift"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>مجموع قيمة الجوائز لليوم</h6>
+                                <h3 id="prizesTotalAmount">0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="kpi-card kpi-returns" style="border-right-color: #198754;">
+                            <div class="kpi-icon-container" style="background-color: #d1e7dd; color: #198754;">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>الموظفين المستحقين اليوم</h6>
+                                <h3 id="prizesTotalEmployees">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Showrooms Panel -->
+                <div class="content-panel">
                     <div class="panel-title">
-                        <span>تقرير الضريبة على مستوى الفروع والمبيعات</span>
-                        <button onclick="downloadExcelReport()" class="btn btn-success btn-sm px-3 py-2 fw-bold" style="border-radius: 8px;">
-                            <i class="fa-solid fa-file-excel me-1"></i> تصدير تقرير الضرائب (Excel)
+                        <span>قائمة المعارض الفائزة وتوزيع الجائزة اليومية بالتساوي</span>
+                        <button onclick="exportPrizesExcel()" class="btn btn-success btn-sm fw-bold px-3 py-2" style="border-radius: 8px;">
+                            <i class="fa-solid fa-file-excel me-1"></i> تصدير كشف الصرف اليومي (Excel)
                         </button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom">
                             <thead>
                                 <tr>
-                                    <th>المعرض</th>
-                                    <th class="text-end">شامل الضريبة (Gross)</th>
-                                    <th class="text-end">قبل الضريبة (Net)</th>
-                                    <th class="text-end">مبلغ الضريبة (VAT)</th>
-
-                                    <th class="text-end">المرتجع شامل الضريبة</th>
-                                    <th class="text-end">عدد الفواتير</th>
+                                    <th>اسم المعرض</th>
+                                    <th class="text-end">متوسط الفاتورة</th>
+                                    <th class="text-end">الهدف اليومي</th>
+                                    <th class="text-end">قيمة الجائزة</th>
+                                    <th style="width: 45%;">طاقم العمل الحاضر (حدد الحضور الفعلي لتوزيع الجائزة)</th>
+                                    <th class="text-end">نصيب الموظف الفردي</th>
+                                    <th class="text-center">العمليات</th>
                                 </tr>
                             </thead>
-                            <tbody id="financialTableBody">
+                            <tbody id="prizesTableBody">
                                 <!-- JS Populated -->
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- VAT Classification Chart Panel -->
-            <div class="col-lg-4">
-                <div class="content-panel h-100">
-                    <div class="panel-title">توزيع مبيعات المعارض ضريبياً</div>
-                    <div class="d-flex align-items-center justify-content-center" style="min-height: 250px;">
-                        <canvas id="vatChart"></canvas>
-                    </div>
-                </div>
             </div>
+            
         </div>
-
     </div>
 
     <script>
@@ -392,6 +547,11 @@
         window.addEventListener('DOMContentLoaded', () => {
             setFilterDates('thisMonth');
             loadFinancialData();
+            
+            // Set default date for prizes tab to yesterday
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            document.getElementById('prizesDate').value = yesterday.toISOString().split('T')[0];
         });
 
         function logout() {
@@ -577,6 +737,311 @@
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
             }
+        }
+
+        const storeAttendanceData = {};
+
+        // Load prizes performance for the selected date
+        async function loadPrizesPerformance() {
+            const date = document.getElementById('prizesDate').value;
+            const tbody = document.getElementById('prizesTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل البيانات وأهداف الفروع...</td></tr>';
+
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const r = await fetch(`${API_BASE}/api/average-bill/performance?date=${date}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                
+                if (!r.ok) throw new Error('API Error');
+                const data = await r.json();
+
+                // Clear previous attendance state
+                for (const prop in storeAttendanceData) { delete storeAttendanceData[prop]; }
+
+                // Filter achieved stores
+                const achievedStores = data.performance.filter(s => s.achieved === true);
+
+                tbody.innerHTML = '';
+                document.getElementById('prizesAchievedStores').textContent = achievedStores.length;
+                
+                let totalPrizeSum = 0;
+                achievedStores.forEach(s => totalPrizeSum += s.prize_amount);
+                document.getElementById('prizesTotalAmount').textContent = totalPrizeSum.toLocaleString('en-US') + ' ريال';
+
+                if (achievedStores.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">لا توجد فروع حققت مستهدف متوسط الفاتورة اليومية في هذا التاريخ.</td></tr>';
+                    document.getElementById('prizesTotalEmployees').textContent = '0';
+                    return;
+                }
+
+                // Render each achieved store
+                achievedStores.forEach(store => {
+                    const storeName = store.store_name;
+                    const tr = document.createElement('tr');
+                    tr.id = `store-row-${storeName.replace(/\s+/g, '-')}`;
+                    tr.innerHTML = `
+                        <td class="fw-bold">${storeName}</td>
+                        <td class="text-end fw-bold text-primary">${store.actual_average_bill.toFixed(2)}</td>
+                        <td class="text-end text-muted">${store.target_value.toFixed(2)}</td>
+                        <td class="text-end fw-bold text-success">${store.prize_amount} ريال</td>
+                        <td>
+                            <div id="attendees-loading-${storeName.replace(/\s+/g, '-')}" class="py-2">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل الموظفين...
+                            </div>
+                            <div id="attendees-container-${storeName.replace(/\s+/g, '-')}" class="d-flex flex-wrap gap-2"></div>
+                        </td>
+                        <td class="text-end fw-bold text-orange text-success" id="share-display-${storeName.replace(/\s+/g, '-')}" style="font-size: 1.1rem; color: #fe7900 !important;">0.00 ريال</td>
+                        <td class="text-center">
+                            <button onclick="saveStoreAttendance('${storeName}')" id="save-btn-${storeName.replace(/\s+/g, '-')}" class="btn btn-primary-custom btn-sm fw-bold px-3 py-2" style="border-radius: 8px;">
+                                <i class="fa-solid fa-floppy-disk me-1"></i> حفظ طاقم العمل
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+
+                    // Fetch attendance list for this store
+                    fetchStoreAttendance(storeName, date, store.prize_amount);
+                });
+
+            } catch (err) {
+                console.error("Failed to load prizes performance:", err);
+                alert("حدث خطأ أثناء تحميل كشف الجوائز اليومية.");
+            }
+        }
+
+        async function fetchStoreAttendance(storeName, date, prizeAmount) {
+            const containerId = `attendees-container-${storeName.replace(/\s+/g, '-')}`;
+            const loadingId = `attendees-loading-${storeName.replace(/\s+/g, '-')}`;
+            const container = document.getElementById(containerId);
+            const loading = document.getElementById(loadingId);
+
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const r = await fetch(`${API_BASE}/api/average-bill/attendance?outlet=${encodeURIComponent(storeName)}&date=${date}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+
+                if (!r.ok) throw new Error('API Error');
+                const data = await r.json();
+
+                storeAttendanceData[storeName] = {
+                    prizeAmount: prizeAmount,
+                    pool: data.pool || [],
+                    present: data.present || []
+                };
+
+                rebuildAttendeesChecklist(storeName);
+                if (loading) loading.classList.add('d-none');
+
+            } catch (err) {
+                console.error(`Failed to fetch attendance for store ${storeName}:`, err);
+                if (loading) {
+                    loading.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> فشل تحميل الموظفين</span>';
+                }
+            }
+        }
+
+        function rebuildAttendeesChecklist(storeName) {
+            const storeData = storeAttendanceData[storeName];
+            const containerId = `attendees-container-${storeName.replace(/\s+/g, '-')}`;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            // Sort pool so present ones appear first
+            const sortedPool = [...storeData.pool].sort((a, b) => {
+                const aPresent = storeData.present.includes(a.id);
+                const bPresent = storeData.present.includes(b.id);
+                if (aPresent && !bPresent) return -1;
+                if (!aPresent && bPresent) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            sortedPool.forEach(emp => {
+                const isChecked = storeData.present.includes(emp.id);
+                
+                const label = document.createElement('label');
+                label.className = 'employee-checkbox-item';
+                label.innerHTML = `
+                    <input type="checkbox" value="${emp.id}" ${isChecked ? 'checked' : ''} onchange="onCheckboxChange('${storeName}')">
+                    <span>${emp.name} (${emp.id})</span>
+                `;
+                container.appendChild(label);
+            });
+
+            // Add manual employee insertion button
+            const addBtn = document.createElement('button');
+            addBtn.className = 'btn btn-outline-secondary btn-sm d-flex align-items-center gap-1';
+            addBtn.style.borderRadius = '8px';
+            addBtn.style.padding = '6px 12px';
+            addBtn.style.fontSize = '0.82rem';
+            addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> إضافة موظف';
+            addBtn.onclick = () => promptAddEmployee(storeName);
+            container.appendChild(addBtn);
+
+            updateStoreShareDisplay(storeName);
+            updateTotalEmployeesSum();
+        }
+
+        function onCheckboxChange(storeName) {
+            const storeData = storeAttendanceData[storeName];
+            const containerId = `attendees-container-${storeName.replace(/\s+/g, '-')}`;
+            const container = document.getElementById(containerId);
+            
+            // Collect checked IDs
+            const checkedIds = [];
+            container.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                if (chk.checked) {
+                    checkedIds.push(chk.value);
+                }
+            });
+
+            storeData.present = checkedIds;
+            updateStoreShareDisplay(storeName);
+            updateTotalEmployeesSum();
+        }
+
+        function updateStoreShareDisplay(storeName) {
+            const storeData = storeAttendanceData[storeName];
+            const displayId = `share-display-${storeName.replace(/\s+/g, '-')}`;
+            const display = document.getElementById(displayId);
+            if (!display) return;
+
+            const count = storeData.present.length;
+            if (count > 0) {
+                const share = storeData.prizeAmount / count;
+                display.textContent = share.toFixed(2) + ' ريال';
+            } else {
+                display.textContent = '0.00 ريال';
+            }
+        }
+
+        function updateTotalEmployeesSum() {
+            let total = 0;
+            for (const storeName in storeAttendanceData) {
+                total += storeAttendanceData[storeName].present.length;
+            }
+            document.getElementById('prizesTotalEmployees').textContent = total;
+        }
+
+        function promptAddEmployee(storeName) {
+            const empId = prompt("أدخل كود الموظف أو رقم الهوية الوطني:");
+            if (!empId) return;
+
+            const storeData = storeAttendanceData[storeName];
+            
+            // Check if already in pool
+            const existsInPool = storeData.pool.find(e => e.id === empId);
+            if (existsInPool) {
+                // Just check it if not checked
+                if (!storeData.present.includes(empId)) {
+                    storeData.present.push(empId);
+                }
+                rebuildAttendeesChecklist(storeName);
+                return;
+            }
+
+            // Search in other pools in memory first
+            let foundName = "";
+            for (const otherStoreName in storeAttendanceData) {
+                const otherStore = storeAttendanceData[otherStoreName];
+                const emp = otherStore.pool.find(e => e.id === empId);
+                if (emp) {
+                    foundName = emp.name;
+                    break;
+                }
+            }
+
+            if (!foundName) {
+                foundName = prompt("لم يتم العثور على هذا الموظف في الكشوفات التلقائية. يرجى إدخال اسم الموظف يدوياً:");
+                if (!foundName) return;
+            }
+
+            // Add to pool and present list
+            storeData.pool.push({ id: empId, name: foundName });
+            storeData.present.push(empId);
+
+            rebuildAttendeesChecklist(storeName);
+        }
+
+        async function saveStoreAttendance(storeName) {
+            const storeData = storeAttendanceData[storeName];
+            const date = document.getElementById('prizesDate').value;
+            const btnId = `save-btn-${storeName.replace(/\s+/g, '-')}`;
+            const btn = document.getElementById(btnId);
+            const originalHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+
+            const payload = {
+                outlet_name: storeName,
+                date: date,
+                employee_ids: storeData.present
+            };
+
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const r = await fetch(`${API_BASE}/api/average-bill/attendance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const res = await r.json();
+                if (r.ok && res.success) {
+                    alert(`تم حفظ طاقم العمل وتوزيع الجوائز بنجاح لمعرض ${storeName}`);
+                } else {
+                    alert("فشل حفظ الحضور: " + (res.error || r.statusText));
+                }
+            } catch (err) {
+                console.error("Error saving attendance:", err);
+                alert("حدث خطأ أثناء حفظ طاقم العمل.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        // Export payouts report to Excel using SheetJS
+        function exportPrizesExcel() {
+            const date = document.getElementById('prizesDate').value;
+            const rows = [];
+
+            for (const storeName in storeAttendanceData) {
+                const storeData = storeAttendanceData[storeName];
+                const count = storeData.present.length;
+                const share = count > 0 ? storeData.prizeAmount / count : 0;
+
+                storeData.present.forEach(empId => {
+                    const emp = storeData.pool.find(e => e.id === empId) || { id: empId, name: "غير معروف" };
+                    rows.push({
+                        "التاريخ": date,
+                        "اسم المعرض": storeName,
+                        "رقم الموظف (الكود)": emp.id,
+                        "اسم الموظف": emp.name,
+                        "قيمة الجائزة الكلية للمعرض": storeData.prizeAmount,
+                        "نصيب الموظف الفردي (ريال)": share
+                    });
+                });
+            }
+
+            if (rows.length === 0) {
+                alert("لا توجد بيانات موظفين مستحقين للتصدير في هذا التاريخ.");
+                return;
+            }
+
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "كشف صرف الجوائز");
+
+            // Save file
+            XLSX.writeFile(workbook, `Orange_Average_Bill_Payouts_${date}.xlsx`);
         }
     </script>
 
