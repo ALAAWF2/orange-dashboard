@@ -778,22 +778,23 @@
                 // Render each achieved store
                 achievedStores.forEach(store => {
                     const storeName = store.store_name;
+                    const storeId = store.store_id;
                     const tr = document.createElement('tr');
-                    tr.id = `store-row-${storeName.replace(/\s+/g, '-')}`;
+                    tr.id = `store-row-${storeId}`;
                     tr.innerHTML = `
                         <td class="fw-bold">${storeName}</td>
                         <td class="text-end fw-bold text-primary">${store.actual_average_bill.toFixed(2)}</td>
                         <td class="text-end text-muted">${store.target_value.toFixed(2)}</td>
                         <td class="text-end fw-bold text-success">${store.prize_amount} ريال</td>
                         <td>
-                            <div id="attendees-loading-${storeName.replace(/\s+/g, '-')}" class="py-2">
+                            <div id="attendees-loading-${storeId}" class="py-2">
                                 <i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل الموظفين...
                             </div>
-                            <div id="attendees-container-${storeName.replace(/\s+/g, '-')}" class="d-flex flex-wrap gap-2"></div>
+                            <div id="attendees-container-${storeId}" class="d-flex flex-wrap gap-2"></div>
                         </td>
-                        <td class="text-end fw-bold text-orange text-success" id="share-display-${storeName.replace(/\s+/g, '-')}" style="font-size: 1.1rem; color: #fe7900 !important;">0.00 ريال</td>
+                        <td class="text-end fw-bold text-orange text-success" id="share-display-${storeId}" style="font-size: 1.1rem; color: #fe7900 !important;">0.00 ريال</td>
                         <td class="text-center">
-                            <button onclick="saveStoreAttendance('${storeName}')" id="save-btn-${storeName.replace(/\s+/g, '-')}" class="btn btn-primary-custom btn-sm fw-bold px-3 py-2" style="border-radius: 8px;">
+                            <button onclick="saveStoreAttendance('${storeId}', '${storeName}')" id="save-btn-${storeId}" class="btn btn-primary-custom btn-sm fw-bold px-3 py-2" style="border-radius: 8px;">
                                 <i class="fa-solid fa-floppy-disk me-1"></i> حفظ طاقم العمل
                             </button>
                         </td>
@@ -801,7 +802,7 @@
                     tbody.appendChild(tr);
 
                     // Fetch attendance list for this store
-                    fetchStoreAttendance(storeName, date, store.prize_amount);
+                    fetchStoreAttendance(storeId, storeName, date, store.prize_amount);
                 });
 
             } catch (err) {
@@ -810,41 +811,42 @@
             }
         }
 
-        async function fetchStoreAttendance(storeName, date, prizeAmount) {
-            const containerId = `attendees-container-${storeName.replace(/\s+/g, '-')}`;
-            const loadingId = `attendees-loading-${storeName.replace(/\s+/g, '-')}`;
+        async function fetchStoreAttendance(storeId, storeName, date, prizeAmount) {
+            const containerId = `attendees-container-${storeId}`;
+            const loadingId = `attendees-loading-${storeId}`;
             const container = document.getElementById(containerId);
             const loading = document.getElementById(loadingId);
 
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const r = await fetch(`${API_BASE}/api/average-bill/attendance?outlet=${encodeURIComponent(storeName)}&date=${date}`, {
+                const r = await fetch(`${API_BASE}/api/average-bill/attendance?store_id=${encodeURIComponent(storeId)}&date=${date}`, {
                     headers: { 'Authorization': authHeader }
                 });
 
                 if (!r.ok) throw new Error('API Error');
                 const data = await r.json();
 
-                storeAttendanceData[storeName] = {
+                storeAttendanceData[storeId] = {
+                    storeName: storeName,
                     prizeAmount: prizeAmount,
-                    pool: data.pool || [],
-                    present: data.present || []
+                    pool: data.employee_pool || [],
+                    present: (data.present_employees || []).map(emp => emp.employee_id)
                 };
 
-                rebuildAttendeesChecklist(storeName);
+                rebuildAttendeesChecklist(storeId);
                 if (loading) loading.classList.add('d-none');
 
             } catch (err) {
-                console.error(`Failed to fetch attendance for store ${storeName}:`, err);
+                console.error(`Failed to fetch attendance for store ${storeId}:`, err);
                 if (loading) {
                     loading.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> فشل تحميل الموظفين</span>';
                 }
             }
         }
 
-        function rebuildAttendeesChecklist(storeName) {
-            const storeData = storeAttendanceData[storeName];
-            const containerId = `attendees-container-${storeName.replace(/\s+/g, '-')}`;
+        function rebuildAttendeesChecklist(storeId) {
+            const storeData = storeAttendanceData[storeId];
+            const containerId = `attendees-container-${storeId}`;
             const container = document.getElementById(containerId);
             if (!container) return;
 
@@ -852,21 +854,21 @@
 
             // Sort pool so present ones appear first
             const sortedPool = [...storeData.pool].sort((a, b) => {
-                const aPresent = storeData.present.includes(a.id);
-                const bPresent = storeData.present.includes(b.id);
+                const aPresent = storeData.present.includes(a.employee_id);
+                const bPresent = storeData.present.includes(b.employee_id);
                 if (aPresent && !bPresent) return -1;
                 if (!aPresent && bPresent) return 1;
-                return a.name.localeCompare(b.name);
+                return a.employee_name.localeCompare(b.employee_name);
             });
 
             sortedPool.forEach(emp => {
-                const isChecked = storeData.present.includes(emp.id);
+                const isChecked = storeData.present.includes(emp.employee_id);
                 
                 const label = document.createElement('label');
                 label.className = 'employee-checkbox-item';
                 label.innerHTML = `
-                    <input type="checkbox" value="${emp.id}" ${isChecked ? 'checked' : ''} onchange="onCheckboxChange('${storeName}')">
-                    <span>${emp.name} (${emp.id})</span>
+                    <input type="checkbox" value="${emp.employee_id}" ${isChecked ? 'checked' : ''} onchange="onCheckboxChange('${storeId}')">
+                    <span>${emp.employee_name} (${emp.employee_id})</span>
                 `;
                 container.appendChild(label);
             });
@@ -878,16 +880,16 @@
             addBtn.style.padding = '6px 12px';
             addBtn.style.fontSize = '0.82rem';
             addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> إضافة موظف';
-            addBtn.onclick = () => promptAddEmployee(storeName);
+            addBtn.onclick = () => promptAddEmployee(storeId);
             container.appendChild(addBtn);
 
-            updateStoreShareDisplay(storeName);
+            updateStoreShareDisplay(storeId);
             updateTotalEmployeesSum();
         }
 
-        function onCheckboxChange(storeName) {
-            const storeData = storeAttendanceData[storeName];
-            const containerId = `attendees-container-${storeName.replace(/\s+/g, '-')}`;
+        function onCheckboxChange(storeId) {
+            const storeData = storeAttendanceData[storeId];
+            const containerId = `attendees-container-${storeId}`;
             const container = document.getElementById(containerId);
             
             // Collect checked IDs
@@ -899,13 +901,13 @@
             });
 
             storeData.present = checkedIds;
-            updateStoreShareDisplay(storeName);
+            updateStoreShareDisplay(storeId);
             updateTotalEmployeesSum();
         }
 
-        function updateStoreShareDisplay(storeName) {
-            const storeData = storeAttendanceData[storeName];
-            const displayId = `share-display-${storeName.replace(/\s+/g, '-')}`;
+        function updateStoreShareDisplay(storeId) {
+            const storeData = storeAttendanceData[storeId];
+            const displayId = `share-display-${storeId}`;
             const display = document.getElementById(displayId);
             if (!display) return;
 
@@ -920,36 +922,36 @@
 
         function updateTotalEmployeesSum() {
             let total = 0;
-            for (const storeName in storeAttendanceData) {
-                total += storeAttendanceData[storeName].present.length;
+            for (const storeId in storeAttendanceData) {
+                total += storeAttendanceData[storeId].present.length;
             }
             document.getElementById('prizesTotalEmployees').textContent = total;
         }
 
-        function promptAddEmployee(storeName) {
+        function promptAddEmployee(storeId) {
             const empId = prompt("أدخل كود الموظف أو رقم الهوية الوطني:");
             if (!empId) return;
 
-            const storeData = storeAttendanceData[storeName];
+            const storeData = storeAttendanceData[storeId];
             
             // Check if already in pool
-            const existsInPool = storeData.pool.find(e => e.id === empId);
+            const existsInPool = storeData.pool.find(e => e.employee_id === empId);
             if (existsInPool) {
                 // Just check it if not checked
                 if (!storeData.present.includes(empId)) {
                     storeData.present.push(empId);
                 }
-                rebuildAttendeesChecklist(storeName);
+                rebuildAttendeesChecklist(storeId);
                 return;
             }
 
             // Search in other pools in memory first
             let foundName = "";
-            for (const otherStoreName in storeAttendanceData) {
-                const otherStore = storeAttendanceData[otherStoreName];
-                const emp = otherStore.pool.find(e => e.id === empId);
+            for (const otherStoreId in storeAttendanceData) {
+                const otherStore = storeAttendanceData[otherStoreId];
+                const emp = otherStore.pool.find(e => e.employee_id === empId);
                 if (emp) {
-                    foundName = emp.name;
+                    foundName = emp.employee_name;
                     break;
                 }
             }
@@ -960,26 +962,34 @@
             }
 
             // Add to pool and present list
-            storeData.pool.push({ id: empId, name: foundName });
+            storeData.pool.push({ employee_id: empId, employee_name: foundName });
             storeData.present.push(empId);
 
-            rebuildAttendeesChecklist(storeName);
+            rebuildAttendeesChecklist(storeId);
         }
 
-        async function saveStoreAttendance(storeName) {
-            const storeData = storeAttendanceData[storeName];
+        async function saveStoreAttendance(storeId, storeName) {
+            const storeData = storeAttendanceData[storeId];
             const date = document.getElementById('prizesDate').value;
-            const btnId = `save-btn-${storeName.replace(/\s+/g, '-')}`;
+            const btnId = `save-btn-${storeId}`;
             const btn = document.getElementById(btnId);
             const originalHtml = btn.innerHTML;
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري الحفظ...';
 
+            const presentEmployeesPayload = storeData.present.map(empId => {
+                const empObj = storeData.pool.find(e => e.employee_id === empId) || { employee_id: empId, employee_name: "غير معروف" };
+                return {
+                    employee_id: empObj.employee_id,
+                    employee_name: empObj.employee_name
+                };
+            });
+
             const payload = {
-                outlet_name: storeName,
-                date: date,
-                employee_ids: storeData.present
+                store_id: storeId,
+                attendance_date: date,
+                present_employees: presentEmployeesPayload
             };
 
             try {
@@ -1013,18 +1023,18 @@
             const date = document.getElementById('prizesDate').value;
             const rows = [];
 
-            for (const storeName in storeAttendanceData) {
-                const storeData = storeAttendanceData[storeName];
+            for (const storeId in storeAttendanceData) {
+                const storeData = storeAttendanceData[storeId];
                 const count = storeData.present.length;
                 const share = count > 0 ? storeData.prizeAmount / count : 0;
 
                 storeData.present.forEach(empId => {
-                    const emp = storeData.pool.find(e => e.id === empId) || { id: empId, name: "غير معروف" };
+                    const emp = storeData.pool.find(e => e.employee_id === empId) || { employee_id: empId, employee_name: "غير معروف" };
                     rows.push({
                         "التاريخ": date,
-                        "اسم المعرض": storeName,
-                        "رقم الموظف (الكود)": emp.id,
-                        "اسم الموظف": emp.name,
+                        "اسم المعرض": storeData.storeName,
+                        "رقم الموظف (الكود)": emp.employee_id,
+                        "اسم الموظف": emp.employee_name,
                         "قيمة الجائزة الكلية للمعرض": storeData.prizeAmount,
                         "نصيب الموظف الفردي (ريال)": share
                     });
