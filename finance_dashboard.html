@@ -500,10 +500,12 @@
                             <thead>
                                 <tr>
                                     <th>اسم المعرض</th>
-                                    <th class="text-end">متوسط الفاتورة</th>
+                                    <th class="text-end">المبيعات الفعلية</th>
+                                    <th class="text-end">عدد الفواتير</th>
+                                    <th class="text-end">متوسط الفاتورة الفعلي</th>
                                     <th class="text-end">الهدف اليومي</th>
                                     <th class="text-end">قيمة الجائزة</th>
-                                    <th style="width: 45%;">طاقم العمل الحاضر (حدد الحضور الفعلي لتوزيع الجائزة)</th>
+                                    <th style="width: 35%;">طاقم العمل الحاضر (حدد الحضور الفعلي لتوزيع الجائزة)</th>
                                     <th class="text-end">نصيب الموظف الفردي</th>
                                     <th class="text-center">العمليات</th>
                                 </tr>
@@ -770,7 +772,7 @@
                 document.getElementById('prizesTotalAmount').textContent = totalPrizeSum.toLocaleString('en-US') + ' ريال';
 
                 if (achievedStores.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">لا توجد فروع حققت مستهدف متوسط الفاتورة اليومية في هذا التاريخ.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد فروع حققت مستهدف متوسط الفاتورة اليومية في هذا التاريخ.</td></tr>';
                     document.getElementById('prizesTotalEmployees').textContent = '0';
                     return;
                 }
@@ -783,14 +785,30 @@
                     tr.id = `store-row-${storeId}`;
                     tr.innerHTML = `
                         <td class="fw-bold">${storeName}</td>
+                        <td class="text-end fw-bold">${store.actual_sales.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="text-end">${store.actual_transactions}</td>
                         <td class="text-end fw-bold text-primary">${store.actual_average_bill.toFixed(2)}</td>
-                        <td class="text-end text-muted">${store.target_value.toFixed(2)}</td>
+                        <td class="text-end text-muted fw-bold">${store.target_value.toFixed(2)}</td>
                         <td class="text-end fw-bold text-success">${store.prize_amount} ريال</td>
                         <td>
-                            <div id="attendees-loading-${storeId}" class="py-2">
-                                <i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل الموظفين...
+                            <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 mx-auto fw-bold" 
+                                    type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse-attendees-${storeId}" 
+                                    aria-expanded="false" 
+                                    aria-controls="collapse-attendees-${storeId}"
+                                    style="border-radius: 8px;">
+                                <i class="fa-solid fa-users"></i> عرض طاقم العمل <i class="fa-solid fa-chevron-down small"></i>
+                            </button>
+                            
+                            <div class="collapse mt-2" id="collapse-attendees-${storeId}">
+                                <div class="card card-body p-2 border shadow-sm" style="border-radius: 12px; background-color: #fafafa;">
+                                    <div id="attendees-loading-${storeId}" class="py-2 text-center">
+                                        <i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل الموظفين...
+                                    </div>
+                                    <div id="attendees-container-${storeId}" class="d-flex flex-wrap gap-2"></div>
+                                </div>
                             </div>
-                            <div id="attendees-container-${storeId}" class="d-flex flex-wrap gap-2"></div>
                         </td>
                         <td class="text-end fw-bold text-orange text-success" id="share-display-${storeId}" style="font-size: 1.1rem; color: #fe7900 !important;">0.00 ريال</td>
                         <td class="text-center">
@@ -802,7 +820,7 @@
                     tbody.appendChild(tr);
 
                     // Fetch attendance list for this store
-                    fetchStoreAttendance(storeId, storeName, date, store.prize_amount);
+                    fetchStoreAttendance(store, date);
                 });
 
             } catch (err) {
@@ -811,7 +829,9 @@
             }
         }
 
-        async function fetchStoreAttendance(storeId, storeName, date, prizeAmount) {
+        async function fetchStoreAttendance(store, date) {
+            const storeId = store.store_id;
+            const storeName = store.store_name;
             const containerId = `attendees-container-${storeId}`;
             const loadingId = `attendees-loading-${storeId}`;
             const container = document.getElementById(containerId);
@@ -828,7 +848,11 @@
 
                 storeAttendanceData[storeId] = {
                     storeName: storeName,
-                    prizeAmount: prizeAmount,
+                    prizeAmount: store.prize_amount,
+                    actualSales: store.actual_sales,
+                    actualTransactions: store.actual_transactions,
+                    actualAverageBill: store.actual_average_bill,
+                    targetValue: store.target_value,
                     pool: data.employee_pool || [],
                     present: (data.present_employees || []).map(emp => emp.employee_id)
                 };
@@ -1033,9 +1057,13 @@
                     rows.push({
                         "التاريخ": date,
                         "اسم المعرض": storeData.storeName,
+                        "المبيعات الفعلية": storeData.actualSales,
+                        "عدد الفواتير": storeData.actualTransactions,
+                        "متوسط الفاتورة الفعلي": storeData.actualAverageBill,
+                        "الهدف اليومي": storeData.targetValue,
+                        "قيمة الجائزة الكلية للمعرض": storeData.prizeAmount,
                         "رقم الموظف (الكود)": emp.employee_id,
                         "اسم الموظف": emp.employee_name,
-                        "قيمة الجائزة الكلية للمعرض": storeData.prizeAmount,
                         "نصيب الموظف الفردي (ريال)": share
                     });
                 });
