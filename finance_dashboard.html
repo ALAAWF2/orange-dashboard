@@ -437,15 +437,44 @@
             <!-- Tab 2: Prizes & Payouts -->
             <div class="tab-pane fade" id="prizes-panel" role="tabpanel" aria-labelledby="prizes-tab">
                 
-                <!-- Filters Prizes -->
+                <!-- Filters Prizes & Weekly Export -->
                 <div class="filter-card">
                     <div class="row align-items-end g-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold text-muted small">تاريخ العمليات المشمولة</label>
-                            <input type="date" id="prizesDate" class="form-control py-2">
+                        <!-- Daily Verification Section -->
+                        <div class="col-lg-5 pe-lg-4">
+                            <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-calendar-day me-1"></i> التحقق اليومي وحفظ الحضور</h6>
+                            <div class="row align-items-end g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-muted small">تاريخ العمليات اليومية</label>
+                                    <input type="date" id="prizesDate" class="form-control py-2">
+                                </div>
+                                <div class="col-md-6">
+                                    <button onclick="loadPrizesPerformance()" class="btn btn-primary-custom py-2 w-100"><i class="fa-solid fa-rotate me-1"></i> عرض الفروع المحققة</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <button onclick="loadPrizesPerformance()" class="btn btn-primary-custom py-2"><i class="fa-solid fa-rotate me-1"></i> عرض الفروع المحققة</button>
+                        
+                        <!-- Divider Line -->
+                        <div class="col-lg-1 d-none d-lg-block text-center text-muted border-start" style="height: 60px; margin-top: 15px; margin-bottom: 5px;"></div>
+                        
+                        <!-- Weekly Payout Export Section -->
+                        <div class="col-lg-6 ps-lg-4">
+                            <h6 class="fw-bold mb-3 text-success"><i class="fa-solid fa-calendar-week me-1"></i> تصدير كشف الصرف الأسبوعي / المجمع</h6>
+                            <div class="row align-items-end g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-muted small">تاريخ البدء</label>
+                                    <input type="date" id="exportStartDate" class="form-control py-2">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-muted small">تاريخ الانتهاء</label>
+                                    <input type="date" id="exportEndDate" class="form-control py-2">
+                                </div>
+                                <div class="col-md-4">
+                                    <button onclick="exportWeeklyPayouts()" class="btn btn-success py-2 w-100 fw-bold" style="border-radius: 8px;">
+                                        <i class="fa-solid fa-file-excel me-1"></i> تصدير الكشف المجمع
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1080,6 +1109,90 @@
 
             // Save file
             XLSX.writeFile(workbook, `Orange_Average_Bill_Payouts_${date}.xlsx`);
+        }
+
+        // Export Weekly Consolidated Payouts Report
+        async function exportWeeklyPayouts() {
+            const start = document.getElementById('exportStartDate').value;
+            const end = document.getElementById('exportEndDate').value;
+
+            if (!start || !end) {
+                alert("يرجى تحديد تاريخ البدء وتاريخ الانتهاء أولاً.");
+                return;
+            }
+
+            const btn = document.querySelector("button[onclick='exportWeeklyPayouts()']");
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري استرجاع البيانات وتصدير الملف...';
+
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const url = `${API_BASE}/api/average-bill/payouts-range?start=${start}&end=${end}`;
+                
+                const r = await fetch(url, {
+                    headers: { 'Authorization': authHeader }
+                });
+
+                if (!r.ok) throw new Error('API Error');
+                const res = await r.json();
+
+                if (!res.success || !res.payouts || res.payouts.length === 0) {
+                    alert("لا توجد بيانات جوائز مستحقة للصرف في هذه الفترة المحددة.");
+                    return;
+                }
+
+                // 1. Build Sheet 1: Daily Breakdown
+                const dailyRows = res.payouts.map(p => ({
+                    "التاريخ": p.date,
+                    "اسم المعرض": p.store_name,
+                    "المبيعات الفعلية": p.actual_sales,
+                    "عدد الفواتير": p.actual_transactions,
+                    "متوسط الفاتورة الفعلي": p.actual_average_bill,
+                    "الهدف اليومي": p.target_value,
+                    "قيمة الجائزة الكلية للمعرض": p.prize_amount,
+                    "رقم الموظف (الكود)": p.employee_id,
+                    "اسم الموظف": p.employee_name,
+                    "نصيب الموظف الفردي (ريال)": p.share
+                }));
+
+                // 2. Build Sheet 2: Consolidated Summary
+                const empSummary = {};
+                res.payouts.forEach(p => {
+                    const key = p.employee_id;
+                    if (!empSummary[key]) {
+                        empSummary[key] = {
+                            "رقم الموظف (الكود)": p.employee_id,
+                            "اسم الموظف": p.employee_name,
+                            "عدد أيام التحقيق": 0,
+                            "إجمالي المستحق (ريال)": 0.0
+                        };
+                    }
+                    empSummary[key]["عدد أيام التحقيق"] += 1;
+                    empSummary[key]["إجمالي المستحق (ريال)"] += p.share;
+                });
+
+                const summaryRows = Object.values(empSummary).sort((a, b) => b["إجمالي المستحق (ريال)"] - a["إجمالي المستحق (ريال)"]);
+
+                // Build workbook
+                const workbook = XLSX.utils.book_new();
+
+                const sheet1 = XLSX.utils.json_to_sheet(dailyRows);
+                const sheet2 = XLSX.utils.json_to_sheet(summaryRows);
+
+                XLSX.utils.book_append_sheet(workbook, sheet2, "ملخص الصرف النهائي");
+                XLSX.utils.book_append_sheet(workbook, sheet1, "تفاصيل الصرف اليومي");
+
+                // Export file
+                XLSX.writeFile(workbook, `Orange_Average_Bill_Weekly_Payouts_${start}_to_${end}.xlsx`);
+
+            } catch (err) {
+                console.error("Error exporting weekly payouts:", err);
+                alert("حدث خطأ أثناء تصدير كشف الصرف المجمع.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
     </script>
 
