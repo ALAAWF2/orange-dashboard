@@ -514,6 +514,27 @@
         </div>
     </div>
 
+    <!-- Modal: View Employees List -->
+    <div class="modal fade" id="employeesListModal" tabindex="-1" aria-labelledby="employeesListModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="employeesListModalLabel"><i class="fa-solid fa-users me-1"></i> طاقم العمل الحاضر</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 class="fw-bold mb-3 text-primary" id="empModalStoreHeader">معرض: -</h6>
+                    <ul class="list-group" id="empModalList" style="max-height: 350px; overflow-y: auto;">
+                        <!-- JS Populated -->
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary py-2 px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px;">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JS Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- SheetJS for Excel -->
@@ -614,8 +635,8 @@
                             </span>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-secondary py-2 px-3 fw-bold" style="border-radius:8px;">
-                                ${store.employees.length} موظفين
+                            <span class="badge bg-secondary py-2 px-3 fw-bold" style="border-radius:8px; cursor:pointer;" onclick="showStoreEmployees('${store.store_name}')" title="اضغط لعرض الموظفين الحاضرين">
+                                ${store.employees.length} موظفين <i class="fa-solid fa-users ms-1"></i>
                             </span>
                         </td>
                         <td class="text-center">
@@ -636,6 +657,35 @@
                 console.error("Error loading daily average bill data:", err);
                 alert("حدث خطأ أثناء تحميل البيانات اليومية. يرجى التأكد من تشغيل خادم الإدارة (dashboard_server/server.py).");
             }
+        }
+
+        // Show store employees list popup
+        function showStoreEmployees(storeName) {
+            const store = dailyPerformanceCache.find(s => s.store_name === storeName);
+            if (!store) return;
+
+            document.getElementById('empModalStoreHeader').textContent = `معرض: ${store.store_name} (${store.achieved ? 'حقق المستهدف اليوم' : 'لم يحقق المستهدف اليوم'})`;
+            
+            const list = document.getElementById('empModalList');
+            list.innerHTML = '';
+
+            if (!store.employees || store.employees.length === 0) {
+                list.innerHTML = '<li class="list-group-item text-center text-muted">لا يوجد موظفون حاضرون مسجلون في هذا اليوم</li>';
+            } else {
+                store.employees.forEach(emp => {
+                    const isPresent = emp.present;
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center fw-bold';
+                    li.innerHTML = `
+                        <span><i class="fa-solid fa-user me-2 text-muted"></i>${emp.employee_name} (${emp.employee_id})</span>
+                        ${store.achieved && isPresent ? `<span class="badge bg-success py-2 px-3">نصيب الموظف: ${emp.share} ريال</span>` : ''}
+                    `;
+                    list.appendChild(li);
+                });
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('employeesListModal'));
+            modal.show();
         }
 
         // Open Edit Modal
