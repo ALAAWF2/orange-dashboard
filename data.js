@@ -6246,25 +6246,6 @@ const EMPLOYEES = [
         "addressBooks": "1114-C;1114-E"
     },
     {
-        "employeeId": "4939-سلطان الهميم",
-        "personnelNumber": "4939",
-        "name": "سلطان الهميم",
-        "startDate": "2026-04-16",
-        "manager": "محمدكلو",
-        "showroom": "1107-38-Al_Riyadh Park",
-        "showroomDetails": [
-            {
-                "name": "1107-38-Al_Riyadh Park",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1107-C",
-                    "1107-E"
-                ]
-            }
-        ],
-        "addressBooks": "1107-C;1107-E"
-    },
-    {
         "employeeId": "4942-رهام جابر",
         "personnelNumber": "4942",
         "name": "رهام جابر",
