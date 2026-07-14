@@ -545,6 +545,26 @@
                     </div>
                 </div>
 
+                <!-- Payouts Charts Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="content-panel h-100">
+                            <div class="panel-title">توزيع الجوائز اليومية حسب المعرض</div>
+                            <div style="min-height: 280px; position: relative;">
+                                <canvas id="payoutsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="content-panel h-100">
+                            <div class="panel-title">نسبة مبيعات المعارض الفائزة اليوم</div>
+                            <div style="min-height: 280px; position: relative;">
+                                <canvas id="payoutSalesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             
         </div>
@@ -638,6 +658,8 @@
         }
 
         let vatChartInstance = null;
+        let payoutsChartInstance = null;
+        let payoutSalesChartInstance = null;
         let dailyPerformanceCache = [];
 
         // Fetch local financial statistics
@@ -730,6 +752,99 @@
             });
         }
 
+        function updatePrizesCharts(achievedStores) {
+            const canvas1 = document.getElementById('payoutsChart');
+            const canvas2 = document.getElementById('payoutSalesChart');
+            if (!canvas1 || !canvas2) return;
+
+            const ctx1 = canvas1.getContext('2d');
+            const ctx2 = canvas2.getContext('2d');
+
+            if (payoutsChartInstance) payoutsChartInstance.destroy();
+            if (payoutSalesChartInstance) payoutSalesChartInstance.destroy();
+
+            if (!achievedStores || achievedStores.length === 0) {
+                return;
+            }
+
+            // Extract labels (remove store code prefix if possible for cleaner look, e.g. "04-Andalos Mall" -> "Andalos Mall")
+            const storeNames = achievedStores.map(s => {
+                const parts = s.store_name.split('-');
+                return parts.length > 1 ? parts.slice(1).join('-').trim() : s.store_name;
+            });
+            const prizeAmounts = achievedStores.map(s => s.prize_amount);
+            const actualSales = achievedStores.map(s => s.actual_sales);
+
+            // Chart 1: Bar chart for daily payouts per showroom
+            payoutsChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: storeNames,
+                    datasets: [{
+                        label: 'قيمة الجائزة (ريال)',
+                        data: prizeAmounts,
+                        backgroundColor: '#fe7900',
+                        borderColor: '#cc6000',
+                        borderWidth: 1,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) { return value + ' ريال'; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: Doughnut chart for actual sales share among winning showrooms
+            const colors = achievedStores.map((_, i) => `hsl(${(i * 360 / achievedStores.length) % 360}, 75%, 60%)`);
+            payoutSalesChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: storeNames,
+                    datasets: [{
+                        data: actualSales,
+                        backgroundColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                font: { family: 'Tajawal', size: 11, weight: 'bold' }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${value.toLocaleString('en-US')} ريال (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Trigger tax report excel download securely via blob fetch
         async function downloadExcelReport() {
             const start = document.getElementById('startDate').value;
@@ -801,6 +916,7 @@
                 if (achievedStores.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد فروع حققت مستهدف متوسط الفاتورة اليومية في هذا التاريخ.</td></tr>';
                     document.getElementById('prizesTotalEmployees').textContent = '0';
+                    updatePrizesCharts([]);
                     return;
                 }
 
@@ -861,6 +977,7 @@
                     totalActiveEmps += s.employees ? s.employees.length : 0;
                 });
                 document.getElementById('prizesTotalEmployees').textContent = totalActiveEmps;
+                updatePrizesCharts(achievedStores);
 
             } catch (err) {
                 console.error("Failed to load prizes performance:", err);

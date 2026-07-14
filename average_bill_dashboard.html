@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -386,6 +388,26 @@
                     </div>
                 </div>
 
+                <!-- Daily Summary Charts Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-5">
+                        <div class="content-panel h-100">
+                            <div class="panel-title">نسبة تحقيق مستهدفات الفروع اليوم</div>
+                            <div style="min-height: 280px; position: relative;">
+                                <canvas id="dailyAchievementChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="content-panel h-100">
+                            <div class="panel-title">أعلى 10 معارض مبيعاً اليوم (ريال)</div>
+                            <div style="min-height: 280px; position: relative;">
+                                <canvas id="dailyTopSalesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Tab 2: Monthly View -->
@@ -586,6 +608,8 @@
         }
 
         let dailyPerformanceCache = [];
+        let dailyAchievementChartInstance = null;
+        let dailyTopSalesChartInstance = null;
         let activeEditStore = null;
 
         // 1. Fetch Daily Performance
@@ -613,6 +637,7 @@
 
                 if (totalStores === 0) {
                     tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا يوجد معارض مسجلة أو لا تتوفر مبيعات لهذا اليوم.</td></tr>';
+                    updateDailyCharts([]);
                 }
 
                 dailyPerformanceCache.sort((a,b) => b.actual_sales - a.actual_sales).forEach(store => {
@@ -652,11 +677,97 @@
                 document.getElementById('dailyAchievedStores').textContent = achievedCount;
                 document.getElementById('dailyMissedStores').textContent = totalStores - achievedCount;
                 document.getElementById('dailyTotalPrize').textContent = totalPrize.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ريال';
+                updateDailyCharts(dailyPerformanceCache);
 
             } catch (err) {
                 console.error("Error loading daily average bill data:", err);
                 alert("حدث خطأ أثناء تحميل البيانات اليومية. يرجى التأكد من تشغيل خادم الإدارة (dashboard_server/server.py).");
             }
+        }
+
+        function updateDailyCharts(performanceData) {
+            const canvas1 = document.getElementById('dailyAchievementChart');
+            const canvas2 = document.getElementById('dailyTopSalesChart');
+            if (!canvas1 || !canvas2) return;
+
+            const ctx1 = canvas1.getContext('2d');
+            const ctx2 = canvas2.getContext('2d');
+
+            if (dailyAchievementChartInstance) dailyAchievementChartInstance.destroy();
+            if (dailyTopSalesChartInstance) dailyTopSalesChartInstance.destroy();
+
+            if (!performanceData || performanceData.length === 0) {
+                return;
+            }
+
+            // Chart 1: Achieved vs Missed Count
+            const achievedCount = performanceData.filter(s => s.achieved).length;
+            const missedCount = performanceData.length - achievedCount;
+
+            dailyAchievementChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['فروع حققت الهدف', 'فروع لم تحقق'],
+                    datasets: [{
+                        data: [achievedCount, missedCount],
+                        backgroundColor: ['#198754', '#dc3545'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                font: { family: 'Cairo', size: 12, weight: 'bold' }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: Top 10 Showrooms sorted by Sales
+            const sortedStores = [...performanceData].sort((a, b) => b.actual_sales - a.actual_sales).slice(0, 10);
+            const storeLabels = sortedStores.map(s => {
+                const parts = s.store_name.split('-');
+                return parts.length > 1 ? parts.slice(1).join('-').trim() : s.store_name;
+            });
+            const salesData = sortedStores.map(s => s.actual_sales);
+
+            dailyTopSalesChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: storeLabels,
+                    datasets: [{
+                        label: 'المبيعات الفعلية (ريال)',
+                        data: salesData,
+                        backgroundColor: '#fe7900',
+                        borderColor: '#cc6000',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) { return value.toLocaleString('en-US') + ' ريال'; }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Show store employees list popup
