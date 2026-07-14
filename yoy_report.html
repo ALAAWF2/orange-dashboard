@@ -1373,8 +1373,23 @@
             if (hasProduct) totalCols++;
             const lastLetter = getColumnLetter(totalCols);
 
+            const totalRow = document.querySelector('#yoyReportBody tr.total-row');
+            const totalCells = totalRow ? totalRow.querySelectorAll('td') : [];
+            const totalSalesGrowthClass = totalCells[3] ? totalCells[3].className : "";
+            const totalVisitorsGrowthClass = totalCells[6] ? totalCells[6].className : "";
+            const totalATVGrowthClass = totalCells[9] ? totalCells[9].className : "";
+
+            const getGrowthInlineStyle = (className) => {
+                if (className.includes('growth-pos')) {
+                    return 'background-color: #d4edda; color: #155724; font-weight: bold;';
+                } else if (className.includes('growth-neg')) {
+                    return 'background-color: #f8d7da; color: #721c24; font-weight: bold;';
+                }
+                return '';
+            };
+
             let tableHtml = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40" dir="rtl">
             <head>
             <meta charset="utf-8">
             <!--[if gte mso 9]><xml>
@@ -1384,6 +1399,7 @@
             <x:Name>مقارنة YoY</x:Name>
             <x:WorksheetOptions>
             <x:DisplayGridlines/>
+            <x:DisplayRightToLeft/>
             </x:WorksheetOptions>
             </x:ExcelWorksheet>
             </x:ExcelWorksheets>
@@ -1401,13 +1417,15 @@
                 .class-e { background-color: #EB984E; color: #000000; font-weight: bold; }
                 .class-s { background-color: #AF7AC5; color: #000000; font-weight: bold; }
                 .online { background-color: #5DADE2; color: #000000; font-weight: bold; }
-                .total-row { font-weight: bold; background-color: #ffffff; }
+                .total-row td, .total-row th { font-weight: bold; background-color: #f2f2f2; }
                 .num-cell { mso-number-format: "#,##0"; }
                 .pct-cell { mso-number-format: "0.0%"; }
+                .growth-pos { background-color: #d4edda !important; color: #155724 !important; font-weight: bold; }
+                .growth-neg { background-color: #f8d7da !important; color: #721c24 !important; font-weight: bold; }
             </style>
             </head>
             <body dir="rtl">
-            <table>
+            <table dir="rtl">
                 <colgroup>
                     <col width="60">
                     <col width="220">
@@ -1507,6 +1525,10 @@
                 const pyATVVal = cells[8].textContent.replace(/,/g, '');
                 const cyATVVal = cells[9].textContent.replace(/,/g, '');
 
+                const salesGrowthClass = cells[4] ? cells[4].className : "";
+                const visitorsGrowthClass = cells[7] ? cells[7].className : "";
+                const atvGrowthClass = cells[10] ? cells[10].className : "";
+
                 tableHtml += `
                 <tr>
                     <td class="${catClass}">${store.category}</td>
@@ -1517,25 +1539,25 @@
                     tableHtml += `
                         <td></td>
                         <td></td>
+                        <td style="font-weight: bold; background-color: #f8d7da; color: #721c24;">-</td>
                         <td></td>
                         <td></td>
+                        <td style="font-weight: bold; background-color: #f8d7da; color: #721c24;">-</td>
                         <td></td>
-                        <td>-</td>
                         <td></td>
-                        <td></td>
-                        <td>-</td>
+                        <td style="font-weight: bold; background-color: #f8d7da; color: #721c24;">-</td>
                     `;
                 } else {
                     tableHtml += `
                         <td class="num-cell" style="mso-number-format:'#,##0';">${pySalesVal === "" ? "" : pySalesVal}</td>
                         <td class="num-cell" style="mso-number-format:'#,##0';">${cySalesVal === "" ? "" : cySalesVal}</td>
-                        <td class="pct-cell" style="mso-number-format:'0.0%';">=IF(C${r}=0, 0, (D${r}-C${r})/C${r})</td>
+                        <td class="pct-cell" style="mso-number-format:'0.0%'; ${getGrowthInlineStyle(salesGrowthClass)}">=IF(C${r}=0, 0, (D${r}-C${r})/C${r})</td>
                         <td class="num-cell" style="mso-number-format:'#,##0';">${pyVisitorsVal === "" ? "" : pyVisitorsVal}</td>
                         <td class="num-cell" style="mso-number-format:'#,##0';">${cyVisitorsVal === "" ? "" : cyVisitorsVal}</td>
-                        <td class="pct-cell" style="mso-number-format:'0.0%';">=IF(F${r}=0, 0, (G${r}-F${r})/F${r})</td>
+                        <td class="pct-cell" style="mso-number-format:'0.0%'; ${getGrowthInlineStyle(visitorsGrowthClass)}">=IF(F${r}=0, 0, (G${r}-F${r})/F${r})</td>
                         <td class="num-cell" style="mso-number-format:'#,##0';">${pyATVVal === "" ? "" : pyATVVal}</td>
                         <td class="num-cell" style="mso-number-format:'#,##0';">${cyATVVal === "" ? "" : cyATVVal}</td>
-                        <td class="pct-cell" style="mso-number-format:'0.0%';">=IF(I${r}=0, 0, (J${r}-I${r})/I${r})</td>
+                        <td class="pct-cell" style="mso-number-format:'0.0%'; ${getGrowthInlineStyle(atvGrowthClass)}">=IF(I${r}=0, 0, (J${r}-I${r})/I${r})</td>
                     `;
                 }
 
@@ -1578,41 +1600,41 @@
             const tR = 56;
             tableHtml += `
                 <tr class="total-row">
-                    <td colspan="2">الإجمالي</td>
-                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(C4:C53)</td>
-                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(D4:D53)</td>
-                    <td class="pct-cell" style="mso-number-format:'0.0%';">=(D${tR}-C${tR})/C${tR}</td>
-                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(F4:F53)</td>
-                    <td class="num-cell" style="mso-number-format:'#,##0';">=SUM(G4:G53)</td>
-                    <td class="pct-cell" style="mso-number-format:'0.0%';">=(G${tR}-F${tR})/F${tR}</td>
-                    <td class="num-cell" style="mso-number-format:'#,##0';">=AVERAGE(I4:I53)</td>
-                    <td class="num-cell" style="mso-number-format:'#,##0';">=AVERAGE(J4:J53)</td>
-                    <td class="pct-cell" style="mso-number-format:'0.0%';">=(J${tR}-I${tR})/I${tR}</td>
+                    <td colspan="2" style="font-weight: bold; background-color: #f2f2f2;">الإجمالي</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(C4:C53)</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(D4:D53)</td>
+                    <td class="pct-cell" style="mso-number-format:'0.0%'; ${getGrowthInlineStyle(totalSalesGrowthClass) || 'background-color: #f2f2f2; font-weight: bold;'}">=(D${tR}-C${tR})/C${tR}</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(F4:F53)</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(G4:G53)</td>
+                    <td class="pct-cell" style="mso-number-format:'0.0%'; ${getGrowthInlineStyle(totalVisitorsGrowthClass) || 'background-color: #f2f2f2; font-weight: bold;'}">=(G${tR}-F${tR})/F${tR}</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=AVERAGE(I4:I53)</td>
+                    <td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=AVERAGE(J4:J53)</td>
+                    <td class="pct-cell" style="mso-number-format:'0.0%'; ${getGrowthInlineStyle(totalATVGrowthClass) || 'background-color: #f2f2f2; font-weight: bold;'}">=(J${tR}-I${tR})/I${tR}</td>
             `;
 
             if (selectedOffersList.length === 0) {
-                tableHtml += `<td>-</td>`;
+                tableHtml += `<td style="font-weight: bold; background-color: #f2f2f2;">-</td>`;
             } else {
                 selectedOffersList.forEach((oid, oIdx) => {
                     const colLetter = getColumnLetter(12 + oIdx);
-                    tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">=SUM(${colLetter}4:${colLetter}53)</td>`;
+                    tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(${colLetter}4:${colLetter}53)</td>`;
                 });
             }
 
             let colIndex = 12 + Math.max(1, selectedOffersList.length);
             if (hasCategory) {
                 const colLetter = getColumnLetter(colIndex);
-                tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">=SUM(${colLetter}4:${colLetter}53)</td>`;
+                tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(${colLetter}4:${colLetter}53)</td>`;
                 colIndex++;
             }
             if (hasProduct) {
                 const colLetter = getColumnLetter(colIndex);
-                tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0';">=SUM(${colLetter}4:${colLetter}53)</td>`;
+                tableHtml += `<td class="num-cell" style="mso-number-format:'#,##0'; font-weight: bold; background-color: #f2f2f2;">=SUM(${colLetter}4:${colLetter}53)</td>`;
                 colIndex++;
             }
 
             tableHtml += `
-                    <td>تم حساب نسبة الفرق بناءً على الإجمالي</td>
+                    <td style="font-weight: bold; background-color: #f2f2f2;">تم حساب نسبة الفرق بناءً على الإجمالي</td>
                 </tr>
             </table>
             </body>
