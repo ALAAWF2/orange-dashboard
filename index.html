@@ -570,64 +570,101 @@
 
         /* Mobile cards view for detailed report */
         .mobile-cards { display: none; }
+        .mobile-filter-toggle { display: none; }
         @media (max-width: 767.98px) {
             .desktop-table { display: none !important; }
             .mobile-cards { display: block !important; }
         }
         .store-card {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            margin-bottom: 10px;
+            border: 1px solid #eceff2;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(23, 29, 35, 0.06);
+            margin-bottom: 12px;
             overflow: hidden;
             cursor: pointer;
-            transition: box-shadow 0.2s;
+            transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+            width: 100%;
+            padding: 0;
+            text-align: right;
+            color: inherit;
+            font-family: inherit;
         }
         .store-card:active {
-            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+            box-shadow: 0 2px 7px rgba(0,0,0,0.12);
+            transform: scale(0.995);
+        }
+        .store-card:focus-visible {
+            outline: 3px solid rgba(254, 121, 0, 0.3);
+            outline-offset: 2px;
+            border-color: #fe7900;
         }
         .store-card-header {
             background: linear-gradient(135deg, #fe7900, #ff9a3c);
             color: white;
-            padding: 10px 14px;
+            min-height: 52px;
+            padding: 11px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
         }
         .store-card-header .sc-name {
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            line-height: 1.35;
+            min-width: 0;
         }
         .store-card-header .sc-rank {
             background: rgba(255,255,255,0.3);
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 700;
+            flex: 0 0 30px;
+        }
+        .sc-header-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+        .sc-mobile-cue {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.92);
         }
         .store-card-body {
-            padding: 10px 12px;
+            padding: 13px 14px 14px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 6px 12px;
+            gap: 11px 14px;
         }
         .sc-item {
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
         .sc-label {
-            font-size: 0.65rem;
-            color: #888;
-            font-weight: 500;
+            font-size: 0.76rem;
+            line-height: 1.35;
+            color: #757b82;
+            font-weight: 600;
         }
         .sc-val {
-            font-size: 0.88rem;
-            font-weight: 700;
+            font-size: 0.96rem;
+            line-height: 1.35;
+            font-weight: 800;
             color: #333;
+            font-variant-numeric: tabular-nums;
+            overflow-wrap: anywhere;
         }
         .sc-divider {
             grid-column: 1 / -1;
@@ -1340,8 +1377,19 @@
     <div class="container-fluid px-4">
 
         <!-- Advanced Filter Bar -->
-        <div class="card border-0 shadow-sm p-3 mb-4">
-            <div class="row align-items-center g-3">
+        <div class="card border-0 shadow-sm p-3 mb-4 dashboard-filter-card">
+            <button type="button" class="mobile-filter-toggle" id="mobileFilterToggle" aria-expanded="false"
+                aria-controls="dashboardFilterFields" onclick="toggleMobileFilters()">
+                <span class="mobile-filter-toggle-main">
+                    <span class="mobile-filter-toggle-icon"><i class="bi bi-sliders2"></i></span>
+                    <span>
+                        <span class="mobile-filter-toggle-title">ضبط التقرير</span>
+                        <span class="mobile-filter-summary" id="mobileFilterSummary">الفترة الحالية · كافة الفروع</span>
+                    </span>
+                </span>
+                <i class="bi bi-chevron-down mobile-filter-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="row align-items-center g-3" id="dashboardFilterFields">
 
                 <!-- Filter Mode -->
                 <div class="col-md-auto">
@@ -1428,8 +1476,8 @@
                     </select>
                 </div>
 
-                <div class="col-md-auto align-self-end">
-                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="updateDashboard()">عرض التقرير
+                <div class="col-md-auto align-self-end dashboard-filter-action">
+                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="applyMobileDashboardFilters()">عرض التقرير
                         🔄</button>
                 </div>
             </div>
