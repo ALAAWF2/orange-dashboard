@@ -688,11 +688,6 @@
 
         /* ========== Mobile Responsive ========== */
         @media (max-width: 767.98px) {
-            /* Force the mobile detail wrapper table to stay within screen boundaries */
-            .mob-drill-panel table {
-                table-layout: fixed !important;
-                width: 100% !important;
-            }
             .drill-tabs-container {
                 max-width: 100%;
             }
@@ -715,8 +710,12 @@
                 white-space: nowrap !important;
             }
             .mob-drill-panel .table-responsive {
-                width: calc(100vw - 36px) !important;
-                max-width: calc(100vw - 36px) !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                border: 1px solid #edf0f2;
+                border-radius: 12px;
+                background: #fff;
             }
             /* Navbar - stack vertically */
             .navbar {
@@ -995,10 +994,49 @@
             }
             .drill-body {
                 padding: 11px 12px 14px;
-                overflow-x: auto;
+                overflow-x: visible;
             }
             .drill-table {
                 font-size: 0.78rem;
+            }
+            .mob-drill-panel {
+                width: 100%;
+                min-width: 0;
+                margin: 2px 0 16px;
+                overflow: hidden;
+                border: 1px solid #e1e5e9;
+                border-radius: 16px;
+                background: #fff;
+                box-shadow: 0 8px 24px rgba(23, 29, 35, 0.1);
+            }
+            .mobile-drill-content,
+            .mob-drill-panel .drill-panel,
+            .mob-drill-panel .drill-tab-pane {
+                width: 100%;
+                min-width: 0;
+            }
+            .mob-drill-panel .drill-table {
+                width: max-content !important;
+                min-width: 760px !important;
+                table-layout: auto !important;
+            }
+            .mob-drill-panel .table-responsive::before {
+                content: 'اسحب الجدول يميناً ويساراً لرؤية كل الأعمدة';
+                position: sticky;
+                right: 0;
+                z-index: 4;
+                display: flex;
+                align-items: center;
+                width: max-content;
+                min-height: 34px;
+                padding: 7px 11px;
+                color: #8a4b12;
+                background: #fff7ef;
+                border-left: 1px solid #ffe1c5;
+                border-bottom: 1px solid #ffe1c5;
+                border-radius: 0 0 0 10px;
+                font-size: 0.74rem;
+                font-weight: 700;
             }
             .drill-table thead th {
                 font-size: 0.74rem;
@@ -1011,6 +1049,20 @@
             }
             .drill-table tfoot td {
                 padding: 8px 7px;
+            }
+            .mob-drill-panel .drill-table thead th:first-child,
+            .mob-drill-panel .drill-table tbody td:first-child,
+            .mob-drill-panel .drill-table tfoot td:first-child {
+                position: sticky;
+                right: 0;
+                z-index: 3;
+                box-shadow: -1px 0 0 #e8ebee;
+            }
+            .mob-drill-panel .drill-table tbody td:first-child {
+                background: #fff;
+            }
+            .mob-drill-panel .drill-table tfoot td:first-child {
+                background: #fff3e0;
             }
             .drill-close-btn {
                 min-height: 44px;
@@ -4176,19 +4228,14 @@
                 // Mobile: insert drill-down div after the store card
                 const targetCard = mobileCard ? mobileCard.closest('.store-card') : null;
                 if (mobileCard) mobileCard.setAttribute('aria-expanded', 'true');
-                // Use a hidden table to host the tr-based drill-down
                 const wrapper = document.createElement('div');
                 wrapper.id = `mob-drill-${storeId}`;
                 wrapper.className = 'mob-drill-panel';
-                wrapper.style.cssText = 'border-radius:10px; margin-bottom:10px; overflow:hidden;';
-                const hiddenTable = document.createElement('table');
-                hiddenTable.style.cssText = 'width:100%; border-collapse:collapse;';
-                const detailRow = document.createElement('tr');
+                const detailRow = document.createElement('div');
                 detailRow.id = `drill-${storeId}`;
-                detailRow.className = 'store-detail-row';
-                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading">⏳ جاري تحميل البيانات...</div></td>`;
-                hiddenTable.appendChild(detailRow);
-                wrapper.appendChild(hiddenTable);
+                detailRow.className = 'mobile-drill-content';
+                detailRow.innerHTML = `<div class="drill-loading">⏳ جاري تحميل البيانات...</div>`;
+                wrapper.appendChild(detailRow);
                 if (targetCard) {
                     targetCard.after(wrapper);
                 } else {
@@ -4419,7 +4466,7 @@
                 _drillDataCache[uid] = { storeName, startStr, endStr, dailyRows, empList, catList, grandSales, grandSalesLY, grandTrans, grandVisitors, grandTarget, rhythmSales, rhythmVisitors, topProductsList, basketData };
 
                 // === RENDER ===
-                detailRow.innerHTML = `<td colspan="15"><div class="drill-panel">
+                const drillPanelHtml = `<div class="drill-panel">
                     <!-- Header -->
                     <div class="drill-header">
                         <div>
@@ -4500,11 +4547,17 @@
                             ${renderAverageBillIncentivesDrill(storeId, uid)}
                         </div>
                     </div>
-                </div></td>`;
+                </div>`;
+                detailRow.innerHTML = detailRow.classList.contains('mobile-drill-content')
+                    ? drillPanelHtml
+                    : `<td colspan="15">${drillPanelHtml}</td>`;
 
             } catch (err) {
                 console.error('Drill-down error:', err);
-                detailRow.innerHTML = `<td colspan="15"><div class="drill-loading text-danger">\u274c \u062e\u0637\u0623 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a: ${err.message}</div></td>`;
+                const errorHtml = `<div class="drill-loading text-danger">\u274c \u062e\u0637\u0623 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a: ${err.message}</div>`;
+                detailRow.innerHTML = detailRow.classList.contains('mobile-drill-content')
+                    ? errorHtml
+                    : `<td colspan="15">${errorHtml}</td>`;
             }
         }
 
