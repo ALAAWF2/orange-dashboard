@@ -582,7 +582,8 @@
             box-shadow: 0 4px 14px rgba(23, 29, 35, 0.06);
             margin-bottom: 12px;
             overflow: hidden;
-            cursor: pointer;
+            position: relative;
+            cursor: default;
             transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
             width: 100%;
             padding: 0;
@@ -590,14 +591,26 @@
             color: inherit;
             font-family: inherit;
         }
-        .store-card:active {
+        .store-card:has(.store-card-action:active) {
             box-shadow: 0 2px 7px rgba(0,0,0,0.12);
             transform: scale(0.995);
         }
-        .store-card:focus-visible {
+        .store-card:focus-within {
             outline: 3px solid rgba(254, 121, 0, 0.3);
             outline-offset: 2px;
             border-color: #fe7900;
+        }
+        .store-card-action {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            width: 100%;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+        .store-card-action:focus-visible {
+            outline: none;
         }
         .store-card-header {
             background: linear-gradient(135deg, #fe7900, #ff9a3c);
@@ -683,23 +696,27 @@
             .drill-tabs-container {
                 max-width: 100%;
             }
-            /* Ensure all tables don't squish on mobile to activate horizontal scroll */
-            .table-responsive {
+            .container-fluid.px-4 .table-responsive {
                 display: block !important;
                 width: 100% !important;
-                max-width: calc(100vw - 50px) !important; /* Strictly limit width to prevent expanding outer TD */
+                max-width: 100% !important;
                 overflow-x: auto !important;
                 -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-inline: contain;
+                scrollbar-width: thin;
             }
-            /* Reset max-width for nested instances (e.g. inside accordions or drill downs) if needed, but 100vw - 50px is very safe */
-            .table-responsive .table {
-                min-width: 650px !important; /* ensures layout columns will never squash */
+            .container-fluid.px-4 .table-responsive .table {
+                min-width: 620px !important;
                 width: max-content !important;
                 white-space: nowrap !important;
             }
-            .table-responsive .table th, 
-            .table-responsive .table td {
+            .container-fluid.px-4 .table-responsive .table th,
+            .container-fluid.px-4 .table-responsive .table td {
                 white-space: nowrap !important;
+            }
+            .mob-drill-panel .table-responsive {
+                width: calc(100vw - 36px) !important;
+                max-width: calc(100vw - 36px) !important;
             }
             /* Navbar - stack vertically */
             .navbar {
@@ -726,8 +743,8 @@
 
             /* Main container padding */
             .container-fluid.px-4 {
-                padding-left: 8px !important;
-                padding-right: 8px !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
             }
 
             /* KPI Cards Row 1 - 2 per row on mobile */
@@ -736,123 +753,238 @@
                 max-width: 50% !important;
             }
             .kpi-value {
-                font-size: 1.1rem;
+                font-size: 1.18rem;
+                line-height: 1.25;
+                font-variant-numeric: tabular-nums;
             }
             .kpi-title {
-                font-size: 0.75rem;
+                font-size: 0.8rem;
+                line-height: 1.35;
             }
             .kpi-card {
-                padding: 10px;
+                min-height: 112px;
+                padding: 13px 12px;
             }
             .kpi-sub {
-                font-size: 0.7rem;
+                font-size: 0.76rem;
+                line-height: 1.35;
             }
 
-            /* Filter bar - each filter full width */
-            .card.border-0.shadow-sm.p-3.mb-4 {
-                padding: 10px !important;
+            .dashboard-filter-card {
+                padding: 0 !important;
+                border: 1px solid #ffe0c2 !important;
+                border-radius: 14px;
+                overflow: hidden;
             }
-            .card.border-0.shadow-sm.p-3.mb-4 .row {
-                gap: 6px;
+            .mobile-filter-toggle {
+                width: 100%;
+                min-height: 62px;
+                padding: 10px 14px;
+                border: 0;
+                background: linear-gradient(135deg, #fff8f1, #ffffff);
+                color: #212529;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                text-align: right;
             }
-            .card.border-0.shadow-sm.p-3.mb-4 .row > [class*="col"] {
+            .mobile-filter-toggle:focus-visible {
+                outline: 3px solid rgba(254, 121, 0, 0.28);
+                outline-offset: -3px;
+            }
+            .mobile-filter-toggle-main {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-width: 0;
+            }
+            .mobile-filter-toggle-icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 11px;
+                background: #fe7900;
+                color: white;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 38px;
+                font-size: 1.05rem;
+            }
+            .mobile-filter-toggle-title,
+            .mobile-filter-summary {
+                display: block;
+            }
+            .mobile-filter-toggle-title {
+                font-size: 0.92rem;
+                font-weight: 800;
+            }
+            .mobile-filter-summary {
+                margin-top: 2px;
+                color: #6c757d;
+                font-size: 0.76rem;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 245px;
+            }
+            .mobile-filter-chevron {
+                color: #fe7900;
+                transition: transform 0.2s ease;
+                flex: 0 0 auto;
+            }
+            .mobile-filter-toggle[aria-expanded="true"] .mobile-filter-chevron {
+                transform: rotate(180deg);
+            }
+            #dashboardFilterFields {
+                display: none;
+                margin: 0;
+                padding: 13px 12px 14px;
+                gap: 10px 8px;
+                border-top: 1px solid #ffead6;
+                background: #fff;
+            }
+            #dashboardFilterFields.is-open {
+                display: flex;
+            }
+            #dashboardFilterFields > [class*="col"] {
                 flex: 0 0 100% !important;
                 max-width: 100% !important;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            #dashboardFilterFields > :nth-child(n+4):nth-child(-n+7) {
+                flex: 0 0 calc(50% - 4px) !important;
+                max-width: calc(50% - 4px) !important;
+            }
+            #dashboardFilterFields .form-label {
+                margin-bottom: 4px;
+                font-size: 0.76rem;
+            }
+            #dashboardFilterFields .form-select,
+            #dashboardFilterFields .form-control,
+            .dashboard-filter-action .btn {
+                min-height: 44px;
+                font-size: 16px;
             }
             #stdFilters {
-                flex-direction: column;
+                flex-direction: row;
                 width: 100%;
+                gap: 8px !important;
             }
             #stdFilters > div {
-                width: 100%;
+                flex: 1;
+                min-width: 0;
             }
             #customFilters {
-                flex-direction: column !important;
+                flex-direction: row !important;
                 width: 100%;
+                gap: 8px !important;
             }
             #customFilters > div {
-                width: 100%;
+                flex: 1;
+                min-width: 0;
+            }
+            .dashboard-filter-action {
+                margin-top: 2px;
+            }
+            .dashboard-filter-action .btn {
+                border-radius: 10px;
+                font-weight: 800;
             }
 
             /* Charts */
             .chart-container {
-                min-height: 220px;
-                padding: 10px;
+                min-height: 245px;
+                padding: 13px;
+                border-radius: 14px;
             }
 
             /* Tables - smaller text */
             .table-custom {
-                font-size: 0.72rem;
+                font-size: 0.78rem;
             }
             .table-custom thead th {
-                font-size: 0.68rem;
-                padding: 5px 3px;
+                font-size: 0.76rem;
+                padding: 8px 7px;
                 white-space: nowrap;
             }
             .table-custom tbody td,
             .table-custom tfoot td {
-                padding: 5px 3px;
-                font-size: 0.7rem;
+                padding: 8px 7px;
+                font-size: 0.78rem;
             }
 
             /* Daily report table */
             #collapseDaily .table {
-                font-size: 0.7rem;
+                font-size: 0.78rem;
             }
             #collapseDaily .table th,
             #collapseDaily .table td {
-                padding: 4px 3px;
+                padding: 8px 7px;
                 white-space: nowrap;
             }
 
             /* Section titles */
             .section-title {
-                font-size: 0.95rem;
-                margin-bottom: 12px;
+                font-size: 1rem;
+                margin-bottom: 14px;
             }
 
             /* Drill-down panel mobile */
             .drill-header {
-                padding: 10px 12px;
-                flex-wrap: wrap;
-                gap: 6px;
+                padding: 12px 13px;
+                gap: 10px;
             }
             .drill-header h6 {
-                font-size: 0.9rem;
+                font-size: 0.98rem;
             }
             .drill-kpis {
-                flex-wrap: wrap;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .drill-kpi {
-                flex: 0 0 33.33%;
-                padding: 8px 4px;
+                padding: 11px 8px;
                 border-bottom: 1px solid #f0f0f0;
             }
+            .drill-kpi:nth-child(odd) {
+                border-left: 1px solid #f0f0f0;
+            }
             .drill-kpi-label {
-                font-size: 0.58rem;
+                font-size: 0.73rem;
+                letter-spacing: 0;
             }
             .drill-kpi-value {
-                font-size: 0.9rem;
+                margin-top: 2px;
+                font-size: 1rem;
+                font-variant-numeric: tabular-nums;
             }
             .drill-tabs {
-                padding: 12px 10px;
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
+                padding: 10px 12px;
+                display: flex;
                 gap: 8px !important;
-                border-bottom: none;
+                overflow-x: auto;
+                overscroll-behavior-inline: contain;
+                scroll-snap-type: inline proximity;
+                scrollbar-width: thin;
+                border-bottom: 1px solid #eee;
                 background: #fafbfc;
             }
             .drill-tab {
-                padding: 10px 8px;
-                font-size: 0.75rem;
-                white-space: normal;
+                min-height: 44px;
+                flex: 0 0 auto;
+                padding: 9px 12px;
+                font-size: 0.8rem;
+                white-space: nowrap;
                 border: 1px solid #e1e8ed;
-                border-radius: 8px;
+                border-radius: 10px;
                 background: white;
                 justify-content: center;
                 text-align: center;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.03);
                 border-bottom-width: 1px;
+                scroll-snap-align: start;
             }
             .drill-tab.active {
                 background: #fff4ec;
@@ -862,34 +994,38 @@
                 border-bottom-width: 1px;
             }
             .drill-body {
-                padding: 8px 10px 12px;
+                padding: 11px 12px 14px;
                 overflow-x: auto;
             }
             .drill-table {
-                font-size: 0.7rem;
+                font-size: 0.78rem;
             }
             .drill-table thead th {
-                font-size: 0.65rem;
-                padding: 5px 3px;
+                font-size: 0.74rem;
+                padding: 8px 7px;
                 white-space: nowrap;
             }
             .drill-table tbody td {
-                padding: 4px 3px;
+                padding: 8px 7px;
                 white-space: nowrap;
             }
             .drill-table tfoot td {
-                padding: 5px 3px;
+                padding: 8px 7px;
+            }
+            .drill-close-btn {
+                min-height: 44px;
+                padding: 8px 13px;
             }
 
             /* Rhythm heatmap */
             .rhythm-grid {
                 grid-template-columns: 50px repeat(24, minmax(28px, 1fr));
-                font-size: 0.55rem;
+                font-size: 0.7rem;
                 min-width: 600px;
             }
             .rhythm-cell {
-                min-height: 22px;
-                font-size: 0.5rem;
+                min-height: 28px;
+                font-size: 0.68rem;
             }
             .rhythm-summary {
                 grid-template-columns: repeat(2, 1fr);
@@ -899,7 +1035,7 @@
                 padding: 10px;
             }
             .rhythm-insight .ri-value {
-                font-size: 0.9rem;
+                font-size: 1rem;
             }
 
             /* Analysis cards */
@@ -920,14 +1056,72 @@
 
             /* Accordion daily report */
             .accordion-button {
-                font-size: 0.85rem;
-                padding: 10px 12px;
+                min-height: 48px;
+                font-size: 0.9rem;
+                padding: 11px 12px;
             }
 
             /* Previous year KPIs */
             .row.g-3.mb-4 > [class*="col-md-3"] {
                 flex: 0 0 50% !important;
                 max-width: 50% !important;
+            }
+            #companyTargetProgressRow .card,
+            #areaManagersComparisonRow .card,
+            #cityHeatmapRow .card,
+            #dashboardChecklistPanel .card,
+            #narrativeCard {
+                border-radius: 14px !important;
+            }
+            #companyTargetProgressRow .card {
+                padding: 16px !important;
+            }
+            #companyTargetProgressRow h5,
+            #areaManagersComparisonRow h5,
+            #cityHeatmapRow h5 {
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+            #cityHeatmapRow .card-body {
+                min-height: 380px !important;
+                padding: 12px !important;
+            }
+            .analysis-header {
+                padding: 13px;
+            }
+            .analysis-body {
+                max-height: 260px;
+            }
+            .mobile-cards {
+                padding-top: 2px;
+            }
+            .chatbot-fab-container {
+                left: 14px;
+                bottom: calc(14px + env(safe-area-inset-bottom));
+            }
+            .chatbot-fab {
+                width: 52px;
+                height: 52px;
+            }
+            .chatbot-fab i {
+                font-size: 22px;
+            }
+            .chatbot-speech-bubble {
+                bottom: 64px;
+                width: min(280px, calc(100vw - 28px));
+                padding: 12px 42px 12px 14px;
+            }
+            .bubble-close-btn {
+                top: 2px;
+                right: 4px;
+                width: 40px;
+                height: 40px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .chatbot-fab-tooltip {
+                display: none;
             }
         }
 
@@ -941,17 +1135,15 @@
                 padding: 2px 5px;
             }
             .kpi-value {
-                font-size: 0.95rem;
+                font-size: 1.08rem;
             }
             .kpi-title {
-                font-size: 0.68rem;
-            }
-            .drill-kpi {
-                flex: 0 0 50%;
+                font-size: 0.74rem;
             }
             .drill-kpi-value {
-                font-size: 0.8rem;
+                font-size: 0.94rem;
             }
+            .mobile-filter-summary { max-width: 205px; }
         }
 
         /* Tablet */
@@ -1152,6 +1344,20 @@
 
         .bubble-close-btn:hover {
             color: #fe7900;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .store-card,
+            .mobile-filter-chevron,
+            .drill-tab-pane,
+            .chatbot-fab,
+            .chatbot-fab i,
+            .chatbot-speech-bubble,
+            .chatbot-fab-badge,
+            .chatbot-fab::after {
+                animation: none !important;
+                transition: none !important;
+            }
         }
 
 
@@ -2606,6 +2812,66 @@
                 yearC.style.display = 'block';
                 monthC.style.display = 'block';
             }
+
+            updateMobileFilterSummary();
+        }
+
+        function updateMobileFilterSummary() {
+            const summary = document.getElementById('mobileFilterSummary');
+            const mode = document.getElementById('filterMode');
+            const branch = document.getElementById('branchFilter');
+            if (!summary || !mode) return;
+
+            let periodText = mode.options[mode.selectedIndex]?.text || 'الفترة الحالية';
+            if (mode.value === 'custom') {
+                const start = document.getElementById('startDate')?.value;
+                const end = document.getElementById('endDate')?.value;
+                if (start || end) periodText = `${start || '—'} إلى ${end || '—'}`;
+            } else {
+                const year = document.getElementById('yearFilter')?.value;
+                const month = document.getElementById('monthFilter');
+                const monthText = month?.options[month.selectedIndex]?.text;
+                if (year) periodText = monthText ? `${year} · ${monthText}` : year;
+            }
+
+            const branchText = branch?.options[branch.selectedIndex]?.text || 'كافة الفروع';
+            summary.textContent = `${periodText} · ${branchText}`;
+        }
+
+        function setMobileFiltersOpen(isOpen) {
+            const fields = document.getElementById('dashboardFilterFields');
+            const toggle = document.getElementById('mobileFilterToggle');
+            if (!fields || !toggle) return;
+            fields.classList.toggle('is-open', isOpen);
+            toggle.setAttribute('aria-expanded', String(isOpen));
+        }
+
+        function toggleMobileFilters() {
+            const toggle = document.getElementById('mobileFilterToggle');
+            if (!toggle) return;
+            setMobileFiltersOpen(toggle.getAttribute('aria-expanded') !== 'true');
+        }
+
+        function applyMobileDashboardFilters() {
+            updateDashboard();
+            updateMobileFilterSummary();
+            if (window.innerWidth <= 767.98) setMobileFiltersOpen(false);
+        }
+
+        function initMobileDashboardControls() {
+            const fields = document.getElementById('dashboardFilterFields');
+            if (!fields || fields.dataset.mobileReady === 'true') return;
+            fields.dataset.mobileReady = 'true';
+            fields.querySelectorAll('select, input').forEach(control => {
+                control.addEventListener('change', updateMobileFilterSummary);
+            });
+            updateMobileFilterSummary();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initMobileDashboardControls);
+        } else {
+            initMobileDashboardControls();
         }
 
         // Helper: Format Date YYYY-MM-DD
@@ -3451,10 +3717,14 @@
                     const absGrowthCls = b.absGrowth >= 0 ? 'color:#198754' : 'color:#dc3545';
                     const achCls = b.ach >= 100 ? 'color:#198754' : 'color:#e67e00';
                     cardsHtml += `
-                    <div class="store-card" onclick="toggleStoreDrillDown('${b.sid}', '${safeName}')">
+                    <div class="store-card">
+                        <button type="button" class="store-card-action" aria-label="عرض تفاصيل ${b.name}" aria-expanded="false" onclick="toggleStoreDrillDown('${b.sid}', '${safeName}')"></button>
                         <div class="store-card-header">
                             <span class="sc-name">${b.name}</span>
-                            <span class="sc-rank">${i + 1}</span>
+                            <span class="sc-header-meta">
+                                <span class="sc-mobile-cue"><i class="bi bi-bar-chart-line"></i> التفاصيل</span>
+                                <span class="sc-rank">${i + 1}</span>
+                            </span>
                         </div>
                         <div class="store-card-body">
                             <div class="sc-item">
@@ -3878,11 +4148,19 @@
             const el = document.getElementById(`store-toggle-${storeId}`);
             const existingRow = document.getElementById(`drill-${storeId}`);
             const existingMobileDrill = document.getElementById(`mob-drill-${storeId}`);
+            const cards = document.querySelectorAll('.store-card-action');
+            let mobileCard = null;
+            cards.forEach(card => {
+                if (card.getAttribute('onclick') && card.getAttribute('onclick').includes(`'${storeId}'`)) {
+                    mobileCard = card;
+                }
+            });
 
             if (existingRow || existingMobileDrill) {
                 if (existingRow) existingRow.remove();
                 if (existingMobileDrill) existingMobileDrill.remove();
                 if (el) el.classList.remove('expanded');
+                if (mobileCard) mobileCard.setAttribute('aria-expanded', 'false');
                 return;
             }
 
@@ -3890,18 +4168,14 @@
             document.querySelectorAll('.store-detail-row').forEach(r => r.remove());
             document.querySelectorAll('.mob-drill-panel').forEach(r => r.remove());
             document.querySelectorAll('.store-name-toggle.expanded').forEach(e => e.classList.remove('expanded'));
+            document.querySelectorAll('.store-card-action[aria-expanded="true"]').forEach(card => card.setAttribute('aria-expanded', 'false'));
 
             if (el) el.classList.add('expanded');
 
             if (isMobileView()) {
                 // Mobile: insert drill-down div after the store card
-                const cards = document.querySelectorAll('.store-card');
-                let targetCard = null;
-                cards.forEach(card => {
-                    if (card.getAttribute('onclick') && card.getAttribute('onclick').includes(`'${storeId}'`)) {
-                        targetCard = card;
-                    }
-                });
+                const targetCard = mobileCard ? mobileCard.closest('.store-card') : null;
+                if (mobileCard) mobileCard.setAttribute('aria-expanded', 'true');
                 // Use a hidden table to host the tr-based drill-down
                 const wrapper = document.createElement('div');
                 wrapper.id = `mob-drill-${storeId}`;
