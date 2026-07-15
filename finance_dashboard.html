@@ -1014,15 +1014,34 @@
                     });
                 }
             });
-
-            if (rows.length === 0) {
-                alert("لا توجد بيانات موظفين مستحقين للتصدير في هذا التاريخ.");
+            if (rows.length === 0 && dailyPerformanceCache.length === 0) {
+                alert("لا توجد بيانات مستحقة للتصدير في هذا التاريخ.");
                 return;
             }
 
-            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const allStoresRows = dailyPerformanceCache.map(store => ({
+                "التاريخ": date,
+                "اسم المعرض": store.store_name,
+                "المبيعات الفعلية": store.actual_sales,
+                "عدد الفواتير": store.actual_transactions,
+                "متوسط الفاتورة الفعلي": store.actual_average_bill,
+                "الهدف اليومي": store.target_value,
+                "قيمة المكافأة": store.prize_amount,
+                "حالة تحقيق الهدف": store.achieved ? "نعم" : "لا",
+                "عدد الموظفين الحاضرين": store.employees ? store.employees.length : 0
+            }));
+
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "كشف صرف الجوائز");
+            
+            if (rows.length > 0) {
+                const worksheet1 = XLSX.utils.json_to_sheet(rows);
+                XLSX.utils.book_append_sheet(workbook, worksheet1, "تفاصيل الموظفين المستحقين");
+            }
+            
+            if (allStoresRows.length > 0) {
+                const worksheet2 = XLSX.utils.json_to_sheet(allStoresRows);
+                XLSX.utils.book_append_sheet(workbook, worksheet2, "أهداف وحالة كافة الفروع");
+            }
 
             // Save file
             XLSX.writeFile(workbook, `Orange_Average_Bill_Payouts_${date}.xlsx`);
@@ -1093,6 +1112,18 @@
 
                 const summaryRows = Object.values(empSummary).sort((a, b) => b["إجمالي المستحق (ريال)"] - a["إجمالي المستحق (ريال)"]);
 
+                // 3. Build Sheet 3: Daily Showroom Targets & Stats
+                const targetHistoryRows = res.targets_history ? res.targets_history.map(t => ({
+                    "التاريخ": t.date,
+                    "اسم المعرض": t.store_name,
+                    "المبيعات الفعلية": t.actual_sales,
+                    "عدد الفواتير": t.actual_transactions,
+                    "متوسط الفاتورة الفعلي": t.actual_average_bill,
+                    "الهدف اليومي": t.target_value,
+                    "قيمة المكافأة": t.prize_amount,
+                    "حالة تحقيق الهدف": t.achieved
+                })) : [];
+
                 // Build workbook
                 const workbook = XLSX.utils.book_new();
 
@@ -1101,6 +1132,11 @@
 
                 XLSX.utils.book_append_sheet(workbook, sheet2, "ملخص الصرف النهائي");
                 XLSX.utils.book_append_sheet(workbook, sheet1, "تفاصيل الصرف اليومي");
+                
+                if (targetHistoryRows.length > 0) {
+                    const sheet3 = XLSX.utils.json_to_sheet(targetHistoryRows);
+                    XLSX.utils.book_append_sheet(workbook, sheet3, "أهداف وحالة كافة الفروع");
+                }
 
                 // Export file
                 XLSX.writeFile(workbook, `Orange_Average_Bill_Weekly_Payouts_${start}_to_${end}.xlsx`);
