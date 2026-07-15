@@ -2108,6 +2108,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         window.rawData = null;
+        window.averageBillIncentivesCache = null;
         let charts = {};
 
         // Sorting State
@@ -2493,6 +2494,17 @@
                 }
             } catch (e) {
                 console.warn("Failed to load summary.json, will wait for management_data.json", e);
+            }
+
+            // Load Average Bill Incentives
+            try {
+                const incentivesRes = await fetch('average_bill_incentives.json');
+                if (incentivesRes.ok) {
+                    window.averageBillIncentivesCache = await incentivesRes.json();
+                    console.log("Average bill incentives loaded successfully.");
+                }
+            } catch (e) {
+                console.warn("Failed to load average_bill_incentives.json", e);
             }
 
             // Step 2: Fetch full management_data.json in background
@@ -4133,6 +4145,7 @@
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'rhythm', this)">تحليل الساعات</button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'topsell', this)" style="color:#d35400;font-weight:bold;">📊 الأكثر مبيعاً</button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'topcat', this)" style="color:#8e44ad;font-weight:bold;">📋 تقرير الفئات</button>
+                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'average-bill-incentives', this)" style="color:#fe7900;font-weight:bold;"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة</button>
                     </div>
 
                     <!-- Tab Panes -->
@@ -4160,6 +4173,9 @@
                         </div>
                         <div id="drill-topcat-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderTopCatDrill(topProductsList, catList, uid)}
+                        </div>
+                        <div id="drill-average-bill-incentives-${uid}" class="drill-tab-pane" style="display:none;">
+                            ${renderAverageBillIncentivesDrill(storeId, uid)}
                         </div>
                     </div>
                 </div></td>`;
@@ -4721,6 +4737,206 @@
             </div>`;
             return html;
         }
+
+        function renderAverageBillIncentivesDrill(storeId, uid) {
+            if (!window.averageBillIncentivesCache || !window.averageBillIncentivesCache.incentives) {
+                return '<div class="text-center text-muted py-3">جاري تحميل البيانات أو لا تتوفر جوائز متوسط الفاتورة حالياً.</div>';
+            }
+            
+            const storeIncentives = window.averageBillIncentivesCache.incentives[storeId];
+            if (!storeIncentives) {
+                return '<div class="text-center text-muted py-3">لا توجد جوائز مسجلة لهذا المعرض.</div>';
+            }
+            
+            const months = Object.keys(storeIncentives).sort().reverse();
+            if (months.length === 0) {
+                return '<div class="text-center text-muted py-3">لا توجد أشهر مسجلة لهذا المعرض.</div>';
+            }
+            
+            let defaultMonthStr = "";
+            if (window.dashboardState && window.dashboardState.year && window.dashboardState.month) {
+                defaultMonthStr = `${window.dashboardState.year}-${String(window.dashboardState.month).padStart(2, '0')}`;
+            }
+            if (!storeIncentives[defaultMonthStr]) {
+                defaultMonthStr = months[0];
+            }
+            
+            let html = `
+            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded border border-light-subtle">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="fw-bold text-muted small mb-0">اختر الشهر:</label>
+                    <select id="incentiveMonthSelect-${uid}" class="form-select form-select-sm fw-bold" style="width: 150px; border-radius: 8px;" onchange="updateIncentiveTab('${storeId}', '${uid}', this.value)">
+                        ${months.map(m => {
+                            const [y, mm] = m.split('-');
+                            const monthNamesAr = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                            const label = `${monthNamesAr[parseInt(mm) - 1]} ${y}`;
+                            return `<option value="${m}" ${m === defaultMonthStr ? 'selected' : ''}>${label}</option>`;
+                        }).join('')}
+                    </select>
+                </div>
+                <div class="small text-muted fw-bold">تاريخ التفعيل: ${window.averageBillIncentivesCache.start_date}</div>
+            </div>
+            
+            <div id="incentiveSummaryContainer-${uid}">
+                ${renderEmployeeIncentivesSummaryHtml(storeIncentives[defaultMonthStr] || [])}
+            </div>
+            
+            <div id="incentiveTableContainer-${uid}">
+                ${renderIncentiveTableHtml(storeIncentives[defaultMonthStr] || [])}
+            </div>
+            `;
+            
+            return html;
+        }
+
+        function getEmployeeMonthlySummary(records) {
+            const summary = {};
+            records.forEach(r => {
+                if (!r.employees) return;
+                r.employees.forEach(e => {
+                    const eid = e.id;
+                    const name = e.name;
+                    if (!summary[eid]) {
+                        summary[eid] = {
+                            id: eid,
+                            name: name,
+                            totalShare: 0.0,
+                            daysPresent: 0,
+                            daysAchieved: 0
+                        };
+                    }
+                    summary[eid].daysPresent++;
+                    if (r.achieved) {
+                        summary[eid].totalShare += r.share;
+                        summary[eid].daysAchieved++;
+                    }
+                });
+            });
+            return Object.values(summary).sort((a, b) => b.totalShare - a.totalShare || a.name.localeCompare(b.name));
+        }
+
+        function renderEmployeeIncentivesSummaryHtml(records) {
+            const summary = getEmployeeMonthlySummary(records);
+            if (summary.length === 0) return '';
+            
+            let html = `
+            <div class="mb-3 p-3 bg-white rounded border border-light-subtle shadow-sm">
+                <h6 class="fw-bold mb-3 text-dark" style="font-size: 0.92rem;"><i class="fa-solid fa-users-viewfinder me-1 text-primary"></i> ملخص مستحقات الموظفين التراكمي للشهر المحدد</h6>
+                <div class="row g-2">
+            `;
+            
+            summary.forEach(emp => {
+                html += `
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded border border-light-subtle h-100" style="background-color: #fcfcfc;">
+                        <div>
+                            <div class="fw-bold text-dark" style="font-size: 0.85rem;">${emp.name}</div>
+                            <small class="text-muted" style="font-size: 0.72rem;">أيام الحضور: ${emp.daysPresent} | التحقيق: ${emp.daysAchieved}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${emp.totalShare > 0 ? 'bg-success text-white' : 'bg-secondary-subtle text-muted'} fw-bold p-2" style="font-size: 0.82rem;">
+                                ${emp.totalShare.toLocaleString('en-US')} ريال
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+            
+            html += `
+                </div>
+            </div>
+            `;
+            return html;
+        }
+        
+        function renderIncentiveTableHtml(records) {
+            if (records.length === 0) {
+                return '<div class="text-center text-muted py-3">لا توجد بيانات جوائز مسجلة لهذا الشهر.</div>';
+            }
+            
+            let html = `
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm drill-table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th class="text-end">المبيعات</th>
+                            <th class="text-center">الفواتير</th>
+                            <th class="text-center">متوسط الفاتورة</th>
+                            <th class="text-center">المستهدف</th>
+                            <th class="text-center">التحقيق</th>
+                            <th class="text-end">الجائزة</th>
+                            <th class="text-center">عدد الحضور</th>
+                            <th>الموظفون ونصيب كل منهم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            records.forEach(r => {
+                const dateObj = new Date(r.date);
+                const dayNamesAr = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+                const dayName = dayNamesAr[dateObj.getDay()];
+                const dayClass = dateObj.getDay() === 5 ? 'day-fri' : dateObj.getDay() === 6 ? 'day-sat' : '';
+                
+                let empsHtml = "";
+                if (r.employees && r.employees.length > 0) {
+                    empsHtml = r.employees.map(e => 
+                        `<span class="badge bg-light text-dark border p-2 m-1 fw-bold">
+                            <i class="fa-solid fa-user me-1 text-muted" style="font-size:0.75rem;"></i>${e.name} 
+                            ${r.achieved ? `<span class="text-success ms-1">(${r.share} ريال)</span>` : ''}
+                        </span>`
+                    ).join('');
+                } else {
+                    empsHtml = '<span class="text-muted small">لا يوجد موظفون حضور مسجلون</span>';
+                }
+                
+                html += `
+                <tr class="${dayClass}">
+                    <td class="fw-bold">${r.date} <small class="text-muted d-block">${dayName}</small></td>
+                    <td class="text-end fw-bold">${r.sales.toLocaleString('en-US')}</td>
+                    <td class="text-center">${r.transactions}</td>
+                    <td class="text-center fw-bold ${r.achieved ? 'text-success' : ''}">${r.actual.toFixed(2)}</td>
+                    <td class="text-center text-muted">${r.target.toFixed(2)}</td>
+                    <td class="text-center">
+                        <span class="badge ${r.achieved ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'} p-2 fw-bold" style="font-size:0.8rem; border: 1px solid ${r.achieved ? '#198754' : '#dc3545'}">
+                            ${r.achieved ? '✓ محقق' : '✗ غير محقق'}
+                        </span>
+                    </td>
+                    <td class="text-end fw-bold text-orange" style="color:#fe7900;">${r.achieved ? r.prize.toLocaleString() + ' ريال' : '-'}</td>
+                    <td class="text-center fw-bold">${r.employees ? r.employees.length : 0}</td>
+                    <td><div class="d-flex flex-wrap">${empsHtml}</div></td>
+                </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            </div>
+            `;
+            
+            return html;
+        }
+
+        window.updateIncentiveTab = function(storeId, uid, monthStr) {
+            const summaryContainer = document.getElementById(`incentiveSummaryContainer-${uid}`);
+            const tableContainer = document.getElementById(`incentiveTableContainer-${uid}`);
+            if (!tableContainer || !window.averageBillIncentivesCache) return;
+            
+            const storeIncentives = window.averageBillIncentivesCache.incentives[storeId];
+            if (!storeIncentives || !storeIncentives[monthStr]) {
+                if (summaryContainer) summaryContainer.innerHTML = '';
+                tableContainer.innerHTML = '<div class="text-center text-muted py-3">لا توجد بيانات جوائز مسجلة لهذا الشهر.</div>';
+                return;
+            }
+            
+            if (summaryContainer) {
+                summaryContainer.innerHTML = renderEmployeeIncentivesSummaryHtml(storeIncentives[monthStr]);
+            }
+            tableContainer.innerHTML = renderIncentiveTableHtml(storeIncentives[monthStr]);
+        };
 
         function renderDailyDrill(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, storeId, storeName) {
             if (rows.length === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات</div>';

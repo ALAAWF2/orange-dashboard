@@ -1188,6 +1188,16 @@
 
                 <hr>
 
+                <!-- 1.5. Average Bill Incentives Card -->
+                <div class="insight-card" id="panelAverageBillIncentivesCard" style="display:none; border: 1px solid #fe7900; background-color: #fff9f3;">
+                    <div class="insight-label fw-bold" style="color: #fe7900; font-size: 0.95rem; border-bottom: 1px solid #ffe8d6; padding-bottom: 6px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة (الشهر الحالي)
+                    </div>
+                    <div id="panelAverageBillIncentivesList" class="small">
+                        <!-- JS Dynamic Content -->
+                    </div>
+                </div>
+
                 <!-- 2. Quality Metrics (Comparisons) -->
                 <h6 class="fw-bold mb-3">⚡ جودة الأداء (مقارنة بالفرع)</h6>
 
@@ -1411,6 +1421,7 @@
             let storeMeta = {}; // To store manager info
             let employeeNames = {}; // New: Arabic names map
             let employeeProductsData = {}; // NEW: Employee Top Products
+            let averageBillIncentivesCache = null; // NEW: Average Bill Incentives
             let top10Chart, branchChart;
 
             // Sorting State
@@ -1497,13 +1508,18 @@
             async function loadData() {
                 // ... existing loadData code ...
                 try {
-                    const [empRes, mgmtRes, prodRes] = await Promise.all([
+                    const [empRes, mgmtRes, prodRes, incentivesRes] = await Promise.all([
                         fetch('employees_data.json'),
                         fetch('management_data.json'),
-                        fetch('data/products/employee_products_data.json').catch(() => null)
+                        fetch('data/products/employee_products_data.json').catch(() => null),
+                        fetch('average_bill_incentives.json').catch(() => null)
                     ]);
 
                     const empJson = await empRes.json();
+                    if (incentivesRes && incentivesRes.ok) {
+                        averageBillIncentivesCache = await incentivesRes.json();
+                        console.log("Average bill incentives loaded in employees.html");
+                    }
                     historyData = empJson.history;
 
                     targetsData = empJson.targets; // Legacy (Current Month)
@@ -2723,10 +2739,122 @@
                 // Populate offcanvas insight metrics
                 renderEnhancedInsights(emp);
 
+                // Populate Average Bill Incentives
+                populateEmployeeIncentives(empId, emp.storeCode);
+
                 // Show Offcanvas
                 const offcanvasEl = document.getElementById('empInsightPanel');
                 const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
                 bsOffcanvas.show();
+            }
+
+            function populateEmployeeIncentives(empId, storeCode) {
+                const card = document.getElementById('panelAverageBillIncentivesCard');
+                const list = document.getElementById('panelAverageBillIncentivesList');
+                if (!card || !list) return;
+                
+                card.style.display = 'none';
+                list.innerHTML = '';
+                
+                if (!averageBillIncentivesCache || !averageBillIncentivesCache.incentives) return;
+                
+                const storeIncentives = averageBillIncentivesCache.incentives[storeCode];
+                if (!storeIncentives) return;
+                
+                const dateFromVal = document.getElementById('dateFrom').value;
+                let activeMonth = "";
+                if (dateFromVal) {
+                    activeMonth = dateFromVal.substring(0, 7);
+                } else {
+                    activeMonth = new Date().toISOString().substring(0, 7);
+                }
+                
+                const monthRecords = storeIncentives[activeMonth];
+                if (!monthRecords || monthRecords.length === 0) return;
+                
+                function localNormalizeEmpId(rawId) {
+                    if (!rawId) return "0000";
+                    let sid = rawId.toString().trim();
+                    if (sid.toLowerCase().startsWith('unknown') || sid.toLowerCase().startsWith('unkown')) {
+                        sid = sid.toLowerCase().replace('unknown', '').replace('unkown', '').trim();
+                    }
+                    if (sid.includes('-')) {
+                        sid = sid.split('-')[0].trim();
+                    }
+                    if (/^\d+$/.test(sid)) {
+                        return sid.padStart(4, '0');
+                    }
+                    return sid;
+                }
+                
+                const cleanEmpId = localNormalizeEmpId(empId);
+                
+                const empPresentRecords = monthRecords.filter(r => 
+                    r.employees && r.employees.some(e => localNormalizeEmpId(e.id) === cleanEmpId)
+                );
+                
+                if (empPresentRecords.length === 0) {
+                    list.innerHTML = '<div class="text-muted text-center py-2 small">لا توجد سجلات حضور أو مكافآت للموظف في هذا الشهر.</div>';
+                    card.style.display = 'block';
+                    return;
+                }
+                
+                let totalPrizeEarned = 0;
+                let presentCount = empPresentRecords.length;
+                let achievedCount = 0;
+                
+                let recordsHtml = empPresentRecords.map(r => {
+                    if (r.achieved) {
+                        totalPrizeEarned += r.share;
+                        achievedCount++;
+                    }
+                    
+                    const dateObj = new Date(r.date);
+                    const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+                    const dayName = dayNames[dateObj.getDay()];
+                    
+                    return `
+                    <div class="d-flex justify-content-between align-items-center border-bottom border-light-subtle py-2">
+                        <div>
+                            <span class="fw-bold">${r.date}</span> <small class="text-muted">(${dayName})</small>
+                            <div class="text-muted" style="font-size: 0.78rem;">
+                                م. الفاتورة: <span class="fw-bold text-dark">${r.actual}</span> / الهدف: ${r.target}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            ${r.achieved ? 
+                                `<span class="badge bg-success-subtle text-success p-1 fw-bold mb-1 d-inline-block">✓ محقق</span>
+                                 <div class="fw-bold text-success" style="font-size:0.85rem;">+${r.share} ريال</div>` :
+                                `<span class="badge bg-danger-subtle text-danger p-1 fw-bold mb-1 d-inline-block">✗ لم يحقق</span>
+                                 <div class="text-muted" style="font-size:0.85rem;">0 ريال</div>`
+                            }
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                const [y, mm] = activeMonth.split('-');
+                const monthNamesAr = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                const monthLabel = `${monthNamesAr[parseInt(mm) - 1]} ${y}`;
+                
+                let summaryHtml = `
+                <div class="p-2 mb-2 rounded bg-white border border-light-subtle" style="border-right: 3px solid #fe7900;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small">إجمالي الجوائز (${monthLabel}):</span>
+                        <span class="fw-bold text-success" style="font-size:1.05rem;">${totalPrizeEarned.toFixed(2)} ريال</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">نسبة التحقيق:</span>
+                        <span class="fw-bold text-dark">${achievedCount} من أصل ${presentCount} أيام حضور</span>
+                    </div>
+                </div>
+                <div style="max-height: 250px; overflow-y: auto; padding-left: 5px;">
+                    ${recordsHtml}
+                </div>
+                `;
+                
+                list.innerHTML = summaryHtml;
+                card.style.display = 'block';
             }
 
             function renderEmpProducts(empId) {
