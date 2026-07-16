@@ -571,33 +571,6 @@ const EMPLOYEES = [
         "addressBooks": "1004-C;1004-E"
     },
     {
-        "employeeId": "0936-اشرف محمد المحمود",
-        "personnelNumber": "0936",
-        "name": "اشرف محمد المحمود",
-        "startDate": "2020-03-01",
-        "manager": "المنطقة الشمالية",
-        "showroom": "1402-26-Al-Noor Mall Madinah و 1501-24-Yanbu Dana Mall",
-        "showroomDetails": [
-            {
-                "name": "1402-26-Al-Noor Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1402-C",
-                    "1402-E"
-                ]
-            },
-            {
-                "name": "1501-24-Yanbu Dana Mall",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1501-C",
-                    "1501-E"
-                ]
-            }
-        ],
-        "addressBooks": "1402-C;1402-E;1501-C;1501-E"
-    },
-    {
         "employeeId": "0966-ادريس شافي بانقاسيري",
         "personnelNumber": "0966",
         "name": "ادريس شافي بانقاسيري",
