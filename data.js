@@ -1471,16 +1471,8 @@ const EMPLOYEES = [
         "name": "جیشاد اثمانيل",
         "startDate": "2022-10-30",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -1490,7 +1482,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1402-C;1402-E"
     },
     {
         "employeeId": "3368-محمد مصطفى كورمبي",
@@ -1681,44 +1673,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1111-C;1111-E"
-    },
-    {
-        "employeeId": "3625-بشاير محمد الجهني",
-        "personnelNumber": "3625",
-        "name": "بشاير محمد الجهني",
-        "startDate": "2023-07-15",
-        "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall",
-        "showroomDetails": [
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
-            }
-        ],
-        "addressBooks": "1004-C;1004-E"
-    },
-    {
-        "employeeId": "3626-مزنة محمد الجهني",
-        "personnelNumber": "3626",
-        "name": "مزنة محمد الجهني",
-        "startDate": "2023-07-15",
-        "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall",
-        "showroomDetails": [
-            {
-                "name": "1002-05-Haifa Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1002-C",
-                    "1002-E"
-                ]
-            }
-        ],
-        "addressBooks": "1002-C;1002-E"
     },
     {
         "employeeId": "3628-اشجان عبدالله العشوا",
@@ -2625,25 +2579,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2201-C;2201-E"
-    },
-    {
-        "employeeId": "4217-ليان سليمان الرشود",
-        "personnelNumber": "4217",
-        "name": "ليان سليمان الرشود",
-        "startDate": "2024-06-12",
-        "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall",
-        "showroomDetails": [
-            {
-                "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1102-C",
-                    "1102-E"
-                ]
-            }
-        ],
-        "addressBooks": "1102-C;1102-E"
     },
     {
         "employeeId": "4231-روان فهد العطوان",
