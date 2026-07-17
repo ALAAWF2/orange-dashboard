@@ -1671,9 +1671,12 @@
 
     <script>
         // Session Check
-        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser) {
-            window.location.href = 'login.html';
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+        const hasDashboardSession = Boolean(currentUser.name && currentUser.pin);
+        if (!hasDashboardSession) {
+            localStorage.removeItem('currentUser');
+            sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى لعرض بيانات الجوائز.');
+            window.location.replace('login.html?reason=session');
         } else if (currentUser.name === 'علاء' && currentUser.role !== 'Admin') {
             currentUser.role = 'Admin';
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -1751,6 +1754,7 @@
 
         function logout() {
             localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('averageBillAuthRedirecting');
             window.location.href = 'login.html';
         }
     </script>
@@ -3019,6 +3023,22 @@
             return 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
         }
 
+        function redirectOnAverageBillUnauthorized(response) {
+            if (response.status !== 401) return response;
+            if (!sessionStorage.getItem('averageBillAuthRedirecting')) {
+                sessionStorage.setItem('averageBillAuthRedirecting', '1');
+                sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول أو تغير رمزها. سجّل الدخول مرة أخرى.');
+                localStorage.removeItem('currentUser');
+                window.location.replace('login.html?reason=session');
+            }
+            return response;
+        }
+
+        async function fetchAverageBillWithAuth(url, options = {}) {
+            const response = await fetch(url, options);
+            return redirectOnAverageBillUnauthorized(response);
+        }
+
         function averageBillToday() {
             const value = new Date();
             return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
@@ -3038,8 +3058,8 @@
                 const headers = { 'Authorization': averageBillAuthHeader() };
                 const today = averageBillToday();
                 const [reviewResponse, todayResponse] = await Promise.all([
-                    fetch(`${averageBillApiBase()}/api/average-bill/reviews`, { headers }),
-                    fetch(`${averageBillApiBase()}/api/average-bill/performance?date=${today}`, { headers })
+                    fetchAverageBillWithAuth(`${averageBillApiBase()}/api/average-bill/reviews`, { headers }),
+                    fetchAverageBillWithAuth(`${averageBillApiBase()}/api/average-bill/performance?date=${today}`, { headers })
                 ]);
                 const reviewResult = await reviewResponse.json();
                 const todayResult = await todayResponse.json();
@@ -3145,7 +3165,7 @@
             const label = decision === 'APPROVE' ? 'قبول' : 'رفض';
             if (!confirm(`تأكيد ${label} الحالة؟ ستُعاد حسبة الجائزة مباشرة.`)) return;
             try {
-                const response = await fetch(`${averageBillApiBase()}/api/average-bill/reviews`, {
+                const response = await fetchAverageBillWithAuth(`${averageBillApiBase()}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3163,6 +3183,7 @@
         }
 
         async function init() {
+            if (!hasDashboardSession) return;
             loadAverageBillCommandCenter();
             // Init Month Filter
             const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];

@@ -773,9 +773,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Auth check
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || (currentUser.role !== 'Finance' && currentUser.role !== 'Admin')) {
-            window.location.href = 'login.html';
+        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+        const hasFinanceSession = Boolean(currentUser.name && currentUser.pin && ['Finance', 'Admin'].includes(currentUser.role));
+        if (!hasFinanceSession) {
+            localStorage.removeItem('currentUser');
+            sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى لعرض لوحة المالية.');
+            window.location.replace('login.html?reason=session');
         } else {
             document.getElementById('userBadge').innerHTML = `<i class="fa-solid fa-user-tie me-1"></i> ${currentUser.name}`;
             
@@ -796,6 +799,7 @@
 
         // Initialize Dates
         window.addEventListener('DOMContentLoaded', () => {
+            if (!hasFinanceSession) return;
             setFilterDates('thisMonth');
             loadFinancialData();
             
@@ -807,6 +811,7 @@
 
         function logout() {
             localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('averageBillAuthRedirecting');
             window.location.href = 'login.html';
         }
 
@@ -856,6 +861,22 @@
         const storedIp = sessionStorage.getItem('serverIp');
         if (storedIp) {
             API_BASE = storedIp;
+        }
+
+        function redirectOnAverageBillUnauthorized(response) {
+            if (response.status !== 401) return response;
+            if (!sessionStorage.getItem('averageBillAuthRedirecting')) {
+                sessionStorage.setItem('averageBillAuthRedirecting', '1');
+                sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول أو تغير رمزها. سجّل الدخول مرة أخرى.');
+                localStorage.removeItem('currentUser');
+                window.location.replace('login.html?reason=session');
+            }
+            return response;
+        }
+
+        async function fetchWithSessionAuth(url, options = {}) {
+            const response = await fetch(url, options);
+            return redirectOnAverageBillUnauthorized(response);
         }
 
         let vatChartInstance = null;
@@ -998,7 +1019,7 @@
             try {
                 // Dynamically resolve auth header using logged in user's Arabic/UTF-8 credentials
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const r = await fetch(`${API_BASE}/api/finance/stats?start=${start}&end=${end}`, {
+                const r = await fetchWithSessionAuth(`${API_BASE}/api/finance/stats?start=${start}&end=${end}`, {
                     headers: {
                         'Authorization': authHeader
                     }
@@ -1185,7 +1206,7 @@
 
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const r = await fetch(`${API_BASE}/api/finance/tax-report?start=${start}&end=${end}`, {
+                const r = await fetchWithSessionAuth(`${API_BASE}/api/finance/tax-report?start=${start}&end=${end}`, {
                     headers: {
                         'Authorization': authHeader
                     }
@@ -1218,7 +1239,7 @@
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل جميع المراجعات...</td></tr>';
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/reviews`, {
                     headers: { 'Authorization': authHeader }
                 });
                 const result = await response.json();
@@ -1253,7 +1274,7 @@
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ';
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
                     body: JSON.stringify({ attendance_date: date, store_number: storeId, sales_group: salesGroup, decision })
@@ -1286,7 +1307,7 @@
 
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const r = await fetch(`${API_BASE}/api/average-bill/performance?date=${date}`, {
+                const r = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/performance?date=${date}`, {
                     headers: { 'Authorization': authHeader }
                 });
                 
@@ -1376,7 +1397,7 @@
             const date = document.getElementById('prizesDate').value;
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
                     body: JSON.stringify({ attendance_date: date, store_number: storeId, sales_group: salesGroup, decision })
@@ -1399,7 +1420,7 @@
             tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
-                const response = await fetch(`${API_BASE}/api/average-bill/review-audit?start=${formatDate(startDate)}&end=${end}`, { headers: { 'Authorization': authHeader } });
+                const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/review-audit?start=${formatDate(startDate)}&end=${end}`, { headers: { 'Authorization': authHeader } });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'تعذر تحميل السجل');
                 const rows = result.audit || [];
@@ -1504,7 +1525,7 @@
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
                 const url = `${API_BASE}/api/average-bill/payouts-range?start=${start}&end=${end}`;
                 
-                const r = await fetch(url, {
+                const r = await fetchWithSessionAuth(url, {
                     headers: { 'Authorization': authHeader }
                 });
 

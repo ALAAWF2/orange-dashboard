@@ -746,9 +746,12 @@
     
     <script>
         // Authentication check
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || !['Admin', 'Manager'].includes(currentUser.role)) {
-            window.location.href = 'login.html';
+        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+        const hasAverageBillSession = Boolean(currentUser.name && currentUser.pin && ['Admin', 'Manager'].includes(currentUser.role));
+        if (!hasAverageBillSession) {
+            localStorage.removeItem('currentUser');
+            sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى لعرض تقرير معدل الفاتورة.');
+            window.location.replace('login.html?reason=session');
         } else {
             document.getElementById('userBadge').innerHTML = `<i class="fa-solid fa-user-tie me-1"></i> ${currentUser.name}`;
         }
@@ -763,10 +766,29 @@
             API_BASE = storedIp;
         }
 
-        const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+        const authHeader = hasAverageBillSession
+            ? 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)))
+            : '';
+
+        function redirectOnAverageBillUnauthorized(response) {
+            if (response.status !== 401) return response;
+            if (!sessionStorage.getItem('averageBillAuthRedirecting')) {
+                sessionStorage.setItem('averageBillAuthRedirecting', '1');
+                sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول أو تغير رمزها. سجّل الدخول مرة أخرى.');
+                localStorage.removeItem('currentUser');
+                window.location.replace('login.html?reason=session');
+            }
+            return response;
+        }
+
+        async function fetchAverageBillWithAuth(url, options = {}) {
+            const response = await fetch(url, options);
+            return redirectOnAverageBillUnauthorized(response);
+        }
 
         // Initialize Dates
         window.addEventListener('DOMContentLoaded', () => {
+            if (!hasAverageBillSession) return;
             const today = new Date();
             const todayValue = formatDateInput(today);
             const requestedDate = new URLSearchParams(window.location.search).get('date');
@@ -934,7 +956,7 @@
             const tbody = document.getElementById('reviewQueueBody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل جميع المراجعات...</td></tr>';
             try {
-                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                const response = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/reviews`, {
                     headers: { 'Authorization': authHeader }
                 });
                 const result = await response.json();
@@ -968,7 +990,7 @@
             const originalHtml = button.innerHTML;
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ';
             try {
-                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                const response = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1007,7 +1029,7 @@
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل البيانات الأداء الفوري...</td></tr>';
 
             try {
-                const r = await fetch(`${API_BASE}/api/average-bill/performance?date=${date}`, {
+                const r = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/performance?date=${date}`, {
                     headers: { 'Authorization': authHeader }
                 });
                 
@@ -1227,7 +1249,7 @@
         async function submitEmployeeReview(storeId, salesGroup, decision) {
             const date = document.getElementById('dailyDate').value;
             try {
-                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                const response = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1313,7 +1335,7 @@
             };
 
             try {
-                const r = await fetch(`${API_BASE}/api/average-bill/targets`, {
+                const r = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/targets`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1356,7 +1378,7 @@
             const endDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
 
             try {
-                const r = await fetch(`${API_BASE}/api/average-bill/performance?start=${startDate}&end=${endDate}`, {
+                const r = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/performance?start=${startDate}&end=${endDate}`, {
                     headers: { 'Authorization': authHeader }
                 });
                 
