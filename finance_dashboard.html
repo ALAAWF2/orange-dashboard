@@ -306,7 +306,7 @@
                 <button class="nav-link active" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax-panel" type="button" role="tab" aria-controls="tax-panel" aria-selected="true"><i class="fa-solid fa-percent me-1"></i> تقرير ضريبة المبيعات</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance()"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
+                <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance(); loadReviewAudit();"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
             </li>
         </ul>
 
@@ -442,7 +442,7 @@
                     <div class="row align-items-end g-3">
                         <!-- Daily Verification Section -->
                         <div class="col-lg-5 pe-lg-4">
-                            <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-calendar-day me-1"></i> التحقق اليومي وحفظ الحضور</h6>
+                            <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-calendar-day me-1"></i> المراجعة اليومية واعتماد الصرف</h6>
                             <div class="row align-items-end g-2">
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold text-muted small">تاريخ العمليات اليومية</label>
@@ -481,7 +481,7 @@
 
                 <!-- Prizes KPI Row -->
                 <div class="row g-4 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="kpi-card kpi-net" style="border-right-color: #0d6efd;">
                             <div class="kpi-icon-container" style="background-color: #e7f1ff; color: #0d6efd;">
                                 <i class="fa-solid fa-shop"></i>
@@ -492,18 +492,18 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="kpi-card kpi-vat" style="border-right-color: #ffc107;">
                             <div class="kpi-icon-container" style="background-color: #fff8e1; color: #ffc107;">
                                 <i class="fa-solid fa-gift"></i>
                             </div>
                             <div class="kpi-info">
-                                <h6>مجموع قيمة الجوائز لليوم</h6>
+                                <h6>المبلغ الجاهز للصرف</h6>
                                 <h3 id="prizesTotalAmount">0.00</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="kpi-card kpi-returns" style="border-right-color: #198754;">
                             <div class="kpi-icon-container" style="background-color: #d1e7dd; color: #198754;">
                                 <i class="fa-solid fa-users"></i>
@@ -511,6 +511,17 @@
                             <div class="kpi-info">
                                 <h6>الموظفين المستحقين اليوم</h6>
                                 <h3 id="prizesTotalEmployees">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card kpi-vat" style="border-right-color: #dc3545;">
+                            <div class="kpi-icon-container" style="background-color: #f8d7da; color: #dc3545;">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h6>معارض معلقة أو مبدئية</h6>
+                                <h3 id="prizesPendingStores">0</h3>
                             </div>
                         </div>
                     </div>
@@ -534,12 +545,37 @@
                                     <th class="text-end">متوسط الفاتورة الفعلي</th>
                                     <th class="text-end">الهدف اليومي</th>
                                     <th class="text-end">قيمة الجائزة</th>
-                                    <th class="text-center" style="width: 35%;">طاقم العمل الحاضر (تلقائي)</th>
-                                    <th class="text-end">نصيب الموظف الفردي</th>
+                                    <th class="text-center" style="width: 38%;">الموظفون والمراجعة</th>
+                                    <th class="text-end">المبلغ المفرج</th>
                                 </tr>
                             </thead>
                             <tbody id="prizesTableBody">
                                 <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="content-panel mt-4">
+                    <div class="panel-title">
+                        <span><i class="fa-solid fa-clock-rotate-left me-1"></i> سجل قرارات المراجعة</span>
+                        <button onclick="loadReviewAudit()" class="btn btn-outline-secondary btn-sm fw-bold"><i class="fa-solid fa-rotate me-1"></i> تحديث السجل</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>وقت القرار</th>
+                                    <th>التاريخ</th>
+                                    <th>المعرض</th>
+                                    <th>الموظف</th>
+                                    <th>القرار القديم</th>
+                                    <th>القرار الجديد</th>
+                                    <th>المراجع</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reviewAuditBody">
+                                <tr><td colspan="7" class="text-center text-muted py-3">اضغط تحديث السجل لعرض القرارات.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -601,7 +637,7 @@
             // Set default date for prizes tab to yesterday
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            document.getElementById('prizesDate').value = yesterday.toISOString().split('T')[0];
+            document.getElementById('prizesDate').value = formatDate(yesterday);
         });
 
         function logout() {
@@ -644,7 +680,7 @@
         }
 
         function formatDate(date) {
-            return date.toISOString().split('T')[0];
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         }
 
         // Configuration
@@ -661,6 +697,41 @@
         let payoutsChartInstance = null;
         let payoutSalesChartInstance = null;
         let dailyPerformanceCache = [];
+
+        const awardStatusMeta = {
+            PRELIMINARY: ['مبدئي حتى 2 ص', 'bg-info text-dark'],
+            PENDING_REVIEW: ['معلّق للمراجعة', 'bg-warning text-dark'],
+            READY: ['جاهز للصرف', 'bg-success'],
+            NO_ELIGIBLE: ['لا يوجد مستحقون', 'bg-dark']
+        };
+
+        const employeeStatusMeta = {
+            CONFIRMED: ['مؤكد', 'bg-success'],
+            APPROVED: ['مقبول', 'bg-success'],
+            PENDING: ['مراجعة', 'bg-warning text-dark'],
+            REJECTED: ['مرفوض', 'bg-danger'],
+            EXCLUDED: ['مستبعد', 'bg-secondary']
+        };
+
+        const reasonLabels = {
+            RETURN_EXCHANGE_ONLY: 'مرتجع أو تبديل فقط',
+            UNMAPPED_EMPLOYEE: 'كود غير مربوط',
+            MULTIPLE_STORES: 'ظهر بمعرضين بنفس اليوم',
+            SINGLE_RECEIPT: 'فاتورة مستقلة واحدة',
+            SINGLE_RECEIPT_WITH_RETURN: 'فاتورة واحدة مع مرتجع أو تبديل',
+            NO_CONFIRMED_ATTENDANCE_30D: 'لا حضور مؤكد خلال 30 يوماً',
+            MULTIPLE_INDEPENDENT_RECEIPTS: 'فاتورتان مستقلتان أو أكثر',
+            NO_INDEPENDENT_SALE: 'لا توجد فاتورة مستقلة'
+        };
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
 
         // Fetch local financial statistics
         async function loadFinancialData() {
@@ -772,7 +843,7 @@
                 const parts = s.store_name.split('-');
                 return parts.length > 1 ? parts.slice(1).join('-').trim() : s.store_name;
             });
-            const prizeAmounts = achievedStores.map(s => s.prize_amount);
+            const prizeAmounts = achievedStores.map(s => s.payout_total || 0);
             const actualSales = achievedStores.map(s => s.actual_sales);
 
             // Chart 1: Bar chart for daily payouts per showroom
@@ -889,7 +960,7 @@
         async function loadPrizesPerformance() {
             const date = document.getElementById('prizesDate').value;
             const tbody = document.getElementById('prizesTableBody');
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل البيانات وأهداف الفروع...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل الجوائز وحالات المراجعة...</td></tr>';
 
             try {
                 const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
@@ -900,82 +971,76 @@
                 if (!r.ok) throw new Error('API Error');
                 const data = await r.json();
 
-                // Save to cache
                 dailyPerformanceCache = data.performance || [];
-
-                // Filter achieved stores
                 const achievedStores = dailyPerformanceCache.filter(s => s.achieved === true);
 
                 tbody.innerHTML = '';
                 document.getElementById('prizesAchievedStores').textContent = achievedStores.length;
-                
-                let totalPrizeSum = 0;
-                achievedStores.forEach(s => totalPrizeSum += s.prize_amount);
+                const totalPrizeSum = achievedStores.reduce((sum, store) => sum + Number(store.payout_total || 0), 0);
                 document.getElementById('prizesTotalAmount').textContent = totalPrizeSum.toLocaleString('en-US') + ' ريال';
+                document.getElementById('prizesPendingStores').textContent = achievedStores.filter(store => ['PENDING_REVIEW', 'PRELIMINARY'].includes(store.award_status)).length;
 
                 if (achievedStores.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد فروع حققت مستهدف متوسط الفاتورة اليومية في هذا التاريخ.</td></tr>';
                     document.getElementById('prizesTotalEmployees').textContent = '0';
+                    document.getElementById('prizesPendingStores').textContent = '0';
                     updatePrizesCharts([]);
                     return;
                 }
 
-                // Render each achieved store
                 achievedStores.forEach(store => {
-                    const storeName = store.store_name;
                     const storeId = store.store_id;
+                    const statusMeta = awardStatusMeta[store.award_status] || [store.award_status, 'bg-secondary'];
                     const tr = document.createElement('tr');
                     tr.id = `store-row-${storeId}`;
                     tr.innerHTML = `
-                        <td class="fw-bold">${storeName}</td>
+                        <td class="fw-bold">${escapeHtml(store.store_name)}</td>
                         <td class="text-end fw-bold">${store.actual_sales.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                         <td class="text-end">${store.actual_transactions}</td>
                         <td class="text-end fw-bold text-primary">${store.actual_average_bill.toFixed(2)}</td>
                         <td class="text-end text-muted fw-bold">${store.target_value.toFixed(2)}</td>
-                        <td class="text-end fw-bold text-success">${store.prize_amount} ريال</td>
+                        <td class="text-end fw-bold">${store.prize_amount} ريال<br><span class="badge ${statusMeta[1]} mt-1">${statusMeta[0]}</span></td>
                         <td>
-                            <div id="attendees-container-${storeId}" class="d-flex flex-wrap gap-1 justify-content-center">
-                                <!-- Populated dynamically from store.employees -->
+                            <div id="attendees-container-${storeId}" class="d-flex flex-column gap-2">
                             </div>
                         </td>
-                        <td class="text-end fw-bold text-orange text-success" id="share-display-${storeId}" style="font-size: 1.1rem; color: #fe7900 !important;">0.00 ريال</td>
+                        <td class="text-end fw-bold" style="font-size: 1.05rem; color: #fe7900;">${Number(store.payout_total || 0).toFixed(2)} ريال</td>
                     `;
                     tbody.appendChild(tr);
 
-                    // Populate the badges directly from store.employees
                     const container = document.getElementById(`attendees-container-${storeId}`);
                     if (container && store.employees) {
                         if (store.employees.length === 0) {
                             container.innerHTML = '<span class="text-muted small">لا يوجد موظفين مسجلين في هذا اليوم</span>';
                         } else {
                             store.employees.forEach(emp => {
-                                const span = document.createElement('span');
-                                span.className = 'badge bg-secondary py-2 px-3 fw-bold';
-                                span.style.borderRadius = '8px';
-                                span.textContent = `${emp.employee_name} (${emp.employee_id})`;
-                                container.appendChild(span);
+                                const empStatus = employeeStatusMeta[emp.final_status] || [emp.final_status, 'bg-secondary'];
+                                const reason = reasonLabels[emp.reason_code] || emp.reason_code;
+                                const canReview = emp.auto_status === 'PENDING' && store.award_status !== 'PRELIMINARY';
+                                const card = document.createElement('div');
+                                card.className = 'border rounded p-2 bg-light';
+                                card.innerHTML = `
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div class="small">
+                                            <div class="fw-bold">${escapeHtml(emp.employee_name)} (${escapeHtml(emp.employee_id)})</div>
+                                            <div class="text-muted">${escapeHtml(reason)}</div>
+                                            <div>مستقلة ${emp.independent_receipts} | مرتجع ${emp.return_receipts} | تبديل ${emp.exchange_receipts}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge ${empStatus[1]}">${empStatus[0]}</span>
+                                            ${emp.share > 0 ? `<div class="text-success fw-bold mt-1">${Number(emp.share).toFixed(2)} ريال</div>` : ''}
+                                        </div>
+                                    </div>
+                                    ${emp.reviewed_by ? `<div class="small text-muted mt-1">آخر قرار: ${escapeHtml(emp.reviewed_by)} (${escapeHtml(emp.reviewed_role)})</div>` : ''}
+                                    ${canReview ? `<div class="d-flex gap-2 mt-2"><button class="btn btn-success btn-sm fw-bold" onclick="submitFinanceReview('${storeId}', '${escapeHtml(emp.sales_group)}', 'APPROVE')">قبول</button><button class="btn btn-danger btn-sm fw-bold" onclick="submitFinanceReview('${storeId}', '${escapeHtml(emp.sales_group)}', 'REJECT')">رفض</button></div>` : ''}
+                                `;
+                                container.appendChild(card);
                             });
                         }
                     }
-
-                    // Calculate individual share
-                    const count = store.employees ? store.employees.length : 0;
-                    const display = document.getElementById(`share-display-${storeId}`);
-                    if (display) {
-                        if (count > 0) {
-                            const share = store.prize_amount / count;
-                            display.textContent = share.toFixed(2) + ' ريال';
-                        } else {
-                            display.textContent = '0.00 ريال';
-                        }
-                    }
                 });
 
-                // Calculate total active employees sum
-                let totalActiveEmps = 0;
-                achievedStores.forEach(s => {
-                    totalActiveEmps += s.employees ? s.employees.length : 0;
-                });
+                const totalActiveEmps = achievedStores.reduce((sum, store) => sum + Number(store.eligible_count || 0), 0);
                 document.getElementById('prizesTotalEmployees').textContent = totalActiveEmps;
                 updatePrizesCharts(achievedStores);
 
@@ -985,19 +1050,66 @@
             }
         }
 
+        async function submitFinanceReview(storeId, salesGroup, decision) {
+            const date = document.getElementById('prizesDate').value;
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ attendance_date: date, store_number: storeId, sales_group: salesGroup, decision })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
+                await loadPrizesPerformance();
+                await loadReviewAudit();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function loadReviewAudit() {
+            const end = document.getElementById('prizesDate').value;
+            const endDate = new Date(`${end}T12:00:00`);
+            const startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 30);
+            const tbody = document.getElementById('reviewAuditBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const response = await fetch(`${API_BASE}/api/average-bill/review-audit?start=${formatDate(startDate)}&end=${end}`, { headers: { 'Authorization': authHeader } });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر تحميل السجل');
+                const rows = result.audit || [];
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">لا توجد قرارات مراجعة في الفترة.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(row => `
+                    <tr>
+                        <td dir="ltr">${escapeHtml(new Date(row.created_at).toLocaleString('ar-SA'))}</td>
+                        <td>${escapeHtml(row.attendance_date)}</td>
+                        <td>${escapeHtml(row.outlet_name)}</td>
+                        <td>${escapeHtml(row.employee_name)} (${escapeHtml(row.employee_id_new)})</td>
+                        <td>${escapeHtml(row.old_decision || '—')}</td>
+                        <td>${escapeHtml(row.new_decision || row.action)}</td>
+                        <td>${escapeHtml(row.actor_name)} (${escapeHtml(row.actor_role)})</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">${escapeHtml(error.message)}</td></tr>`;
+            }
+        }
+
         // Export payouts report to Excel using SheetJS
         function exportPrizesExcel() {
             const date = document.getElementById('prizesDate').value;
             const rows = [];
 
-            const achievedStores = dailyPerformanceCache.filter(s => s.achieved === true);
+            const achievedStores = dailyPerformanceCache.filter(s => s.award_status === 'READY');
 
             achievedStores.forEach(store => {
-                const count = store.employees ? store.employees.length : 0;
-                const share = count > 0 ? store.prize_amount / count : 0;
-
                 if (store.employees) {
-                    store.employees.forEach(emp => {
+                    store.employees.filter(emp => emp.present && emp.share > 0).forEach(emp => {
                         rows.push({
                              "التاريخ": date,
                              "اسم المعرض": store.store_name,
@@ -1009,7 +1121,7 @@
                              "الرقم الوظيفي (قديم)": emp.employee_id_old || '',
                              "الرقم الوظيفي (جديد)": emp.employee_id_new || emp.employee_id || '',
                              "اسم الموظف": emp.employee_name,
-                             "نصيب الموظف الفردي (ريال)": share
+                             "نصيب الموظف الفردي (ريال)": emp.share
                         });
                     });
                 }
@@ -1028,7 +1140,10 @@
                 "الهدف اليومي": store.target_value,
                 "قيمة المكافأة": store.prize_amount,
                 "حالة تحقيق الهدف": store.achieved ? "نعم" : "لا",
-                "عدد الموظفين الحاضرين": store.employees ? store.employees.length : 0
+                "حالة الجائزة": (awardStatusMeta[store.award_status] || [store.award_status])[0],
+                "عدد الموظفين المستحقين": store.eligible_count,
+                "عدد الحالات المعلقة": store.pending_count,
+                "المبلغ المفرج": store.payout_total
             }));
 
             const workbook = XLSX.utils.book_new();
@@ -1121,7 +1236,8 @@
                     "متوسط الفاتورة الفعلي": t.actual_average_bill,
                     "الهدف اليومي": t.target_value,
                     "قيمة المكافأة": t.prize_amount,
-                    "حالة تحقيق الهدف": t.achieved
+                    "حالة تحقيق الهدف": t.achieved,
+                    "حالة الجائزة": (awardStatusMeta[t.award_status] || [t.award_status])[0]
                 })) : [];
 
                 // Build workbook

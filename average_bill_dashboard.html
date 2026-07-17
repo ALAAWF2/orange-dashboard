@@ -354,7 +354,7 @@
                                 <i class="fa-solid fa-gift"></i>
                             </div>
                             <div class="kpi-info">
-                                <h6>إجمالي الجوائز اليومية</h6>
+                                <h6>الجوائز الجاهزة للصرف</h6>
                                 <h3 id="dailyTotalPrize">0.00</h3>
                             </div>
                         </div>
@@ -376,8 +376,8 @@
                                     <th class="text-end">متوسط الفاتورة الفعلي</th>
                                     <th class="text-end">المستهدف اليومي</th>
                                     <th class="text-end">قيمة الجائزة</th>
-                                    <th class="text-center">حالة التحقيق</th>
-                                    <th class="text-center">عدد الحاضرين</th>
+                                    <th class="text-center">حالة الجائزة</th>
+                                    <th class="text-center">الموظفون</th>
                                     <th class="text-center">العمليات</th>
                                 </tr>
                             </thead>
@@ -485,11 +485,16 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label fw-bold">تاريخ سريان التعديل</label>
+                        <input type="date" id="modalEffectiveDate" class="form-control py-2">
+                        <div class="form-text">لا يمكن اختيار اليوم الحالي أو أي تاريخ سابق.</div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-bold">فترة تطبيق التعديل</label>
                         <select id="modalPeriodType" class="form-select py-2">
-                            <option value="day">اليوم المحدد فقط (${document.getElementById('dailyDate')?.value})</option>
-                            <option value="onwards">من اليوم فصاعداً (مستقبل مستمر)</option>
-                            <option value="month">الشهر الحالي بالكامل</option>
+                            <option value="day">تاريخ السريان المحدد فقط</option>
+                            <option value="onwards">من تاريخ السريان فصاعداً</option>
+                            <option value="month">من تاريخ السريان حتى نهاية الشهر</option>
                         </select>
                     </div>
                 </div>
@@ -538,15 +543,15 @@
 
     <!-- Modal: View Employees List -->
     <div class="modal fade" id="employeesListModal" tabindex="-1" aria-labelledby="employeesListModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="employeesListModalLabel"><i class="fa-solid fa-users me-1"></i> طاقم العمل الحاضر</h5>
+                    <h5 class="modal-title" id="employeesListModalLabel"><i class="fa-solid fa-users me-1"></i> حضور الموظفين ومراجعة الحالات</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <h6 class="fw-bold mb-3 text-primary" id="empModalStoreHeader">معرض: -</h6>
-                    <ul class="list-group" id="empModalList" style="max-height: 350px; overflow-y: auto;">
+                    <ul class="list-group" id="empModalList" style="max-height: 480px; overflow-y: auto;">
                         <!-- JS Populated -->
                     </ul>
                 </div>
@@ -565,7 +570,7 @@
     <script>
         // Authentication check
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || currentUser.role !== 'Admin') {
+        if (!currentUser || !['Admin', 'Manager'].includes(currentUser.role)) {
             window.location.href = 'login.html';
         } else {
             document.getElementById('userBadge').innerHTML = `<i class="fa-solid fa-user-tie me-1"></i> ${currentUser.name}`;
@@ -586,24 +591,28 @@
         // Initialize Dates
         window.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
-            document.getElementById('dailyDate').value = today.toISOString().split('T')[0];
+            const todayValue = formatDateInput(today);
+            const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+            const tomorrowValue = formatDateInput(tomorrow);
+            document.getElementById('dailyDate').value = todayValue;
             document.getElementById('monthlyMonth').value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-            
-            // Set modal period default select text
-            updatePeriodLabelText(today.toISOString().split('T')[0]);
-
-            document.getElementById('dailyDate').addEventListener('change', (e) => {
-                updatePeriodLabelText(e.target.value);
-            });
+            document.getElementById('modalEffectiveDate').min = tomorrowValue;
+            document.getElementById('modalEffectiveDate').value = tomorrowValue;
+            updatePeriodLabelText(tomorrowValue);
+            document.getElementById('modalEffectiveDate').addEventListener('change', (e) => updatePeriodLabelText(e.target.value));
 
             // Load Initial Data
             loadDailyPerformance();
         });
 
+        function formatDateInput(value) {
+            return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+        }
+
         function updatePeriodLabelText(dateVal) {
             const periodSelect = document.getElementById('modalPeriodType');
             if (periodSelect) {
-                periodSelect.options[0].textContent = `اليوم المحدد فقط (${dateVal})`;
+                periodSelect.options[0].textContent = `تاريخ السريان المحدد فقط (${dateVal})`;
             }
         }
 
@@ -611,6 +620,43 @@
         let dailyAchievementChartInstance = null;
         let dailyTopSalesChartInstance = null;
         let activeEditStore = null;
+
+        const awardStatusMeta = {
+            INACTIVE: ['غير مفعّل', 'bg-secondary'],
+            NOT_ACHIEVED: ['غير محقق', 'bg-danger'],
+            PRELIMINARY: ['مبدئي حتى 2 ص', 'bg-info text-dark'],
+            PENDING_REVIEW: ['معلّق للمراجعة', 'bg-warning text-dark'],
+            READY: ['جاهز للصرف', 'bg-success'],
+            NO_ELIGIBLE: ['لا يوجد مستحقون', 'bg-dark']
+        };
+
+        const employeeStatusMeta = {
+            CONFIRMED: ['حاضر تلقائياً', 'bg-success'],
+            APPROVED: ['مقبول بالمراجعة', 'bg-success'],
+            PENDING: ['يحتاج مراجعة', 'bg-warning text-dark'],
+            REJECTED: ['مرفوض', 'bg-danger'],
+            EXCLUDED: ['مستبعد تلقائياً', 'bg-secondary']
+        };
+
+        const reasonLabels = {
+            RETURN_EXCHANGE_ONLY: 'نشاط مرتجع أو تبديل فقط',
+            UNMAPPED_EMPLOYEE: 'كود الموظف غير مربوط',
+            MULTIPLE_STORES: 'ظهر في أكثر من معرض بنفس يوم الحضور',
+            SINGLE_RECEIPT: 'فاتورة بيع مستقلة واحدة فقط',
+            SINGLE_RECEIPT_WITH_RETURN: 'فاتورة مستقلة واحدة مع مرتجع أو تبديل',
+            NO_CONFIRMED_ATTENDANCE_30D: 'لا يوجد حضور مؤكد خلال 30 يوماً',
+            MULTIPLE_INDEPENDENT_RECEIPTS: 'فاتورتان مستقلتان أو أكثر',
+            NO_INDEPENDENT_SALE: 'لا توجد فاتورة بيع مستقلة'
+        };
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
 
         // 1. Fetch Daily Performance
         async function loadDailyPerformance() {
@@ -643,8 +689,13 @@
                 dailyPerformanceCache.sort((a,b) => b.actual_sales - a.actual_sales).forEach(store => {
                     if (store.achieved) {
                         achievedCount++;
-                        totalPrize += store.prize_amount;
+                        totalPrize += store.payout_total;
                     }
+
+                    const statusMeta = awardStatusMeta[store.award_status] || [store.award_status, 'bg-secondary'];
+                    const targetButton = currentUser.role === 'Admin'
+                        ? `<button onclick="openEditTargetModal('${store.store_name}')" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius:6px;"><i class="fa-solid fa-pen-to-square me-1"></i> تعديل الهدف</button>`
+                        : '<span class="text-muted">—</span>';
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -655,19 +706,15 @@
                         <td class="text-end text-muted fw-bold">${store.target_value.toFixed(2)}</td>
                         <td class="text-end fw-bold">${store.prize_amount} ريال</td>
                         <td class="text-center">
-                            <span class="${store.achieved ? 'badge-success-custom' : 'badge-danger-custom'}">
-                                ${store.achieved ? '<i class="fa-solid fa-check me-1"></i> محقق' : '<i class="fa-solid fa-xmark me-1"></i> غير محقق'}
+                            <span class="badge ${statusMeta[1]} py-2 px-3">${statusMeta[0]}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary py-2 px-3 fw-bold" style="border-radius:8px; cursor:pointer;" onclick="showStoreEmployees('${store.store_id}')" title="اضغط لعرض تفاصيل الموظفين">
+                                ${store.eligible_count} مستحق / ${store.pending_count} مراجعة <i class="fa-solid fa-users ms-1"></i>
                             </span>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-secondary py-2 px-3 fw-bold" style="border-radius:8px; cursor:pointer;" onclick="showStoreEmployees('${store.store_name}')" title="اضغط لعرض الموظفين الحاضرين">
-                                ${store.employees.length} موظفين <i class="fa-solid fa-users ms-1"></i>
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <button onclick="openEditTargetModal('${store.store_name}')" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius:6px;">
-                                <i class="fa-solid fa-pen-to-square me-1"></i> تعديل الهدف
-                            </button>
+                            ${targetButton}
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -771,36 +818,96 @@
         }
 
         // Show store employees list popup
-        function showStoreEmployees(storeName) {
-            const store = dailyPerformanceCache.find(s => s.store_name === storeName);
+        function showStoreEmployees(storeId) {
+            const store = dailyPerformanceCache.find(s => s.store_id === String(storeId));
             if (!store) return;
 
-            document.getElementById('empModalStoreHeader').textContent = `معرض: ${store.store_name} (${store.achieved ? 'حقق المستهدف اليوم' : 'لم يحقق المستهدف اليوم'})`;
+            const awardLabel = (awardStatusMeta[store.award_status] || [store.award_status])[0];
+            document.getElementById('empModalStoreHeader').textContent = `معرض: ${store.store_name} — ${awardLabel}`;
             
             const list = document.getElementById('empModalList');
             list.innerHTML = '';
 
             if (!store.employees || store.employees.length === 0) {
-                list.innerHTML = '<li class="list-group-item text-center text-muted">لا يوجد موظفون حاضرون مسجلون في هذا اليوم</li>';
+                list.innerHTML = '<li class="list-group-item text-center text-muted">لا توجد حركة موظفين مسجلة في يوم الحضور</li>';
             } else {
                 store.employees.forEach(emp => {
-                    const isPresent = emp.present;
+                    const statusMeta = employeeStatusMeta[emp.final_status] || [emp.final_status, 'bg-secondary'];
+                    const reason = reasonLabels[emp.reason_code] || emp.reason_code;
+                    const highLevelDecision = ['Admin', 'Finance'].includes(emp.reviewed_role);
+                    const canReview = emp.auto_status === 'PENDING'
+                        && store.achieved
+                        && store.award_status !== 'PRELIMINARY'
+                        && !(currentUser.role === 'Manager' && highLevelDecision);
+                    const receipts = emp.evidence?.receipts || [];
+                    const receiptRows = receipts.map(receipt => `
+                        <div class="small text-muted border-top pt-1 mt-1">
+                            <span class="fw-bold">${escapeHtml(receipt.time)}</span>
+                            — ${Number(receipt.amount).toFixed(2)} ريال
+                            — ${escapeHtml(receipt.kind)}
+                            <br><span dir="ltr">${escapeHtml(receipt.transaction_id)}</span>
+                        </div>
+                    `).join('');
+                    const reviewButtons = canReview ? `
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-success btn-sm fw-bold" onclick="submitEmployeeReview('${store.store_id}', '${escapeHtml(emp.sales_group)}', 'APPROVE')"><i class="fa-solid fa-check me-1"></i> قبول</button>
+                            <button class="btn btn-danger btn-sm fw-bold" onclick="submitEmployeeReview('${store.store_id}', '${escapeHtml(emp.sales_group)}', 'REJECT')"><i class="fa-solid fa-xmark me-1"></i> رفض</button>
+                        </div>
+                    ` : '';
                     const li = document.createElement('li');
-                    li.className = 'list-group-item d-flex justify-content-between align-items-center fw-bold';
+                    li.className = 'list-group-item';
                     li.innerHTML = `
-                        <span><i class="fa-solid fa-user me-2 text-muted"></i>${emp.employee_name} (${emp.employee_id})</span>
-                        ${store.achieved && isPresent ? `<span class="badge bg-success py-2 px-3">نصيب الموظف: ${emp.share} ريال</span>` : ''}
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="fw-bold"><i class="fa-solid fa-user me-2 text-muted"></i>${escapeHtml(emp.employee_name)} (${escapeHtml(emp.employee_id)})</div>
+                                <div class="small text-muted mt-1">${escapeHtml(reason)}</div>
+                                <div class="small mt-1">مستقلة: ${emp.independent_receipts} | مرتجعات: ${emp.return_receipts} | تبديل: ${emp.exchange_receipts}</div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge ${statusMeta[1]} py-2 px-3">${statusMeta[0]}</span>
+                                ${emp.share > 0 ? `<div class="text-success fw-bold mt-2">${Number(emp.share).toFixed(2)} ريال</div>` : ''}
+                            </div>
+                        </div>
+                        ${emp.reviewed_by ? `<div class="small text-muted mt-2">آخر قرار: ${escapeHtml(emp.reviewed_by)} (${escapeHtml(emp.reviewed_role)})</div>` : ''}
+                        ${reviewButtons}
+                        <details class="mt-2"><summary class="small fw-bold text-primary" style="cursor:pointer;">تفاصيل الفواتير (${receipts.length})</summary>${receiptRows}</details>
                     `;
                     list.appendChild(li);
                 });
             }
 
-            const modal = new bootstrap.Modal(document.getElementById('employeesListModal'));
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('employeesListModal'));
             modal.show();
+        }
+
+        async function submitEmployeeReview(storeId, salesGroup, decision) {
+            const date = document.getElementById('dailyDate').value;
+            try {
+                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader
+                    },
+                    body: JSON.stringify({
+                        attendance_date: date,
+                        store_number: storeId,
+                        sales_group: salesGroup,
+                        decision
+                    })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
+                await loadDailyPerformance();
+                showStoreEmployees(storeId);
+            } catch (error) {
+                alert(error.message);
+            }
         }
 
         // Open Edit Modal
         function openEditTargetModal(storeName) {
+            if (currentUser.role !== 'Admin') return;
             activeEditStore = dailyPerformanceCache.find(s => s.store_name === storeName);
             if (!activeEditStore) return;
 
@@ -808,9 +915,13 @@
             document.getElementById('modalTargetValue').value = activeEditStore.target_value;
             document.getElementById('modalPrizeAmount').value = activeEditStore.prize_amount.toString();
             
-            // Set modal period input text
             const selectedDate = document.getElementById('dailyDate').value;
-            document.getElementById('modalPeriodType').options[0].textContent = `اليوم المحدد فقط (${selectedDate})`;
+            const now = new Date();
+            const tomorrowValue = formatDateInput(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+            const effectiveDate = selectedDate > tomorrowValue ? selectedDate : tomorrowValue;
+            document.getElementById('modalEffectiveDate').min = tomorrowValue;
+            document.getElementById('modalEffectiveDate').value = effectiveDate;
+            updatePeriodLabelText(effectiveDate);
 
             const modal = new bootstrap.Modal(document.getElementById('editTargetModal'));
             modal.show();
@@ -823,25 +934,27 @@
             const targetVal = parseFloat(document.getElementById('modalTargetValue').value);
             const prizeAmt = parseFloat(document.getElementById('modalPrizeAmount').value);
             const periodType = document.getElementById('modalPeriodType').value;
-            const selectedDate = document.getElementById('dailyDate').value;
+            const effectiveDate = document.getElementById('modalEffectiveDate').value;
 
             if (isNaN(targetVal) || targetVal < 0) {
                 alert("يرجى إدخال قيمة مستهدفة صحيحة أكبر من أو تساوي الصفر.");
                 return;
             }
 
-            let startDate = selectedDate;
-            let endDate = selectedDate;
+            if (!effectiveDate || effectiveDate < document.getElementById('modalEffectiveDate').min) {
+                alert("تاريخ سريان التارجت يجب أن يكون غداً أو أي تاريخ مستقبلي.");
+                return;
+            }
+
+            let startDate = effectiveDate;
+            let endDate = effectiveDate;
 
             if (periodType === 'onwards') {
-                // Set start date as today/selected date, and set end date far into future (e.g. 2030)
                 endDate = "2029-12-31";
             } else if (periodType === 'month') {
-                // Find first and last days of the month of the selected date
-                const parts = selectedDate.split('-');
+                const parts = effectiveDate.split('-');
                 const y = parseInt(parts[0]);
                 const m = parseInt(parts[1]);
-                startDate = `${y}-${String(m).padStart(2, '0')}-01`;
                 const lastDay = new Date(y, m, 0).getDate();
                 endDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
             }
@@ -919,8 +1032,8 @@
                         <td class="text-end">${store.total_sales.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                         <td class="text-end">${store.total_transactions}</td>
                         <td class="text-end fw-bold">${store.monthly_average_bill.toFixed(2)}</td>
-                        <td class="text-center fw-bold text-success">${store.days_achieved} / ${store.days_in_month} يوم</td>
-                        <td class="text-end fw-bold text-orange" style="color:var(--primary); font-size:1.1rem;">${store.total_prize.toLocaleString('en-US')} ريال</td>
+                        <td class="text-center fw-bold text-success">${store.days_ready} جاهز / ${store.days_pending} معلّق / ${store.days_in_month} يوم</td>
+                        <td class="text-end fw-bold text-orange" style="color:var(--primary); font-size:1.1rem;">${store.total_prize.toLocaleString('en-US')} ريال${store.pending_prize > 0 ? `<div class="small text-warning">${store.pending_prize.toLocaleString('en-US')} معلّقة</div>` : ''}</td>
                         <td class="text-center">
                             <button onclick="viewMonthlyDetails('${store.store_name}')" class="btn btn-sm btn-outline-secondary fw-bold" style="border-radius:6px;" ${store.days_achieved === 0 ? 'disabled' : ''}>
                                 <i class="fa-solid fa-circle-info me-1"></i> تفاصيل الحضور اليومي
@@ -947,6 +1060,7 @@
             tbody.innerHTML = '';
 
             store.achieved_days.sort((a,b) => b.date.localeCompare(a.date)).forEach(day => {
+                const statusMeta = awardStatusMeta[day.award_status] || [day.award_status, 'bg-secondary'];
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="fw-bold">${day.date}</td>
@@ -954,8 +1068,8 @@
                     <td class="text-end text-muted">${day.target_value.toFixed(2)}</td>
                     <td class="text-end fw-bold">${day.prize_amount} ريال</td>
                     <td class="text-end fw-bold text-primary">${day.employees_count} موظف</td>
-                    <td style="font-size:0.88rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${day.employees}">
-                        ${day.employees}
+                    <td style="font-size:0.88rem; max-width: 250px;" title="${day.employees}">
+                        <span class="badge ${statusMeta[1]} mb-1">${statusMeta[0]}</span><br>${day.employees}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -981,8 +1095,11 @@
                 "إجمالي الفواتير": store.total_transactions,
                 "متوسط الفاتورة للشهر": store.monthly_average_bill,
                 "أيام تحقيق الهدف": store.days_achieved,
+                "أيام جاهزة للصرف": store.days_ready,
+                "أيام معلقة": store.days_pending,
                 "إجمالي الأيام المشمولة": store.days_in_month,
-                "إجمالي الجوائز التراكمية (ريال)": store.total_prize
+                "إجمالي الجوائز الجاهزة (ريال)": store.total_prize,
+                "إجمالي الجوائز المعلقة (ريال)": store.pending_prize
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
