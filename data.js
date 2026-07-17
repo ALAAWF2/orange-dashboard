@@ -576,18 +576,18 @@ const EMPLOYEES = [
         "name": "ادريس شافي بانقاسيري",
         "startDate": "2020-02-22",
         "manager": "المنطقة الغربية",
-        "showroom": "1006-13-Al-Yasmin Mall",
+        "showroom": "1008-48 - Jeddah Park",
         "showroomDetails": [
             {
-                "name": "1006-13-Al-Yasmin Mall",
+                "name": "1008-48 - Jeddah Park",
                 "manager": "المنطقة الغربية",
                 "codes": [
-                    "1006-C",
-                    "1006-E"
+                    "1008-C",
+                    "1008-E"
                 ]
             }
         ],
-        "addressBooks": "1006-C;1006-E"
+        "addressBooks": "1008-C;1008-E"
     },
     {
         "employeeId": "1088-زين ال عبيد ايشه",
