@@ -588,7 +588,7 @@
                             <div id="statusText" class="small text-white-50">جاري التحقق...</div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between small mb-2"><span>حسابات العملاء</span><strong id="statusCustomers">—</strong></div>
+                    <div class="d-flex justify-content-between small mb-2"><span>هويات العملاء الموحدة</span><strong id="statusCustomers">—</strong></div>
                     <div class="d-flex justify-content-between small"><span>آخر تحديث للإحصائيات</span><strong id="statusUpdated">—</strong></div>
                 </aside>
             </div>
@@ -694,6 +694,7 @@
                     <option value="all">الكل</option>
                 </select>
                 <button id="loadDuplicatesButton" class="action-button" type="button">تحديث القائمة</button>
+                <span id="identityLinkSummary" class="duplicate-pill"></span>
                 <span id="duplicateCount" class="section-kicker me-auto"></span>
             </div>
             <div id="duplicateList" class="duplicate-list"><div class="crm-panel loading-state">جاري تحميل حالات التكرار...</div></div>
@@ -959,7 +960,7 @@
             const summary = data.summary;
             const detail = document.getElementById('customerDetail');
             const duplicateBlock = data.other_accounts.length ? `
-                <div class="warning-card"><strong><i class="fa-solid fa-triangle-exclamation ms-2"></i>هذا الجوال مستخدم في ${customer.phone_account_count} حسابات</strong><div class="small mt-1">الحسابات معروضة منفصلة للمراجعة، ولم يتم دمجها تلقائياً.</div><div>${data.other_accounts.map(row => `<button class="other-account-button" data-other-key="${customerKey(row)}">${escapeHtml(row.customer_name || row.customer_account)} · ${escapeHtml(row.customer_account)}</button>`).join('')}</div></div>
+                <div class="warning-card"><strong><i class="fa-solid fa-link ms-2"></i>تم توحيد ${customer.phone_account_count} حسابات تحت عميل واحد داخل CRM</strong><div class="small mt-1">الفواتير والمشتريات مجمعة في هذا الملف، والجوال معروض بالصيغة المحلية التي تبدأ بـ0. لم يتم حذف الحسابات الأصلية من Dynamics.</div><div>${data.other_accounts.map(row => `<button class="other-account-button" data-other-key="${customerKey(row)}">${escapeHtml(row.customer_name || row.customer_account)} · ${escapeHtml(row.customer_account)}</button>`).join('')}</div></div>
             ` : '';
             const storesRows = data.stores.length ? data.stores.map(row => `
                 <tr><td><strong>${escapeHtml(row.outlet_name)}</strong><div class="text-muted small">${escapeHtml(row.store_number)}</div></td><td>${numberFormatter.format(row.invoice_count)}</td><td class="${row.net_sales < 0 ? 'amount-negative' : 'amount-positive'}">${currencyFormatter.format(row.net_sales)}</td><td>${formatDate(row.last_visit)}</td></tr>
@@ -1057,6 +1058,7 @@
                 </button>
             `).join('');
             document.getElementById('segmentGeneratedAt').textContent = `آخر تحديث ${formatDate(data.generated_at)}`;
+            document.getElementById('identityLinkSummary').innerHTML = `<i class="fa-solid fa-link"></i> ${numberFormatter.format(data.linked_account_count || 0)} حساب مكرر تم توحيده`;
             document.querySelectorAll('.segment-card').forEach(card => card.addEventListener('click', () => {
                 document.getElementById('segmentFilter').value = card.dataset.segment;
                 document.querySelectorAll('.segment-card').forEach(item => item.classList.toggle('active', item === card));
@@ -1081,7 +1083,7 @@
                 document.getElementById('segmentResultCount').textContent = `${numberFormatter.format(data.total_count)} عميل`;
                 const rows = data.customers.length ? data.customers.map(row => `
                     <tr>
-                        <td><strong>${escapeHtml(row.customer_name || 'عميل بدون اسم')}</strong><div class="customer-meta">${escapeHtml(row.primary_phone || 'بدون جوال')} · ${escapeHtml(row.customer_account)}</div></td>
+                        <td><strong>${escapeHtml(row.customer_name || 'عميل بدون اسم')}</strong>${row.linked_account_count > 1 ? `<span class="duplicate-pill me-2"><i class="fa-solid fa-link"></i>${numberFormatter.format(row.linked_account_count)} حسابات</span>` : ''}<div class="customer-meta">${escapeHtml(row.primary_phone || 'بدون جوال')} · ${escapeHtml(row.customer_account)}</div></td>
                         <td><span class="segment-badge ${segmentClass(row.segment)}">${escapeHtml(segmentLabels[row.segment] || row.segment)}</span></td>
                         <td>${escapeHtml(row.acquisition_outlet_name || '—')}</td>
                         <td>${formatDate(row.last_visit)}<div class="customer-meta">منذ ${numberFormatter.format(row.days_since_last_purchase)} يوم</div></td>
@@ -1125,7 +1127,7 @@
                 document.getElementById('crossStoreCount').textContent = `${numberFormatter.format(data.total_count)} عميل`;
                 const rows = data.customers.length ? data.customers.map(row => `
                     <tr>
-                        <td><strong>${escapeHtml(row.customer_name || 'عميل بدون اسم')}</strong><div class="customer-meta">${escapeHtml(row.primary_phone || 'بدون جوال')} · ${escapeHtml(row.customer_account)}</div><div class="journey-list">${row.stores.map(store => `<span class="journey-stop">${escapeHtml(store.outlet_name)} · ${numberFormatter.format(store.invoice_count)}</span>`).join('')}</div></td>
+                        <td><strong>${escapeHtml(row.customer_name || 'عميل بدون اسم')}</strong>${row.linked_account_count > 1 ? `<span class="duplicate-pill me-2"><i class="fa-solid fa-link"></i>${numberFormatter.format(row.linked_account_count)} حسابات</span>` : ''}<div class="customer-meta">${escapeHtml(row.primary_phone || 'بدون جوال')} · ${escapeHtml(row.customer_account)}</div><div class="journey-list">${row.stores.map(store => `<span class="journey-stop">${escapeHtml(store.outlet_name)} · ${numberFormatter.format(store.invoice_count)}</span>`).join('')}</div></td>
                         <td>${numberFormatter.format(row.store_count)}</td>
                         <td>${numberFormatter.format(row.invoice_count)}</td>
                         <td>${formatDate(row.last_visit)}</td>
@@ -1254,8 +1256,9 @@
                     await loadStoreAnalytics();
                 } else if (tabName === 'cross-store' && !document.querySelector('#crossStoreTable table')) {
                     await loadCrossStore(1);
-                } else if (tabName === 'duplicates' && !document.querySelector('.duplicate-case')) {
-                    await loadDuplicates(1);
+                } else if (tabName === 'duplicates') {
+                    await loadPhase2Overview();
+                    if (!document.querySelector('.duplicate-case')) await loadDuplicates(1);
                 } else if (tabName === 'audit') {
                     await loadExportAudit();
                 }
