@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM العملاء | Orange Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/orange-ui.css">
+    <style>
+        :root {
+            --crm-orange: #fe7900;
+            --crm-orange-deep: #d95f00;
+            --crm-ink: #171717;
+            --crm-paper: #f4f1ec;
+            --crm-cream: #fffaf4;
+            --crm-muted: #746d65;
+            --crm-line: #e4ddd4;
+            --crm-success: #13795b;
+            --crm-danger: #b42318;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--crm-paper);
+            color: var(--crm-ink);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #fff !important;
+            border-bottom: 2px solid #ffe1c5;
+            box-shadow: 0 2px 14px rgba(42, 30, 18, 0.06);
+        }
+
+        .brand-orange { color: var(--crm-orange); }
+
+        .crm-shell {
+            max-width: 1680px;
+            margin: 0 auto;
+            padding: 0 1.25rem 3rem;
+        }
+
+        .crm-hero {
+            position: relative;
+            overflow: hidden;
+            background: var(--crm-ink);
+            color: #fff;
+            border-radius: 28px;
+            padding: clamp(1.5rem, 4vw, 3.5rem);
+            margin-bottom: 1.25rem;
+            box-shadow: 0 24px 60px rgba(38, 27, 17, 0.18);
+        }
+
+        .crm-hero::after {
+            content: "CRM";
+            position: absolute;
+            inset-inline-end: -1rem;
+            top: -3.8rem;
+            font-size: clamp(8rem, 20vw, 19rem);
+            line-height: 1;
+            font-weight: 900;
+            color: rgba(254, 121, 0, 0.12);
+            letter-spacing: -0.08em;
+            pointer-events: none;
+        }
+
+        .hero-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+            gap: 2rem;
+            align-items: end;
+        }
+
+        .eyebrow {
+            color: #ffae66;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 0.65rem;
+        }
+
+        .crm-title {
+            font-size: clamp(2rem, 5vw, 4.5rem);
+            line-height: 1.08;
+            font-weight: 900;
+            letter-spacing: -0.045em;
+            margin-bottom: 0.75rem;
+        }
+
+        .crm-title span { color: var(--crm-orange); }
+
+        .crm-subtitle {
+            color: #d4d0cb;
+            font-size: 1rem;
+            max-width: 720px;
+            margin-bottom: 1.5rem;
+        }
+
+        .crm-search-wrap {
+            display: flex;
+            background: #fff;
+            border: 4px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px;
+            padding: 0.4rem;
+            box-shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
+        }
+
+        .crm-search-wrap:focus-within {
+            outline: 4px solid rgba(254, 121, 0, 0.28);
+        }
+
+        .crm-search-input {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            box-shadow: none !important;
+            font-size: 1rem;
+            padding: 0.85rem 1rem;
+        }
+
+        .crm-search-button {
+            border: 0;
+            border-radius: 12px;
+            background: var(--crm-orange);
+            color: #18110b;
+            font-weight: 900;
+            padding: 0.7rem 1.4rem;
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+
+        .crm-search-button:hover { background: #ff9130; transform: translateY(-1px); }
+
+        .status-panel {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 1.15rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+            border-radius: 50%;
+            background: #ffca6b;
+            box-shadow: 0 0 0 7px rgba(255, 202, 107, 0.12);
+        }
+
+        .status-dot.ready { background: #42d3a2; box-shadow: 0 0 0 7px rgba(66, 211, 162, 0.12); }
+
+        .toolbar {
+            background: #fff;
+            border: 1px solid var(--crm-line);
+            border-radius: 18px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+
+        .toolbar-label { font-weight: 800; color: var(--crm-muted); }
+
+        .toolbar .form-select, .toolbar .form-control {
+            width: auto;
+            min-width: 150px;
+            border-color: var(--crm-line);
+            font-weight: 700;
+        }
+
+        .period-apply {
+            border: 0;
+            border-radius: 10px;
+            background: var(--crm-ink);
+            color: #fff;
+            font-weight: 800;
+            padding: 0.55rem 1.15rem;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 1.75rem 0 0.85rem;
+        }
+
+        .section-heading h2 {
+            font-size: 1.2rem;
+            font-weight: 900;
+            margin: 0;
+        }
+
+        .section-kicker { color: var(--crm-muted); font-size: 0.8rem; }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.8rem;
+        }
+
+        .crm-kpi {
+            position: relative;
+            background: #fff;
+            border: 1px solid var(--crm-line);
+            border-radius: 18px;
+            padding: 1.15rem;
+            min-height: 138px;
+            overflow: hidden;
+        }
+
+        .crm-kpi:first-child {
+            background: var(--crm-orange);
+            border-color: var(--crm-orange);
+            grid-column: span 2;
+        }
+
+        .crm-kpi::after {
+            content: "";
+            position: absolute;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            inset-inline-end: -30px;
+            bottom: -30px;
+            background: rgba(254, 121, 0, 0.08);
+        }
+
+        .crm-kpi:first-child::after { background: rgba(255, 255, 255, 0.18); }
+
+        .kpi-label { color: var(--crm-muted); font-size: 0.78rem; font-weight: 800; }
+        .crm-kpi:first-child .kpi-label { color: #35200e; }
+
+        .kpi-value {
+            font-size: clamp(1.45rem, 2.4vw, 2.4rem);
+            line-height: 1.1;
+            font-weight: 900;
+            margin-top: 0.7rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .kpi-note { color: var(--crm-muted); font-size: 0.72rem; margin-top: 0.45rem; }
+        .crm-kpi:first-child .kpi-note { color: #5c3515; }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.55fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .crm-panel {
+            background: #fff;
+            border: 1px solid var(--crm-line);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .panel-head {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid var(--crm-line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .panel-head h3 { font-size: 1rem; font-weight: 900; margin: 0; }
+
+        .top-customer-row {
+            display: grid;
+            grid-template-columns: 44px minmax(0, 1.4fr) minmax(110px, 0.6fr) 86px;
+            gap: 0.8rem;
+            align-items: center;
+            padding: 0.85rem 1.1rem;
+            border-bottom: 1px solid #f0ebe5;
+            cursor: pointer;
+            transition: background 0.18s ease;
+        }
+
+        .top-customer-row:hover { background: var(--crm-cream); }
+        .top-customer-row:last-child { border-bottom: 0; }
+
+        .rank-badge {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: var(--crm-ink);
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .top-customer-row:nth-child(1) .rank-badge { background: var(--crm-orange); color: #231408; }
+        .customer-name { font-weight: 900; overflow-wrap: anywhere; }
+        .customer-meta { color: var(--crm-muted); font-size: 0.72rem; margin-top: 0.18rem; }
+        .customer-value { font-weight: 900; font-variant-numeric: tabular-nums; }
+
+        .segment-list { padding: 1rem; display: grid; gap: 0.8rem; }
+        .segment-row { display: grid; gap: 0.4rem; }
+        .segment-line { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.8rem; font-weight: 800; }
+        .segment-track { height: 9px; border-radius: 20px; background: #eee7df; overflow: hidden; }
+        .segment-fill { height: 100%; border-radius: inherit; background: var(--crm-orange); }
+        .segment-row:nth-child(2) .segment-fill { background: var(--crm-ink); }
+        .segment-row:nth-child(3) .segment-fill { background: #9d9185; }
+
+        .search-results {
+            margin-top: 1rem;
+            background: #fff;
+            border: 1px solid var(--crm-line);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .search-result-row {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid #f0ebe5;
+            background: #fff;
+            text-align: right;
+            padding: 1rem 1.2rem;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 1rem;
+            transition: background 0.18s ease;
+        }
+
+        .search-result-row:hover, .search-result-row:focus { background: var(--crm-cream); }
+        .search-result-row:last-child { border-bottom: 0; }
+
+        .duplicate-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: #8a4b08;
+            background: #fff0d8;
+            border: 1px solid #ffd59a;
+            border-radius: 999px;
+            padding: 0.24rem 0.55rem;
+            font-size: 0.68rem;
+            font-weight: 800;
+        }
+
+        .customer-detail {
+            margin-top: 1.25rem;
+            display: grid;
+            gap: 1rem;
+        }
+
+        .identity-card {
+            background: var(--crm-ink);
+            color: #fff;
+            border-radius: 22px;
+            padding: 1.4rem;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .identity-name { font-size: clamp(1.35rem, 3vw, 2.35rem); font-weight: 900; margin-bottom: 0.45rem; }
+        .identity-meta { color: #cfc9c2; display: flex; gap: 0.7rem 1.2rem; flex-wrap: wrap; font-size: 0.82rem; }
+        .identity-account { background: var(--crm-orange); color: #241407; border-radius: 12px; padding: 0.6rem 0.8rem; font-weight: 900; direction: ltr; }
+
+        .detail-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .detail-kpi { background: #fff; border: 1px solid var(--crm-line); border-radius: 16px; padding: 1rem; }
+        .detail-kpi strong { display: block; font-size: 1.25rem; margin-top: 0.35rem; font-variant-numeric: tabular-nums; }
+
+        .warning-card {
+            background: #fff4df;
+            border: 1px solid #ffd79e;
+            color: #7b4308;
+            border-radius: 16px;
+            padding: 1rem;
+        }
+
+        .other-account-button {
+            border: 1px solid #edc17f;
+            background: #fff;
+            border-radius: 10px;
+            padding: 0.45rem 0.65rem;
+            margin: 0.35rem 0 0 0.35rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        .table-wrap { overflow-x: auto; }
+        .crm-table { margin: 0; min-width: 720px; }
+        .crm-table th { background: var(--crm-cream); color: var(--crm-muted); font-size: 0.72rem; font-weight: 900; border-bottom: 1px solid var(--crm-line); white-space: nowrap; }
+        .crm-table td { vertical-align: middle; font-size: 0.8rem; border-color: #f0ebe5; }
+        .amount-positive { color: var(--crm-success); font-weight: 900; }
+        .amount-negative { color: var(--crm-danger); font-weight: 900; }
+
+        .empty-state { padding: 2.5rem 1rem; text-align: center; color: var(--crm-muted); }
+        .empty-state i { display: block; font-size: 2rem; color: #c6bbb0; margin-bottom: 0.7rem; }
+        .loading-state { padding: 2rem; text-align: center; color: var(--crm-muted); }
+
+        .pagination-bar { display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.85rem; border-top: 1px solid var(--crm-line); }
+        .pagination-bar button { border: 1px solid var(--crm-line); background: #fff; border-radius: 9px; padding: 0.4rem 0.75rem; font-weight: 800; }
+        .pagination-bar button:disabled { opacity: 0.4; }
+
+        .fade-enter { animation: fadeEnter 0.28s ease both; }
+        @keyframes fadeEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 1100px) {
+            .hero-grid, .content-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .crm-kpi:first-child { grid-column: span 1; }
+        }
+
+        @media (max-width: 720px) {
+            .crm-shell { padding: 0 0.7rem 2rem; }
+            .crm-hero { border-radius: 20px; padding: 1.25rem; }
+            .crm-search-wrap { flex-direction: column; }
+            .crm-search-button { width: 100%; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .crm-kpi:first-child { grid-column: span 2; }
+            .detail-kpis { grid-template-columns: 1fr 1fr; }
+            .identity-card { grid-template-columns: 1fr; }
+            .top-customer-row { grid-template-columns: 40px minmax(0, 1fr); }
+            .top-customer-row .customer-value, .top-customer-row .invoice-count { grid-column: 2; }
+            .toolbar .form-select, .toolbar .form-control { width: 100%; }
+            .period-apply { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar mb-4 sticky-top"></nav>
+
+    <main class="crm-shell">
+        <section class="crm-hero">
+            <div class="hero-grid">
+                <div>
+                    <div class="eyebrow">Customer Intelligence / 2026</div>
+                    <h1 class="crm-title">اعرف عميلك.<br><span>افهم زيارته.</span></h1>
+                    <p class="crm-subtitle">ابحث بالجوال أو الاسم أو حساب العميل أو رقم الفاتورة، وشاهد رحلة الشراء كاملة من أول زيارة إلى آخر فاتورة.</p>
+                    <form id="searchForm" class="crm-search-wrap" role="search">
+                        <label for="searchInput" class="visually-hidden">البحث عن عميل</label>
+                        <input id="searchInput" class="form-control crm-search-input" autocomplete="off" maxlength="100" placeholder="مثال: 05xxxxxxxx، اسم العميل، Cust-... أو رقم الفاتورة">
+                        <button class="crm-search-button" type="submit"><i class="fa-solid fa-magnifying-glass ms-2"></i>بحث</button>
+                    </form>
+                </div>
+                <aside class="status-panel" aria-live="polite">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span id="statusDot" class="status-dot"></span>
+                        <div>
+                            <div class="fw-black" style="font-weight:900">جاهزية بيانات CRM</div>
+                            <div id="statusText" class="small text-white-50">جاري التحقق...</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-2"><span>حسابات العملاء</span><strong id="statusCustomers">—</strong></div>
+                    <div class="d-flex justify-content-between small"><span>آخر تحديث للإحصائيات</span><strong id="statusUpdated">—</strong></div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="toolbar" aria-label="فترة التقرير">
+            <span class="toolbar-label"><i class="fa-regular fa-calendar ms-1"></i>فترة التحليل</span>
+            <select id="periodType" class="form-select form-select-sm">
+                <option value="year">السنة</option>
+                <option value="month">الشهر</option>
+                <option value="custom">فترة مخصصة</option>
+                <option value="all">كل التاريخ</option>
+            </select>
+            <select id="yearSelect" class="form-select form-select-sm"></select>
+            <select id="monthSelect" class="form-select form-select-sm d-none">
+                <option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option>
+                <option value="4">أبريل</option><option value="5">مايو</option><option value="6">يونيو</option>
+                <option value="7">يوليو</option><option value="8">أغسطس</option><option value="9">سبتمبر</option>
+                <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
+            </select>
+            <input id="customStart" type="date" class="form-control form-control-sm d-none">
+            <input id="customEnd" type="date" class="form-control form-control-sm d-none">
+            <button id="applyPeriod" class="period-apply" type="button">تطبيق</button>
+            <span id="overviewSource" class="section-kicker me-auto"></span>
+        </section>
+
+        <section id="overviewSection">
+            <div class="section-heading">
+                <div><div class="section-kicker">نظرة سريعة</div><h2>قيمة قاعدة العملاء</h2></div>
+                <span id="periodLabel" class="section-kicker">السنة الحالية</span>
+            </div>
+            <div id="kpiGrid" class="kpi-grid">
+                <div class="crm-kpi"><div class="skeleton" style="height:22px;width:45%"></div><div class="skeleton mt-4" style="height:34px"></div></div>
+                <div class="crm-kpi"><div class="skeleton" style="height:22px"></div><div class="skeleton mt-4" style="height:34px"></div></div>
+                <div class="crm-kpi"><div class="skeleton" style="height:22px"></div><div class="skeleton mt-4" style="height:34px"></div></div>
+                <div class="crm-kpi"><div class="skeleton" style="height:22px"></div><div class="skeleton mt-4" style="height:34px"></div></div>
+            </div>
+
+            <div class="content-grid">
+                <section class="crm-panel">
+                    <div class="panel-head"><h3><i class="fa-solid fa-crown ms-2" style="color:var(--crm-orange)"></i>أفضل العملاء</h3><span class="section-kicker">حسب صافي المشتريات</span></div>
+                    <div id="topCustomers"><div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل الترتيب...</div></div>
+                </section>
+                <section class="crm-panel">
+                    <div class="panel-head"><h3>تركيبة العملاء</h3><span class="section-kicker">سلوك التكرار</span></div>
+                    <div id="segments" class="segment-list"><div class="loading-state">جاري التحليل...</div></div>
+                </section>
+            </div>
+        </section>
+
+        <section id="searchResultsSection" class="search-results d-none" aria-live="polite">
+            <div class="panel-head"><h3 id="searchResultsTitle">نتائج البحث</h3><button id="closeSearch" class="btn btn-sm btn-light" type="button">إغلاق</button></div>
+            <div id="searchResults"></div>
+        </section>
+
+        <section id="customerDetail" class="customer-detail d-none" aria-live="polite"></section>
+    </main>
+
+    <script src="assets/nav.js"></script>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+        const crmAllowed = currentUser.name === 'Sales Manager' || currentUser.name === 'علاء';
+        if (!currentUser.name || !currentUser.pin) {
+            window.location.replace('login.html?reason=session');
+        } else if (!crmAllowed) {
+            window.location.replace('index.html');
+        }
+
+        const state = {
+            overview: null,
+            selectedCustomer: null,
+            invoicePage: 1,
+            invoicePages: 1,
+            searchTimer: null,
+            searchController: null
+        };
+
+        const numberFormatter = new Intl.NumberFormat('ar-SA');
+        const currencyFormatter = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 });
+        const dateFormatter = new Intl.DateTimeFormat('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            })[character]);
+        }
+
+        function authHeader() {
+            return 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+        }
+
+        async function apiFetch(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Authorization': authHeader(),
+                    'ngrok-skip-browser-warning': 'true',
+                    ...(options.headers || {})
+                }
+            });
+            if (response.status === 401) {
+                localStorage.removeItem('currentUser');
+                window.location.replace('login.html?reason=session');
+                throw new Error('Session expired');
+            }
+            if (response.status === 403) {
+                window.location.replace('index.html');
+                throw new Error('Access denied');
+            }
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Request failed');
+            return data;
+        }
+
+        function formatDate(value) {
+            if (!value) return '—';
+            const date = new Date(value + (String(value).length === 10 ? 'T12:00:00' : ''));
+            return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+        }
+
+        function periodParams() {
+            const type = document.getElementById('periodType').value;
+            const params = new URLSearchParams({ period: type });
+            if (type === 'year') params.set('year', document.getElementById('yearSelect').value);
+            if (type === 'month') {
+                params.set('year', document.getElementById('yearSelect').value);
+                params.set('month', document.getElementById('monthSelect').value);
+            }
+            if (type === 'custom') {
+                params.set('start', document.getElementById('customStart').value);
+                params.set('end', document.getElementById('customEnd').value);
+            }
+            return params;
+        }
+
+        function updatePeriodControls() {
+            const type = document.getElementById('periodType').value;
+            document.getElementById('yearSelect').classList.toggle('d-none', !['year', 'month'].includes(type));
+            document.getElementById('monthSelect').classList.toggle('d-none', type !== 'month');
+            document.getElementById('customStart').classList.toggle('d-none', type !== 'custom');
+            document.getElementById('customEnd').classList.toggle('d-none', type !== 'custom');
+        }
+
+        function renderKpis(summary) {
+            const repeatRate = summary.customer_count ? summary.repeat_customer_count / summary.customer_count * 100 : 0;
+            document.getElementById('kpiGrid').innerHTML = `
+                <article class="crm-kpi"><div class="kpi-label">صافي مبيعات العملاء</div><div class="kpi-value">${currencyFormatter.format(summary.net_sales)}</div><div class="kpi-note">بعد احتساب المرتجعات</div></article>
+                <article class="crm-kpi"><div class="kpi-label">العملاء المشترون</div><div class="kpi-value">${numberFormatter.format(summary.customer_count)}</div><div class="kpi-note">حساب عميل ضمن الفترة</div></article>
+                <article class="crm-kpi"><div class="kpi-label">العملاء المتكررون</div><div class="kpi-value">${numberFormatter.format(summary.repeat_customer_count)}</div><div class="kpi-note">${repeatRate.toFixed(1)}% من العملاء</div></article>
+                <article class="crm-kpi"><div class="kpi-label">عدد الفواتير</div><div class="kpi-value">${numberFormatter.format(summary.invoice_count)}</div><div class="kpi-note">فواتير مرتبطة بعميل</div></article>
+                <article class="crm-kpi"><div class="kpi-label">متوسط قيمة العميل</div><div class="kpi-value">${currencyFormatter.format(summary.average_customer_value)}</div><div class="kpi-note">متوسط صافي الشراء</div></article>
+            `;
+        }
+
+        function customerKey(row) {
+            return `${encodeURIComponent(row.data_area_id)}|${encodeURIComponent(row.customer_account)}`;
+        }
+
+        function renderTopCustomers(summary) {
+            const container = document.getElementById('topCustomers');
+            if (!summary.top_customers.length) {
+                container.innerHTML = '<div class="empty-state"><i class="fa-regular fa-user"></i>لا يوجد عملاء ضمن هذه الفترة.</div>';
+                return;
+            }
+            container.innerHTML = summary.top_customers.map((row, index) => `
+                <div class="top-customer-row" tabindex="0" role="button" data-customer-key="${customerKey(row)}">
+                    <span class="rank-badge">${index + 1}</span>
+                    <div><div class="customer-name">${escapeHtml(row.customer_name || 'عميل بدون اسم')}</div><div class="customer-meta">${escapeHtml(row.customer_account)} · ${escapeHtml(row.primary_phone || 'بدون جوال')}</div></div>
+                    <div class="customer-value">${currencyFormatter.format(row.net_sales)}</div>
+                    <div class="invoice-count text-muted small">${numberFormatter.format(row.invoice_count)} فاتورة</div>
+                </div>
+            `).join('');
+            container.querySelectorAll('[data-customer-key]').forEach(element => {
+                const open = () => {
+                    const [area, account] = element.dataset.customerKey.split('|').map(decodeURIComponent);
+                    openCustomer(area, account);
+                };
+                element.addEventListener('click', open);
+                element.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') open(); });
+            });
+        }
+
+        function renderSegments(summary) {
+            const total = summary.customer_count || 1;
+            const segments = [
+                ['عملاء متكررون', summary.repeat_customer_count, summary.repeat_customer_count / total * 100],
+                ['اشتروا مرة واحدة', summary.one_time_customer_count, summary.one_time_customer_count / total * 100],
+                ['غير نشطين منذ 90 يوماً', summary.inactive_customer_count, summary.inactive_customer_count / total * 100]
+            ];
+            document.getElementById('segments').innerHTML = segments.map(([label, count, percent]) => `
+                <div class="segment-row"><div class="segment-line"><span>${label}</span><span>${numberFormatter.format(count)} · ${percent.toFixed(1)}%</span></div><div class="segment-track"><div class="segment-fill" style="width:${Math.min(100, percent)}%"></div></div></div>
+            `).join('');
+        }
+
+        async function loadStatus() {
+            try {
+                const data = await apiFetch('/api/crm/status');
+                document.getElementById('statusDot').classList.toggle('ready', data.ready);
+                document.getElementById('statusText').textContent = data.ready ? 'البيانات مكتملة وجاهزة' : `متبقّي ${numberFormatter.format(data.missing_account_count)} حساب`;
+                document.getElementById('statusCustomers').textContent = numberFormatter.format(data.customer_count);
+                document.getElementById('statusUpdated').textContent = data.stats_generated_at ? formatDate(data.stats_generated_at) : 'بانتظار أول توليد';
+            } catch (error) {
+                document.getElementById('statusText').textContent = 'تعذر التحقق من الجاهزية';
+            }
+        }
+
+        async function loadOverview() {
+            const params = periodParams();
+            if (params.get('period') === 'custom' && (!params.get('start') || !params.get('end'))) {
+                alert('حدد تاريخ البداية والنهاية.');
+                return;
+            }
+            document.getElementById('topCustomers').innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل الترتيب...</div>';
+            try {
+                const data = await apiFetch('/api/crm/overview?' + params.toString());
+                state.overview = data;
+                renderKpis(data.summary);
+                renderTopCustomers(data.summary);
+                renderSegments(data.summary);
+                document.getElementById('periodLabel').textContent = data.period_key === 'all' ? 'كل التاريخ' : data.period_key;
+                document.getElementById('overviewSource').textContent = data.source === 'private_json' ? 'إحصائيات يومية جاهزة' : 'حساب مباشر من قاعدة البيانات';
+            } catch (error) {
+                document.getElementById('topCustomers').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        function renderSearchResults(data) {
+            const section = document.getElementById('searchResultsSection');
+            const container = document.getElementById('searchResults');
+            section.classList.remove('d-none');
+            section.classList.add('fade-enter');
+            document.getElementById('searchResultsTitle').textContent = `نتائج البحث (${numberFormatter.format(data.count)})`;
+            if (!data.results.length) {
+                container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i>لم نجد عميلاً مطابقاً. جرّب رقم الجوال الكامل أو Customer Account.</div>';
+                return;
+            }
+            container.innerHTML = data.results.map(row => `
+                <button type="button" class="search-result-row" data-customer-key="${customerKey(row)}">
+                    <span><strong class="customer-name">${escapeHtml(row.customer_name || 'عميل بدون اسم')}</strong><span class="customer-meta d-block">${escapeHtml(row.primary_phone || 'بدون جوال')} · ${escapeHtml(row.customer_account)} · ${escapeHtml(row.party_number || '')}</span></span>
+                    <span>${row.phone_account_count > 1 ? `<span class="duplicate-pill"><i class="fa-solid fa-triangle-exclamation"></i>${row.phone_account_count} حسابات على نفس الجوال</span>` : '<i class="fa-solid fa-chevron-left text-muted"></i>'}</span>
+                </button>
+            `).join('');
+            container.querySelectorAll('[data-customer-key]').forEach(element => {
+                element.addEventListener('click', () => {
+                    const [area, account] = element.dataset.customerKey.split('|').map(decodeURIComponent);
+                    openCustomer(area, account);
+                });
+            });
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function performSearch(query) {
+            const value = String(query || '').trim();
+            if (value.length < 2) return;
+            if (state.searchController) state.searchController.abort();
+            state.searchController = new AbortController();
+            const container = document.getElementById('searchResults');
+            document.getElementById('searchResultsSection').classList.remove('d-none');
+            container.innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري البحث...</div>';
+            try {
+                const data = await apiFetch('/api/crm/search?q=' + encodeURIComponent(value), { signal: state.searchController.signal });
+                renderSearchResults(data);
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        function detailQuery(area, account, page = null) {
+            const params = periodParams();
+            params.set('data_area_id', area);
+            params.set('customer_account', account);
+            if (page !== null) {
+                params.set('page', page);
+                params.set('page_size', 25);
+            }
+            return params.toString();
+        }
+
+        function renderCustomerDetails(data) {
+            const customer = data.customer;
+            const summary = data.summary;
+            const detail = document.getElementById('customerDetail');
+            const duplicateBlock = data.other_accounts.length ? `
+                <div class="warning-card"><strong><i class="fa-solid fa-triangle-exclamation ms-2"></i>هذا الجوال مستخدم في ${customer.phone_account_count} حسابات</strong><div class="small mt-1">الحسابات معروضة منفصلة للمراجعة، ولم يتم دمجها تلقائياً.</div><div>${data.other_accounts.map(row => `<button class="other-account-button" data-other-key="${customerKey(row)}">${escapeHtml(row.customer_name || row.customer_account)} · ${escapeHtml(row.customer_account)}</button>`).join('')}</div></div>
+            ` : '';
+            const storesRows = data.stores.length ? data.stores.map(row => `
+                <tr><td><strong>${escapeHtml(row.outlet_name)}</strong><div class="text-muted small">${escapeHtml(row.store_number)}</div></td><td>${numberFormatter.format(row.invoice_count)}</td><td class="${row.net_sales < 0 ? 'amount-negative' : 'amount-positive'}">${currencyFormatter.format(row.net_sales)}</td><td>${formatDate(row.last_visit)}</td></tr>
+            `).join('') : '<tr><td colspan="4" class="empty-state">لا توجد مشتريات ضمن الفترة.</td></tr>';
+            detail.innerHTML = `
+                <div class="identity-card fade-enter"><div><div class="eyebrow">Customer Profile</div><div class="identity-name">${escapeHtml(customer.customer_name || 'عميل بدون اسم')}</div><div class="identity-meta"><span><i class="fa-solid fa-phone ms-1"></i>${escapeHtml(customer.primary_phone || 'بدون جوال')}</span><span>Party: ${escapeHtml(customer.party_number || '—')}</span><span>${escapeHtml(customer.party_type || '')}</span></div></div><div class="identity-account">${escapeHtml(customer.customer_account)}</div></div>
+                ${duplicateBlock}
+                <div class="detail-kpis"><div class="detail-kpi"><span class="section-kicker">صافي المشتريات</span><strong>${currencyFormatter.format(summary.net_sales)}</strong></div><div class="detail-kpi"><span class="section-kicker">عدد الفواتير</span><strong>${numberFormatter.format(summary.invoice_count)}</strong></div><div class="detail-kpi"><span class="section-kicker">متوسط الفاتورة</span><strong>${currencyFormatter.format(summary.average_invoice)}</strong></div><div class="detail-kpi"><span class="section-kicker">آخر زيارة</span><strong>${formatDate(summary.last_visit)}</strong></div></div>
+                <section class="crm-panel"><div class="panel-head"><h3>أين اشترى؟</h3><span class="section-kicker">المعارض مرتبة حسب القيمة</span></div><div class="table-wrap"><table class="table crm-table"><thead><tr><th>المعرض</th><th>الفواتير</th><th>صافي المشتريات</th><th>آخر زيارة</th></tr></thead><tbody>${storesRows}</tbody></table></div></section>
+                <section class="crm-panel"><div class="panel-head"><h3>سجل الفواتير</h3><span id="invoiceCountLabel" class="section-kicker">جاري التحميل...</span></div><div id="invoiceTable" class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل الفواتير...</div><div id="invoicePagination"></div></section>
+            `;
+            detail.classList.remove('d-none');
+            detail.querySelectorAll('[data-other-key]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const [area, account] = button.dataset.otherKey.split('|').map(decodeURIComponent);
+                    openCustomer(area, account);
+                });
+            });
+        }
+
+        async function openCustomer(area, account) {
+            state.selectedCustomer = { area, account };
+            state.invoicePage = 1;
+            const detail = document.getElementById('customerDetail');
+            detail.classList.remove('d-none');
+            detail.innerHTML = '<div class="crm-panel loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري بناء ملف العميل...</div>';
+            detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            try {
+                const data = await apiFetch('/api/crm/customer?' + detailQuery(area, account));
+                renderCustomerDetails(data);
+                await loadInvoices(1);
+            } catch (error) {
+                detail.innerHTML = `<div class="crm-panel empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadInvoices(page) {
+            if (!state.selectedCustomer) return;
+            const { area, account } = state.selectedCustomer;
+            const table = document.getElementById('invoiceTable');
+            if (!table) return;
+            table.innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل الفواتير...</div>';
+            try {
+                const data = await apiFetch('/api/crm/customer/invoices?' + detailQuery(area, account, page));
+                state.invoicePage = data.page;
+                state.invoicePages = data.total_pages;
+                document.getElementById('invoiceCountLabel').textContent = `${numberFormatter.format(data.total_count)} فاتورة`;
+                const rows = data.invoices.length ? data.invoices.map(row => `
+                    <tr><td><strong dir="ltr">${escapeHtml(row.transaction_id)}</strong></td><td>${formatDate(row.bill_date)}</td><td>${escapeHtml(row.outlet_name)}</td><td><span class="badge ${row.transaction_type === 'return' ? 'text-bg-danger' : 'text-bg-success'}">${row.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></td><td class="${row.payment_amount < 0 ? 'amount-negative' : 'amount-positive'}">${currencyFormatter.format(row.payment_amount)}</td></tr>
+                `).join('') : '<tr><td colspan="5" class="empty-state">لا توجد فواتير ضمن الفترة.</td></tr>';
+                table.innerHTML = `<div class="table-wrap"><table class="table crm-table"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>المعرض</th><th>النوع</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+                document.getElementById('invoicePagination').innerHTML = data.total_pages > 1 ? `<div class="pagination-bar"><button id="prevInvoices" ${data.page <= 1 ? 'disabled' : ''}>السابق</button><span class="small fw-bold">${data.page} / ${data.total_pages}</span><button id="nextInvoices" ${data.page >= data.total_pages ? 'disabled' : ''}>التالي</button></div>` : '';
+                document.getElementById('prevInvoices')?.addEventListener('click', () => loadInvoices(data.page - 1));
+                document.getElementById('nextInvoices')?.addEventListener('click', () => loadInvoices(data.page + 1));
+            } catch (error) {
+                table.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        function initializeFilters() {
+            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('yearSelect');
+            for (let year = currentYear; year >= 2025; year -= 1) {
+                yearSelect.insertAdjacentHTML('beforeend', `<option value="${year}">${year}</option>`);
+            }
+            document.getElementById('monthSelect').value = String(new Date().getMonth() + 1);
+            document.getElementById('customStart').value = `${currentYear}-01-01`;
+            document.getElementById('customEnd').value = new Date().toISOString().slice(0, 10);
+        }
+
+        document.getElementById('periodType').addEventListener('change', updatePeriodControls);
+        document.getElementById('applyPeriod').addEventListener('click', async () => {
+            await loadOverview();
+            if (state.selectedCustomer) await openCustomer(state.selectedCustomer.area, state.selectedCustomer.account);
+        });
+        document.getElementById('searchForm').addEventListener('submit', event => {
+            event.preventDefault();
+            clearTimeout(state.searchTimer);
+            performSearch(document.getElementById('searchInput').value);
+        });
+        document.getElementById('searchInput').addEventListener('input', event => {
+            clearTimeout(state.searchTimer);
+            if (event.target.value.trim().length >= 3) {
+                state.searchTimer = setTimeout(() => performSearch(event.target.value), 450);
+            }
+        });
+        document.getElementById('closeSearch').addEventListener('click', () => document.getElementById('searchResultsSection').classList.add('d-none'));
+
+        initializeFilters();
+        updatePeriodControls();
+        Promise.all([loadStatus(), loadOverview()]);
+    </script>
+</body>
+</html>

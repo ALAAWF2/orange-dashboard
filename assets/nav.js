@@ -25,6 +25,7 @@ async function initNavbar() {
     else if (path.includes('yoy_report.html')) pageTitle = "YoY REPORT";
     else if (path.includes('booff_report.html')) pageTitle = "YEARS REPORT";
     else if (path.includes('a3_comparison.html')) pageTitle = "A3 REPORT";
+    else if (path.includes('crm.html')) pageTitle = "CRM";
 
     // 1. Create Stall Warning Bar (prepended to body)
     const warningBar = document.createElement('div');
@@ -53,6 +54,7 @@ async function initNavbar() {
     const role = currentUser ? currentUser.role : 'guest';
     const isAlaa = (name === 'علاء');
     const isManager = (role === 'Manager' || role === 'Admin' || name === 'Sales Manager' || isAlaa);
+    const isCrmUser = (name === 'Sales Manager' || isAlaa);
 
     // 4. Read page-specific local actions if present
     const localActionsEl = navbarEl.querySelector('#nav-local-actions');
@@ -110,6 +112,10 @@ async function initNavbar() {
 
                 <!-- Navigation Dropdowns & Links -->
                 <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">🏠 الرئيسية</a>
+
+                ${isCrmUser ? `
+                <a href="crm.html" class="btn btn-outline-primary btn-sm fw-bold">◎ CRM العملاء</a>
+                ` : ''}
 
                 <!-- Dropdown: Sales & Reports -->
                 <div class="dropdown">
