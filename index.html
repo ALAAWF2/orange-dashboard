@@ -679,6 +679,15 @@
             font-weight: 600;
         }
 
+        /* ========== Fixed-height canvas wrappers (prevent infinite growth) ========== */
+        .chart-canvas-wrap {
+            position: relative;
+            width: 100%;
+        }
+        .wrap-cumulative { height: 300px; }
+        .wrap-weekday { height: 260px; }
+        .wrap-matrix { height: 330px; }
+
         /* ========== Prevent horizontal overflow globally ========== */
         html, body {
             overflow-x: hidden;
@@ -906,6 +915,11 @@
             .kpi-mini-label { font-size: 0.72rem; }
             .kpi-mini-sub { font-size: 0.66rem; }
             .mover-name { max-width: 48%; }
+
+            /* New charts - compact heights on mobile */
+            .wrap-cumulative,
+            .wrap-weekday,
+            .wrap-matrix { height: 230px; }
 
             .dashboard-filter-card {
                 padding: 0 !important;
@@ -2273,15 +2287,19 @@
             <!-- Cumulative Sales Pace -->
             <div class="col-md-8">
                 <h5 class="section-title">المسار التراكمي للمبيعات (Cumulative Pace)</h5>
-                <div class="chart-container">
-                    <canvas id="cumulativeChart"></canvas>
+                <div class="chart-container" style="min-height: 0;">
+                    <div class="chart-canvas-wrap wrap-cumulative">
+                        <canvas id="cumulativeChart"></canvas>
+                    </div>
                 </div>
             </div>
             <!-- Weekday Performance -->
             <div class="col-md-4">
                 <h5 class="section-title">أداء أيام الأسبوع (Weekday Avg)</h5>
-                <div class="chart-container">
-                    <canvas id="weekdayChart"></canvas>
+                <div class="chart-container" style="min-height: 0;">
+                    <div class="chart-canvas-wrap wrap-weekday">
+                        <canvas id="weekdayChart"></canvas>
+                    </div>
                     <div class="weekday-insight" id="weekdayInsight" style="display: none;"></div>
                 </div>
             </div>
@@ -2292,20 +2310,22 @@
             <!-- Efficiency Matrix -->
             <div class="col-md-8" id="efficiencyMatrixCol">
                 <h5 class="section-title">مصفوفة كفاءة الفروع (Efficiency Matrix)</h5>
-                <div class="chart-container" style="min-height: 420px;">
+                <div class="chart-container" style="min-height: 0;">
                     <div class="matrix-legend mb-2">
                         <span>↗ نجوم (تحويل وفاتورة عاليان)</span>
                         <span>↘ فرص تحويل (زوار بلا شراء)</span>
                         <span>↖ فرص سلة (فاتورة ضعيفة)</span>
                         <span>↙ يحتاج تدخل</span>
                     </div>
-                    <canvas id="efficiencyChart"></canvas>
+                    <div class="chart-canvas-wrap wrap-matrix">
+                        <canvas id="efficiencyChart"></canvas>
+                    </div>
                 </div>
             </div>
             <!-- Top Movers -->
             <div class="col-md-4">
                 <h5 class="section-title">أبرز التحركات (Top Movers)</h5>
-                <div class="chart-container" style="min-height: 420px; overflow-y: auto;">
+                <div class="chart-container" style="min-height: 0; max-height: 460px; overflow-y: auto;">
                     <div class="movers-group-title up"><i class="bi bi-graph-up-arrow"></i> الأعلى نمواً (قيمة)</div>
                     <div id="topGainersList"></div>
                     <div class="movers-group-title down mt-3"><i class="bi bi-graph-down-arrow"></i> الأكثر تراجعاً (قيمة)</div>
