@@ -263,6 +263,44 @@
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.2);
         }
+
+        .review-workbench {
+            background: linear-gradient(135deg, #fffaf5 0%, #ffffff 72%);
+            border: 1px solid #ffd7b1;
+            border-right: 6px solid var(--primary);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(74, 45, 16, 0.07);
+            overflow: hidden;
+        }
+
+        .review-workbench-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid #ffe5cc;
+        }
+
+        .review-count-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #212529;
+            color: #fff;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .review-workbench .table { margin-bottom: 0; }
+        .review-workbench .table > :not(caption) > * > * { padding: 12px 14px; }
+
+        @media (max-width: 767px) {
+            .review-workbench-header { align-items: flex-start; }
+            .review-workbench .table { min-width: 820px; }
+        }
     </style>
 </head>
 <body>
@@ -299,6 +337,35 @@
             
             <!-- Tab 1: Daily View -->
             <div class="tab-pane fade show active" id="daily-panel" role="tabpanel" aria-labelledby="daily-tab">
+
+                <section class="review-workbench mb-4" aria-labelledby="reviewQueueTitle">
+                    <div class="review-workbench-header">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h5 class="fw-bold mb-0" id="reviewQueueTitle"><i class="fa-solid fa-list-check text-warning me-1"></i> المراجعات المعلقة</h5>
+                                <span class="review-count-pill"><span id="reviewQueueCaseCount">0</span> حالة · <span id="reviewQueueStoreCount">0</span> معرض/يوم</span>
+                            </div>
+                            <div class="small text-muted mt-1">كل الحالات غير المحسومة منذ بداية نظام الجوائز — بدون اختيار يوم بيوم.</div>
+                        </div>
+                        <button type="button" class="btn btn-outline-dark btn-sm fw-bold" onclick="loadReviewQueue()"><i class="fa-solid fa-rotate me-1"></i> تحديث</button>
+                    </div>
+                    <div class="table-responsive" style="max-height: 390px;">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>التاريخ والمعرض</th>
+                                    <th>الموظف</th>
+                                    <th>سبب المراجعة</th>
+                                    <th>دليل الحضور</th>
+                                    <th class="text-center">القرار</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reviewQueueBody">
+                                <tr><td colspan="5" class="text-center text-muted py-4">جاري تحميل الحالات المعلقة...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
                 
                 <!-- Filters Daily -->
                 <div class="filter-card">
@@ -592,9 +659,11 @@
         window.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
             const todayValue = formatDateInput(today);
+            const requestedDate = new URLSearchParams(window.location.search).get('date');
+            const selectedDailyDate = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || '') ? requestedDate : todayValue;
             const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
             const tomorrowValue = formatDateInput(tomorrow);
-            document.getElementById('dailyDate').value = todayValue;
+            document.getElementById('dailyDate').value = selectedDailyDate;
             document.getElementById('monthlyMonth').value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
             document.getElementById('modalEffectiveDate').min = tomorrowValue;
             document.getElementById('modalEffectiveDate').value = tomorrowValue;
@@ -603,6 +672,7 @@
 
             // Load Initial Data
             loadDailyPerformance();
+            loadReviewQueue();
         });
 
         function formatDateInput(value) {
@@ -656,6 +726,78 @@
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#039;');
+        }
+
+        async function loadReviewQueue() {
+            const tbody = document.getElementById('reviewQueueBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل جميع المراجعات...</td></tr>';
+            try {
+                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر تحميل قائمة المراجعة');
+
+                document.getElementById('reviewQueueCaseCount').textContent = result.case_count;
+                document.getElementById('reviewQueueStoreCount').textContent = result.store_day_count;
+                if (!result.cases.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> لا توجد حالات معلقة ضمن معارضك.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = result.cases.map(item => `
+                    <tr>
+                        <td>
+                            <div class="fw-bold">${escapeHtml(item.store_name)}</div>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" onclick="openReviewDay('${item.date}')">${item.date} · متوسط ${Number(item.actual_average_bill).toFixed(2)} / هدف ${Number(item.target_value).toFixed(2)}</button>
+                        </td>
+                        <td><div class="fw-bold">${escapeHtml(item.employee_name)}</div><span class="small text-muted">${escapeHtml(item.employee_id)}</span></td>
+                        <td><span class="badge bg-warning text-dark">${escapeHtml(reasonLabels[item.reason_code] || item.reason_code)}</span></td>
+                        <td class="small">
+                            <span class="fw-bold text-success">${item.independent_receipts} مبيع مستقل</span>
+                            <span class="text-muted"> · ${item.return_receipts} مرتجع · ${item.exchange_receipts} تبديل</span>
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <button type="button" class="btn btn-success btn-sm fw-bold me-1" onclick="submitQueueReview('${item.date}', '${item.store_id}', '${escapeHtml(item.sales_group)}', 'APPROVE')"><i class="fa-solid fa-check"></i> قبول</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="submitQueueReview('${item.date}', '${item.store_id}', '${escapeHtml(item.sales_group)}', 'REJECT')"><i class="fa-solid fa-xmark"></i> رفض</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${escapeHtml(error.message)}</td></tr>`;
+            }
+        }
+
+        function openReviewDay(date) {
+            document.getElementById('dailyDate').value = date;
+            loadDailyPerformance();
+            document.querySelector('.filter-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function submitQueueReview(date, storeId, salesGroup, decision) {
+            const label = decision === 'APPROVE' ? 'قبول' : 'رفض';
+            if (!confirm(`تأكيد ${label} هذه الحالة؟ سيتم إعادة توزيع الجائزة مباشرة.`)) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader
+                    },
+                    body: JSON.stringify({
+                        attendance_date: date,
+                        store_number: storeId,
+                        sales_group: salesGroup,
+                        decision
+                    })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
+                await loadReviewQueue();
+                if (document.getElementById('dailyDate').value === date) await loadDailyPerformance();
+            } catch (error) {
+                alert(error.message);
+            }
         }
 
         // 1. Fetch Daily Performance
@@ -901,6 +1043,7 @@
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
                 await loadDailyPerformance();
+                await loadReviewQueue();
                 showStoreEmployees(storeId);
             } catch (error) {
                 alert(error.message);

@@ -278,6 +278,32 @@
             border-radius: 8px;
             font-size: 0.85rem;
         }
+
+        .review-command-center {
+            background: linear-gradient(135deg, #fff9f2 0%, #ffffff 70%);
+            border: 1px solid #ffd6ad;
+            border-right: 6px solid var(--primary);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(74, 45, 16, 0.07);
+            overflow: hidden;
+        }
+
+        .review-command-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid #ffe4ca;
+        }
+
+        .review-command-center .table { margin-bottom: 0; }
+        .review-command-center .table > :not(caption) > * > * { padding: 12px 14px; }
+
+        @media (max-width: 767px) {
+            .review-command-header { align-items: flex-start; }
+            .review-command-center .table { min-width: 850px; }
+        }
     </style>
 </head>
 
@@ -306,7 +332,7 @@
                 <button class="nav-link active" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax-panel" type="button" role="tab" aria-controls="tax-panel" aria-selected="true"><i class="fa-solid fa-percent me-1"></i> تقرير ضريبة المبيعات</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance(); loadReviewAudit();"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
+                <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance(); loadReviewQueue(); loadReviewAudit();"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
             </li>
         </ul>
 
@@ -436,6 +462,35 @@
 
             <!-- Tab 2: Prizes & Payouts -->
             <div class="tab-pane fade" id="prizes-panel" role="tabpanel" aria-labelledby="prizes-tab">
+
+                <section class="review-command-center mb-4" aria-labelledby="financeReviewQueueTitle">
+                    <div class="review-command-header">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h5 class="fw-bold mb-0" id="financeReviewQueueTitle"><i class="fa-solid fa-list-check text-warning me-1"></i> صندوق المراجعات غير المحسومة</h5>
+                                <span class="badge bg-dark rounded-pill"><span id="financeReviewCaseCount">0</span> حالة · <span id="financeReviewStoreCount">0</span> معرض/يوم</span>
+                            </div>
+                            <div class="small text-muted mt-1">يعرض جميع الحالات المعلقة تلقائياً منذ بداية النظام، ولا يرتبط بتاريخ الجدول اليومي أدناه.</div>
+                        </div>
+                        <button type="button" class="btn btn-outline-dark btn-sm fw-bold" onclick="loadReviewQueue()"><i class="fa-solid fa-rotate me-1"></i> تحديث</button>
+                    </div>
+                    <div class="table-responsive" style="max-height: 420px;">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>التاريخ والمعرض</th>
+                                    <th>الموظف</th>
+                                    <th>السبب</th>
+                                    <th>دليل الفواتير</th>
+                                    <th class="text-center">اعتماد المالية</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeReviewQueueBody">
+                                <tr><td colspan="5" class="text-center text-muted py-4">افتح تبويب الجوائز لتحميل المراجعات.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
                 
                 <!-- Filters Prizes & Weekly Export -->
                 <div class="filter-card">
@@ -956,6 +1011,70 @@
             }
         }
 
+        async function loadReviewQueue() {
+            const tbody = document.getElementById('financeReviewQueueBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل جميع المراجعات...</td></tr>';
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر تحميل المراجعات');
+
+                document.getElementById('financeReviewCaseCount').textContent = result.case_count;
+                document.getElementById('financeReviewStoreCount').textContent = result.store_day_count;
+                if (!result.cases.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-bold py-4"><i class="fa-solid fa-circle-check me-1"></i> لا توجد حالات معلقة حالياً.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = result.cases.map(item => `
+                    <tr>
+                        <td>
+                            <div class="fw-bold">${escapeHtml(item.store_name)}</div>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" onclick="openFinanceReviewDay('${item.date}')">${item.date} · ${Number(item.actual_average_bill).toFixed(2)} / ${Number(item.target_value).toFixed(2)}</button>
+                        </td>
+                        <td><div class="fw-bold">${escapeHtml(item.employee_name)}</div><span class="small text-muted">${escapeHtml(item.employee_id)}</span></td>
+                        <td><span class="badge bg-warning text-dark">${escapeHtml(reasonLabels[item.reason_code] || item.reason_code)}</span></td>
+                        <td class="small"><span class="fw-bold text-success">${item.independent_receipts} مبيع</span><span class="text-muted"> · ${item.return_receipts} مرتجع · ${item.exchange_receipts} تبديل</span></td>
+                        <td class="text-center text-nowrap">
+                            <button type="button" class="btn btn-success btn-sm fw-bold me-1" onclick="submitQueueFinanceReview('${item.date}', '${item.store_id}', '${escapeHtml(item.sales_group)}', 'APPROVE')"><i class="fa-solid fa-check"></i> قبول</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="submitQueueFinanceReview('${item.date}', '${item.store_id}', '${escapeHtml(item.sales_group)}', 'REJECT')"><i class="fa-solid fa-xmark"></i> رفض</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${escapeHtml(error.message)}</td></tr>`;
+            }
+        }
+
+        function openFinanceReviewDay(date) {
+            document.getElementById('prizesDate').value = date;
+            loadPrizesPerformance();
+            document.querySelector('#prizes-panel .filter-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function submitQueueFinanceReview(date, storeId, salesGroup, decision) {
+            const label = decision === 'APPROVE' ? 'قبول' : 'رفض';
+            if (!confirm(`تأكيد ${label} الحالة وإعادة توزيع الجائزة؟`)) return;
+            try {
+                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const response = await fetch(`${API_BASE}/api/average-bill/reviews`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ attendance_date: date, store_number: storeId, sales_group: salesGroup, decision })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
+                await loadReviewQueue();
+                if (document.getElementById('prizesDate').value === date) await loadPrizesPerformance();
+                await loadReviewAudit();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
         // Load prizes performance for the selected date
         async function loadPrizesPerformance() {
             const date = document.getElementById('prizesDate').value;
@@ -1062,6 +1181,7 @@
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
                 await loadPrizesPerformance();
+                await loadReviewQueue();
                 await loadReviewAudit();
             } catch (error) {
                 alert(error.message);

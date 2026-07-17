@@ -1518,6 +1518,50 @@
         .map-tooltip-value {
             font-weight: 700;
         }
+
+        .bill-command-board {
+            background: linear-gradient(135deg, #fff8f0 0%, #ffffff 68%);
+            border: 1px solid #ffd5aa;
+            border-right: 7px solid #fe7900;
+            border-radius: 16px;
+            box-shadow: 0 10px 28px rgba(69, 43, 19, 0.08);
+            overflow: hidden;
+        }
+
+        .bill-command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            border-bottom: 1px solid #ffe3c6;
+        }
+
+        .bill-command-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 11px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            background: #212529;
+            color: #fff;
+        }
+
+        .bill-command-filter.active {
+            background: #fe7900;
+            border-color: #fe7900;
+            color: #fff;
+        }
+
+        .bill-command-board .table { margin-bottom: 0; }
+        .bill-command-board .table > :not(caption) > * > * { padding: 12px 14px; }
+
+        @media (max-width: 767px) {
+            .bill-command-header { align-items: flex-start; flex-direction: column; }
+            .bill-command-board .table { min-width: 860px; }
+        }
     </style>
 </head>
 
@@ -2199,6 +2243,45 @@
             </div>
         </div>
 
+        <section class="row mt-4" id="averageBillCommandSection" style="display: none;" aria-labelledby="averageBillCommandTitle">
+            <div class="col-12">
+                <div class="bill-command-board">
+                    <div class="bill-command-header">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h5 class="fw-bold mb-0" id="averageBillCommandTitle"><i class="bi bi-award-fill text-warning"></i> متابعة جوائز معدل الفاتورة</h5>
+                                <span class="bill-command-stat"><span id="billCommandAchievedCount">0</span> حقق اليوم</span>
+                                <span class="bill-command-stat" style="background:#9a5a00;"><span id="billCommandPendingCount">0</span> مراجعة معلقة</span>
+                            </div>
+                            <div class="small text-muted mt-1" id="billCommandScopeText">يعرض فقط المعارض المرتبطة بحسابك.</div>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold bill-command-filter active" data-filter="all" onclick="setBillCommandFilter('all', this)">الكل</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold bill-command-filter" data-filter="pending" onclick="setBillCommandFilter('pending', this)">تحتاج مراجعة</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold bill-command-filter" data-filter="achieved" onclick="setBillCommandFilter('achieved', this)">حققت اليوم</button>
+                            <button type="button" class="btn btn-outline-dark btn-sm fw-bold" onclick="loadAverageBillCommandCenter()"><i class="bi bi-arrow-clockwise"></i></button>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 390px;">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>التاريخ والمعرض</th>
+                                    <th>المتوسط / الهدف</th>
+                                    <th>الحالة</th>
+                                    <th>الموظفون المعلقون</th>
+                                    <th class="text-center">الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="averageBillCommandBody">
+                                <tr><td colspan="5" class="text-center text-muted py-4">جاري تحميل متابعة الجوائز...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Row 3: Detailed Table -->
         <div class="row mt-4" id="detailed-report-row">
             <div class="col-12">
@@ -2771,7 +2854,173 @@
             updateDashboard();
         }
 
+        let averageBillCommandRows = [];
+        let averageBillCommandFilter = 'all';
+
+        function escapeBillHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function averageBillApiBase() {
+            let base = window.location.origin;
+            if (!base || base.startsWith('file://') || base.includes('github.io')) base = 'http://localhost:5000';
+            return sessionStorage.getItem('serverIp') || base;
+        }
+
+        function averageBillAuthHeader() {
+            return 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+        }
+
+        function averageBillToday() {
+            const value = new Date();
+            return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+        }
+
+        async function loadAverageBillCommandCenter() {
+            const section = document.getElementById('averageBillCommandSection');
+            if (!currentUser || !['Admin', 'Manager', 'Finance'].includes(currentUser.role)) {
+                if (section) section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'flex';
+            const tbody = document.getElementById('averageBillCommandBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm text-warning me-2"></span>جاري تحميل المعارض المرتبطة بحسابك...</td></tr>';
+            try {
+                const headers = { 'Authorization': averageBillAuthHeader() };
+                const today = averageBillToday();
+                const [reviewResponse, todayResponse] = await Promise.all([
+                    fetch(`${averageBillApiBase()}/api/average-bill/reviews`, { headers }),
+                    fetch(`${averageBillApiBase()}/api/average-bill/performance?date=${today}`, { headers })
+                ]);
+                const reviewResult = await reviewResponse.json();
+                const todayResult = await todayResponse.json();
+                if (!reviewResponse.ok) throw new Error(reviewResult.error || 'تعذر تحميل المراجعات');
+                if (!todayResponse.ok) throw new Error(todayResult.error || 'تعذر تحميل إنجازات اليوم');
+
+                const pendingRows = new Map();
+                (reviewResult.cases || []).forEach(item => {
+                    const key = `${item.date}_${item.store_id}`;
+                    if (!pendingRows.has(key)) {
+                        pendingRows.set(key, {
+                            kind: 'pending',
+                            date: item.date,
+                            storeId: item.store_id,
+                            storeName: item.store_name,
+                            actual: Number(item.actual_average_bill || 0),
+                            target: Number(item.target_value || 0),
+                            prize: Number(item.prize_amount || 0),
+                            status: 'PENDING_REVIEW',
+                            cases: []
+                        });
+                    }
+                    pendingRows.get(key).cases.push(item);
+                });
+
+                const achievedRows = (todayResult.performance || [])
+                    .filter(item => item.achieved)
+                    .map(item => ({
+                        kind: 'achieved',
+                        date: item.date,
+                        storeId: item.store_id,
+                        storeName: item.store_name,
+                        actual: Number(item.actual_average_bill || 0),
+                        target: Number(item.target_value || 0),
+                        prize: Number(item.prize_amount || 0),
+                        status: item.award_status,
+                        eligibleCount: Number(item.eligible_count || 0),
+                        cases: (item.employees || []).filter(employee => employee.final_status === 'PENDING')
+                    }))
+                    .filter(item => !pendingRows.has(`${item.date}_${item.storeId}`));
+
+                averageBillCommandRows = [...pendingRows.values(), ...achievedRows];
+                document.getElementById('billCommandAchievedCount').textContent = (todayResult.performance || []).filter(item => item.achieved).length;
+                document.getElementById('billCommandPendingCount').textContent = reviewResult.store_day_count || 0;
+                document.getElementById('billCommandScopeText').textContent = currentUser.role === 'Manager'
+                    ? `معارض ${currentUser.name} فقط · المراجعات المعلقة من كل الأيام وإنجازات اليوم.`
+                    : 'المعارض المسموحة لحسابك · المراجعات المعلقة من كل الأيام وإنجازات اليوم.';
+                renderAverageBillCommandCenter();
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${escapeBillHtml(error.message)}</td></tr>`;
+            }
+        }
+
+        function setBillCommandFilter(filter, button) {
+            averageBillCommandFilter = filter;
+            document.querySelectorAll('.bill-command-filter').forEach(item => item.classList.remove('active'));
+            button?.classList.add('active');
+            renderAverageBillCommandCenter();
+        }
+
+        function renderAverageBillCommandCenter() {
+            const tbody = document.getElementById('averageBillCommandBody');
+            const rows = averageBillCommandRows.filter(row => averageBillCommandFilter === 'all' || row.kind === averageBillCommandFilter);
+            if (!rows.length) {
+                const message = averageBillCommandFilter === 'pending' ? 'لا توجد مراجعات معلقة ضمن معارضك.' : 'لا توجد معارض ضمن هذا التصنيف.';
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-success fw-bold py-4"><i class="bi bi-check-circle-fill me-1"></i>${message}</td></tr>`;
+                return;
+            }
+
+            const statusMeta = {
+                PENDING_REVIEW: ['تحتاج مراجعة', 'bg-warning text-dark'],
+                PRELIMINARY: ['مبدئي حتى 2 ص', 'bg-info text-dark'],
+                READY: ['جاهز للصرف', 'bg-success'],
+                NO_ELIGIBLE: ['لا يوجد مستحقون', 'bg-dark']
+            };
+            tbody.innerHTML = rows.map(row => {
+                const status = statusMeta[row.status] || [row.status, 'bg-secondary'];
+                const employeeNames = row.cases.length
+                    ? row.cases.map(item => `<span class="badge bg-light text-dark border me-1 mb-1">${escapeBillHtml(item.employee_name)}</span>`).join('')
+                    : `<span class="text-muted small">${row.eligibleCount || 0} موظف مستحق</span>`;
+                const actions = row.kind === 'pending'
+                    ? row.cases.map(item => `
+                        <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                            <span class="small fw-bold text-truncate" style="max-width:90px;">${escapeBillHtml(item.employee_name)}</span>
+                            <button type="button" class="btn btn-success btn-sm py-0 px-2" onclick="submitIndexBillReview('${row.date}', '${row.storeId}', '${escapeBillHtml(item.sales_group)}', 'APPROVE')">قبول</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" onclick="submitIndexBillReview('${row.date}', '${row.storeId}', '${escapeBillHtml(item.sales_group)}', 'REJECT')">رفض</button>
+                        </div>
+                    `).join('')
+                    : `<a class="btn btn-outline-secondary btn-sm fw-bold" href="average_bill_dashboard.html?date=${row.date}">التفاصيل</a>`;
+                return `
+                    <tr>
+                        <td><div class="fw-bold">${escapeBillHtml(row.storeName)}</div><span class="small text-muted">${row.date}</span></td>
+                        <td><span class="fw-bold text-success">${row.actual.toFixed(2)}</span><span class="text-muted"> / ${row.target.toFixed(2)}</span></td>
+                        <td><span class="badge ${status[1]}">${status[0]}</span><div class="small text-muted mt-1">جائزة ${row.prize.toLocaleString('en-US')} ريال</div></td>
+                        <td>${employeeNames}</td>
+                        <td class="text-center">${actions}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function submitIndexBillReview(date, storeId, salesGroup, decision) {
+            const label = decision === 'APPROVE' ? 'قبول' : 'رفض';
+            if (!confirm(`تأكيد ${label} الحالة؟ ستُعاد حسبة الجائزة مباشرة.`)) return;
+            try {
+                const response = await fetch(`${averageBillApiBase()}/api/average-bill/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': averageBillAuthHeader()
+                    },
+                    body: JSON.stringify({ attendance_date: date, store_number: storeId, sales_group: salesGroup, decision })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
+                showToast('تم حفظ القرار وإعادة توزيع الجائزة.');
+                await loadAverageBillCommandCenter();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
         async function init() {
+            loadAverageBillCommandCenter();
             // Init Month Filter
             const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
             const mSelect = document.getElementById('monthFilter');
