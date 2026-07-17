@@ -562,6 +562,123 @@
             margin-top: 4px;
         }
 
+        /* ========== Retail Intelligence KPI Strip ========== */
+        .kpi-mini-card {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            padding: 14px 16px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-right: 4px solid #fe7900;
+            transition: transform 0.2s;
+        }
+        .kpi-mini-card:hover { transform: translateY(-2px); }
+        .kpi-mini-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex: 0 0 44px;
+        }
+        .kpi-mini-icon.orange { background: #fff3e0; color: #fe7900; }
+        .kpi-mini-icon.blue { background: #e7f1ff; color: #0d6efd; }
+        .kpi-mini-icon.green { background: #e8f5e9; color: #198754; }
+        .kpi-mini-icon.purple { background: #f3e5f5; color: #6f42c1; }
+        .kpi-mini-label {
+            font-size: 0.78rem;
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .kpi-mini-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #212529;
+            line-height: 1.2;
+            font-variant-numeric: tabular-nums;
+        }
+        .kpi-mini-sub {
+            font-size: 0.72rem;
+            color: #98a0a6;
+            margin-top: 2px;
+        }
+
+        /* ========== Top Movers Lists ========== */
+        .movers-group-title {
+            font-size: 0.82rem;
+            font-weight: 800;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .movers-group-title.up { background: #e8f5e9; color: #198754; }
+        .movers-group-title.down { background: #ffebee; color: #c62828; }
+        .mover-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f4f4f4;
+            font-size: 0.85rem;
+        }
+        .mover-row:last-child { border-bottom: none; }
+        .mover-name {
+            font-weight: 700;
+            color: #333;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 55%;
+        }
+        .mover-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+        .mover-val.up { color: #198754; }
+        .mover-val.down { color: #dc3545; }
+        .mover-pct {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 6px;
+        }
+        .mover-pct.up { background: #e8f5e9; color: #198754; }
+        .mover-pct.down { background: #ffebee; color: #c62828; }
+
+        /* ========== Efficiency Matrix Legend ========== */
+        .matrix-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: #666;
+        }
+        .matrix-legend span {
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 3px 10px;
+            font-weight: 600;
+        }
+        .weekday-insight {
+            font-size: 0.8rem;
+            color: #6c757d;
+            background: #fff8f0;
+            border: 1px solid #ffe0b2;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
         /* ========== Prevent horizontal overflow globally ========== */
         html, body {
             overflow-x: hidden;
@@ -768,6 +885,27 @@
                 font-size: 0.76rem;
                 line-height: 1.35;
             }
+
+            /* Retail KPI strip - 2 per row on mobile */
+            #retailKpiRow > [class*="col"] {
+                flex: 0 0 50% !important;
+                max-width: 50% !important;
+            }
+            .kpi-mini-card {
+                padding: 10px 12px;
+                gap: 9px;
+            }
+            .kpi-mini-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
+                flex: 0 0 36px;
+                border-radius: 10px;
+            }
+            .kpi-mini-value { font-size: 1.05rem; }
+            .kpi-mini-label { font-size: 0.72rem; }
+            .kpi-mini-sub { font-size: 0.66rem; }
+            .mover-name { max-width: 48%; }
 
             .dashboard-filter-card {
                 padding: 0 !important;
@@ -2017,6 +2155,50 @@
             </div>
         </div>
 
+        <!-- Row 2.4: Retail Intelligence KPI Strip -->
+        <div class="row g-3 mb-4 row-cols-2 row-cols-md-4" id="retailKpiRow">
+            <div class="col">
+                <div class="kpi-mini-card" style="border-right-color: #fe7900;">
+                    <div class="kpi-mini-icon orange"><i class="bi bi-basket2"></i></div>
+                    <div>
+                        <div class="kpi-mini-label">القطع المباعة (Units)</div>
+                        <div class="kpi-mini-value" id="kpiUnits">—</div>
+                        <div class="kpi-mini-sub" id="kpiUnitsSub">بانتظار البيانات الكاملة</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="kpi-mini-card" style="border-right-color: #0d6efd;">
+                    <div class="kpi-mini-icon blue"><i class="bi bi-bag-plus"></i></div>
+                    <div>
+                        <div class="kpi-mini-label">قطعة / فاتورة (UPT)</div>
+                        <div class="kpi-mini-value" id="kpiUpt">—</div>
+                        <div class="kpi-mini-sub" id="kpiUptSub">vs فترة المقارنة</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="kpi-mini-card" style="border-right-color: #198754;">
+                    <div class="kpi-mini-icon green"><i class="bi bi-tag"></i></div>
+                    <div>
+                        <div class="kpi-mini-label">متوسط قيمة القطعة (Item Value)</div>
+                        <div class="kpi-mini-value" id="kpiItemVal">—</div>
+                        <div class="kpi-mini-sub" id="kpiItemValSub">vs فترة المقارنة</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="kpi-mini-card" style="border-right-color: #6f42c1;">
+                    <div class="kpi-mini-icon purple"><i class="bi bi-calendar-star"></i></div>
+                    <div>
+                        <div class="kpi-mini-label">أفضل يوم (Best Day)</div>
+                        <div class="kpi-mini-value" id="kpiBestDay" style="font-size: 1.05rem;">—</div>
+                        <div class="kpi-mini-sub" id="kpiBestDaySub">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Row 2.5: Daily Report (Accordion) -->
         <div class="accordion mb-4 text-center" id="dailyAccordion">
             <div class="accordion-item border-0 shadow-sm" style="border-radius: var(--card-radius); overflow: hidden;">
@@ -2082,6 +2264,52 @@
                 <h5 class="section-title">أعلى 10 فروع (Top 10)</h5>
                 <div class="chart-container">
                     <canvas id="top10Chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3.5: Cumulative Pace & Weekday Performance -->
+        <div class="row mt-4">
+            <!-- Cumulative Sales Pace -->
+            <div class="col-md-8">
+                <h5 class="section-title">المسار التراكمي للمبيعات (Cumulative Pace)</h5>
+                <div class="chart-container">
+                    <canvas id="cumulativeChart"></canvas>
+                </div>
+            </div>
+            <!-- Weekday Performance -->
+            <div class="col-md-4">
+                <h5 class="section-title">أداء أيام الأسبوع (Weekday Avg)</h5>
+                <div class="chart-container">
+                    <canvas id="weekdayChart"></canvas>
+                    <div class="weekday-insight" id="weekdayInsight" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3.6: Store Efficiency Matrix & Top Movers -->
+        <div class="row mt-4">
+            <!-- Efficiency Matrix -->
+            <div class="col-md-8" id="efficiencyMatrixCol">
+                <h5 class="section-title">مصفوفة كفاءة الفروع (Efficiency Matrix)</h5>
+                <div class="chart-container" style="min-height: 420px;">
+                    <div class="matrix-legend mb-2">
+                        <span>↗ نجوم (تحويل وفاتورة عاليان)</span>
+                        <span>↘ فرص تحويل (زوار بلا شراء)</span>
+                        <span>↖ فرص سلة (فاتورة ضعيفة)</span>
+                        <span>↙ يحتاج تدخل</span>
+                    </div>
+                    <canvas id="efficiencyChart"></canvas>
+                </div>
+            </div>
+            <!-- Top Movers -->
+            <div class="col-md-4">
+                <h5 class="section-title">أبرز التحركات (Top Movers)</h5>
+                <div class="chart-container" style="min-height: 420px; overflow-y: auto;">
+                    <div class="movers-group-title up"><i class="bi bi-graph-up-arrow"></i> الأعلى نمواً (قيمة)</div>
+                    <div id="topGainersList"></div>
+                    <div class="movers-group-title down mt-3"><i class="bi bi-graph-down-arrow"></i> الأكثر تراجعاً (قيمة)</div>
+                    <div id="topDeclinersList"></div>
                 </div>
             </div>
         </div>
@@ -3671,12 +3899,16 @@
 
             // --- 2. Aggregation Function ---
             const calcStats = (start, end, filters = {}) => {
-                let sales = 0, trans = 0, visitors = 0, target = 0;
+                let sales = 0, trans = 0, visitors = 0, target = 0, items = 0;
                 let monthly = {};
                 let branchSales = {};
                 let branchTrans = {};
                 let branchVisitors = {};
                 let branchTarget = {};
+                let branchItems = {};
+                let daily = {};
+                let dailyTrans = {};
+                let dailyVisitors = {};
 
                 // Use provided filters or fallback to UI state
                 const filterBranch = filters.branch || selBranch;
@@ -3713,6 +3945,7 @@
                         let m = new Date(d).getMonth() + 1;
                         monthly[m] = (monthly[m] || 0) + v;
                         branchSales[s] = (branchSales[s] || 0) + v;
+                        daily[d] = (daily[d] || 0) + v;
                     }
                 });
                 // Targets
@@ -3739,6 +3972,7 @@
                     if (filterFn(d, s)) {
                         visitors += v;
                         branchVisitors[s] = (branchVisitors[s] || 0) + v;
+                        dailyVisitors[d] = (dailyVisitors[d] || 0) + v;
                     }
                 });
                 // Trans
@@ -3746,10 +3980,18 @@
                     if (filterFn(d, s)) {
                         trans += v;
                         branchTrans[s] = (branchTrans[s] || 0) + v;
+                        dailyTrans[d] = (dailyTrans[d] || 0) + v;
+                    }
+                });
+                // Items (Units Sold)
+                (rawData.items || []).forEach(([d, s, v]) => {
+                    if (filterFn(d, s)) {
+                        items += v;
+                        branchItems[s] = (branchItems[s] || 0) + v;
                     }
                 });
 
-                return { sales, trans, visitors, target, monthly, branchSales, branchTrans, branchVisitors, branchTarget };
+                return { sales, trans, visitors, target, items, monthly, branchSales, branchTrans, branchVisitors, branchTarget, branchItems, daily, dailyTrans, dailyVisitors };
             };
 
             // Calculate Current (Filtered) for Display
@@ -4015,6 +4257,13 @@
 
             // Render Top 10 Chart
             renderTop10(branchList.slice(0, 10));
+
+            // --- 5.4 Retail Intelligence Sections ---
+            renderRetailKpis(curr, prev);
+            renderCumulativeChart(curr.daily, prev.daily, cYear, pYear);
+            renderWeekdayChart(curr.daily, curr.dailyTrans, curr.dailyVisitors);
+            renderEfficiencyMatrix(branchList);
+            renderTopMovers(branchList);
 
             // Render Table
             const tbody = document.getElementById('detailsTableBody');
@@ -6270,6 +6519,360 @@
 
         function fmt(el, v) { el.textContent = v.toLocaleString(undefined, { maximumFractionDigits: 0 }); }
         function valFmt(v) { return v.toLocaleString(undefined, { maximumFractionDigits: 0 }); } // Explicit helper if needed
+
+        // ==========================================
+        // RETAIL INTELLIGENCE SECTIONS
+        // ==========================================
+
+        const AR_WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const AR_WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5]; // Sat -> Fri
+
+        function renderRetailKpis(curr, prev) {
+            const elUnits = document.getElementById('kpiUnits');
+            const elUpt = document.getElementById('kpiUpt');
+            const elItemVal = document.getElementById('kpiItemVal');
+            const elBestDay = document.getElementById('kpiBestDay');
+            if (!elUnits) return;
+
+            // Units Sold
+            if (curr.items > 0) {
+                elUnits.textContent = Math.round(curr.items).toLocaleString();
+                const unitsGrowth = prev.items > 0 ? ((curr.items - prev.items) / prev.items) * 100 : 0;
+                const sub = document.getElementById('kpiUnitsSub');
+                sub.textContent = (unitsGrowth >= 0 ? '+' : '') + unitsGrowth.toFixed(1) + '% vs فترة المقارنة';
+                sub.style.color = unitsGrowth >= 0 ? '#198754' : '#dc3545';
+            } else {
+                elUnits.textContent = '—';
+                document.getElementById('kpiUnitsSub').textContent = 'بانتظار البيانات الكاملة';
+            }
+
+            // UPT (Units Per Transaction)
+            const upt = curr.trans > 0 ? curr.items / curr.trans : 0;
+            const prevUpt = prev.trans > 0 ? prev.items / prev.trans : 0;
+            if (upt > 0) {
+                elUpt.textContent = upt.toFixed(2);
+                const d = upt - prevUpt;
+                const sub = document.getElementById('kpiUptSub');
+                sub.textContent = (d >= 0 ? '+' : '') + d.toFixed(2) + ' vs فترة المقارنة (' + prevUpt.toFixed(2) + ')';
+                sub.style.color = d >= 0 ? '#198754' : '#dc3545';
+            } else {
+                elUpt.textContent = '—';
+                document.getElementById('kpiUptSub').textContent = 'vs فترة المقارنة';
+            }
+
+            // Average Item Value
+            const itemVal = curr.items > 0 ? curr.sales / curr.items : 0;
+            const prevItemVal = prev.items > 0 ? prev.sales / prev.items : 0;
+            if (itemVal > 0) {
+                elItemVal.textContent = itemVal.toFixed(0);
+                const d = prevItemVal > 0 ? ((itemVal - prevItemVal) / prevItemVal) * 100 : 0;
+                const sub = document.getElementById('kpiItemValSub');
+                sub.textContent = (d >= 0 ? '+' : '') + d.toFixed(1) + '% vs فترة المقارنة (' + prevItemVal.toFixed(0) + ')';
+                sub.style.color = d >= 0 ? '#198754' : '#dc3545';
+            } else {
+                elItemVal.textContent = '—';
+                document.getElementById('kpiItemValSub').textContent = 'vs فترة المقارنة';
+            }
+
+            // Best Day
+            const dates = Object.keys(curr.daily || {});
+            if (dates.length > 0) {
+                let bestDate = dates[0];
+                dates.forEach(d => { if (curr.daily[d] > curr.daily[bestDate]) bestDate = d; });
+                const dt = new Date(bestDate);
+                elBestDay.textContent = AR_WEEKDAYS[dt.getDay()] + ' ' + dt.getDate() + '/' + (dt.getMonth() + 1);
+                document.getElementById('kpiBestDaySub').textContent = Math.round(curr.daily[bestDate]).toLocaleString() + ' ريال';
+            } else {
+                elBestDay.textContent = '—';
+                document.getElementById('kpiBestDaySub').textContent = '—';
+            }
+        }
+
+        function renderCumulativeChart(currDaily, prevDaily, y1, y2) {
+            const canvas = document.getElementById('cumulativeChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (charts['cumulative']) charts['cumulative'].destroy();
+
+            const currDates = Object.keys(currDaily || {}).sort();
+            const prevDates = Object.keys(prevDaily || {}).sort();
+
+            let run = 0;
+            const currCum = currDates.map(d => { run += currDaily[d]; return Math.round(run); });
+            run = 0;
+            const prevCum = prevDates.map(d => { run += prevDaily[d]; return Math.round(run); });
+
+            const labels = currDates.map((d, i) => {
+                const dt = new Date(d);
+                return dt.getDate() + '/' + (dt.getMonth() + 1);
+            });
+
+            charts['cumulative'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'الحالية ' + y1,
+                            data: currCum,
+                            borderColor: '#fe7900',
+                            backgroundColor: 'rgba(254, 121, 0, 0.08)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHitRadius: 8,
+                            borderWidth: 2.5
+                        },
+                        {
+                            label: 'المقارنة ' + y2,
+                            data: prevCum,
+                            borderColor: '#adb5bd',
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHitRadius: 8,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { autoSkip: true, maxTicksLimit: 12 } },
+                        y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => (v / 1000) + 'K' } }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => ' ' + c.dataset.label + ': ' + Math.round(c.parsed.y).toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderWeekdayChart(daily, dailyTrans, dailyVisitors) {
+            const canvas = document.getElementById('weekdayChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (charts['weekday']) charts['weekday'].destroy();
+
+            const salesSum = {}, transSum = {}, visSum = {}, dayCount = {};
+            Object.keys(daily || {}).forEach(d => {
+                const wd = new Date(d).getDay();
+                salesSum[wd] = (salesSum[wd] || 0) + daily[d];
+                dayCount[wd] = (dayCount[wd] || 0) + 1;
+            });
+            Object.keys(dailyTrans || {}).forEach(d => {
+                const wd = new Date(d).getDay();
+                transSum[wd] = (transSum[wd] || 0) + dailyTrans[d];
+            });
+            Object.keys(dailyVisitors || {}).forEach(d => {
+                const wd = new Date(d).getDay();
+                visSum[wd] = (visSum[wd] || 0) + dailyVisitors[d];
+            });
+
+            const labels = AR_WEEK_ORDER.map(wd => AR_WEEKDAYS[wd]);
+            const avgSales = AR_WEEK_ORDER.map(wd => dayCount[wd] ? Math.round(salesSum[wd] / dayCount[wd]) : 0);
+            const hideVis = shouldHideVisitors();
+            const avgConv = AR_WEEK_ORDER.map(wd => visSum[wd] > 0 ? (transSum[wd] || 0) / visSum[wd] * 100 : 0);
+
+            // Highlight best weekday bar
+            let bestIdx = 0;
+            avgSales.forEach((v, i) => { if (v > avgSales[bestIdx]) bestIdx = i; });
+            const barColors = avgSales.map((_, i) => i === bestIdx ? '#cc6100' : '#ffd8a8');
+
+            const datasets = [{
+                label: 'متوسط المبيعات',
+                data: avgSales,
+                backgroundColor: barColors,
+                borderRadius: 6,
+                yAxisID: 'ySales'
+            }];
+            if (!hideVis) {
+                datasets.push({
+                    label: 'التحويل %',
+                    data: avgConv.map(v => +v.toFixed(1)),
+                    type: 'line',
+                    borderColor: '#0d6efd',
+                    backgroundColor: '#0d6efd',
+                    pointRadius: 4,
+                    tension: 0.3,
+                    yAxisID: 'yConv'
+                });
+            }
+
+            charts['weekday'] = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        ySales: { position: 'right', grid: { borderDash: [5, 5] }, ticks: { callback: v => (v / 1000) + 'K' } },
+                        yConv: { position: 'left', min: 0, display: !hideVis, grid: { display: false }, ticks: { callback: v => v + '%' } }
+                    },
+                    plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } }
+                }
+            });
+
+            // Insight line
+            const insight = document.getElementById('weekdayInsight');
+            if (insight && avgSales.some(v => v > 0)) {
+                const worstIdx = avgSales.reduce((wi, v, i) => v < avgSales[wi] && dayCount[AR_WEEK_ORDER[i]] ? i : wi, 0);
+                const diffPct = avgSales[worstIdx] > 0 ? ((avgSales[bestIdx] - avgSales[worstIdx]) / avgSales[worstIdx]) * 100 : 0;
+                insight.textContent = '💡 أقوى يوم: ' + labels[bestIdx] + ' (متوسط ' + avgSales[bestIdx].toLocaleString() + ') — أعلى من ' + labels[worstIdx] + ' بنسبة ' + diffPct.toFixed(0) + '%';
+                insight.style.display = 'block';
+            } else if (insight) {
+                insight.style.display = 'none';
+            }
+        }
+
+        function renderEfficiencyMatrix(branchList) {
+            const col = document.getElementById('efficiencyMatrixCol');
+            const canvas = document.getElementById('efficiencyChart');
+            if (!canvas || !col) return;
+
+            // Conversion-based: hide entirely when visitors are hidden for this user
+            if (shouldHideVisitors()) {
+                col.style.display = 'none';
+                return;
+            }
+            col.style.display = '';
+
+            const ctx = canvas.getContext('2d');
+            if (charts['efficiency']) charts['efficiency'].destroy();
+
+            // Only stores with meaningful traffic & sales; exclude Online type
+            const pts = branchList.filter(b => {
+                const meta = rawData.store_meta ? rawData.store_meta[b.sid] : null;
+                if (meta && meta.type === 'Online') return false;
+                return b.visitors > 0 && b.trans > 0 && b.val > 0;
+            });
+
+            if (pts.length === 0) {
+                charts['efficiency'] = null;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            const maxVal = Math.max(...pts.map(b => b.val));
+            let sumTrans = 0, sumVis = 0, sumVal = 0;
+            pts.forEach(b => { sumTrans += b.trans; sumVis += b.visitors; sumVal += b.val; });
+            const avgConv = sumVis > 0 ? (sumTrans / sumVis) * 100 : 0;
+            const avgTicket = sumTrans > 0 ? sumVal / sumTrans : 0;
+
+            const data = pts.map(b => ({
+                x: +b.conv.toFixed(2),
+                y: Math.round(b.avgInv),
+                r: 5 + 13 * Math.sqrt(b.val / maxVal),
+                name: b.name,
+                val: b.val,
+                ach: b.ach
+            }));
+
+            const quadrantPlugin = {
+                id: 'quadrantLines',
+                afterDatasetsDraw(chart, args, opts) {
+                    const area = chart.chartArea;
+                    if (!area) return;
+                    const { left, right, top, bottom } = area;
+                    const xPos = chart.scales.x.getPixelForValue(opts.xAvg);
+                    const yPos = chart.scales.y.getPixelForValue(opts.yAvg);
+                    const c = chart.ctx;
+                    c.save();
+                    c.strokeStyle = 'rgba(108, 117, 125, 0.55)';
+                    c.lineWidth = 1.5;
+                    c.setLineDash([6, 6]);
+                    c.beginPath(); c.moveTo(xPos, top); c.lineTo(xPos, bottom); c.stroke();
+                    c.beginPath(); c.moveTo(left, yPos); c.lineTo(right, yPos); c.stroke();
+                    c.setLineDash([]);
+                    c.fillStyle = 'rgba(108, 117, 125, 0.85)';
+                    c.font = '600 10px Tajawal';
+                    c.textAlign = 'left';
+                    c.fillText('متوسط التحويل ' + opts.xAvg.toFixed(1) + '%', xPos + 5, top + 12);
+                    c.fillText('متوسط الفاتورة ' + Math.round(opts.yAvg).toLocaleString(), left + 6, yPos - 6);
+                    c.restore();
+                }
+            };
+
+            charts['efficiency'] = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'الفروع',
+                        data,
+                        backgroundColor: data.map(p => {
+                            const a = p.ach;
+                            return a >= 100 ? 'rgba(25, 135, 84, 0.65)' : a >= 70 ? 'rgba(254, 121, 0, 0.65)' : 'rgba(220, 53, 69, 0.6)';
+                        }),
+                        borderColor: data.map(p => p.ach >= 100 ? '#198754' : p.ach >= 70 ? '#fe7900' : '#dc3545'),
+                        borderWidth: 1.5
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'نسبة التحويل %', font: { weight: 'bold' } },
+                            grid: { borderDash: [5, 5] },
+                            ticks: { callback: v => v + '%' }
+                        },
+                        y: {
+                            title: { display: true, text: 'متوسط الفاتورة', font: { weight: 'bold' } },
+                            grid: { borderDash: [5, 5] }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        quadrantLines: { xAvg: avgConv, yAvg: avgTicket },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].raw.name,
+                                label: (c) => [
+                                    'المبيعات: ' + Math.round(c.raw.val).toLocaleString(),
+                                    'التحويل: ' + c.raw.x.toFixed(1) + '%',
+                                    'م. الفاتورة: ' + Math.round(c.raw.y).toLocaleString(),
+                                    'تحقيق الهدف: ' + c.raw.ach.toFixed(1) + '%'
+                                ]
+                            }
+                        }
+                    }
+                },
+                plugins: [quadrantPlugin]
+            });
+        }
+
+        function renderTopMovers(branchList) {
+            const gainersEl = document.getElementById('topGainersList');
+            const declinersEl = document.getElementById('topDeclinersList');
+            if (!gainersEl || !declinersEl) return;
+
+            const gainers = branchList.filter(b => b.absGrowth > 0)
+                .sort((a, b) => b.absGrowth - a.absGrowth).slice(0, 5);
+            const decliners = branchList.filter(b => b.absGrowth < 0)
+                .sort((a, b) => a.absGrowth - b.absGrowth).slice(0, 5);
+
+            const rowHtml = (b, isUp) => `
+                <div class="mover-row">
+                    <span class="mover-name" title="${b.name}">${b.name}</span>
+                    <span>
+                        <span class="mover-pct ${isUp ? 'up' : 'down'}" dir="ltr">${b.growth >= 0 ? '+' : ''}${b.growth.toFixed(1)}%</span>
+                        <span class="mover-val ${isUp ? 'up' : 'down'}" dir="ltr">${b.absGrowth >= 0 ? '+' : ''}${Math.round(b.absGrowth).toLocaleString()}</span>
+                    </span>
+                </div>`;
+
+            gainersEl.innerHTML = gainers.length > 0
+                ? gainers.map(b => rowHtml(b, true)).join('')
+                : '<div class="text-muted text-center py-2" style="font-size: 0.8rem;">لا يوجد نمو في هذه الفترة</div>';
+            declinersEl.innerHTML = decliners.length > 0
+                ? decliners.map(b => rowHtml(b, false)).join('')
+                : '<div class="text-muted text-center py-2" style="font-size: 0.8rem;">لا يوجد تراجع في هذه الفترة</div>';
+        }
 
         function renderMiniGauge(id, pct) {
             const ctx = document.getElementById(id).getContext('2d');
