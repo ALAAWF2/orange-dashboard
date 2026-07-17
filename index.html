@@ -5177,14 +5177,17 @@
                             name: name,
                             totalShare: 0.0,
                             daysPresent: 0,
-                            daysAchieved: 0
+                            daysAchieved: 0,
+                            daysPending: 0
                         };
                     }
                     summary[eid].daysPresent++;
-                    if (r.achieved) {
-                        summary[eid].totalShare += r.share;
+                    const employeeShare = Number(e.share || 0);
+                    if (employeeShare > 0) {
+                        summary[eid].totalShare += employeeShare;
                         summary[eid].daysAchieved++;
                     }
+                    if (['PENDING_REVIEW', 'PRELIMINARY'].includes(r.status)) summary[eid].daysPending++;
                 });
             });
             return Object.values(summary).sort((a, b) => b.totalShare - a.totalShare || a.name.localeCompare(b.name));
@@ -5206,7 +5209,7 @@
                     <div class="d-flex align-items-center justify-content-between p-2 rounded border border-light-subtle h-100" style="background-color: #fcfcfc;">
                         <div>
                             <div class="fw-bold text-dark" style="font-size: 0.85rem;">${emp.name}</div>
-                            <small class="text-muted" style="font-size: 0.72rem;">أيام الحضور: ${emp.daysPresent} | التحقيق: ${emp.daysAchieved}</small>
+                            <small class="text-muted" style="font-size: 0.72rem;">أيام الحضور: ${emp.daysPresent} | الصرف: ${emp.daysAchieved}${emp.daysPending > 0 ? ` | معلّق: ${emp.daysPending}` : ''}</small>
                         </div>
                         <div class="text-end">
                             <span class="badge ${emp.totalShare > 0 ? 'bg-success text-white' : 'bg-secondary-subtle text-muted'} fw-bold p-2" style="font-size: 0.82rem;">
@@ -5254,15 +5257,31 @@
                 const dayNamesAr = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
                 const dayName = dayNamesAr[dateObj.getDay()];
                 const dayClass = dateObj.getDay() === 5 ? 'day-fri' : dateObj.getDay() === 6 ? 'day-sat' : '';
+                const statusLabels = {
+                    READY: 'جاهز للصرف',
+                    PENDING_REVIEW: 'قيد المراجعة',
+                    PRELIMINARY: 'مبدئي حتى 2 ص',
+                    NO_ELIGIBLE: 'لا يوجد مستحقون',
+                    NOT_ACHIEVED: 'غير محقق',
+                    INACTIVE: 'غير مفعّل'
+                };
+                const statusClass = r.status === 'READY'
+                    ? 'bg-success-subtle text-success'
+                    : ['PENDING_REVIEW', 'PRELIMINARY'].includes(r.status)
+                        ? 'bg-warning-subtle text-warning'
+                        : 'bg-danger-subtle text-danger';
                 
                 let empsHtml = "";
                 if (r.employees && r.employees.length > 0) {
-                    empsHtml = r.employees.map(e => 
-                        `<span class="badge bg-light text-dark border p-2 m-1 fw-bold">
+                    empsHtml = r.employees.map(e => {
+                        const statusLabel = ['PENDING_REVIEW', 'PRELIMINARY'].includes(r.status) && e.status === 'PENDING'
+                            ? 'قيد المراجعة'
+                            : r.achieved && ['REJECTED', 'EXCLUDED'].includes(e.status) ? 'غير مستحق' : '';
+                        return `<span class="badge bg-light text-dark border p-2 m-1 fw-bold">
                             <i class="fa-solid fa-user me-1 text-muted" style="font-size:0.75rem;"></i>${e.name} 
-                            ${r.achieved ? `<span class="text-success ms-1">(${r.share} ريال)</span>` : ''}
-                        </span>`
-                    ).join('');
+                            ${Number(e.share || 0) > 0 ? `<span class="text-success ms-1">(${Number(e.share).toFixed(2)} ريال)</span>` : statusLabel ? `<span class="text-warning ms-1">(${statusLabel})</span>` : ''}
+                        </span>`;
+                    }).join('');
                 } else {
                     empsHtml = '<span class="text-muted small">لا يوجد موظفون حضور مسجلون</span>';
                 }
@@ -5275,11 +5294,11 @@
                     <td class="text-center fw-bold ${r.achieved ? 'text-success' : ''}">${r.actual.toFixed(2)}</td>
                     <td class="text-center text-muted">${r.target.toFixed(2)}</td>
                     <td class="text-center">
-                        <span class="badge ${r.achieved ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'} p-2 fw-bold" style="font-size:0.8rem; border: 1px solid ${r.achieved ? '#198754' : '#dc3545'}">
-                            ${r.achieved ? '✓ محقق' : '✗ غير محقق'}
+                        <span class="badge ${statusClass} p-2 fw-bold" style="font-size:0.8rem;">
+                            ${statusLabels[r.status] || (r.achieved ? 'محقق' : 'غير محقق')}
                         </span>
                     </td>
-                    <td class="text-end fw-bold text-orange" style="color:#fe7900;">${r.achieved ? r.prize.toLocaleString() + ' ريال' : '-'}</td>
+                    <td class="text-end fw-bold text-orange" style="color:#fe7900;">${r.status === 'READY' ? Number(r.payout || 0).toLocaleString() + ' ريال' : r.achieved ? 'معلّقة' : '-'}</td>
                     <td class="text-center fw-bold">${r.employees ? r.employees.length : 0}</td>
                     <td><div class="d-flex flex-wrap">${empsHtml}</div></td>
                 </tr>

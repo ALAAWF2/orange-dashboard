@@ -832,7 +832,9 @@
                 list.innerHTML = '<li class="list-group-item text-center text-muted">لا توجد حركة موظفين مسجلة في يوم الحضور</li>';
             } else {
                 store.employees.forEach(emp => {
-                    const statusMeta = employeeStatusMeta[emp.final_status] || [emp.final_status, 'bg-secondary'];
+                    const statusMeta = !store.achieved && emp.final_status === 'PENDING'
+                        ? ['لا مراجعة — الهدف غير محقق', 'bg-secondary']
+                        : employeeStatusMeta[emp.final_status] || [emp.final_status, 'bg-secondary'];
                     const reason = reasonLabels[emp.reason_code] || emp.reason_code;
                     const highLevelDecision = ['Admin', 'Finance'].includes(emp.reviewed_role);
                     const canReview = emp.auto_status === 'PENDING'

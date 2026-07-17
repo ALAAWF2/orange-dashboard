@@ -2802,12 +2802,17 @@
                 let totalPrizeEarned = 0;
                 let presentCount = empPresentRecords.length;
                 let achievedCount = 0;
-                
+                let pendingCount = 0;
+                 
                 let recordsHtml = empPresentRecords.map(r => {
-                    if (r.achieved) {
-                        totalPrizeEarned += r.share;
+                    const employeeRecord = r.employees.find(e => localNormalizeEmpId(e.id) === cleanEmpId) || {};
+                    const employeeShare = Number(employeeRecord.share || 0);
+                    const isPendingDay = ['PENDING_REVIEW', 'PRELIMINARY'].includes(r.status);
+                    if (employeeShare > 0) {
+                        totalPrizeEarned += employeeShare;
                         achievedCount++;
                     }
+                    if (isPendingDay) pendingCount++;
                     
                     const dateObj = new Date(r.date);
                     const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -2822,9 +2827,15 @@
                             </div>
                         </div>
                         <div class="text-end">
-                            ${r.achieved ? 
-                                `<span class="badge bg-success-subtle text-success p-1 fw-bold mb-1 d-inline-block">✓ محقق</span>
-                                 <div class="fw-bold text-success" style="font-size:0.85rem;">+${r.share} ريال</div>` :
+                            ${isPendingDay ?
+                                `<span class="badge bg-warning-subtle text-warning p-1 fw-bold mb-1 d-inline-block">قيد المراجعة</span>
+                                 <div class="text-muted" style="font-size:0.85rem;">لا يوجد مبلغ معتمد</div>` :
+                              employeeShare > 0 ?
+                                `<span class="badge bg-success-subtle text-success p-1 fw-bold mb-1 d-inline-block">✓ مستحق</span>
+                                 <div class="fw-bold text-success" style="font-size:0.85rem;">+${employeeShare.toFixed(2)} ريال</div>` :
+                              r.achieved ?
+                                `<span class="badge bg-secondary-subtle text-secondary p-1 fw-bold mb-1 d-inline-block">غير مستحق</span>
+                                 <div class="text-muted" style="font-size:0.85rem;">0 ريال</div>` :
                                 `<span class="badge bg-danger-subtle text-danger p-1 fw-bold mb-1 d-inline-block">✗ لم يحقق</span>
                                  <div class="text-muted" style="font-size:0.85rem;">0 ريال</div>`
                             }
@@ -2847,6 +2858,7 @@
                         <span class="text-muted small">نسبة التحقيق:</span>
                         <span class="fw-bold text-dark">${achievedCount} من أصل ${presentCount} أيام حضور</span>
                     </div>
+                    ${pendingCount > 0 ? `<div class="small text-warning fw-bold mt-1">${pendingCount} يوم قيد المراجعة ولا يدخل في الإجمالي</div>` : ''}
                 </div>
                 <div style="max-height: 250px; overflow-y: auto; padding-left: 5px;">
                     ${recordsHtml}
