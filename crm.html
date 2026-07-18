@@ -522,6 +522,9 @@
 
         .invoice-link:hover, .invoice-link:focus-visible { color: var(--crm-orange-deep); }
         .invoice-link i { color: var(--crm-orange); }
+        .invoice-link .invoice-toggle-icon { transition: transform 0.2s ease; }
+        .invoice-link[aria-expanded="true"] { color: var(--crm-orange-deep); }
+        .invoice-link[aria-expanded="true"] .invoice-toggle-icon { transform: rotate(180deg); }
 
         .invoice-pending {
             display: inline-flex;
@@ -531,39 +534,40 @@
             font-weight: 800;
         }
 
-        .invoice-dialog {
-            width: min(1180px, calc(100vw - 2rem));
-            max-height: calc(100vh - 2rem);
-            padding: 0;
-            border: 0;
-            border-radius: 24px;
-            background: #fff;
-            color: var(--crm-ink);
-            box-shadow: 0 36px 100px rgba(18, 13, 9, 0.34);
+        .invoice-source-row.is-expanded td { background: #fffaf3; }
+        .invoice-detail-row > td {
+            padding: 0 !important;
+            background: #fffaf3;
+            border-bottom: 2px solid var(--crm-orange) !important;
         }
 
-        .invoice-dialog::backdrop { background: rgba(20, 15, 11, 0.72); backdrop-filter: blur(5px); }
-        .invoice-dialog-shell { min-height: 280px; }
+        .invoice-inline-panel {
+            border-inline-start: 5px solid var(--crm-orange);
+            box-shadow: inset 0 10px 24px rgba(44, 29, 15, 0.04);
+            animation: invoiceExpand 0.22s ease both;
+        }
 
-        .invoice-dialog-head {
-            position: sticky;
-            top: 0;
-            z-index: 2;
+        @keyframes invoiceExpand {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .invoice-inline-head {
             display: flex;
             justify-content: space-between;
             gap: 1rem;
-            align-items: start;
-            padding: 1.25rem 1.4rem;
+            align-items: center;
+            padding: 0.9rem 1rem;
             background: var(--crm-ink);
             color: #fff;
-            border-bottom: 5px solid var(--crm-orange);
         }
 
-        .invoice-dialog-number { direction: ltr; font-size: clamp(1.15rem, 3vw, 1.8rem); font-weight: 900; }
-        .invoice-dialog-meta { color: #cfc9c2; display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; margin-top: 0.35rem; font-size: 0.78rem; }
-        .invoice-dialog-close { width: 42px; height: 42px; flex: 0 0 auto; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; background: rgba(255,255,255,0.08); color: #fff; }
-        .invoice-dialog-close:hover { background: var(--crm-orange); color: var(--crm-ink); }
-        .invoice-dialog-body { padding: 1.2rem 1.4rem 1.5rem; overflow: auto; }
+        .invoice-inline-number { direction: ltr; font-size: 1.05rem; font-weight: 900; }
+        .invoice-inline-meta { color: #cfc9c2; display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin-top: 0.25rem; font-size: 0.72rem; }
+        .invoice-inline-close { flex: 0 0 auto; border: 1px solid rgba(255,255,255,0.22); border-radius: 10px; padding: 0.42rem 0.7rem; background: rgba(255,255,255,0.08); color: #fff; font-size: 0.72rem; font-weight: 900; }
+        .invoice-inline-close:hover, .invoice-inline-close:focus-visible { background: var(--crm-orange); color: var(--crm-ink); }
+        .invoice-inline-body { padding: 1rem; }
+        .invoice-inline-panel > .loading-state { background: #fffaf3; }
 
         .invoice-summary-grid {
             display: grid;
@@ -634,8 +638,8 @@
             .duplicate-pair { grid-template-columns: 1fr; }
             .duplicate-divider { transform: rotate(90deg); }
             .audit-row { grid-template-columns: 1fr 1fr; }
-            .invoice-dialog { width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); border-radius: 18px; }
-            .invoice-dialog-head, .invoice-dialog-body { padding: 1rem; }
+            .invoice-inline-head { align-items: flex-start; padding: 0.8rem; }
+            .invoice-inline-body { padding: 0.75rem; }
             .invoice-summary-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
@@ -790,10 +794,6 @@
         <section id="customerDetail" class="customer-detail d-none" aria-live="polite"></section>
     </main>
 
-    <dialog id="invoiceDialog" class="invoice-dialog" aria-labelledby="invoiceDialogTitle">
-        <div id="invoiceDialogContent" class="invoice-dialog-shell"></div>
-    </dialog>
-
     <script src="assets/nav.js"></script>
     <script>
         const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
@@ -818,6 +818,9 @@
             selectedCustomer: null,
             invoicePage: 1,
             invoicePages: 1,
+            invoiceDetailsCache: new Map(),
+            invoiceDetailsController: null,
+            openInvoiceKey: null,
             searchTimer: null,
             searchController: null
         };
@@ -1063,6 +1066,10 @@
         }
 
         async function openCustomer(area, account) {
+            state.invoiceDetailsController?.abort();
+            state.invoiceDetailsController = null;
+            state.invoiceDetailsCache.clear();
+            state.openInvoiceKey = null;
             state.selectedCustomer = { area, account };
             state.invoicePage = 1;
             const detail = document.getElementById('customerDetail');
@@ -1080,6 +1087,9 @@
 
         async function loadInvoices(page) {
             if (!state.selectedCustomer) return;
+            state.invoiceDetailsController?.abort();
+            state.invoiceDetailsController = null;
+            state.openInvoiceKey = null;
             const { area, account } = state.selectedCustomer;
             const table = document.getElementById('invoiceTable');
             if (!table) return;
@@ -1097,10 +1107,24 @@
                     return `<tr><td><button class="invoice-link" type="button" data-invoice-key="${invoiceKey}" aria-label="فتح تفاصيل الفاتورة">${invoiceLabel}<i class="fa-solid fa-arrow-up-right-from-square me-2"></i></button></td><td>${formatDate(row.bill_date)}</td><td>${escapeHtml(row.outlet_name)}</td><td><span class="badge ${row.transaction_type === 'return' ? 'text-bg-danger' : 'text-bg-success'}">${row.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></td><td class="${row.payment_amount < 0 ? 'amount-negative' : 'amount-positive'}">${currencyFormatter.format(row.payment_amount)}</td></tr>`;
                 }).join('') : '<tr><td colspan="5" class="empty-state">لا توجد فواتير ضمن الفترة.</td></tr>';
                 table.innerHTML = `<div class="table-wrap"><table class="table crm-table"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>المعرض</th><th>النوع</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-                table.querySelectorAll('[data-invoice-key]').forEach(button => {
+                table.querySelectorAll('[data-invoice-key]').forEach((button, index) => {
+                    const sourceRow = button.closest('tr');
+                    const detailRow = document.createElement('tr');
+                    const detailId = `invoice-details-${data.page}-${index + 1}`;
+                    detailRow.id = detailId;
+                    detailRow.className = 'invoice-detail-row';
+                    detailRow.hidden = true;
+                    detailRow.setAttribute('aria-live', 'polite');
+                    detailRow.innerHTML = '<td colspan="5"><div class="invoice-inline-panel"></div></td>';
+                    sourceRow.classList.add('invoice-source-row');
+                    sourceRow.insertAdjacentElement('afterend', detailRow);
+                    button.setAttribute('aria-expanded', 'false');
+                    button.setAttribute('aria-controls', detailId);
+                    const toggleIcon = button.querySelector(':scope > i:last-child');
+                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-down me-2 invoice-toggle-icon';
                     button.addEventListener('click', () => {
                         const [invoiceArea, storeNumber, transactionId] = button.dataset.invoiceKey.split('|').map(decodeURIComponent);
-                        openInvoiceDetails(invoiceArea, storeNumber, transactionId);
+                        toggleInvoiceDetails(button, detailRow, invoiceArea, storeNumber, transactionId);
                     });
                 });
                 document.getElementById('invoicePagination').innerHTML = data.total_pages > 1 ? `<div class="pagination-bar"><button id="prevInvoices" ${data.page <= 1 ? 'disabled' : ''}>السابق</button><span class="small fw-bold">${data.page} / ${data.total_pages}</span><button id="nextInvoices" ${data.page >= data.total_pages ? 'disabled' : ''}>التالي</button></div>` : '';
@@ -1111,12 +1135,49 @@
             }
         }
 
-        async function openInvoiceDetails(invoiceArea, storeNumber, transactionId) {
+        function collapseInvoiceDetails(button, detailRow) {
+            detailRow.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+            button.setAttribute('aria-label', 'فتح تفاصيل الفاتورة');
+            button.closest('tr')?.classList.remove('is-expanded');
+            if (state.openInvoiceKey === button.dataset.invoiceKey) {
+                state.invoiceDetailsController?.abort();
+                state.invoiceDetailsController = null;
+                state.openInvoiceKey = null;
+            }
+        }
+
+        function collapseOpenInvoiceDetails(exceptButton = null) {
+            const expandedButton = document.querySelector('#invoiceTable .invoice-link[aria-expanded="true"]');
+            if (!expandedButton || expandedButton === exceptButton) return;
+            const expandedRow = expandedButton.closest('tr')?.nextElementSibling;
+            if (expandedRow) collapseInvoiceDetails(expandedButton, expandedRow);
+        }
+
+        async function toggleInvoiceDetails(button, detailRow, invoiceArea, storeNumber, transactionId) {
             if (!state.selectedCustomer) return;
-            const dialog = document.getElementById('invoiceDialog');
-            const content = document.getElementById('invoiceDialogContent');
-            content.innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل تفاصيل الفاتورة...</div>';
-            if (!dialog.open) dialog.showModal();
+            if (button.getAttribute('aria-expanded') === 'true') {
+                collapseInvoiceDetails(button, detailRow);
+                return;
+            }
+
+            collapseOpenInvoiceDetails(button);
+            button.setAttribute('aria-expanded', 'true');
+            button.setAttribute('aria-label', 'إغلاق تفاصيل الفاتورة');
+            button.closest('tr')?.classList.add('is-expanded');
+            detailRow.hidden = false;
+            state.openInvoiceKey = button.dataset.invoiceKey;
+            const panel = detailRow.querySelector('.invoice-inline-panel');
+
+            const cachedData = state.invoiceDetailsCache.get(button.dataset.invoiceKey);
+            if (cachedData) {
+                renderInvoiceDetails(cachedData, panel, button, detailRow);
+                return;
+            }
+
+            panel.innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل تفاصيل الفاتورة...</div>';
+            const controller = new AbortController();
+            state.invoiceDetailsController = controller;
             const params = new URLSearchParams({
                 data_area_id: state.selectedCustomer.area,
                 customer_account: state.selectedCustomer.account,
@@ -1125,17 +1186,21 @@
                 transaction_id: transactionId
             });
             try {
-                const data = await apiFetch('/api/crm/customer/invoice?' + params.toString());
-                renderInvoiceDetails(data);
+                const data = await apiFetch('/api/crm/customer/invoice?' + params.toString(), { signal: controller.signal });
+                state.invoiceDetailsCache.set(button.dataset.invoiceKey, data);
+                if (button.getAttribute('aria-expanded') === 'true' && detailRow.isConnected) {
+                    renderInvoiceDetails(data, panel, button, detailRow);
+                }
             } catch (error) {
-                content.innerHTML = `<div class="invoice-dialog-head"><div><div class="eyebrow">Invoice Details</div><h3 id="invoiceDialogTitle" class="m-0">تعذر فتح الفاتورة</h3></div><button class="invoice-dialog-close" type="button" data-close-invoice aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button></div><div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
-                content.querySelector('[data-close-invoice]').addEventListener('click', () => dialog.close());
+                if (error.name === 'AbortError') return;
+                panel.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
+            } finally {
+                if (state.invoiceDetailsController === controller) state.invoiceDetailsController = null;
             }
         }
 
-        function renderInvoiceDetails(data) {
+        function renderInvoiceDetails(data, content, button, detailRow) {
             const invoice = data.invoice;
-            const content = document.getElementById('invoiceDialogContent');
             const invoiceNumber = invoice.invoice_number || 'رقم الفاتورة قيد الترحيل';
             const sellerChips = invoice.sellers.length
                 ? invoice.sellers.map(name => `<span class="seller-chip"><i class="fa-solid fa-user-tie"></i>${escapeHtml(name)}</span>`).join('')
@@ -1152,11 +1217,11 @@
                 </tr>
             `).join('') : '<tr><td colspan="7" class="empty-state">لا توجد منتجات مرتبطة بهذه الفاتورة.</td></tr>';
             content.innerHTML = `
-                <div class="invoice-dialog-head">
-                    <div><div class="eyebrow">Invoice Details</div><h3 id="invoiceDialogTitle" class="invoice-dialog-number m-0">${escapeHtml(invoiceNumber)}</h3><div class="invoice-dialog-meta"><span>${formatDate(invoice.bill_date)}</span><span>${escapeHtml(invoice.outlet_name)}</span><span>${invoice.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></div></div>
-                    <button class="invoice-dialog-close" type="button" data-close-invoice aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+                <div class="invoice-inline-head">
+                    <div><div class="eyebrow">Invoice Details</div><div class="invoice-inline-number">${escapeHtml(invoiceNumber)}</div><div class="invoice-inline-meta"><span>${formatDate(invoice.bill_date)}</span><span>${escapeHtml(invoice.outlet_name)}</span><span>${invoice.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></div></div>
+                    <button class="invoice-inline-close" type="button" data-collapse-invoice><i class="fa-solid fa-chevron-up ms-1"></i>إغلاق التفاصيل</button>
                 </div>
-                <div class="invoice-dialog-body">
+                <div class="invoice-inline-body">
                     <div class="invoice-summary-grid">
                         <div class="invoice-summary-card"><span>إجمالي الفاتورة</span><strong class="${invoice.payment_amount < 0 ? 'amount-negative' : 'amount-positive'}">${invoiceCurrencyFormatter.format(invoice.payment_amount)}</strong></div>
                         <div class="invoice-summary-card"><span>عدد المنتجات</span><strong>${numberFormatter.format(data.items.length)}</strong></div>
@@ -1167,12 +1232,11 @@
                     <div class="table-wrap"><table class="table crm-table invoice-items-table"><thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th><th>البائع</th></tr></thead><tbody>${itemRows}</tbody></table></div>
                 </div>
             `;
-            content.querySelector('[data-close-invoice]').addEventListener('click', () => document.getElementById('invoiceDialog').close());
+            content.querySelector('[data-collapse-invoice]').addEventListener('click', () => {
+                collapseInvoiceDetails(button, detailRow);
+                button.focus();
+            });
         }
-
-        document.getElementById('invoiceDialog').addEventListener('click', event => {
-            if (event.target === event.currentTarget) event.currentTarget.close();
-        });
 
         function showToast(message) {
             document.querySelector('.toast-note')?.remove();
