@@ -53,8 +53,14 @@ async function initNavbar() {
     const name = currentUser ? currentUser.name : '';
     const role = currentUser ? currentUser.role : 'guest';
     const isAlaa = (name === 'علاء');
+    const isCrmOnly = (role === 'CRM');
     const isManager = (role === 'Manager' || role === 'Admin' || name === 'Sales Manager' || isAlaa);
-    const isCrmUser = (name === 'Sales Manager' || isAlaa);
+    const isCrmUser = (isCrmOnly || name === 'Sales Manager' || isAlaa);
+
+    if (isCrmOnly && !path.includes('crm.html')) {
+        window.location.replace('crm.html');
+        return;
+    }
 
     // 4. Read page-specific local actions if present
     const localActionsEl = navbarEl.querySelector('#nav-local-actions');
@@ -96,7 +102,7 @@ async function initNavbar() {
             ${centerContent}
 
             <!-- Right: Action Links -->
-            <div class="d-flex gap-2 flex-wrap justify-content-end align-items-center">
+            <div class="d-flex gap-2 flex-wrap justify-content-end align-items-center" data-nav-actions>
                 <!-- Mobile Today's Sales Badge (Hidden on Desktop) -->
                 ${isIndexPage ? `
                 <button onclick="typeof filterToday === 'function' ? filterToday() : null"
@@ -174,6 +180,13 @@ async function initNavbar() {
             </div>
         </div>
     `;
+
+    if (isCrmOnly) {
+        navbarEl.querySelector('[data-nav-actions]').innerHTML = `
+            <a href="crm.html" class="btn btn-outline-primary btn-sm fw-bold">◎ CRM العملاء</a>
+            <button onclick="logout()" class="btn btn-danger btn-sm fw-bold">خروج</button>
+        `;
+    }
 
     // 5. Initialize custom click handler for dropdown toggles (ensures robust functionality)
     setupDropdownToggles();

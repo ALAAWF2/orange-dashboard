@@ -1,4 +1,5 @@
 const USERS = {
+    "CS": { "pin": "7531", "role": "CRM", "hide_visitors": true },
     "Sales Manager": { "pin": "6587", "role": "Admin", "hide_visitors": false, "email": "m.hamadon@orangebedbath.com", "password": "Mh@852" },
     "المالية": { "pin": "2026", "role": "Finance", "hide_visitors": false, "email": "supervisor.reader@orangebedbath.com", "password": "OrangeReader2026!" },
     "المنطقة الشمالية": { "pin": "6342", "role": "Manager", "hide_visitors": false, "email": "bakr@orangebedbath.com", "password": "ZSgy" },
