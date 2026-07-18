@@ -508,6 +508,79 @@
             font-weight: 900;
         }
 
+        .invoice-link {
+            border: 0;
+            background: transparent;
+            color: var(--crm-ink);
+            padding: 0.35rem 0;
+            font-weight: 900;
+            text-decoration: underline;
+            text-decoration-color: var(--crm-orange);
+            text-decoration-thickness: 3px;
+            text-underline-offset: 5px;
+        }
+
+        .invoice-link:hover, .invoice-link:focus-visible { color: var(--crm-orange-deep); }
+        .invoice-link i { color: var(--crm-orange); }
+
+        .invoice-pending {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--crm-muted);
+            font-weight: 800;
+        }
+
+        .invoice-dialog {
+            width: min(1180px, calc(100vw - 2rem));
+            max-height: calc(100vh - 2rem);
+            padding: 0;
+            border: 0;
+            border-radius: 24px;
+            background: #fff;
+            color: var(--crm-ink);
+            box-shadow: 0 36px 100px rgba(18, 13, 9, 0.34);
+        }
+
+        .invoice-dialog::backdrop { background: rgba(20, 15, 11, 0.72); backdrop-filter: blur(5px); }
+        .invoice-dialog-shell { min-height: 280px; }
+
+        .invoice-dialog-head {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: start;
+            padding: 1.25rem 1.4rem;
+            background: var(--crm-ink);
+            color: #fff;
+            border-bottom: 5px solid var(--crm-orange);
+        }
+
+        .invoice-dialog-number { direction: ltr; font-size: clamp(1.15rem, 3vw, 1.8rem); font-weight: 900; }
+        .invoice-dialog-meta { color: #cfc9c2; display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; margin-top: 0.35rem; font-size: 0.78rem; }
+        .invoice-dialog-close { width: 42px; height: 42px; flex: 0 0 auto; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; background: rgba(255,255,255,0.08); color: #fff; }
+        .invoice-dialog-close:hover { background: var(--crm-orange); color: var(--crm-ink); }
+        .invoice-dialog-body { padding: 1.2rem 1.4rem 1.5rem; overflow: auto; }
+
+        .invoice-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 1rem;
+        }
+
+        .invoice-summary-card { background: var(--crm-cream); border: 1px solid var(--crm-line); border-radius: 14px; padding: 0.8rem; }
+        .invoice-summary-card span { display: block; color: var(--crm-muted); font-size: 0.68rem; font-weight: 800; }
+        .invoice-summary-card strong { display: block; margin-top: 0.28rem; font-size: 0.95rem; }
+        .seller-list { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+        .seller-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.65rem; border-radius: 999px; background: #fff0d8; color: #824708; border: 1px solid #ffd59a; font-size: 0.72rem; font-weight: 900; }
+        .invoice-items-table { min-width: 980px; }
+        .invoice-product-name { font-weight: 900; }
+        .invoice-product-code { direction: ltr; color: var(--crm-muted); font-size: 0.68rem; margin-top: 0.2rem; }
+
         .store-name-cell strong { display: block; }
         .retention-rate { font-size: 0.7rem; color: var(--crm-muted); }
 
@@ -561,6 +634,9 @@
             .duplicate-pair { grid-template-columns: 1fr; }
             .duplicate-divider { transform: rotate(90deg); }
             .audit-row { grid-template-columns: 1fr 1fr; }
+            .invoice-dialog { width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); border-radius: 18px; }
+            .invoice-dialog-head, .invoice-dialog-body { padding: 1rem; }
+            .invoice-summary-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -714,6 +790,10 @@
         <section id="customerDetail" class="customer-detail d-none" aria-live="polite"></section>
     </main>
 
+    <dialog id="invoiceDialog" class="invoice-dialog" aria-labelledby="invoiceDialogTitle">
+        <div id="invoiceDialogContent" class="invoice-dialog-shell"></div>
+    </dialog>
+
     <script src="assets/nav.js"></script>
     <script>
         const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
@@ -744,6 +824,7 @@
 
         const numberFormatter = new Intl.NumberFormat('ar-SA');
         const currencyFormatter = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 });
+        const invoiceCurrencyFormatter = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const dateFormatter = new Intl.DateTimeFormat('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
         const segmentLabels = {
             'VIP': 'كبار العملاء',
@@ -1008,10 +1089,20 @@
                 state.invoicePage = data.page;
                 state.invoicePages = data.total_pages;
                 document.getElementById('invoiceCountLabel').textContent = `${numberFormatter.format(data.total_count)} فاتورة`;
-                const rows = data.invoices.length ? data.invoices.map(row => `
-                    <tr><td><strong dir="ltr">${escapeHtml(row.transaction_id)}</strong></td><td>${formatDate(row.bill_date)}</td><td>${escapeHtml(row.outlet_name)}</td><td><span class="badge ${row.transaction_type === 'return' ? 'text-bg-danger' : 'text-bg-success'}">${row.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></td><td class="${row.payment_amount < 0 ? 'amount-negative' : 'amount-positive'}">${currencyFormatter.format(row.payment_amount)}</td></tr>
-                `).join('') : '<tr><td colspan="5" class="empty-state">لا توجد فواتير ضمن الفترة.</td></tr>';
+                const rows = data.invoices.length ? data.invoices.map(row => {
+                    const invoiceKey = [row.data_area_id, row.store_number, row.transaction_id].map(encodeURIComponent).join('|');
+                    const invoiceLabel = row.invoice_number
+                        ? `<span dir="ltr">${escapeHtml(row.invoice_number)}</span>`
+                        : '<span class="invoice-pending"><i class="fa-regular fa-clock"></i>رقم الفاتورة قيد الترحيل</span>';
+                    return `<tr><td><button class="invoice-link" type="button" data-invoice-key="${invoiceKey}" aria-label="فتح تفاصيل الفاتورة">${invoiceLabel}<i class="fa-solid fa-arrow-up-right-from-square me-2"></i></button></td><td>${formatDate(row.bill_date)}</td><td>${escapeHtml(row.outlet_name)}</td><td><span class="badge ${row.transaction_type === 'return' ? 'text-bg-danger' : 'text-bg-success'}">${row.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></td><td class="${row.payment_amount < 0 ? 'amount-negative' : 'amount-positive'}">${currencyFormatter.format(row.payment_amount)}</td></tr>`;
+                }).join('') : '<tr><td colspan="5" class="empty-state">لا توجد فواتير ضمن الفترة.</td></tr>';
                 table.innerHTML = `<div class="table-wrap"><table class="table crm-table"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>المعرض</th><th>النوع</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+                table.querySelectorAll('[data-invoice-key]').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const [invoiceArea, storeNumber, transactionId] = button.dataset.invoiceKey.split('|').map(decodeURIComponent);
+                        openInvoiceDetails(invoiceArea, storeNumber, transactionId);
+                    });
+                });
                 document.getElementById('invoicePagination').innerHTML = data.total_pages > 1 ? `<div class="pagination-bar"><button id="prevInvoices" ${data.page <= 1 ? 'disabled' : ''}>السابق</button><span class="small fw-bold">${data.page} / ${data.total_pages}</span><button id="nextInvoices" ${data.page >= data.total_pages ? 'disabled' : ''}>التالي</button></div>` : '';
                 document.getElementById('prevInvoices')?.addEventListener('click', () => loadInvoices(data.page - 1));
                 document.getElementById('nextInvoices')?.addEventListener('click', () => loadInvoices(data.page + 1));
@@ -1019,6 +1110,69 @@
                 table.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
             }
         }
+
+        async function openInvoiceDetails(invoiceArea, storeNumber, transactionId) {
+            if (!state.selectedCustomer) return;
+            const dialog = document.getElementById('invoiceDialog');
+            const content = document.getElementById('invoiceDialogContent');
+            content.innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm ms-2"></span>جاري تحميل تفاصيل الفاتورة...</div>';
+            if (!dialog.open) dialog.showModal();
+            const params = new URLSearchParams({
+                data_area_id: state.selectedCustomer.area,
+                customer_account: state.selectedCustomer.account,
+                invoice_data_area_id: invoiceArea,
+                store_number: storeNumber,
+                transaction_id: transactionId
+            });
+            try {
+                const data = await apiFetch('/api/crm/customer/invoice?' + params.toString());
+                renderInvoiceDetails(data);
+            } catch (error) {
+                content.innerHTML = `<div class="invoice-dialog-head"><div><div class="eyebrow">Invoice Details</div><h3 id="invoiceDialogTitle" class="m-0">تعذر فتح الفاتورة</h3></div><button class="invoice-dialog-close" type="button" data-close-invoice aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button></div><div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(error.message)}</div>`;
+                content.querySelector('[data-close-invoice]').addEventListener('click', () => dialog.close());
+            }
+        }
+
+        function renderInvoiceDetails(data) {
+            const invoice = data.invoice;
+            const content = document.getElementById('invoiceDialogContent');
+            const invoiceNumber = invoice.invoice_number || 'رقم الفاتورة قيد الترحيل';
+            const sellerChips = invoice.sellers.length
+                ? invoice.sellers.map(name => `<span class="seller-chip"><i class="fa-solid fa-user-tie"></i>${escapeHtml(name)}</span>`).join('')
+                : '<span class="seller-chip"><i class="fa-solid fa-user-slash"></i>لم يتم ربط اسم البائع</span>';
+            const itemRows = data.items.length ? data.items.map(item => `
+                <tr>
+                    <td><div class="invoice-product-name">${escapeHtml(item.product_name)}</div><div class="invoice-product-code">${escapeHtml(item.item_id)}</div></td>
+                    <td>${numberFormatter.format(item.quantity)}</td>
+                    <td>${invoiceCurrencyFormatter.format(item.unit_price)}</td>
+                    <td>${invoiceCurrencyFormatter.format(item.discount_amount)}</td>
+                    <td>${invoiceCurrencyFormatter.format(item.tax_amount)}</td>
+                    <td class="${item.net_amount < 0 ? 'amount-negative' : 'amount-positive'}">${invoiceCurrencyFormatter.format(item.net_amount)}</td>
+                    <td>${escapeHtml(item.seller_name || item.sales_group || '—')}</td>
+                </tr>
+            `).join('') : '<tr><td colspan="7" class="empty-state">لا توجد منتجات مرتبطة بهذه الفاتورة.</td></tr>';
+            content.innerHTML = `
+                <div class="invoice-dialog-head">
+                    <div><div class="eyebrow">Invoice Details</div><h3 id="invoiceDialogTitle" class="invoice-dialog-number m-0">${escapeHtml(invoiceNumber)}</h3><div class="invoice-dialog-meta"><span>${formatDate(invoice.bill_date)}</span><span>${escapeHtml(invoice.outlet_name)}</span><span>${invoice.transaction_type === 'return' ? 'مرتجع' : 'شراء'}</span></div></div>
+                    <button class="invoice-dialog-close" type="button" data-close-invoice aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="invoice-dialog-body">
+                    <div class="invoice-summary-grid">
+                        <div class="invoice-summary-card"><span>إجمالي الفاتورة</span><strong class="${invoice.payment_amount < 0 ? 'amount-negative' : 'amount-positive'}">${invoiceCurrencyFormatter.format(invoice.payment_amount)}</strong></div>
+                        <div class="invoice-summary-card"><span>عدد المنتجات</span><strong>${numberFormatter.format(data.items.length)}</strong></div>
+                        <div class="invoice-summary-card"><span>المعرض</span><strong>${escapeHtml(invoice.outlet_name)}</strong></div>
+                        <div class="invoice-summary-card"><span>نقطة البيع</span><strong>${escapeHtml(invoice.terminal || '—')}</strong></div>
+                    </div>
+                    <div class="seller-list">${sellerChips}</div>
+                    <div class="table-wrap"><table class="table crm-table invoice-items-table"><thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th><th>البائع</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+                </div>
+            `;
+            content.querySelector('[data-close-invoice]').addEventListener('click', () => document.getElementById('invoiceDialog').close());
+        }
+
+        document.getElementById('invoiceDialog').addEventListener('click', event => {
+            if (event.target === event.currentTarget) event.currentTarget.close();
+        });
 
         function showToast(message) {
             document.querySelector('.toast-note')?.remove();
