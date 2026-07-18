@@ -652,20 +652,72 @@
         .mover-pct.up { background: #e8f5e9; color: #198754; }
         .mover-pct.down { background: #ffebee; color: #c62828; }
 
-        /* ========== Efficiency Matrix Legend ========== */
-        .matrix-legend {
+        /* ========== Basket Analysis Panel ========== */
+        .basket-chips {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            font-size: 0.72rem;
-            color: #666;
+            margin-bottom: 14px;
         }
-        .matrix-legend span {
+        .basket-chip {
+            flex: 1;
+            min-width: 120px;
             background: #f8f9fa;
             border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 3px 10px;
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: center;
+        }
+        .basket-chip .bc-label {
+            font-size: 0.72rem;
+            color: #6c757d;
             font-weight: 600;
+            margin-bottom: 3px;
+        }
+        .basket-chip .bc-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #212529;
+            font-variant-numeric: tabular-nums;
+        }
+        .basket-chip .bc-delta {
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .basket-bucket-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 4px;
+            border-bottom: 1px solid #f4f4f4;
+            font-size: 0.85rem;
+        }
+        .basket-bucket-row:last-child { border-bottom: none; }
+        .basket-bucket-name {
+            font-weight: 700;
+            color: #333;
+            width: 130px;
+            flex: 0 0 130px;
+        }
+        .basket-bucket-bar {
+            flex: 1;
+            height: 10px;
+            border-radius: 5px;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+        .basket-bucket-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.4s;
+        }
+        .basket-bucket-val {
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            min-width: 95px;
+            text-align: left;
+            flex: 0 0 95px;
         }
         .weekday-insight {
             font-size: 0.8rem;
@@ -686,7 +738,7 @@
         }
         .wrap-cumulative { height: 300px; }
         .wrap-weekday { height: 260px; }
-        .wrap-matrix { height: 330px; }
+        .wrap-basket { height: 240px; }
 
         /* ========== Prevent horizontal overflow globally ========== */
         html, body {
@@ -919,7 +971,9 @@
             /* New charts - compact heights on mobile */
             .wrap-cumulative,
             .wrap-weekday,
-            .wrap-matrix { height: 230px; }
+            .wrap-basket { height: 220px; }
+            .basket-bucket-name { width: 105px; flex: 0 0 105px; font-size: 0.78rem; }
+            .basket-bucket-val { min-width: 80px; flex: 0 0 80px; font-size: 0.78rem; }
 
             .dashboard-filter-card {
                 padding: 0 !important;
@@ -2305,20 +2359,22 @@
             </div>
         </div>
 
-        <!-- Row 3.6: Store Efficiency Matrix & Top Movers -->
+        <!-- Row 3.6: Basket Analysis & Top Movers -->
         <div class="row mt-4">
-            <!-- Efficiency Matrix -->
-            <div class="col-md-8" id="efficiencyMatrixCol">
-                <h5 class="section-title">مصفوفة كفاءة الفروع (Efficiency Matrix)</h5>
+            <!-- Basket Analysis -->
+            <div class="col-md-8" id="basketAnalysisCol">
+                <h5 class="section-title">تحليل سلة المشتريات (Basket Analysis)</h5>
                 <div class="chart-container" style="min-height: 0;">
-                    <div class="matrix-legend mb-2">
-                        <span>↗ نجوم (تحويل وفاتورة عاليان)</span>
-                        <span>↘ فرص تحويل (زوار بلا شراء)</span>
-                        <span>↖ فرص سلة (فاتورة ضعيفة)</span>
-                        <span>↙ يحتاج تدخل</span>
-                    </div>
-                    <div class="chart-canvas-wrap wrap-matrix">
-                        <canvas id="efficiencyChart"></canvas>
+                    <div class="row align-items-center g-3">
+                        <div class="col-md-5">
+                            <div class="chart-canvas-wrap wrap-basket">
+                                <canvas id="basketChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="basket-chips" id="basketChips"></div>
+                            <div id="basketStats"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4014,6 +4070,33 @@
                 return { sales, trans, visitors, target, items, monthly, branchSales, branchTrans, branchVisitors, branchTarget, branchItems, daily, dailyTrans, dailyVisitors };
             };
 
+            // --- 2.5 Basket Aggregation (respects same filters) ---
+            const calcBasket = (start, end) => {
+                const data = { '1': { bills: 0, items: 0 }, '2': { bills: 0, items: 0 }, '3+': { bills: 0, items: 0 } };
+                let sTime = start.getTime();
+                let eTime = end.getTime();
+
+                (rawData.basket_analysis || []).forEach(([d, s, size, bills, items]) => {
+                    if (selBranch !== 'all' && s !== selBranch) return;
+                    if (rawData.store_meta && rawData.store_meta[s]) {
+                        let meta = rawData.store_meta[s];
+                        if (selCity !== 'all' && meta.city !== selCity) return;
+                        if (selManager !== 'all' && meta.manager !== selManager) return;
+                        if (selType !== 'all' && meta.type !== selType) return;
+                    } else {
+                        if (selCity !== 'all' || selManager !== 'all' || selType !== 'all') return;
+                    }
+                    let dTime = new Date(d).getTime();
+                    if (dTime < sTime || dTime > eTime) return;
+                    if (data[size]) {
+                        data[size].bills += bills || 0;
+                        data[size].items += items || 0;
+                    }
+                });
+
+                return data;
+            };
+
             // Calculate Current (Filtered) for Display
             const curr = calcStats(currentStart, currentEnd);
             const prev = calcStats(prevStart, prevEnd);
@@ -4282,7 +4365,7 @@
             renderRetailKpis(curr, prev);
             renderCumulativeChart(curr.daily, prev.daily, cYear, pYear);
             renderWeekdayChart(curr.daily, curr.dailyTrans, curr.dailyVisitors);
-            renderEfficiencyMatrix(branchList);
+            renderBasketAnalysis(calcBasket(currentStart, currentEnd), calcBasket(prevStart, prevEnd));
             renderTopMovers(branchList);
 
             // Render Table
@@ -6752,119 +6835,137 @@
             }
         }
 
-        function renderEfficiencyMatrix(branchList) {
-            const col = document.getElementById('efficiencyMatrixCol');
-            const canvas = document.getElementById('efficiencyChart');
-            if (!canvas || !col) return;
-
-            // Conversion-based: hide entirely when visitors are hidden for this user
-            if (shouldHideVisitors()) {
-                col.style.display = 'none';
-                return;
-            }
-            col.style.display = '';
+        function renderBasketAnalysis(curr, prev) {
+            const canvas = document.getElementById('basketChart');
+            const chipsEl = document.getElementById('basketChips');
+            const statsEl = document.getElementById('basketStats');
+            if (!canvas || !chipsEl || !statsEl) return;
 
             const ctx = canvas.getContext('2d');
-            if (charts['efficiency']) charts['efficiency'].destroy();
+            if (charts['basket']) charts['basket'].destroy();
 
-            // Only stores with meaningful traffic & sales; exclude Online type
-            const pts = branchList.filter(b => {
-                const meta = rawData.store_meta ? rawData.store_meta[b.sid] : null;
-                if (meta && meta.type === 'Online') return false;
-                return b.visitors > 0 && b.trans > 0 && b.val > 0;
-            });
+            const summarize = (b) => {
+                const bills = b['1'].bills + b['2'].bills + b['3+'].bills;
+                const items = b['1'].items + b['2'].items + b['3+'].items;
+                const multiBills = b['2'].bills + b['3+'].bills;
+                return {
+                    bills, items, multiBills,
+                    avgItems: bills > 0 ? items / bills : 0,
+                    multiPct: bills > 0 ? (multiBills / bills) * 100 : 0
+                };
+            };
 
-            if (pts.length === 0) {
-                charts['efficiency'] = null;
+            const c = summarize(curr);
+            const p = summarize(prev);
+
+            // Empty state
+            if (c.bills === 0) {
+                charts['basket'] = null;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                chipsEl.innerHTML = '';
+                statsEl.innerHTML = '<div class="text-muted text-center py-3" style="font-size: 0.85rem;">لا توجد بيانات سلال لهذه الفترة</div>';
                 return;
             }
 
-            const maxVal = Math.max(...pts.map(b => b.val));
-            let sumTrans = 0, sumVis = 0, sumVal = 0;
-            pts.forEach(b => { sumTrans += b.trans; sumVis += b.visitors; sumVal += b.val; });
-            const avgConv = sumVis > 0 ? (sumTrans / sumVis) * 100 : 0;
-            const avgTicket = sumTrans > 0 ? sumVal / sumTrans : 0;
-
-            const data = pts.map(b => ({
-                x: +b.conv.toFixed(2),
-                y: Math.round(b.avgInv),
-                r: 5 + 13 * Math.sqrt(b.val / maxVal),
-                name: b.name,
-                val: b.val,
-                ach: b.ach
-            }));
-
-            const quadrantPlugin = {
-                id: 'quadrantLines',
-                afterDatasetsDraw(chart, args, opts) {
+            // --- Donut Chart ---
+            const centerTextPlugin = {
+                id: 'basketCenterText',
+                afterDraw(chart, args, opts) {
                     const area = chart.chartArea;
-                    if (!area) return;
-                    const { left, right, top, bottom } = area;
-                    const xPos = chart.scales.x.getPixelForValue(opts.xAvg);
-                    const yPos = chart.scales.y.getPixelForValue(opts.yAvg);
-                    const c = chart.ctx;
-                    c.save();
-                    c.strokeStyle = 'rgba(108, 117, 125, 0.55)';
-                    c.lineWidth = 1.5;
-                    c.setLineDash([6, 6]);
-                    c.beginPath(); c.moveTo(xPos, top); c.lineTo(xPos, bottom); c.stroke();
-                    c.beginPath(); c.moveTo(left, yPos); c.lineTo(right, yPos); c.stroke();
-                    c.setLineDash([]);
-                    c.fillStyle = 'rgba(108, 117, 125, 0.85)';
-                    c.font = '600 10px Tajawal';
-                    c.textAlign = 'left';
-                    c.fillText('متوسط التحويل ' + opts.xAvg.toFixed(1) + '%', xPos + 5, top + 12);
-                    c.fillText('متوسط الفاتورة ' + Math.round(opts.yAvg).toLocaleString(), left + 6, yPos - 6);
-                    c.restore();
+                    if (!area || !opts.text) return;
+                    const x = (area.left + area.right) / 2;
+                    const y = (area.top + area.bottom) / 2;
+                    const cc = chart.ctx;
+                    cc.save();
+                    cc.textAlign = 'center';
+                    cc.textBaseline = 'middle';
+                    cc.font = '800 1.45rem Tajawal';
+                    cc.fillStyle = '#212529';
+                    cc.fillText(opts.text, x, y - 9);
+                    cc.font = '600 0.68rem Tajawal';
+                    cc.fillStyle = '#98a0a6';
+                    cc.fillText(opts.sub || '', x, y + 15);
+                    cc.restore();
                 }
             };
 
-            charts['efficiency'] = new Chart(ctx, {
-                type: 'bubble',
+            charts['basket'] = new Chart(ctx, {
+                type: 'doughnut',
                 data: {
+                    labels: ['فاتورة بقطعة', 'فاتورة بقطعتين', 'فواتير 3+ قطع'],
                     datasets: [{
-                        label: 'الفروع',
-                        data,
-                        backgroundColor: data.map(p => {
-                            const a = p.ach;
-                            return a >= 100 ? 'rgba(25, 135, 84, 0.65)' : a >= 70 ? 'rgba(254, 121, 0, 0.65)' : 'rgba(220, 53, 69, 0.6)';
-                        }),
-                        borderColor: data.map(p => p.ach >= 100 ? '#198754' : p.ach >= 70 ? '#fe7900' : '#dc3545'),
-                        borderWidth: 1.5
+                        data: [curr['1'].bills, curr['2'].bills, curr['3+'].bills],
+                        backgroundColor: ['#ffd8a8', '#ff9f43', '#cc6100'],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'نسبة التحويل %', font: { weight: 'bold' } },
-                            grid: { borderDash: [5, 5] },
-                            ticks: { callback: v => v + '%' }
-                        },
-                        y: {
-                            title: { display: true, text: 'متوسط الفاتورة', font: { weight: 'bold' } },
-                            grid: { borderDash: [5, 5] }
-                        }
-                    },
+                    cutout: '68%',
                     plugins: {
-                        legend: { display: false },
-                        quadrantLines: { xAvg: avgConv, yAvg: avgTicket },
+                        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
+                        basketCenterText: { text: c.avgItems.toFixed(2), sub: 'قطعة / فاتورة' },
                         tooltip: {
                             callbacks: {
-                                title: (items) => items[0].raw.name,
-                                label: (c) => [
-                                    'المبيعات: ' + Math.round(c.raw.val).toLocaleString(),
-                                    'التحويل: ' + c.raw.x.toFixed(1) + '%',
-                                    'م. الفاتورة: ' + Math.round(c.raw.y).toLocaleString(),
-                                    'تحقيق الهدف: ' + c.raw.ach.toFixed(1) + '%'
-                                ]
+                                label: (item) => {
+                                    const pct = c.bills > 0 ? (item.parsed / c.bills) * 100 : 0;
+                                    return ' ' + item.label + ': ' + item.parsed.toLocaleString() + ' فاتورة (' + pct.toFixed(1) + '%)';
+                                }
                             }
                         }
                     }
                 },
-                plugins: [quadrantPlugin]
+                plugins: [centerTextPlugin]
             });
+
+            // --- Summary Chips (with comparison deltas) ---
+            const hasPrev = p.bills > 0;
+            const deltaHtml = (val, isPct) => {
+                const cls = val >= 0 ? 'color:#198754' : 'color:#dc3545';
+                const sign = val >= 0 ? '+' : '';
+                return `<div class="bc-delta" style="${cls}" dir="ltr">${sign}${val.toFixed(1)}${isPct ? ' نقطة' : '%'}</div>`;
+            };
+            const noPrevHtml = '<div class="bc-delta" style="color:#b0b7bd;">لا توجد بيانات مقارنة</div>';
+            const itemsGrowth = hasPrev && p.items > 0 ? ((c.items - p.items) / p.items) * 100 : 0;
+            const avgItemsDelta = c.avgItems - p.avgItems;
+            const multiDelta = c.multiPct - p.multiPct;
+
+            chipsEl.innerHTML = `
+                <div class="basket-chip">
+                    <div class="bc-label">إجمالي الفواتير</div>
+                    <div class="bc-value">${c.bills.toLocaleString()}</div>
+                    ${hasPrev ? deltaHtml(itemsGrowth, false) : noPrevHtml}
+                </div>
+                <div class="basket-chip">
+                    <div class="bc-label">متوسط القطع / فاتورة</div>
+                    <div class="bc-value">${c.avgItems.toFixed(2)}</div>
+                    ${hasPrev ? `<div class="bc-delta" style="${avgItemsDelta >= 0 ? 'color:#198754' : 'color:#dc3545'}" dir="ltr">${avgItemsDelta >= 0 ? '+' : ''}${avgItemsDelta.toFixed(2)}</div>` : noPrevHtml}
+                </div>
+                <div class="basket-chip">
+                    <div class="bc-label">فواتير متعددة القطع</div>
+                    <div class="bc-value">${c.multiPct.toFixed(1)}%</div>
+                    ${hasPrev ? deltaHtml(multiDelta, true) : noPrevHtml}
+                </div>
+            `;
+
+            // --- Bucket Rows with Share Bars ---
+            const buckets = [
+                { key: '1', name: 'فاتورة بقطعة', color: '#ffd8a8' },
+                { key: '2', name: 'فاتورة بقطعتين', color: '#ff9f43' },
+                { key: '3+', name: 'فواتير 3+ قطع', color: '#cc6100' }
+            ];
+            statsEl.innerHTML = buckets.map(bk => {
+                const bills = curr[bk.key].bills;
+                const pct = c.bills > 0 ? (bills / c.bills) * 100 : 0;
+                const avgItemsInBucket = bills > 0 ? (curr[bk.key].items / bills) : 0;
+                return `
+                <div class="basket-bucket-row">
+                    <span class="basket-bucket-name">${bk.name}</span>
+                    <span class="basket-bucket-bar"><span class="basket-bucket-fill" style="width: ${pct.toFixed(1)}%; background: ${bk.color}; display: block;"></span></span>
+                    <span class="basket-bucket-val">${bills.toLocaleString()} <span style="color:#98a0a6; font-weight:600;">(${pct.toFixed(0)}%)</span></span>
+                </div>`;
+            }).join('');
         }
 
         function renderTopMovers(branchList) {
