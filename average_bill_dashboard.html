@@ -149,6 +149,13 @@
             margin-bottom: 30px;
         }
 
+        .date-range-note {
+            color: #6c757d;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
         .btn-primary-custom {
             background-color: var(--primary);
             border-color: var(--primary);
@@ -481,11 +488,18 @@
                 <div class="filter-card">
                     <div class="row align-items-end g-3">
                         <div class="col-md-3">
-                            <label class="form-label">اختر التاريخ</label>
-                            <input type="date" id="dailyDate" class="form-control py-2">
+                            <label class="form-label" for="dailyStartDate">من تاريخ</label>
+                            <input type="date" id="dailyStartDate" class="form-control py-2">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="dailyEndDate">إلى تاريخ</label>
+                            <input type="date" id="dailyEndDate" class="form-control py-2">
                         </div>
                         <div class="col-md-3">
                             <button onclick="loadDailyPerformance()" class="btn btn-primary-custom py-2"><i class="fa-solid fa-rotate me-1"></i> تحديث البيانات</button>
+                        </div>
+                        <div class="col-12">
+                            <div class="date-range-note" id="dailyRangeNote"><i class="fa-solid fa-circle-info me-1"></i>يمكن اختيار فترة تصل إلى 31 يوماً.</div>
                         </div>
                     </div>
                 </div>
@@ -498,7 +512,7 @@
                                 <i class="fa-solid fa-shop"></i>
                             </div>
                             <div class="kpi-info">
-                                <h6>إجمالي الفروع</h6>
+                                <h6 id="dailyTotalStoresLabel">إجمالي الفروع</h6>
                                 <h3 id="dailyTotalStores">0</h3>
                             </div>
                         </div>
@@ -509,7 +523,7 @@
                                 <i class="fa-solid fa-circle-check"></i>
                             </div>
                             <div class="kpi-info">
-                                <h6>فروع حققت الهدف</h6>
+                                <h6 id="dailyAchievedStoresLabel">فروع حققت الهدف</h6>
                                 <h3 id="dailyAchievedStores">0</h3>
                             </div>
                         </div>
@@ -520,7 +534,7 @@
                                 <i class="fa-solid fa-circle-xmark"></i>
                             </div>
                             <div class="kpi-info">
-                                <h6>فروع لم تحقق</h6>
+                                <h6 id="dailyMissedStoresLabel">فروع لم تحقق</h6>
                                 <h3 id="dailyMissedStores">0</h3>
                             </div>
                         </div>
@@ -541,12 +555,13 @@
                 <!-- Daily Table Panel -->
                 <div class="content-panel">
                     <div class="panel-title">
-                        <span>أداء المعارض اليومي مقارنة بالمستهدف</span>
+                        <span id="dailyTableTitle">أداء المعارض اليومي مقارنة بالمستهدف</span>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom">
                             <thead>
                                 <tr>
+                                    <th>التاريخ</th>
                                     <th>المعرض</th>
                                     <th class="text-end">المبيعات الفعلية</th>
                                     <th class="text-end">عدد الفواتير</th>
@@ -569,7 +584,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-lg-5">
                         <div class="content-panel h-100">
-                            <div class="panel-title">نسبة تحقيق مستهدفات الفروع اليوم</div>
+                            <div class="panel-title" id="dailyAchievementChartTitle">نسبة تحقيق مستهدفات الفروع اليوم</div>
                             <div style="min-height: 280px; position: relative;">
                                 <canvas id="dailyAchievementChart"></canvas>
                             </div>
@@ -577,7 +592,7 @@
                     </div>
                     <div class="col-lg-7">
                         <div class="content-panel h-100">
-                            <div class="panel-title">أعلى 10 معارض مبيعاً اليوم (ريال)</div>
+                            <div class="panel-title" id="dailyTopSalesChartTitle">أعلى 10 معارض مبيعاً اليوم (ريال)</div>
                             <div style="min-height: 280px; position: relative;">
                                 <canvas id="dailyTopSalesChart"></canvas>
                             </div>
@@ -791,11 +806,20 @@
             if (!hasAverageBillSession) return;
             const today = new Date();
             const todayValue = formatDateInput(today);
-            const requestedDate = new URLSearchParams(window.location.search).get('date');
-            const selectedDailyDate = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || '') ? requestedDate : todayValue;
+            const queryParams = new URLSearchParams(window.location.search);
+            const requestedDate = queryParams.get('date');
+            const requestedStartDate = queryParams.get('start');
+            const requestedEndDate = queryParams.get('end');
+            const legacyDate = isValidDateInput(requestedDate) ? requestedDate : todayValue;
+            const selectedStartDate = isValidDateInput(requestedStartDate) ? requestedStartDate : legacyDate;
+            const selectedEndDate = isValidDateInput(requestedEndDate) ? requestedEndDate : selectedStartDate;
             const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
             const tomorrowValue = formatDateInput(tomorrow);
-            document.getElementById('dailyDate').value = selectedDailyDate;
+            document.getElementById('dailyStartDate').value = selectedStartDate;
+            document.getElementById('dailyEndDate').value = selectedEndDate;
+            syncDailyRangeConstraints('start');
+            document.getElementById('dailyStartDate').addEventListener('change', () => syncDailyRangeConstraints('start'));
+            document.getElementById('dailyEndDate').addEventListener('change', () => syncDailyRangeConstraints('end'));
             document.getElementById('monthlyMonth').value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
             document.getElementById('modalEffectiveDate').min = tomorrowValue;
             document.getElementById('modalEffectiveDate').value = tomorrowValue;
@@ -809,6 +833,91 @@
 
         function formatDateInput(value) {
             return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+        }
+
+        function isValidDateInput(value) {
+            return /^\d{4}-\d{2}-\d{2}$/.test(value || '');
+        }
+
+        function shiftDateInput(value, days) {
+            const [year, month, day] = value.split('-').map(Number);
+            const shifted = new Date(Date.UTC(year, month - 1, day + days));
+            return shifted.toISOString().slice(0, 10);
+        }
+
+        function countDateRangeDays(startDate, endDate) {
+            const startTime = Date.parse(`${startDate}T00:00:00Z`);
+            const endTime = Date.parse(`${endDate}T00:00:00Z`);
+            return Math.floor((endTime - startTime) / 86400000) + 1;
+        }
+
+        function syncDailyRangeConstraints(changedField) {
+            const startInput = document.getElementById('dailyStartDate');
+            const endInput = document.getElementById('dailyEndDate');
+            let startDate = startInput.value;
+            let endDate = endInput.value;
+            if (!isValidDateInput(startDate) || !isValidDateInput(endDate)) return;
+
+            if (endDate < startDate) {
+                if (changedField === 'end') {
+                    startDate = endDate;
+                    startInput.value = startDate;
+                } else {
+                    endDate = startDate;
+                    endInput.value = endDate;
+                }
+            }
+
+            if (countDateRangeDays(startDate, endDate) > 31) {
+                if (changedField === 'end') {
+                    startDate = shiftDateInput(endDate, -30);
+                    startInput.value = startDate;
+                } else {
+                    endDate = shiftDateInput(startDate, 30);
+                    endInput.value = endDate;
+                }
+            }
+
+            endInput.min = startDate;
+            endInput.max = shiftDateInput(startDate, 30);
+            updateDailyRangeNote(startDate, endDate);
+        }
+
+        function updateDailyRangeNote(startDate, endDate) {
+            const days = countDateRangeDays(startDate, endDate);
+            const note = document.getElementById('dailyRangeNote');
+            note.innerHTML = `<i class="fa-solid fa-circle-info me-1"></i>${days === 1 ? 'يوم واحد محدد' : `${days} أيام محددة`} — الحد الأقصى 31 يوماً.`;
+        }
+
+        function getSelectedDailyRange() {
+            const startDate = document.getElementById('dailyStartDate').value;
+            const endDate = document.getElementById('dailyEndDate').value;
+            if (!isValidDateInput(startDate) || !isValidDateInput(endDate)) {
+                throw new Error('يرجى تحديد تاريخ البداية وتاريخ النهاية.');
+            }
+            if (endDate < startDate) {
+                throw new Error('تاريخ النهاية يجب أن يكون مساوياً أو بعد تاريخ البداية.');
+            }
+            const days = countDateRangeDays(startDate, endDate);
+            if (days > 31) {
+                throw new Error('يمكن عرض 31 يوماً كحد أقصى في المتابعة اليومية.');
+            }
+            return { startDate, endDate, days, isRange: days > 1 };
+        }
+
+        function setDailyRange(startDate, endDate = startDate) {
+            document.getElementById('dailyStartDate').value = startDate;
+            document.getElementById('dailyEndDate').value = endDate;
+            syncDailyRangeConstraints('start');
+        }
+
+        function isDateInSelectedDailyRange(date) {
+            try {
+                const range = getSelectedDailyRange();
+                return date >= range.startDate && date <= range.endDate;
+            } catch (_error) {
+                return false;
+            }
         }
 
         function updatePeriodLabelText(dateVal) {
@@ -972,7 +1081,7 @@
         }
 
         function openReviewDay(date) {
-            document.getElementById('dailyDate').value = date;
+            setDailyRange(date);
             loadDailyPerformance();
             document.querySelector('.filter-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -1014,7 +1123,7 @@
                 notice.className = `alert ${decision === 'APPROVE' ? 'alert-success' : 'alert-secondary'} review-decision-notice`;
                 notice.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i>تم ${label} حالة <strong>${escapeHtml(employeeName)}</strong> وإعادة الاحتساب. حالة الجائزة الآن: <strong>${escapeHtml(awardLabel)}</strong>.`;
                 notice.style.display = 'block';
-                if (document.getElementById('dailyDate').value === date) await loadDailyPerformance();
+                if (isDateInSelectedDailyRange(date)) await loadDailyPerformance();
             } catch (error) {
                 alert(error.message);
                 actionButtons.forEach(item => item.disabled = false);
@@ -1024,33 +1133,53 @@
 
         // 1. Fetch Daily Performance
         async function loadDailyPerformance() {
-            const date = document.getElementById('dailyDate').value;
             const tbody = document.getElementById('dailyTableBody');
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل البيانات الأداء الفوري...</td></tr>';
+            let range;
+            try {
+                range = getSelectedDailyRange();
+            } catch (error) {
+                alert(error.message);
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل بيانات الأداء...</td></tr>';
+            updateDailyViewLabels(range);
 
             try {
-                const r = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/performance?date=${date}`, {
+                const params = new URLSearchParams({
+                    start: range.startDate,
+                    end: range.endDate,
+                    view: 'daily'
+                });
+                const r = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/performance?${params.toString()}`, {
                     headers: { 'Authorization': authHeader }
                 });
-                
-                if (!r.ok) throw new Error('API Error');
                 const res = await r.json();
-                
-                dailyPerformanceCache = res.performance;
+                if (!r.ok) throw new Error(res.error || 'تعذر تحميل بيانات الفترة المحددة.');
+
+                dailyPerformanceCache = Array.isArray(res.performance) ? res.performance : [];
+
+                const pageUrl = new URL(window.location.href);
+                pageUrl.searchParams.delete('date');
+                pageUrl.searchParams.set('start', range.startDate);
+                pageUrl.searchParams.set('end', range.endDate);
+                window.history.replaceState({}, '', pageUrl);
 
                 // Populate KPIs
-                let totalStores = dailyPerformanceCache.length;
+                const totalStores = dailyPerformanceCache.length;
                 let achievedCount = 0;
                 let totalPrize = 0.0;
 
                 tbody.innerHTML = '';
 
                 if (totalStores === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا يوجد معارض مسجلة أو لا تتوفر مبيعات لهذا اليوم.</td></tr>';
-                    updateDailyCharts([]);
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">لا توجد بيانات معارض للفترة من ${range.startDate} إلى ${range.endDate}.</td></tr>`;
+                    updateDailyCharts([], range.isRange);
                 }
 
-                dailyPerformanceCache.sort((a,b) => b.actual_sales - a.actual_sales).forEach(store => {
+                dailyPerformanceCache
+                    .sort((a, b) => b.date.localeCompare(a.date) || b.actual_sales - a.actual_sales)
+                    .forEach(store => {
                     if (store.achieved) {
                         achievedCount++;
                         totalPrize += store.payout_total;
@@ -1058,11 +1187,12 @@
 
                     const statusMeta = awardStatusMeta[store.award_status] || [store.award_status, 'bg-secondary'];
                     const targetButton = currentUser.role === 'Admin'
-                        ? `<button onclick="openEditTargetModal('${store.store_name}')" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius:6px;"><i class="fa-solid fa-pen-to-square me-1"></i> تعديل الهدف</button>`
+                        ? `<button type="button" onclick="openEditTargetModal('${store.store_id}', '${store.date}')" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius:6px;"><i class="fa-solid fa-pen-to-square me-1"></i> تعديل الهدف</button>`
                         : '<span class="text-muted">—</span>';
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
+                        <td class="fw-bold" dir="ltr">${escapeHtml(store.date)}</td>
                         <td class="fw-bold">${store.store_name}</td>
                         <td class="text-end fw-bold text-primary">${store.actual_sales.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                         <td class="text-end">${store.actual_transactions}</td>
@@ -1073,9 +1203,9 @@
                             <span class="badge ${statusMeta[1]} py-2 px-3">${statusMeta[0]}</span>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-secondary py-2 px-3 fw-bold" style="border-radius:8px; cursor:pointer;" onclick="showStoreEmployees('${store.store_id}')" title="اضغط لعرض تفاصيل الموظفين">
+                            <button type="button" class="badge border-0 bg-secondary py-2 px-3 fw-bold" style="border-radius:8px; cursor:pointer;" onclick="showStoreEmployees('${store.store_id}', '${store.date}')" title="عرض تفاصيل الموظفين في ${store.date}">
                                 ${store.eligible_count} مستحق / ${store.pending_count} مراجعة <i class="fa-solid fa-users ms-1"></i>
-                            </span>
+                            </button>
                         </td>
                         <td class="text-center">
                             ${targetButton}
@@ -1088,15 +1218,31 @@
                 document.getElementById('dailyAchievedStores').textContent = achievedCount;
                 document.getElementById('dailyMissedStores').textContent = totalStores - achievedCount;
                 document.getElementById('dailyTotalPrize').textContent = totalPrize.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ريال';
-                updateDailyCharts(dailyPerformanceCache);
+                updateDailyCharts(dailyPerformanceCache, range.isRange);
 
             } catch (err) {
                 console.error("Error loading daily average bill data:", err);
-                alert("حدث خطأ أثناء تحميل البيانات اليومية. يرجى التأكد من تشغيل خادم الإدارة (dashboard_server/server.py).");
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">${escapeHtml(err.message)}</td></tr>`;
+                alert(err.message);
             }
         }
 
-        function updateDailyCharts(performanceData) {
+        function updateDailyViewLabels(range) {
+            document.getElementById('dailyTotalStoresLabel').textContent = range.isRange ? 'إجمالي سجلات الفروع' : 'إجمالي الفروع';
+            document.getElementById('dailyAchievedStoresLabel').textContent = range.isRange ? 'سجلات حققت الهدف' : 'فروع حققت الهدف';
+            document.getElementById('dailyMissedStoresLabel').textContent = range.isRange ? 'سجلات لم تحقق' : 'فروع لم تحقق';
+            document.getElementById('dailyTableTitle').textContent = range.isRange
+                ? `أداء المعارض اليومي من ${range.startDate} إلى ${range.endDate}`
+                : `أداء المعارض اليومي بتاريخ ${range.startDate}`;
+            document.getElementById('dailyAchievementChartTitle').textContent = range.isRange
+                ? 'نسبة تحقيق مستهدفات سجلات الفروع خلال الفترة'
+                : 'نسبة تحقيق مستهدفات الفروع في اليوم المحدد';
+            document.getElementById('dailyTopSalesChartTitle').textContent = range.isRange
+                ? 'أعلى 10 سجلات معارض مبيعاً خلال الفترة (ريال)'
+                : 'أعلى 10 معارض مبيعاً في اليوم المحدد (ريال)';
+        }
+
+        function updateDailyCharts(performanceData, isRange = false) {
             const canvas1 = document.getElementById('dailyAchievementChart');
             const canvas2 = document.getElementById('dailyTopSalesChart');
             if (!canvas1 || !canvas2) return;
@@ -1118,7 +1264,7 @@
             dailyAchievementChartInstance = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
-                    labels: ['فروع حققت الهدف', 'فروع لم تحقق'],
+                    labels: isRange ? ['سجلات حققت الهدف', 'سجلات لم تحقق'] : ['فروع حققت الهدف', 'فروع لم تحقق'],
                     datasets: [{
                         data: [achievedCount, missedCount],
                         backgroundColor: ['#198754', '#dc3545'],
@@ -1145,7 +1291,8 @@
             const sortedStores = [...performanceData].sort((a, b) => b.actual_sales - a.actual_sales).slice(0, 10);
             const storeLabels = sortedStores.map(s => {
                 const parts = s.store_name.split('-');
-                return parts.length > 1 ? parts.slice(1).join('-').trim() : s.store_name;
+                const storeLabel = parts.length > 1 ? parts.slice(1).join('-').trim() : s.store_name;
+                return isRange ? `${storeLabel} · ${s.date}` : storeLabel;
             });
             const salesData = sortedStores.map(s => s.actual_sales);
 
@@ -1182,12 +1329,12 @@
         }
 
         // Show store employees list popup
-        function showStoreEmployees(storeId) {
-            const store = dailyPerformanceCache.find(s => s.store_id === String(storeId));
+        function showStoreEmployees(storeId, date) {
+            const store = dailyPerformanceCache.find(s => s.store_id === String(storeId) && s.date === date);
             if (!store) return;
 
             const awardLabel = (awardStatusMeta[store.award_status] || [store.award_status])[0];
-            document.getElementById('empModalStoreHeader').textContent = `معرض: ${store.store_name} — ${awardLabel}`;
+            document.getElementById('empModalStoreHeader').textContent = `معرض: ${store.store_name} — ${store.date} — ${awardLabel}`;
             
             const list = document.getElementById('empModalList');
             list.innerHTML = '';
@@ -1216,8 +1363,8 @@
                     `).join('');
                     const reviewButtons = canReview ? `
                         <div class="d-flex gap-2 mt-2">
-                            <button class="btn btn-success btn-sm fw-bold" onclick="submitEmployeeReview('${store.store_id}', '${escapeHtml(emp.sales_group)}', 'APPROVE')"><i class="fa-solid fa-check me-1"></i> قبول</button>
-                            <button class="btn btn-danger btn-sm fw-bold" onclick="submitEmployeeReview('${store.store_id}', '${escapeHtml(emp.sales_group)}', 'REJECT')"><i class="fa-solid fa-xmark me-1"></i> رفض</button>
+                            <button class="btn btn-success btn-sm fw-bold" onclick="submitEmployeeReview('${store.store_id}', '${store.date}', '${escapeHtml(emp.sales_group)}', 'APPROVE')"><i class="fa-solid fa-check me-1"></i> قبول</button>
+                            <button class="btn btn-danger btn-sm fw-bold" onclick="submitEmployeeReview('${store.store_id}', '${store.date}', '${escapeHtml(emp.sales_group)}', 'REJECT')"><i class="fa-solid fa-xmark me-1"></i> رفض</button>
                         </div>
                     ` : '';
                     const li = document.createElement('li');
@@ -1246,8 +1393,7 @@
             modal.show();
         }
 
-        async function submitEmployeeReview(storeId, salesGroup, decision) {
-            const date = document.getElementById('dailyDate').value;
+        async function submitEmployeeReview(storeId, date, salesGroup, decision) {
             try {
                 const response = await fetchAverageBillWithAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
@@ -1266,23 +1412,23 @@
                 if (!response.ok) throw new Error(result.error || 'تعذر حفظ القرار');
                 await loadDailyPerformance();
                 await loadReviewQueue();
-                showStoreEmployees(storeId);
+                showStoreEmployees(storeId, date);
             } catch (error) {
                 alert(error.message);
             }
         }
 
         // Open Edit Modal
-        function openEditTargetModal(storeName) {
+        function openEditTargetModal(storeId, date) {
             if (currentUser.role !== 'Admin') return;
-            activeEditStore = dailyPerformanceCache.find(s => s.store_name === storeName);
+            activeEditStore = dailyPerformanceCache.find(s => s.store_id === String(storeId) && s.date === date);
             if (!activeEditStore) return;
 
             document.getElementById('modalStoreName').value = activeEditStore.store_name;
             document.getElementById('modalTargetValue').value = activeEditStore.target_value;
             document.getElementById('modalPrizeAmount').value = activeEditStore.prize_amount.toString();
             
-            const selectedDate = document.getElementById('dailyDate').value;
+            const selectedDate = activeEditStore.date;
             const now = new Date();
             const tomorrowValue = formatDateInput(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
             const effectiveDate = selectedDate > tomorrowValue ? selectedDate : tomorrowValue;
