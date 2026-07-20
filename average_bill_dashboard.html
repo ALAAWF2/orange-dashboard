@@ -679,7 +679,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">تاريخ سريان التعديل</label>
                         <input type="date" id="modalEffectiveDate" class="form-control py-2">
-                        <div class="form-text">لا يمكن اختيار اليوم الحالي أو أي تاريخ سابق.</div>
+                        <div class="form-text">يمكن تطبيق التعديل من اليوم، ولا يمكن اختيار أي تاريخ سابق.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">فترة تطبيق التعديل</label>
@@ -806,6 +806,7 @@
             if (!hasAverageBillSession) return;
             const today = new Date();
             const todayValue = formatDateInput(today);
+            const riyadhTodayValue = getRiyadhTodayValue();
             const queryParams = new URLSearchParams(window.location.search);
             const requestedDate = queryParams.get('date');
             const requestedStartDate = queryParams.get('start');
@@ -813,17 +814,15 @@
             const legacyDate = isValidDateInput(requestedDate) ? requestedDate : todayValue;
             const selectedStartDate = isValidDateInput(requestedStartDate) ? requestedStartDate : legacyDate;
             const selectedEndDate = isValidDateInput(requestedEndDate) ? requestedEndDate : selectedStartDate;
-            const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-            const tomorrowValue = formatDateInput(tomorrow);
             document.getElementById('dailyStartDate').value = selectedStartDate;
             document.getElementById('dailyEndDate').value = selectedEndDate;
             syncDailyRangeConstraints('start');
             document.getElementById('dailyStartDate').addEventListener('change', () => syncDailyRangeConstraints('start'));
             document.getElementById('dailyEndDate').addEventListener('change', () => syncDailyRangeConstraints('end'));
             document.getElementById('monthlyMonth').value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-            document.getElementById('modalEffectiveDate').min = tomorrowValue;
-            document.getElementById('modalEffectiveDate').value = tomorrowValue;
-            updatePeriodLabelText(tomorrowValue);
+            document.getElementById('modalEffectiveDate').min = riyadhTodayValue;
+            document.getElementById('modalEffectiveDate').value = riyadhTodayValue;
+            updatePeriodLabelText(riyadhTodayValue);
             document.getElementById('modalEffectiveDate').addEventListener('change', (e) => updatePeriodLabelText(e.target.value));
 
             // Load Initial Data
@@ -833,6 +832,17 @@
 
         function formatDateInput(value) {
             return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+        }
+
+        function getRiyadhTodayValue() {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Riyadh',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(new Date());
+            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+            return `${values.year}-${values.month}-${values.day}`;
         }
 
         function isValidDateInput(value) {
@@ -1429,10 +1439,9 @@
             document.getElementById('modalPrizeAmount').value = activeEditStore.prize_amount.toString();
             
             const selectedDate = activeEditStore.date;
-            const now = new Date();
-            const tomorrowValue = formatDateInput(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
-            const effectiveDate = selectedDate > tomorrowValue ? selectedDate : tomorrowValue;
-            document.getElementById('modalEffectiveDate').min = tomorrowValue;
+            const todayValue = getRiyadhTodayValue();
+            const effectiveDate = selectedDate > todayValue ? selectedDate : todayValue;
+            document.getElementById('modalEffectiveDate').min = todayValue;
             document.getElementById('modalEffectiveDate').value = effectiveDate;
             updatePeriodLabelText(effectiveDate);
 
@@ -1455,7 +1464,7 @@
             }
 
             if (!effectiveDate || effectiveDate < document.getElementById('modalEffectiveDate').min) {
-                alert("تاريخ سريان التارجت يجب أن يكون غداً أو أي تاريخ مستقبلي.");
+                alert("تاريخ سريان التارجت يجب أن يكون اليوم أو أي تاريخ مستقبلي.");
                 return;
             }
 
@@ -1497,7 +1506,10 @@
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     modal.hide();
 
-                    alert("تم حفظ التعديل بنجاح وتحديث البيانات.");
+                    const successMessage = res.ledger_refreshed
+                        ? "تم حفظ التعديل بنجاح وتحديث بيانات اليوم."
+                        : "تم حفظ التعديل بنجاح.";
+                    alert(res.refresh_warning || successMessage);
                     loadDailyPerformance();
                 } else {
                     alert("فشل تحديث المستهدف: " + (res.error || r.statusText));
