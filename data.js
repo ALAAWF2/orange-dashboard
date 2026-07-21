@@ -2600,25 +2600,6 @@ const EMPLOYEES = [
         "addressBooks": "1601-C;1601-E"
     },
     {
-        "employeeId": "4242-محمد شمير كوندو بارا",
-        "personnelNumber": "4242",
-        "name": "محمد شمير كوندو بارا",
-        "startDate": "2024-07-08",
-        "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
-        "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            }
-        ],
-        "addressBooks": "1203-C;1203-E"
-    },
-    {
         "employeeId": "4245-موده سليمان الدويرعا",
         "personnelNumber": "4245",
         "name": "موده سليمان الدويرعا",
