@@ -1,16 +1,11 @@
 const MANAGERS = [
     {
-        "username": "المنطقة الغربية",
-        "password": "0000",
-        "outlets": []
-    },
-    {
-        "username": "اماني عسيري",
-        "password": "0000",
-        "outlets": []
-    },
-    {
         "username": "عبيدة السباعي",
+        "password": "0000",
+        "outlets": []
+    },
+    {
+        "username": "المنطقة الغربية",
         "password": "0000",
         "outlets": []
     },
@@ -20,7 +15,7 @@ const MANAGERS = [
         "outlets": []
     },
     {
-        "username": "المنطقة الشمالية",
+        "username": "عبدالله السرداح",
         "password": "0000",
         "outlets": []
     },
@@ -30,7 +25,7 @@ const MANAGERS = [
         "outlets": []
     },
     {
-        "username": "عبدالله السرداح",
+        "username": "المنطقة الشمالية",
         "password": "0000",
         "outlets": []
     },
@@ -38,10 +33,434 @@ const MANAGERS = [
         "username": "جهاد ايوبي",
         "password": "0000",
         "outlets": []
+    },
+    {
+        "username": "اماني عسيري",
+        "password": "0000",
+        "outlets": []
     }
 ];
 
 const EMPLOYEES = [
+    {
+        "employeeId": "0019-KHALED MAKAWI1",
+        "personnelNumber": "0019",
+        "name": "KHALED MAKAWI1",
+        "startDate": "2013-07-14",
+        "manager": "عبيدة السباعي",
+        "showroom": "1001-04-Andalos Mall و 1005-09-Al-Salam Mall و 1007-18-Al_Khayyat Center و 1009-53-Al Basateen Mall و 1012-57-Sauq7 و 1002-05-Haifa Mall و 1003-06-Red Sea Mall و 1004-07-Arab Mall و 1006-13-Al-Yasmin Mall و 1008-48 - Jeddah Park و 1010-54-THE VILLAGE و 1011-56- Aziz Mall 2 و 1101-12-Al_Hamra Mall و 1104-29-Al Nakheel Mall Riyadh و 1106-32-Atyaf Mall Riyadh و 1107-38-Al_Riyadh Park و 1110-45- Riyadh Gallery Mall و 1111-46-Khaleej Mall Riyadh و 1113-51-Park Avenue Riyadh و 1114-1114-Malgha Mall و 1115-1115-Alrabie Mall و 1102-15-Riyadh Othaim Mall و 1103-25-Rabwa Othaim Mall و 1105-30-Tala Mall Riyadh و 1108-39-Salam Mall Riyadh و 1109-40-Hayat Mall Riyad و 1112-50-Meem Plaza Riyadh و 1801-19-Hail Othaim Mall و 2401-47-Al-Nakheel Plaza و 1201-08-Makkah Mall و 1202-20-Sitten Street Makkah و 1203-55- Jabl Omar و 1301-11-Jouri Mall و 1302-14-Al Kamal Mall و 1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah و 1501-24-Yanbu Dana Mall و 1701-17-Arar Othaim Mall و 2001-22-Tabuk Park و 2301-44-Al-Jouf Center و 1601-16-Ehsa Othaim Mall و 1602-49-AlAhsa Mall و 2101-27-Dhahran Mall khobar و 2102-28-Al Nakheel Mall Dammam و 2103-42-Dareen Mall Dammam و 2201-36-Al jubail Mall و 1901-21-Abha Al_Rashid Mall New و 1902-KHAMIS AVENUE و 1903-43-Mujan Park و 1904-52-Al_Baha Mall و 1906-1906-LAVANDA PARK",
+        "showroomDetails": [
+            {
+                "name": "1001-04-Andalos Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1001-C",
+                    "1001-E"
+                ]
+            },
+            {
+                "name": "1005-09-Al-Salam Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1005-C",
+                    "1005-E"
+                ]
+            },
+            {
+                "name": "1007-18-Al_Khayyat Center",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1007-C",
+                    "1007-E"
+                ]
+            },
+            {
+                "name": "1009-53-Al Basateen Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1009-C",
+                    "1009-E"
+                ]
+            },
+            {
+                "name": "1012-57-Sauq7",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1012-C",
+                    "1012-E"
+                ]
+            },
+            {
+                "name": "1002-05-Haifa Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1002-C",
+                    "1002-E"
+                ]
+            },
+            {
+                "name": "1003-06-Red Sea Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1003-C",
+                    "1003-E"
+                ]
+            },
+            {
+                "name": "1004-07-Arab Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1004-C",
+                    "1004-E"
+                ]
+            },
+            {
+                "name": "1006-13-Al-Yasmin Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1006-C",
+                    "1006-E"
+                ]
+            },
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
+            },
+            {
+                "name": "1010-54-THE VILLAGE",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1010-C",
+                    "1010-E"
+                ]
+            },
+            {
+                "name": "1011-56- Aziz Mall 2",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1011-C",
+                    "1011-E"
+                ]
+            },
+            {
+                "name": "1101-12-Al_Hamra Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1101-C",
+                    "1101-E"
+                ]
+            },
+            {
+                "name": "1104-29-Al Nakheel Mall Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1104-C",
+                    "1104-E"
+                ]
+            },
+            {
+                "name": "1106-32-Atyaf Mall Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1106-C",
+                    "1106-E"
+                ]
+            },
+            {
+                "name": "1107-38-Al_Riyadh Park",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1107-C",
+                    "1107-E"
+                ]
+            },
+            {
+                "name": "1110-45- Riyadh Gallery Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1110-C",
+                    "1110-E"
+                ]
+            },
+            {
+                "name": "1111-46-Khaleej Mall Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1111-C",
+                    "1111-E"
+                ]
+            },
+            {
+                "name": "1113-51-Park Avenue Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1113-C",
+                    "1113-E"
+                ]
+            },
+            {
+                "name": "1114-1114-Malgha Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1114-C",
+                    "1114-E"
+                ]
+            },
+            {
+                "name": "1115-1115-Alrabie Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1115-C",
+                    "1115-E"
+                ]
+            },
+            {
+                "name": "1102-15-Riyadh Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1102-C",
+                    "1102-E"
+                ]
+            },
+            {
+                "name": "1103-25-Rabwa Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1103-C",
+                    "1103-E"
+                ]
+            },
+            {
+                "name": "1105-30-Tala Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1105-C",
+                    "1105-E"
+                ]
+            },
+            {
+                "name": "1108-39-Salam Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1108-C",
+                    "1108-E"
+                ]
+            },
+            {
+                "name": "1109-40-Hayat Mall Riyad",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1109-C",
+                    "1109-E"
+                ]
+            },
+            {
+                "name": "1112-50-Meem Plaza Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1112-C",
+                    "1112-E"
+                ]
+            },
+            {
+                "name": "1801-19-Hail Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1801-C",
+                    "1801-E"
+                ]
+            },
+            {
+                "name": "2401-47-Al-Nakheel Plaza",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "2401-C",
+                    "2401-E"
+                ]
+            },
+            {
+                "name": "1201-08-Makkah Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1201-C",
+                    "1201-E"
+                ]
+            },
+            {
+                "name": "1202-20-Sitten Street Makkah",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1202-C",
+                    "1202-E"
+                ]
+            },
+            {
+                "name": "1203-55- Jabl Omar",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1203-C",
+                    "1203-E"
+                ]
+            },
+            {
+                "name": "1301-11-Jouri Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1301-C",
+                    "1301-E"
+                ]
+            },
+            {
+                "name": "1302-14-Al Kamal Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1302-C",
+                    "1302-E"
+                ]
+            },
+            {
+                "name": "1401-23-Alia Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1401-C",
+                    "1401-E"
+                ]
+            },
+            {
+                "name": "1402-26-Al-Noor Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1402-C",
+                    "1402-E"
+                ]
+            },
+            {
+                "name": "1501-24-Yanbu Dana Mall",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1501-C",
+                    "1501-E"
+                ]
+            },
+            {
+                "name": "1701-17-Arar Othaim Mall",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1701-C",
+                    "1701-E"
+                ]
+            },
+            {
+                "name": "2001-22-Tabuk Park",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "2001-C",
+                    "2001-E"
+                ]
+            },
+            {
+                "name": "2301-44-Al-Jouf Center",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "2301-C",
+                    "2301-E"
+                ]
+            },
+            {
+                "name": "1601-16-Ehsa Othaim Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1601-C",
+                    "1601-E"
+                ]
+            },
+            {
+                "name": "1602-49-AlAhsa Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1602-C",
+                    "1602-E"
+                ]
+            },
+            {
+                "name": "2101-27-Dhahran Mall khobar",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2101-C",
+                    "2101-E"
+                ]
+            },
+            {
+                "name": "2102-28-Al Nakheel Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2102-C",
+                    "2102-E"
+                ]
+            },
+            {
+                "name": "2103-42-Dareen Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2103-C",
+                    "2103-E"
+                ]
+            },
+            {
+                "name": "2201-36-Al jubail Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2201-C",
+                    "2201-E"
+                ]
+            },
+            {
+                "name": "1901-21-Abha Al_Rashid Mall New",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1901-C",
+                    "1901-E"
+                ]
+            },
+            {
+                "name": "1902-KHAMIS AVENUE",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1902-C",
+                    "1902-E"
+                ]
+            },
+            {
+                "name": "1903-43-Mujan Park",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1903-C",
+                    "1903-E"
+                ]
+            },
+            {
+                "name": "1904-52-Al_Baha Mall",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1904-C",
+                    "1904-E"
+                ]
+            },
+            {
+                "name": "1906-1906-LAVANDA PARK",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1906-C",
+                    "1906-E"
+                ]
+            }
+        ],
+        "addressBooks": "1001-C;1001-E;1002-C;1002-E;1003-C;1003-E;1004-C;1004-E;1005-C;1005-E;1006-C;1006-E;1007-C;1007-E;1008-C;1008-E;1009-C;1009-E;1010-C;1010-E;1011-C;1011-E;1012-C;1012-E;1013-C;1013-E;1014-C;1014-E;1101-C;1101-E;1102-C;1102-E;1103-C;1103-E;1104-C;1104-E;1105-C;1105-E;1106-C;1106-E;1107-C;1107-E;1108-C;1108-E;1109-C;1109-E;1110-C;1110-E;1111-C;1111-E;1112-C;1112-E;1113-C;1113-E;1114-C;1114-E;1115-C;1115-E;1201-C;1201-E;1202-C;1202-E;1203-C;1203-E;1301-C;1301-E;1302-C;1302-E;1401-C;1401-E;1402-C;1402-E;1501-C;1501-E;1601-C;1601-E;1602-C;1602-E;1701-C;1701-E;1801-C;1801-E;1901-C;1901-E;1902-C;1902-E;1903-C;1903-E;1904-C;1904-E;1906-C;1906-E;2001-C;2001-E;2101-C;2101-E;2102-C;2102-E;2103-C;2103-E;2201-C;2201-E;2301-C;2301-E;2401-C;2401-E"
+    },
     {
         "employeeId": "0024-محمد رشيد كونتيته",
         "personnelNumber": "0024",
@@ -205,22 +624,22 @@ const EMPLOYEES = [
         "name": "محمود محمد خير محجوب",
         "startDate": "2017-02-15",
         "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar و 1202-20-Sitten Street Makkah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1202-20-Sitten Street Makkah و 1203-55- Jabl Omar و 1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1203-55- Jabl Omar",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1203-C",
-                    "1203-E"
-                ]
-            },
             {
                 "name": "1202-20-Sitten Street Makkah",
                 "manager": "رضوان عطيوي",
                 "codes": [
                     "1202-C",
                     "1202-E"
+                ]
+            },
+            {
+                "name": "1203-55- Jabl Omar",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1203-C",
+                    "1203-E"
                 ]
             },
             {
@@ -232,7 +651,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1203-C;1203-E;1402-C;1402-E;1202-C;1202-E"
+        "addressBooks": "1202-C;1202-E;1203-C;1203-E;1402-C;1402-E"
     },
     {
         "employeeId": "0198-معتصم اسماعيل العامر",
@@ -370,7 +789,7 @@ const EMPLOYEES = [
         "name": "عاصم عبد الودود البا",
         "startDate": "2018-01-26",
         "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall و 1202-20-Sitten Street Makkah و 1203-55- Jabl Omar",
+        "showroom": "1201-08-Makkah Mall و 1203-55- Jabl Omar",
         "showroomDetails": [
             {
                 "name": "1201-08-Makkah Mall",
@@ -378,14 +797,6 @@ const EMPLOYEES = [
                 "codes": [
                     "1201-C",
                     "1201-E"
-                ]
-            },
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
                 ]
             },
             {
@@ -397,7 +808,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1201-C;1201-E;1202-C;1202-E;1203-C;1203-E"
+        "addressBooks": "1201-C;1201-E;1203-C;1203-E"
     },
     {
         "employeeId": "0488-نزار فيسيار",
@@ -636,6 +1047,25 @@ const EMPLOYEES = [
         "addressBooks": "1301-C;1301-E;1302-C;1302-E"
     },
     {
+        "employeeId": "1271-فدوى الدوسري",
+        "personnelNumber": "1271",
+        "name": "فدوى الدوسري",
+        "startDate": "2021-02-27",
+        "manager": "جهاد ايوبي",
+        "showroom": "2101-27-Dhahran Mall khobar",
+        "showroomDetails": [
+            {
+                "name": "2101-27-Dhahran Mall khobar",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2101-C",
+                    "2101-E"
+                ]
+            }
+        ],
+        "addressBooks": "2101-C;2101-E"
+    },
+    {
         "employeeId": "1342-فراس رتعان الحسن",
         "personnelNumber": "1342",
         "name": "فراس رتعان الحسن",
@@ -826,7 +1256,7 @@ const EMPLOYEES = [
         "employeeId": "1587-شمس الدين كونغاث",
         "personnelNumber": "1587",
         "name": "شمس الدين كونغاث",
-        "startDate": "2021-08-20",
+        "startDate": "2021-08-21",
         "manager": "جهاد ايوبي",
         "showroom": "2103-42-Dareen Mall Dammam",
         "showroomDetails": [
@@ -1159,18 +1589,18 @@ const EMPLOYEES = [
         "name": "محمد بشير فيلانشولا",
         "startDate": "2021-12-09",
         "manager": "المنطقة الغربية",
-        "showroom": "1008-48 - Jeddah Park",
+        "showroom": "1006-13-Al-Yasmin Mall",
         "showroomDetails": [
             {
-                "name": "1008-48 - Jeddah Park",
+                "name": "1006-13-Al-Yasmin Mall",
                 "manager": "المنطقة الغربية",
                 "codes": [
-                    "1008-C",
-                    "1008-E"
+                    "1006-C",
+                    "1006-E"
                 ]
             }
         ],
-        "addressBooks": "1008-C;1008-E"
+        "addressBooks": "1006-C;1006-E"
     },
     {
         "employeeId": "2804-ارشاد بالبيتا",
@@ -1935,16 +2365,8 @@ const EMPLOYEES = [
         "name": "فاطمة إبراهيم الكياد",
         "startDate": "2023-10-01",
         "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall و 1008-48 - Jeddah Park",
+        "showroom": "1008-48 - Jeddah Park",
         "showroomDetails": [
-            {
-                "name": "1002-05-Haifa Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1002-C",
-                    "1002-E"
-                ]
-            },
             {
                 "name": "1008-48 - Jeddah Park",
                 "manager": "المنطقة الغربية",
@@ -1954,7 +2376,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1002-C;1002-E;1008-C;1008-E"
+        "addressBooks": "1008-C;1008-E"
     },
     {
         "employeeId": "3780-شيخة لافي الرشيدي",
@@ -2000,16 +2422,8 @@ const EMPLOYEES = [
         "name": "رنيم احمد السميري",
         "startDate": "2023-12-28",
         "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall و 1011-56- Aziz Mall 2",
+        "showroom": "1011-56- Aziz Mall 2",
         "showroomDetails": [
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
-            },
             {
                 "name": "1011-56- Aziz Mall 2",
                 "manager": "المنطقة الغربية",
@@ -2019,7 +2433,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1004-C;1004-E;1011-C;1011-E"
+        "addressBooks": "1011-C;1011-E"
     },
     {
         "employeeId": "3890-عادل منور فاريا تودي",
@@ -2275,6 +2689,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2101-C;2101-E"
+    },
+    {
+        "employeeId": "4122-محمدعرفان باثيرامانا",
+        "personnelNumber": "4122",
+        "name": "محمدعرفان باثيرامانا",
+        "startDate": "2024-04-18",
+        "manager": "رضوان عطيوي",
+        "showroom": "1301-11-Jouri Mall",
+        "showroomDetails": [
+            {
+                "name": "1301-11-Jouri Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1301-C",
+                    "1301-E"
+                ]
+            }
+        ],
+        "addressBooks": "1301-C;1301-E"
     },
     {
         "employeeId": "4124-بدريه شريف المالكي",
@@ -3465,8 +3898,16 @@ const EMPLOYEES = [
         "name": "خالد خندش",
         "startDate": "2025-02-25",
         "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
+        "showroom": "1111-46-Khaleej Mall Riyadh و 1114-1114-Malgha Mall",
         "showroomDetails": [
+            {
+                "name": "1111-46-Khaleej Mall Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1111-C",
+                    "1111-E"
+                ]
+            },
             {
                 "name": "1114-1114-Malgha Mall",
                 "manager": "محمدكلو",
@@ -3476,7 +3917,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1114-C;1114-E"
+        "addressBooks": "1111-C;1111-E;1114-C;1114-E"
     },
     {
         "employeeId": "4516-حوراء عبدالله",
@@ -3598,8 +4039,16 @@ const EMPLOYEES = [
         "name": "بدريه الجهني",
         "startDate": "2025-04-13",
         "manager": "المنطقة الشمالية",
-        "showroom": "1402-26-Al-Noor Mall Madinah",
+        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
+            {
+                "name": "1401-23-Alia Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1401-C",
+                    "1401-E"
+                ]
+            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -3609,7 +4058,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1402-C;1402-E"
+        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
     },
     {
         "employeeId": "4557-رهف منصوري",
@@ -3673,19 +4122,19 @@ const EMPLOYEES = [
         "personnelNumber": "4563",
         "name": "رغد الزهراني",
         "startDate": "2025-04-23",
-        "manager": "المنطقة الشمالية",
-        "showroom": "2001-22-Tabuk Park",
+        "manager": "المنطقة الغربية",
+        "showroom": "1010-54-THE VILLAGE",
         "showroomDetails": [
             {
-                "name": "2001-22-Tabuk Park",
-                "manager": "المنطقة الشمالية",
+                "name": "1010-54-THE VILLAGE",
+                "manager": "المنطقة الغربية",
                 "codes": [
-                    "2001-C",
-                    "2001-E"
+                    "1010-C",
+                    "1010-E"
                 ]
             }
         ],
-        "addressBooks": "2001-C;2001-E"
+        "addressBooks": "1010-C;1010-E"
     },
     {
         "employeeId": "4567-هناء عبدالله",
@@ -3791,31 +4240,12 @@ const EMPLOYEES = [
         "addressBooks": "1301-C;1301-E"
     },
     {
-        "employeeId": "4600-خلود الرفاعي",
-        "personnelNumber": "4600",
-        "name": "خلود الرفاعي",
-        "startDate": "2025-05-26",
-        "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah",
-        "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            }
-        ],
-        "addressBooks": "1401-C;1401-E"
-    },
-    {
         "employeeId": "4601-حسان العرافي",
         "personnelNumber": "4601",
         "name": "حسان العرافي",
         "startDate": "2025-05-27",
         "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall و 1202-20-Sitten Street Makkah",
+        "showroom": "1201-08-Makkah Mall",
         "showroomDetails": [
             {
                 "name": "1201-08-Makkah Mall",
@@ -3824,17 +4254,9 @@ const EMPLOYEES = [
                     "1201-C",
                     "1201-E"
                 ]
-            },
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
-                ]
             }
         ],
-        "addressBooks": "1201-C;1201-E;1202-C;1202-E"
+        "addressBooks": "1201-C;1201-E"
     },
     {
         "employeeId": "4603-سلطان حارس",
@@ -3873,25 +4295,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1010-C;1010-E"
-    },
-    {
-        "employeeId": "4615-نوال خضر",
-        "personnelNumber": "4615",
-        "name": "نوال خضر",
-        "startDate": "2025-06-18",
-        "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall",
-        "showroomDetails": [
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
-            }
-        ],
-        "addressBooks": "1004-C;1004-E"
     },
     {
         "employeeId": "4577-رنيم اليزيدي",
@@ -4111,25 +4514,6 @@ const EMPLOYEES = [
         "addressBooks": "1002-C;1002-E;1004-C;1004-E"
     },
     {
-        "employeeId": "4649-شروق نواف العنزي",
-        "personnelNumber": "4649",
-        "name": "شروق نواف العنزي",
-        "startDate": "2025-07-21",
-        "manager": "عبدالله السرداح",
-        "showroom": "2401-47-Al-Nakheel Plaza",
-        "showroomDetails": [
-            {
-                "name": "2401-47-Al-Nakheel Plaza",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "2401-C",
-                    "2401-E"
-                ]
-            }
-        ],
-        "addressBooks": "2401-C;2401-E"
-    },
-    {
         "employeeId": "4651-اماني سعد المالكي",
         "personnelNumber": "4651",
         "name": "اماني سعد المالكي",
@@ -4192,16 +4576,8 @@ const EMPLOYEES = [
         "name": "رويده سالم الحربي",
         "startDate": "2025-08-18",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -4211,7 +4587,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1402-C;1402-E"
     },
     {
         "employeeId": "4670-سلمى علي مجرشي",
@@ -4309,25 +4685,6 @@ const EMPLOYEES = [
         "addressBooks": "1113-C;1113-E"
     },
     {
-        "employeeId": "4681-جنى علي الشمراني",
-        "personnelNumber": "4681",
-        "name": "جنى علي الشمراني",
-        "startDate": "2025-09-02",
-        "manager": "المنطقة الغربية",
-        "showroom": "1003-06-Red Sea Mall",
-        "showroomDetails": [
-            {
-                "name": "1003-06-Red Sea Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1003-C",
-                    "1003-E"
-                ]
-            }
-        ],
-        "addressBooks": "1003-C;1003-E"
-    },
-    {
         "employeeId": "4703-منى عبدالمحسن الزهرا",
         "personnelNumber": "4703",
         "name": "منى عبدالمحسن الزهرا",
@@ -4352,16 +4709,8 @@ const EMPLOYEES = [
         "name": "عريب فرج القحطاني",
         "startDate": "2025-09-03",
         "manager": "عبدالله السرداح",
-        "showroom": "1109-40-Hayat Mall Riyad و 1103-25-Rabwa Othaim Mall",
+        "showroom": "1103-25-Rabwa Othaim Mall و 1109-40-Hayat Mall Riyad",
         "showroomDetails": [
-            {
-                "name": "1109-40-Hayat Mall Riyad",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1109-C",
-                    "1109-E"
-                ]
-            },
             {
                 "name": "1103-25-Rabwa Othaim Mall",
                 "manager": "عبدالله السرداح",
@@ -4369,9 +4718,17 @@ const EMPLOYEES = [
                     "1103-C",
                     "1103-E"
                 ]
+            },
+            {
+                "name": "1109-40-Hayat Mall Riyad",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1109-C",
+                    "1109-E"
+                ]
             }
         ],
-        "addressBooks": "1109-C;1109-E;1103-C;1103-E"
+        "addressBooks": "1103-C;1103-E;1109-C;1109-E"
     },
     {
         "employeeId": "4689-رنا سعد العنزي",
@@ -4494,25 +4851,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1001-C;1001-E"
-    },
-    {
-        "employeeId": "4726-فاطمة القرني",
-        "personnelNumber": "4726",
-        "name": "فاطمة القرني",
-        "startDate": "2025-10-09",
-        "manager": "المنطقة الغربية",
-        "showroom": "1008-48 - Jeddah Park",
-        "showroomDetails": [
-            {
-                "name": "1008-48 - Jeddah Park",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1008-C",
-                    "1008-E"
-                ]
-            }
-        ],
-        "addressBooks": "1008-C;1008-E"
     },
     {
         "employeeId": "4725-مياسة مروان",
@@ -4679,25 +5017,6 @@ const EMPLOYEES = [
         "personnelNumber": "4776",
         "name": "Athari Alqahtani",
         "startDate": "2025-11-23",
-        "manager": "جهاد ايوبي",
-        "showroom": "2101-27-Dhahran Mall khobar",
-        "showroomDetails": [
-            {
-                "name": "2101-27-Dhahran Mall khobar",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "2101-C",
-                    "2101-E"
-                ]
-            }
-        ],
-        "addressBooks": "2101-C;2101-E"
-    },
-    {
-        "employeeId": "1850-Fadwa Aldousari",
-        "personnelNumber": "1850",
-        "name": "Fadwa Aldousari",
-        "startDate": "2025-12-08",
         "manager": "جهاد ايوبي",
         "showroom": "2101-27-Dhahran Mall khobar",
         "showroomDetails": [
@@ -5022,16 +5341,8 @@ const EMPLOYEES = [
         "name": "Shog Alyobe",
         "startDate": "2025-12-23",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            },
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -5041,7 +5352,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1402-C;1402-E"
     },
     {
         "employeeId": "4796-أسماء ضيف الله",
@@ -5337,13 +5648,40 @@ const EMPLOYEES = [
         "addressBooks": "1903-C;1903-E"
     },
     {
+        "employeeId": "4838-هنوف الوادعي",
+        "personnelNumber": "4838",
+        "name": "هنوف الوادعي",
+        "startDate": "2026-01-26",
+        "manager": "محمدكلو",
+        "showroom": "1114-1114-Malgha Mall",
+        "showroomDetails": [
+            {
+                "name": "1114-1114-Malgha Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1114-C",
+                    "1114-E"
+                ]
+            }
+        ],
+        "addressBooks": "1114-C;1114-E"
+    },
+    {
         "employeeId": "4839-منال طاهر",
         "personnelNumber": "4839",
         "name": "منال طاهر",
         "startDate": "2026-01-27",
         "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
+        "showroom": "1201-08-Makkah Mall و 1203-55- Jabl Omar",
         "showroomDetails": [
+            {
+                "name": "1201-08-Makkah Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1201-C",
+                    "1201-E"
+                ]
+            },
             {
                 "name": "1203-55- Jabl Omar",
                 "manager": "رضوان عطيوي",
@@ -5353,7 +5691,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1203-C;1203-E"
+        "addressBooks": "1201-C;1201-E;1203-C;1203-E"
     },
     {
         "employeeId": "4842-راويه احمد المطيري",
@@ -5665,8 +6003,16 @@ const EMPLOYEES = [
         "name": "سعيدة الفهمي",
         "startDate": "2026-02-16",
         "manager": "رضوان عطيوي",
-        "showroom": "1203-55- Jabl Omar",
+        "showroom": "1201-08-Makkah Mall و 1203-55- Jabl Omar",
         "showroomDetails": [
+            {
+                "name": "1201-08-Makkah Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1201-C",
+                    "1201-E"
+                ]
+            },
             {
                 "name": "1203-55- Jabl Omar",
                 "manager": "رضوان عطيوي",
@@ -5676,7 +6022,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1203-C;1203-E"
+        "addressBooks": "1201-C;1201-E;1203-C;1203-E"
     },
     {
         "employeeId": "4882-سديم الشهراني",
@@ -5797,19 +6143,19 @@ const EMPLOYEES = [
         "personnelNumber": "4899",
         "name": "فارس محسن",
         "startDate": "2026-03-01",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
+        "manager": "عبدالله السرداح",
+        "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
+                "name": "1102-15-Riyadh Othaim Mall",
+                "manager": "عبدالله السرداح",
                 "codes": [
-                    "1114-C",
-                    "1114-E"
+                    "1102-C",
+                    "1102-E"
                 ]
             }
         ],
-        "addressBooks": "1114-C;1114-E"
+        "addressBooks": "1102-C;1102-E"
     },
     {
         "employeeId": "4900-ابتهال خليوي",
@@ -5926,25 +6272,6 @@ const EMPLOYEES = [
         "addressBooks": "1903-C;1903-E"
     },
     {
-        "employeeId": "4933-غلا خالد",
-        "personnelNumber": "4933",
-        "name": "غلا خالد",
-        "startDate": "2026-04-07",
-        "manager": "المنطقة الغربية",
-        "showroom": "1003-06-Red Sea Mall",
-        "showroomDetails": [
-            {
-                "name": "1003-06-Red Sea Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1003-C",
-                    "1003-E"
-                ]
-            }
-        ],
-        "addressBooks": "1003-C;1003-E"
-    },
-    {
         "employeeId": "4932-روان الحربي",
         "personnelNumber": "4932",
         "name": "روان الحربي",
@@ -6002,25 +6329,6 @@ const EMPLOYEES = [
         "addressBooks": "1115-C;1115-E"
     },
     {
-        "employeeId": "4936-فاطمه المدني",
-        "personnelNumber": "4936",
-        "name": "فاطمه المدني",
-        "startDate": "2026-04-12",
-        "manager": "المنطقة الغربية",
-        "showroom": "1008-48 - Jeddah Park",
-        "showroomDetails": [
-            {
-                "name": "1008-48 - Jeddah Park",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1008-C",
-                    "1008-E"
-                ]
-            }
-        ],
-        "addressBooks": "1008-C;1008-E"
-    },
-    {
         "employeeId": "4937-نوره حمدان",
         "personnelNumber": "4937",
         "name": "نوره حمدان",
@@ -6038,6 +6346,44 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2001-C;2001-E"
+    },
+    {
+        "employeeId": "4917-فارس مورامبيلاف",
+        "personnelNumber": "4917",
+        "name": "فارس مورامبيلاف",
+        "startDate": "2026-03-12",
+        "manager": "جهاد ايوبي",
+        "showroom": "2102-28-Al Nakheel Mall Dammam",
+        "showroomDetails": [
+            {
+                "name": "2102-28-Al Nakheel Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2102-C",
+                    "2102-E"
+                ]
+            }
+        ],
+        "addressBooks": "2102-C;2102-E"
+    },
+    {
+        "employeeId": "4914-محمد فاحص كالاكاندات",
+        "personnelNumber": "4914",
+        "name": "محمد فاحص كالاكاندات",
+        "startDate": "2026-03-12",
+        "manager": "جهاد ايوبي",
+        "showroom": "1602-49-AlAhsa Mall",
+        "showroomDetails": [
+            {
+                "name": "1602-49-AlAhsa Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1602-C",
+                    "1602-E"
+                ]
+            }
+        ],
+        "addressBooks": "1602-C;1602-E"
     },
     {
         "employeeId": "4910-أنجا تيناري",
@@ -6076,6 +6422,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1111-C;1111-E"
+    },
+    {
+        "employeeId": "4911-محمد شبيب شيكازيت فا",
+        "personnelNumber": "4911",
+        "name": "محمد شبيب شيكازيت فا",
+        "startDate": "2026-03-12",
+        "manager": "محمدكلو",
+        "showroom": "1115-1115-Alrabie Mall",
+        "showroomDetails": [
+            {
+                "name": "1115-1115-Alrabie Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1115-C",
+                    "1115-E"
+                ]
+            }
+        ],
+        "addressBooks": "1115-C;1115-E"
     },
     {
         "employeeId": "4928-محمد شهير بينكانور",
@@ -6135,6 +6500,25 @@ const EMPLOYEES = [
         "addressBooks": "1114-C;1114-E"
     },
     {
+        "employeeId": "4939-سلطان الهميم",
+        "personnelNumber": "4939",
+        "name": "سلطان الهميم",
+        "startDate": "2026-04-16",
+        "manager": "محمدكلو",
+        "showroom": "1107-38-Al_Riyadh Park",
+        "showroomDetails": [
+            {
+                "name": "1107-38-Al_Riyadh Park",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1107-C",
+                    "1107-E"
+                ]
+            }
+        ],
+        "addressBooks": "1107-C;1107-E"
+    },
+    {
         "employeeId": "4942-رهام جابر",
         "personnelNumber": "4942",
         "name": "رهام جابر",
@@ -6178,16 +6562,8 @@ const EMPLOYEES = [
         "name": "منال هلال",
         "startDate": "2026-04-19",
         "manager": "عبدالله السرداح",
-        "showroom": "1109-40-Hayat Mall Riyad و 1102-15-Riyadh Othaim Mall",
+        "showroom": "1102-15-Riyadh Othaim Mall و 1109-40-Hayat Mall Riyad",
         "showroomDetails": [
-            {
-                "name": "1109-40-Hayat Mall Riyad",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1109-C",
-                    "1109-E"
-                ]
-            },
             {
                 "name": "1102-15-Riyadh Othaim Mall",
                 "manager": "عبدالله السرداح",
@@ -6195,9 +6571,17 @@ const EMPLOYEES = [
                     "1102-C",
                     "1102-E"
                 ]
+            },
+            {
+                "name": "1109-40-Hayat Mall Riyad",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1109-C",
+                    "1109-E"
+                ]
             }
         ],
-        "addressBooks": "1109-C;1109-E;1102-C;1102-E"
+        "addressBooks": "1102-C;1102-E;1109-C;1109-E"
     },
     {
         "employeeId": "4943-منى العمري",
@@ -6257,25 +6641,6 @@ const EMPLOYEES = [
         "addressBooks": "1106-C;1106-E"
     },
     {
-        "employeeId": "4950-رهف المالكي",
-        "personnelNumber": "4950",
-        "name": "رهف المالكي",
-        "startDate": "2026-05-03",
-        "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall",
-        "showroomDetails": [
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
-            }
-        ],
-        "addressBooks": "1004-C;1004-E"
-    },
-    {
         "employeeId": "4951-بشاير الزهراني",
         "personnelNumber": "4951",
         "name": "بشاير الزهراني",
@@ -6320,44 +6685,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1004-C;1004-E;1009-C;1009-E"
-    },
-    {
-        "employeeId": "4954-رولا ابراهيم المعبدي",
-        "personnelNumber": "4954",
-        "name": "رولا ابراهيم المعبدي",
-        "startDate": "2026-05-05",
-        "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall",
-        "showroomDetails": [
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
-            }
-        ],
-        "addressBooks": "1004-C;1004-E"
-    },
-    {
-        "employeeId": "4955-علياء الزهراني",
-        "personnelNumber": "4955",
-        "name": "علياء الزهراني",
-        "startDate": "2026-05-10",
-        "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall",
-        "showroomDetails": [
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
-            }
-        ],
-        "addressBooks": "1004-C;1004-E"
     },
     {
         "employeeId": "4956-الهنوف معلا",
@@ -6434,44 +6761,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1105-C;1105-E"
-    },
-    {
-        "employeeId": "4961-رغد طارق",
-        "personnelNumber": "4961",
-        "name": "رغد طارق",
-        "startDate": "2026-05-14",
-        "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah",
-        "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            }
-        ],
-        "addressBooks": "1401-C;1401-E"
-    },
-    {
-        "employeeId": "4962-مروة الحربي",
-        "personnelNumber": "4962",
-        "name": "مروة الحربي",
-        "startDate": "2026-05-14",
-        "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah",
-        "showroomDetails": [
-            {
-                "name": "1401-23-Alia Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1401-C",
-                    "1401-E"
-                ]
-            }
-        ],
-        "addressBooks": "1401-C;1401-E"
     },
     {
         "employeeId": "4963-شيماء سليمان",
@@ -6645,25 +6934,6 @@ const EMPLOYEES = [
         "addressBooks": "1108-C;1108-E"
     },
     {
-        "employeeId": "4974-يارا احمد الذبياني",
-        "personnelNumber": "4974",
-        "name": "يارا احمد الذبياني",
-        "startDate": "2026-06-10",
-        "manager": "المنطقة الشمالية",
-        "showroom": "1501-24-Yanbu Dana Mall",
-        "showroomDetails": [
-            {
-                "name": "1501-24-Yanbu Dana Mall",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1501-C",
-                    "1501-E"
-                ]
-            }
-        ],
-        "addressBooks": "1501-C;1501-E"
-    },
-    {
         "employeeId": "4975-لمياء الزهراني",
         "personnelNumber": "4975",
         "name": "لمياء الزهراني",
@@ -6762,7 +7032,7 @@ const EMPLOYEES = [
         "employeeId": "4980-ريمه فقيه",
         "personnelNumber": "4980",
         "name": "ريمه فقيه",
-        "startDate": "2026-06-15",
+        "startDate": "2026-06-16",
         "manager": "المنطقة الغربية",
         "showroom": "1011-56- Aziz Mall 2",
         "showroomDetails": [
@@ -6776,6 +7046,253 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1011-C;1011-E"
+    },
+    {
+        "employeeId": "4981-Asrar Almtiri",
+        "personnelNumber": "4981",
+        "name": "Asrar Almtiri",
+        "startDate": "2026-06-18",
+        "manager": "المنطقة الغربية",
+        "showroom": "1008-48 - Jeddah Park",
+        "showroomDetails": [
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
+            }
+        ],
+        "addressBooks": "1008-C;1008-E"
+    },
+    {
+        "employeeId": "4983-Tasnim Alshehri",
+        "personnelNumber": "4983",
+        "name": "Tasnim Alshehri",
+        "startDate": "2026-07-01",
+        "manager": "اماني عسيري",
+        "showroom": "1903-43-Mujan Park",
+        "showroomDetails": [
+            {
+                "name": "1903-43-Mujan Park",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1903-C",
+                    "1903-E"
+                ]
+            }
+        ],
+        "addressBooks": "1903-C;1903-E"
+    },
+    {
+        "employeeId": "4984-Abd Almuhsin Saleh",
+        "personnelNumber": "4984",
+        "name": "Abd Almuhsin Saleh",
+        "startDate": "2026-07-01",
+        "manager": "محمدكلو",
+        "showroom": "1114-1114-Malgha Mall",
+        "showroomDetails": [
+            {
+                "name": "1114-1114-Malgha Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1114-C",
+                    "1114-E"
+                ]
+            }
+        ],
+        "addressBooks": "1114-C;1114-E"
+    },
+    {
+        "employeeId": "4985-Najla Hasan",
+        "personnelNumber": "4985",
+        "name": "Najla Hasan",
+        "startDate": "2026-07-01",
+        "manager": "المنطقة الغربية",
+        "showroom": "1003-06-Red Sea Mall",
+        "showroomDetails": [
+            {
+                "name": "1003-06-Red Sea Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1003-C",
+                    "1003-E"
+                ]
+            }
+        ],
+        "addressBooks": "1003-C;1003-E"
+    },
+    {
+        "employeeId": "4986-Renad Alfahem",
+        "personnelNumber": "4986",
+        "name": "Renad Alfahem",
+        "startDate": "2026-07-01",
+        "manager": "عبدالله السرداح",
+        "showroom": "1105-30-Tala Mall Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1105-30-Tala Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1105-C",
+                    "1105-E"
+                ]
+            }
+        ],
+        "addressBooks": "1105-C;1105-E"
+    },
+    {
+        "employeeId": "4988-Rabab Mahdi",
+        "personnelNumber": "4988",
+        "name": "Rabab Mahdi",
+        "startDate": "2026-07-02",
+        "manager": "المنطقة الغربية",
+        "showroom": "1004-07-Arab Mall",
+        "showroomDetails": [
+            {
+                "name": "1004-07-Arab Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1004-C",
+                    "1004-E"
+                ]
+            }
+        ],
+        "addressBooks": "1004-C;1004-E"
+    },
+    {
+        "employeeId": "4989-شادن عسيري",
+        "personnelNumber": "4989",
+        "name": "شادن عسيري",
+        "startDate": "2026-07-01",
+        "manager": "اماني عسيري",
+        "showroom": "1901-21-Abha Al_Rashid Mall New",
+        "showroomDetails": [
+            {
+                "name": "1901-21-Abha Al_Rashid Mall New",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1901-C",
+                    "1901-E"
+                ]
+            }
+        ],
+        "addressBooks": "1901-C;1901-E"
+    },
+    {
+        "employeeId": "4990-Wafaa Alrshidi",
+        "personnelNumber": "4990",
+        "name": "Wafaa Alrshidi",
+        "startDate": "2026-07-02",
+        "manager": "عبدالله السرداح",
+        "showroom": "1801-19-Hail Othaim Mall",
+        "showroomDetails": [
+            {
+                "name": "1801-19-Hail Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1801-C",
+                    "1801-E"
+                ]
+            }
+        ],
+        "addressBooks": "1801-C;1801-E"
+    },
+    {
+        "employeeId": "4987-حسن الحميدي",
+        "personnelNumber": "4987",
+        "name": "حسن الحميدي",
+        "startDate": "2026-07-02",
+        "manager": "عبدالله السرداح",
+        "showroom": "1112-50-Meem Plaza Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1112-50-Meem Plaza Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1112-C",
+                    "1112-E"
+                ]
+            }
+        ],
+        "addressBooks": "1112-C;1112-E"
+    },
+    {
+        "employeeId": "4992-عبير الحارثي",
+        "personnelNumber": "4992",
+        "name": "عبير الحارثي",
+        "startDate": "2026-07-03",
+        "manager": "المنطقة الغربية",
+        "showroom": "1002-05-Haifa Mall",
+        "showroomDetails": [
+            {
+                "name": "1002-05-Haifa Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1002-C",
+                    "1002-E"
+                ]
+            }
+        ],
+        "addressBooks": "1002-C;1002-E"
+    },
+    {
+        "employeeId": "4995-مها العنزي",
+        "personnelNumber": "4995",
+        "name": "مها العنزي",
+        "startDate": "2026-07-15",
+        "manager": "المنطقة الشمالية",
+        "showroom": "2001-22-Tabuk Park",
+        "showroomDetails": [
+            {
+                "name": "2001-22-Tabuk Park",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "2001-C",
+                    "2001-E"
+                ]
+            }
+        ],
+        "addressBooks": "2001-C;2001-E"
+    },
+    {
+        "employeeId": "4993-Athar Alzahrani",
+        "personnelNumber": "4993",
+        "name": "Athar Alzahrani",
+        "startDate": "2026-07-19",
+        "manager": "محمدكلو",
+        "showroom": "1101-12-Al_Hamra Mall",
+        "showroomDetails": [
+            {
+                "name": "1101-12-Al_Hamra Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1101-C",
+                    "1101-E"
+                ]
+            }
+        ],
+        "addressBooks": "1101-C;1101-E"
+    },
+    {
+        "employeeId": "4997-Shahad Aljuhani",
+        "personnelNumber": "4997",
+        "name": "Shahad Aljuhani",
+        "startDate": "2026-07-19",
+        "manager": "المنطقة الشمالية",
+        "showroom": "1501-24-Yanbu Dana Mall",
+        "showroomDetails": [
+            {
+                "name": "1501-24-Yanbu Dana Mall",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1501-C",
+                    "1501-E"
+                ]
+            }
+        ],
+        "addressBooks": "1501-C;1501-E"
     }
 ];
 
