@@ -3345,25 +3345,6 @@ const EMPLOYEES = [
         "addressBooks": "1901-C;1901-E"
     },
     {
-        "employeeId": "4359-هناء المدوح",
-        "personnelNumber": "4359",
-        "name": "هناء المدوح",
-        "startDate": "2024-10-13",
-        "manager": "جهاد ايوبي",
-        "showroom": "1601-16-Ehsa Othaim Mall",
-        "showroomDetails": [
-            {
-                "name": "1601-16-Ehsa Othaim Mall",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "1601-C",
-                    "1601-E"
-                ]
-            }
-        ],
-        "addressBooks": "1601-C;1601-E"
-    },
-    {
         "employeeId": "4366-نوره هوساوي",
         "personnelNumber": "4366",
         "name": "نوره هوساوي",
