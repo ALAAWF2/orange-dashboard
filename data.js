@@ -7257,9 +7257,9 @@ const EMPLOYEES = [
         "addressBooks": "1101-C;1101-E"
     },
     {
-        "employeeId": "4997-Shahad Aljuhani",
+        "employeeId": "4997-شهد الجهني",
         "personnelNumber": "4997",
-        "name": "Shahad Aljuhani",
+        "name": "شهد الجهني",
         "startDate": "2026-07-19",
         "manager": "المنطقة الشمالية",
         "showroom": "1501-24-Yanbu Dana Mall",
