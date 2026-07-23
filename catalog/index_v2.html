@@ -1404,7 +1404,11 @@
 
         const rawProducts = await loadProductsData(lastUpdatedIso);
         window.allProductsUnfiltered = JSON.parse(JSON.stringify(rawProducts));
-        window.products = rawProducts.filter(p => !blockedAliases.includes(String(p.alias)) && !blockedAliases.includes(String(p.code)));
+        window.products = rawProducts.filter(p => 
+          !blockedAliases.includes(String(p.alias)) && 
+          !blockedAliases.includes(String(p.code)) &&
+          !String(p.code).toUpperCase().startsWith('SER')
+        );
 
         try {
           const { data: promoData } = await supabaseClient.from('catalog_promo_prices').select('*');
@@ -1808,6 +1812,8 @@
       userMall = newOutlet;
       const textSpan = document.getElementById('galleryNameText');
       if (textSpan) textSpan.textContent = userMall;
+      const userInfo = document.getElementById('userInfo');
+      if (userInfo) userInfo.textContent = `مرحباً بك خيارات مدير المنطقة (${userMall})`;
 
       userWarehouse = 'Warehouse';
       try {
