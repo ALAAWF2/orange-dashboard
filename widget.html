@@ -43,6 +43,14 @@
         .navbar {
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             background: white !important;
+            transition: transform 220ms ease, box-shadow 220ms ease;
+            will-change: transform;
+        }
+
+        .navbar.widget-nav-hidden {
+            transform: translateY(calc(-100% - 12px));
+            box-shadow: none;
+            pointer-events: none;
         }
 
         .navbar-brand {
@@ -52,6 +60,12 @@
 
         .brand-orange {
             color: #fe7900;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .navbar {
+                transition: none;
+            }
         }
 
         /* KPI Cards */
@@ -2051,6 +2065,56 @@
             localStorage.setItem('installBannerDismissed', 'true');
         }
 
+        function initAutoHideNavbar() {
+            const navbar = document.querySelector('nav.navbar');
+            if (!navbar || navbar.dataset.autoHideInitialized === 'true') return;
+
+            navbar.dataset.autoHideInitialized = 'true';
+            let lastScrollY = Math.max(window.scrollY, 0);
+            let accumulatedScroll = 0;
+            let lastDirection = 0;
+            let ticking = false;
+
+            const showNavbar = () => navbar.classList.remove('widget-nav-hidden');
+
+            const updateNavbar = () => {
+                const currentScrollY = Math.max(window.scrollY, 0);
+                const scrollDelta = currentScrollY - lastScrollY;
+                const menuIsOpen = Boolean(navbar.querySelector('.dropdown-menu.show'));
+                const navbarHasKeyboardFocus = Boolean(navbar.querySelector(':focus-visible'));
+                const currentDirection = Math.sign(scrollDelta);
+
+                if (currentDirection !== 0) {
+                    if (currentDirection !== lastDirection) accumulatedScroll = 0;
+                    accumulatedScroll += scrollDelta;
+                    lastDirection = currentDirection;
+                }
+
+                if (currentScrollY <= 24 || menuIsOpen || navbarHasKeyboardFocus) {
+                    showNavbar();
+                    accumulatedScroll = 0;
+                } else if (accumulatedScroll <= -12) {
+                    showNavbar();
+                    accumulatedScroll = 0;
+                } else if (accumulatedScroll >= 12 && currentScrollY > navbar.offsetHeight) {
+                    navbar.classList.add('widget-nav-hidden');
+                    accumulatedScroll = 0;
+                }
+
+                lastScrollY = currentScrollY;
+                ticking = false;
+            };
+
+            window.addEventListener('scroll', () => {
+                if (ticking) return;
+                ticking = true;
+                window.requestAnimationFrame(updateNavbar);
+            }, { passive: true });
+
+            navbar.addEventListener('focusin', showNavbar);
+            navbar.addEventListener('click', showNavbar);
+        }
+
 
 
         // Detect if running as standalone PWA
@@ -2086,6 +2150,8 @@
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
+            initAutoHideNavbar();
+
             if (checkLogin()) {
                 loadData();
             }
