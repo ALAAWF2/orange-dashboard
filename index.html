@@ -2391,7 +2391,7 @@
         </div>
 
         <div class="row mt-4" id="areaManagersComparisonRow" style="display: none;">
-            <div class="col-lg-8">
+            <div class="col-12">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-white border-0 py-3">
                         <h5 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
@@ -2415,18 +2415,6 @@
                                 <tbody id="mgrComparisonTableBody">
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 mt-3 mt-lg-0">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h5 class="fw-bold text-dark m-0">📊 رسم بياني للمقارنة</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container" style="min-height: 300px; position: relative;">
-                            <canvas id="mgrComparisonChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -4194,8 +4182,6 @@
                         tbody.appendChild(tr);
                     });
                 }
-
-                renderMgrComparisonChart(mgrList);
             }
 
             // Extract Global Top 5 Achievement
@@ -6978,9 +6964,16 @@
             const declinersEl = document.getElementById('topDeclinersList');
             if (!gainersEl || !declinersEl) return;
 
-            const gainers = branchList.filter(b => b.absGrowth > 0)
+            // Only include showrooms active in both periods (Comparable Stores)
+            const validBranches = branchList.filter(b => {
+                const meta = rawData.store_meta ? rawData.store_meta[b.sid] : null;
+                const isShowroom = meta ? meta.type === 'Showroom' : true;
+                return isShowroom && b.val > 0 && b.prevVal > 0;
+            });
+
+            const gainers = validBranches.filter(b => b.absGrowth > 0)
                 .sort((a, b) => b.absGrowth - a.absGrowth).slice(0, 5);
-            const decliners = branchList.filter(b => b.absGrowth < 0)
+            const decliners = validBranches.filter(b => b.absGrowth < 0)
                 .sort((a, b) => a.absGrowth - b.absGrowth).slice(0, 5);
 
             const rowHtml = (b, isUp) => `
@@ -7095,68 +7088,6 @@
             });
         }
 
-        function renderMgrComparisonChart(mgrList) {
-            const ctx = document.getElementById('mgrComparisonChart').getContext('2d');
-            if (charts['mgrComparison']) {
-                charts['mgrComparison'].destroy();
-            }
-            const labels = mgrList.map(m => m.name);
-            const achData = mgrList.map(m => m.ach);
-            const convData = mgrList.map(m => m.conv);
-            charts['mgrComparison'] = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'نسبة تحقيق التارجت %',
-                            data: achData,
-                            backgroundColor: '#fe7900',
-                            borderRadius: 4,
-                            yAxisID: 'yAch'
-                        },
-                        {
-                            label: 'نسبة الاستحواذ %',
-                            data: convData,
-                            borderColor: '#0d6efd',
-                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                            type: 'line',
-                            yAxisID: 'yConv',
-                            tension: 0.3,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            grid: { display: false }
-                        },
-                        yAch: {
-                            type: 'linear',
-                            position: 'right',
-                            title: { display: true, text: 'نسبة تحقيق التارجت %' },
-                            min: 0,
-                            suggestedMax: 120,
-                            grid: { borderDash: [5, 5] }
-                        },
-                        yConv: {
-                            type: 'linear',
-                            position: 'left',
-                            title: { display: true, text: 'نسبة الاستحواذ %' },
-                            min: 0,
-                            suggestedMax: 15,
-                            grid: { display: false }
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'top' }
-                    }
-                }
-            });
-        }
 
 
 
