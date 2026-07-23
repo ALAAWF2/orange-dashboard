@@ -1583,7 +1583,16 @@
                 // Branches
                 const branchSelect = document.getElementById('branchFilter');
                 const branches = Object.keys(historyData || {});
+                const isManager = currentUser && currentUser.role === 'Manager';
+                const managerName = currentUser ? currentUser.name : '';
+
                 branches.forEach(code => {
+                    if (isManager) {
+                        const meta = storeMeta ? storeMeta[code] : null;
+                        if (!meta || meta.manager !== managerName) {
+                            return; // skip this store
+                        }
+                    }
                     const name = storesData[code] || code;
                     const opt = document.createElement('option');
                     opt.value = code;

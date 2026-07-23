@@ -3005,15 +3005,26 @@
             const cities = new Set();
             const managers = new Set();
 
+            const isManager = currentUser && currentUser.role === 'Manager';
+            const managerName = currentUser ? currentUser.name : '';
+
             storeIds.sort((a, b) => (rawData.stores[a] || '').localeCompare(rawData.stores[b] || ''));
 
             storeIds.forEach(sid => {
+                let meta = rawData.store_meta ? rawData.store_meta[sid] : null;
+                
+                // If the user is a manager, filter out other managers' stores
+                if (isManager) {
+                    if (!meta || meta.manager !== managerName) {
+                        return; // skip this store
+                    }
+                }
+
                 let opt = document.createElement('option');
                 opt.value = sid;
                 opt.textContent = rawData.stores[sid] || sid;
                 bSelect.appendChild(opt);
 
-                let meta = rawData.store_meta ? rawData.store_meta[sid] : null;
                 if (meta) {
                     if (meta.city && meta.city !== 'Unknown') cities.add(meta.city);
                     if (meta.manager && meta.manager !== 'Unknown') managers.add(meta.manager);
