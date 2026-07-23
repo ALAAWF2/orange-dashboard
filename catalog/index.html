@@ -4199,10 +4199,25 @@
       return localTime.toISOString().split('T')[0];
     }
 
+    const NIGHT_CHECKLIST_ITEM_IDS = [27, 28, 29, 30, 31];
+
+    function isNightInspectionItem(itemId) {
+      return NIGHT_CHECKLIST_ITEM_IDS.includes(Number(itemId));
+    }
+
+    function isNightInspectionWindow() {
+      const saudiString = new Date().toLocaleString("en-US", { timeZone: "Asia/Riyadh" });
+      const saudiDate = new Date(saudiString);
+      const hour = saudiDate.getHours();
+      return hour === 23 || hour === 0 || hour === 1;
+    }
+
     function renderChecklist() {
       const container = document.getElementById('checklistItemsContainer');
       container.innerHTML = '';
       
+      const isNightTime = isNightInspectionWindow();
+
       // Calculate progress metrics
       const totalItems = checklistItems.length;
       const checkedItems = checklistItems.filter(item => !!todayLogs[item.id]).length;
@@ -4260,29 +4275,42 @@
           const log = todayLogs[item.id];
           const isChecked = !!log;
           const checkedTimeStr = isChecked ? formatCheckedTime(log.checked_at) : '';
+          const isNightItem = isNightInspectionItem(item.id);
+          const isNightRestricted = isNightItem && !isNightTime && !isChecked;
           
           const itemEl = document.createElement('div');
-          itemEl.className = `checklist-item ${isChecked ? 'checked' : ''}`;
+          itemEl.className = `checklist-item ${isChecked ? 'checked' : ''} ${isNightRestricted ? 'night-restricted' : ''}`;
           itemEl.style.marginBottom = '10px';
+          if (isNightRestricted) {
+            itemEl.style.opacity = '0.75';
+          }
           
           itemEl.onclick = (e) => {
             const checkbox = itemEl.querySelector('input[type="checkbox"]');
             if (checkbox.disabled) return;
             if (e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper')) return;
+            if (isNightRestricted) {
+              showToast("عفواً، هذا البند مخصص للتفقد الليلي فقط (من 11:00 مساءً وحتى 1:59 صباحاً)", "warning");
+              return;
+            }
             checkbox.checked = !checkbox.checked;
             handleChecklistToggle(item.id, checkbox.checked, log ? log.id : null);
           };
           
+          const nightBadge = isNightItem 
+            ? `<span style="font-size:0.75em; background:#312e81; color:#c7d2fe; padding:2px 7px; border-radius:10px; font-weight:bold; margin-right:6px; display:inline-flex; align-items:center; gap:3px;">🌙 تفقد ليلي (11م - 1:59ص)</span>` 
+            : '';
+
           itemEl.innerHTML = `
             <div class="checklist-item-right">
               <div class="checklist-checkbox-wrapper">
-                <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                <input type="checkbox" ${isChecked ? 'checked' : ''} ${isNightRestricted ? 'disabled' : ''}
                        onchange="handleChecklistToggle(${item.id}, this.checked, ${log ? log.id : null})">
                 <span class="checklist-checkmark">
                   <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </span>
               </div>
-              <span class="checklist-text">${item.text}</span>
+              <span class="checklist-text">${item.text} ${nightBadge}</span>
             </div>
             ${isChecked ? `<span class="checklist-meta">✓ تفقد ${checkedTimeStr}</span>` : ''}
           `;
@@ -4307,6 +4335,12 @@
 
     async function handleChecklistToggle(itemId, isChecked, logId) {
       if (!currentUser || !userMall) return;
+      
+      if (isChecked && isNightInspectionItem(itemId) && !isNightInspectionWindow()) {
+        showToast("عفواً، هذا البند مخصص للتفقد الليلي فقط (من 11:00 مساءً وحتى 1:59 صباحاً)", "warning");
+        renderChecklist();
+        return;
+      }
       
       const checkboxes = document.querySelectorAll('#checklistItemsContainer input[type="checkbox"]');
       checkboxes.forEach(cb => cb.disabled = true);
