@@ -497,6 +497,11 @@
             box-shadow: 0 0 12px rgba(83, 52, 131, 0.4);
         }
 
+        .shift-toggle-btn:disabled {
+            cursor: wait;
+            opacity: 0.72;
+        }
+
         .shift-kpi-section {
             display: none;
         }
@@ -505,9 +510,52 @@
             display: block;
         }
 
+        .shift-panel {
+            background: #101728;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 28px rgba(16, 23, 40, 0.16);
+        }
+
+        .shift-panel-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .shift-mode-label {
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+
+        .shift-coverage-note {
+            color: rgba(255, 255, 255, 0.58);
+            font-size: 0.68rem;
+            margin-top: 2px;
+        }
+
+        .shift-data-state {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.66rem;
+            padding: 4px 8px;
+            white-space: nowrap;
+        }
+
+        .shift-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+            gap: 8px;
+        }
+
         .shift-card {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border: none;
+            border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: var(--card-radius);
             padding: 14px;
             color: white;
@@ -560,11 +608,12 @@
             margin-top: 4px;
         }
 
-        .shift-branch-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            flex-wrap: wrap;
+        .shift-message {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.78rem;
+            line-height: 1.6;
+            padding: 12px 8px 4px;
+            text-align: center;
         }
 
         .shift-branch-badge {
@@ -723,7 +772,8 @@
                             <option value="monthly">🎯 أعلى تحقيق شهري</option>
                         </select>
                     </div>
-                    <button class="shift-toggle-btn" id="shiftToggle" onclick="toggleShiftView()">🌙 الشفتات</button>
+                    <button class="shift-toggle-btn" id="shiftToggle" type="button" aria-controls="shiftKpiSection"
+                        aria-expanded="false" onclick="toggleShiftView()">🌙 الشفتات</button>
                 </div>
                 <div id="periodLabel" class="period-label" style="display: none;"></div>
             </div>
@@ -772,23 +822,18 @@
 
             <!-- Shift KPI Cards (hidden by default) -->
             <div id="shiftKpiSection" class="shift-kpi-section mb-3">
-                <div class="row g-2">
-                    <div class="col-6">
-                        <div class="shift-card shift-1">
-                            <div class="shift-label">🌅 شفت الصباح</div>
-                            <div class="shift-time">10:00 ص - 2:00 م</div>
-                            <div class="shift-sales" id="shift1Sales">0</div>
-                            <div class="shift-details" id="shift1Details">0 فاتورة | 0 زائر</div>
+                <div class="shift-panel">
+                    <div class="shift-panel-header">
+                        <div>
+                            <div class="shift-mode-label" id="shiftModeLabel">الدوام العادي</div>
+                            <div class="shift-coverage-note" id="shiftCoverageNote">
+                                مبيعات ما بعد منتصف الليل تُحتسب ضمن يوم العمل السابق
+                            </div>
                         </div>
+                        <span class="shift-data-state" id="shiftDataState">جاهز</span>
                     </div>
-                    <div class="col-6">
-                        <div class="shift-card shift-2">
-                            <div class="shift-label">☀️ شفت المساء</div>
-                            <div class="shift-time">2:00 م - 12:00 ص</div>
-                            <div class="shift-sales" id="shift2Sales">0</div>
-                            <div class="shift-details" id="shift2Details">0 فاتورة | 0 زائر</div>
-                        </div>
-                    </div>
+                    <div id="shiftCards" class="shift-grid"></div>
+                    <div id="shiftMessage" class="shift-message" style="display: none;"></div>
                 </div>
             </div>
 
@@ -796,22 +841,22 @@
                 <h6 class="section-title mb-3">ملخص صباحي</h6>
                 <div class="morning-summary-grid">
                     <div class="morning-summary-card">
-                        <div class="morning-summary-label">أعلى 3 فروع تحتاج متابعة اليوم</div>
+                        <div class="morning-summary-label" id="followupSummaryLabel">أعلى 3 فروع تحتاج متابعة اليوم</div>
                         <div id="morningFollowupList"></div>
                     </div>
                     <div class="morning-summary-card">
-                        <div class="morning-summary-label">أفضل فرع أمس</div>
+                        <div class="morning-summary-label" id="bestPreviousLabel">أفضل فرع في اليوم السابق</div>
                         <div class="morning-summary-main" id="bestYesterdayBranch">لا توجد بيانات كافية</div>
                     </div>
                     <div class="morning-summary-card">
-                        <div class="morning-summary-label">أسوأ معدل استحواذ أمس</div>
+                        <div class="morning-summary-label" id="worstPreviousLabel">أسوأ معدل استحواذ في اليوم السابق</div>
                         <div class="morning-summary-main" id="worstYesterdayConversion">لا توجد بيانات كافية</div>
                     </div>
                 </div>
             </div>
 
             <!-- Branch List -->
-            <h6 class="section-title">📍 مبيعات الفروع اليوم</h6>
+            <h6 class="section-title" id="branchSectionTitle">📍 مبيعات الفروع اليوم</h6>
             <div id="branchList">
                 <!-- JS Populated -->
             </div>
@@ -836,6 +881,8 @@
         let currentUser = null;
         let deferredPrompt = null;
         let shiftViewActive = false;  // Shift view toggle state
+        let shiftDataPromise = null;
+        let employeesDataPromise = null;
 
         function shouldHideVisitors() {
             if (!currentUser) return false;
@@ -901,16 +948,34 @@
             return today.toISOString().split('T')[0];
         }
 
-        function getYesterdayStr() {
-            const d = new Date();
-            d.setDate(d.getDate() - 1);
-            return d.toISOString().split('T')[0];
+        function addDaysStr(dateStr, days) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day + days));
+            return date.toISOString().split('T')[0];
         }
 
-        function getLastYearTodayStr() {
-            const d = new Date();
-            d.setFullYear(d.getFullYear() - 1);
-            return d.toISOString().split('T')[0];
+        function addYearsStr(dateStr, years) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const targetYear = year + years;
+            const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, month, 0)).getUTCDate();
+            const date = new Date(Date.UTC(targetYear, month - 1, Math.min(day, lastDayOfTargetMonth)));
+            return date.toISOString().split('T')[0];
+        }
+
+        function getComparisonRanges(fromDate, toDate) {
+            const dayMs = 24 * 60 * 60 * 1000;
+            const dayCount = Math.round(
+                (Date.parse(`${toDate}T00:00:00Z`) - Date.parse(`${fromDate}T00:00:00Z`)) / dayMs
+            ) + 1;
+            const previousTo = addDaysStr(fromDate, -1);
+
+            return {
+                previousFrom: addDaysStr(previousTo, -(dayCount - 1)),
+                previousTo,
+                lastYearFrom: addYearsStr(fromDate, -1),
+                lastYearTo: addYearsStr(toDate, -1),
+                previousLabel: dayCount === 1 ? 'عن اليوم السابق' : 'عن الفترة السابقة'
+            };
         }
 
         function formatNumber(num) {
@@ -1025,179 +1090,300 @@
             renderWidget();
         }
 
-        // Check if date is within selected range
-        function isDateInRange(dateStr) {
-            if (!selectedFromDate || !selectedToDate) return dateStr === getTodayStr();
-            return dateStr >= selectedFromDate && dateStr <= selectedToDate;
+        // === SHIFT VIEW LOGIC ===
+        const NORMAL_SHIFTS = [
+            { id: 1, icon: '🌅', label: 'شفت الصباح', time: '9:00 ص - 2:00 م', startHour: 9, endHour: 14 },
+            { id: 2, icon: '🌙', label: 'شفت المساء', time: '2:00 م - 3:00 ص', startHour: 14, endHour: 27 }
+        ];
+
+        const RAMADAN_SHIFTS = [
+            { id: 1, icon: '🌅', label: 'الشفت الأول', time: '6:00 ص - 12:00 م', startHour: 6, endHour: 12 },
+            { id: 2, icon: '☀️', label: 'الشفت الثاني', time: '12:00 م - 6:00 م', startHour: 12, endHour: 18 },
+            { id: 3, icon: '🌙', label: 'الشفت الليلي', time: '6:00 م - 3:00 ص', startHour: 18, endHour: 27 }
+        ];
+
+        function isRamadanDate(dateStr) {
+            const events = rawData?.metadata?.ramadan_dates || [];
+            return events.some(event => {
+                const name = String(event.event || '').toLowerCase();
+                const isRamadan = name.includes('ramadan') || name.includes('رمضان');
+                return isRamadan && dateStr >= event.start && dateStr <= event.end;
+            });
         }
 
-        // === SHIFT VIEW LOGIC ===
-        function toggleShiftView() {
+        function getShiftConfiguration(fromDate, toDate) {
+            let hasNormalDay = false;
+            let hasRamadanDay = false;
+
+            for (let dateStr = fromDate; dateStr <= toDate; dateStr = addDaysStr(dateStr, 1)) {
+                if (isRamadanDate(dateStr)) hasRamadanDay = true;
+                else hasNormalDay = true;
+                if (hasNormalDay && hasRamadanDay) {
+                    return { mode: 'mixed', definitions: [] };
+                }
+            }
+
+            if (hasRamadanDay) {
+                return { mode: 'ramadan', definitions: RAMADAN_SHIFTS };
+            }
+            return { mode: 'normal', definitions: NORMAL_SHIFTS };
+        }
+
+        function normalizeHourlyRecordDate(dateStr, hourValue) {
+            const hour = Number(hourValue);
+
+            // The generator already exports the 2026 Ramadan boundary as
+            // hours 24-26 on the previous business date.
+            if (hour >= 24) {
+                return { businessDate: dateStr, businessHour: hour };
+            }
+
+            // All 00:00-02:59 activity belongs to the previous retail day.
+            if (hour >= 0 && hour < 3) {
+                return {
+                    businessDate: addDaysStr(dateStr, -1),
+                    businessHour: hour + 24
+                };
+            }
+
+            return { businessDate: dateStr, businessHour: hour };
+        }
+
+        function getShiftForBusinessHour(definitions, businessHour) {
+            return definitions.find(shift =>
+                businessHour >= shift.startHour && businessHour < shift.endHour
+            ) || null;
+        }
+
+        function setShiftMessage(message, state = 'تنبيه') {
+            document.getElementById('shiftCards').innerHTML = '';
+            document.getElementById('shiftDataState').textContent = state;
+            const messageEl = document.getElementById('shiftMessage');
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+        }
+
+        async function ensureShiftData() {
+            const hasSalesHourly = Array.isArray(rawData?.sales_hourly) && rawData.sales_hourly.length > 0;
+            const hasVisitorsHourly = Array.isArray(rawData?.visitors_hourly) && rawData.visitors_hourly.length > 0;
+            if (hasSalesHourly && hasVisitorsHourly) return;
+            if (shiftDataPromise) return shiftDataPromise;
+
+            // Backward-compatible fallback until summary.json is regenerated
+            // by the next scheduled management-data cycle.
+            shiftDataPromise = fetch('management_data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
+                .then(fullData => {
+                    rawData.sales_hourly = fullData.sales_hourly || [];
+                    rawData.visitors_hourly = fullData.visitors_hourly || [];
+                })
+                .catch(error => {
+                    shiftDataPromise = null;
+                    throw error;
+                });
+
+            return shiftDataPromise;
+        }
+
+        async function toggleShiftView() {
             shiftViewActive = !shiftViewActive;
             const btn = document.getElementById('shiftToggle');
             const section = document.getElementById('shiftKpiSection');
             btn.classList.toggle('active', shiftViewActive);
             section.classList.toggle('visible', shiftViewActive);
-            renderWidget();
-        }
+            btn.setAttribute('aria-expanded', String(shiftViewActive));
 
-        // Determine which shift an hour belongs to
-        function getShiftForHour(hour) {
-            if (hour >= 10 && hour < 14) return 1;
-            if (hour >= 14 && hour < 24) return 2;
-            return 0;
-        }
+            if (!shiftViewActive) {
+                renderWidget();
+                return;
+            }
 
-        // Get next day string
-        function getNextDayStr(dateStr) {
-            const d = new Date(dateStr);
-            d.setDate(d.getDate() + 1);
-            return d.toISOString().split('T')[0];
+            btn.disabled = true;
+            btn.textContent = '⏳ تحميل الشفتات';
+            setShiftMessage('جار تحميل بيانات المبيعات والزوار بالساعة…', 'تحميل');
+
+            try {
+                await ensureShiftData();
+                if (shiftViewActive) renderWidget();
+            } catch (error) {
+                console.error('Error loading hourly shift data:', error);
+                setShiftMessage('تعذر تحميل بيانات الشفتات. حاول مرة أخرى بعد قليل.', 'غير متوفر');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🌙 الشفتات';
+            }
         }
 
         // Aggregate shift data for all branches in the selected date range
-                function computeShiftData(allowedBranches, fromDate, toDate) {
-            const shiftData = {
-                1: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} },
-                2: { sales: 0, bills: 0, visitors: 0, byStore: {}, byStoreBills: {}, byStoreVisitors: {} }
+        function computeShiftData(allowedBranches, fromDate, toDate) {
+            const configuration = getShiftConfiguration(fromDate, toDate);
+            if (configuration.mode === 'mixed') {
+                return {
+                    mode: 'mixed',
+                    definitions: [],
+                    shifts: {},
+                    hasSalesRows: false,
+                    hasVisitorRows: false
+                };
+            }
+
+            const shifts = {};
+            configuration.definitions.forEach(definition => {
+                shifts[definition.id] = {
+                    sales: 0,
+                    bills: 0,
+                    visitors: 0,
+                    salesRows: 0,
+                    visitorRows: 0,
+                    byStore: {},
+                    byStoreBills: {},
+                    byStoreVisitors: {}
+                };
+            });
+
+            const allowed = new Set(allowedBranches.map(String));
+
+            (rawData.sales_hourly || []).forEach(row => {
+                const [date, rawStore, hour, sales, bills] = row;
+                const store = String(rawStore);
+                if (!allowed.has(store)) return;
+
+                const normalized = normalizeHourlyRecordDate(date, hour);
+                if (normalized.businessDate < fromDate || normalized.businessDate > toDate) return;
+
+                const definition = getShiftForBusinessHour(
+                    configuration.definitions,
+                    normalized.businessHour
+                );
+                if (!definition) return;
+
+                const shift = shifts[definition.id];
+                const salesValue = Number(sales) || 0;
+                const billValue = Number(bills) || 0;
+                shift.sales += salesValue;
+                shift.bills += billValue;
+                shift.salesRows += 1;
+                shift.byStore[store] = (shift.byStore[store] || 0) + salesValue;
+                shift.byStoreBills[store] = (shift.byStoreBills[store] || 0) + billValue;
+            });
+
+            (rawData.visitors_hourly || []).forEach(row => {
+                const [date, rawStore, hour, visitors] = row;
+                const store = String(rawStore);
+                if (!allowed.has(store)) return;
+
+                const normalized = normalizeHourlyRecordDate(date, hour);
+                if (normalized.businessDate < fromDate || normalized.businessDate > toDate) return;
+
+                const definition = getShiftForBusinessHour(
+                    configuration.definitions,
+                    normalized.businessHour
+                );
+                if (!definition) return;
+
+                const shift = shifts[definition.id];
+                const visitorValue = Number(visitors) || 0;
+                shift.visitors += visitorValue;
+                shift.visitorRows += 1;
+                shift.byStoreVisitors[store] = (shift.byStoreVisitors[store] || 0) + visitorValue;
+            });
+
+            return {
+                ...configuration,
+                shifts,
+                hasSalesRows: Object.values(shifts).some(shift => shift.salesRows > 0),
+                hasVisitorRows: Object.values(shifts).some(shift => shift.visitorRows > 0)
             };
-
-            if (rawData.sales_hourly) {
-                const salesMap = {};
-                rawData.sales_hourly.forEach(row => {
-                    const [date, store, hour, sales, bills] = row;
-                    if (!allowedBranches.includes(store)) return;
-                    const key = `${date}_${store}_${hour}`;
-                    salesMap[key] = { sales, bills };
-                });
-
-                let d = new Date(fromDate);
-                const endD = new Date(toDate);
-                while (d <= endD) {
-                    const dateStr = d.toISOString().split('T')[0];
-
-                    allowedBranches.forEach(store => {
-                        for (let h = 10; h < 14; h++) {
-                            const entry = salesMap[`${dateStr}_${store}_${h}`];
-                            if (entry) {
-                                shiftData[1].sales += entry.sales;
-                                shiftData[1].bills += entry.bills;
-                                shiftData[1].byStore[store] = (shiftData[1].byStore[store] || 0) + entry.sales;
-                                shiftData[1].byStoreBills[store] = (shiftData[1].byStoreBills[store] || 0) + entry.bills;
-                            }
-                        }
-                        for (let h = 14; h < 24; h++) {
-                            const entry = salesMap[`${dateStr}_${store}_${h}`];
-                            if (entry) {
-                                shiftData[2].sales += entry.sales;
-                                shiftData[2].bills += entry.bills;
-                                shiftData[2].byStore[store] = (shiftData[2].byStore[store] || 0) + entry.sales;
-                                shiftData[2].byStoreBills[store] = (shiftData[2].byStoreBills[store] || 0) + entry.bills;
-                            }
-                        }
-                    });
-                    d.setDate(d.getDate() + 1);
-                }
-            }
-
-            if (rawData.visitors_hourly) {
-                const visMap = {};
-                rawData.visitors_hourly.forEach(row => {
-                    const [date, store, hour, count] = row;
-                    if (!allowedBranches.includes(store)) return;
-                    const key = `${date}_${store}_${hour}`;
-                    visMap[key] = (visMap[key] || 0) + count;
-                });
-
-                let d2 = new Date(fromDate);
-                const endD = new Date(toDate);
-                while (d2 <= endD) {
-                    const dateStr = d2.toISOString().split('T')[0];
-
-                    allowedBranches.forEach(store => {
-                        for (let h = 10; h < 14; h++) {
-                            const v = visMap[`${dateStr}_${store}_${h}`];
-                            if (v) { shiftData[1].visitors += v; shiftData[1].byStoreVisitors[store] = (shiftData[1].byStoreVisitors[store] || 0) + v; }
-                        }
-                        for (let h = 14; h < 24; h++) {
-                            const v = visMap[`${dateStr}_${store}_${h}`];
-                            if (v) { shiftData[2].visitors += v; shiftData[2].byStoreVisitors[store] = (shiftData[2].byStoreVisitors[store] || 0) + v; }
-                        }
-                    });
-                    d2.setDate(d2.getDate() + 1);
-                }
-            }
-
-            return shiftData;
         }
 
         // Render shift KPI cards
         function renderShiftKPIs(shiftData) {
-            [1, 2].forEach(s => {
-                const d = shiftData[s];
-                document.getElementById(`shift${s}Sales`).textContent = formatNumber(d.sales);
-                const rate = d.visitors > 0 ? ((d.bills / d.visitors) * 100).toFixed(1) : 0;
+            const messageEl = document.getElementById('shiftMessage');
+            if (shiftData.mode === 'mixed') {
+                document.getElementById('shiftModeLabel').textContent = 'أكثر من نظام دوام';
+                setShiftMessage(
+                    'الفترة المحددة تجمع أيام رمضان والدوام العادي. اختر فترة ضمن نظام دوام واحد لعرض الشفتات بدقة.',
+                    'يلزم تحديد الفترة'
+                );
+                return;
+            }
+
+            document.getElementById('shiftModeLabel').textContent =
+                shiftData.mode === 'ramadan' ? 'جدول شفتات رمضان' : 'جدول الدوام العادي';
+            document.getElementById('shiftCoverageNote').textContent =
+                'الفترة 12:00 ص - 3:00 ص محسوبة ضمن يوم العمل السابق';
+            document.getElementById('shiftDataState').textContent =
+                shiftData.hasSalesRows ? 'بيانات فعلية' : 'لا توجد حركة';
+
+            messageEl.style.display = 'none';
+            messageEl.textContent = '';
+
+            document.getElementById('shiftCards').innerHTML = shiftData.definitions.map(definition => {
+                const data = shiftData.shifts[definition.id];
+                const salesText = data.salesRows > 0 ? formatNumber(data.sales) : '—';
+                const rate = data.visitors > 0 ? ((data.bills / data.visitors) * 100).toFixed(1) : null;
+
+                let details;
                 if (shouldHideVisitors()) {
-                    document.getElementById(`shift${s}Details`).textContent =
-                        `${formatNumber(d.bills)} فاتورة | (${rate}%)`;
+                    details = `${formatNumber(data.bills)} فاتورة${rate ? ` | (${rate}%)` : ''}`;
+                } else if (data.visitorRows === 0) {
+                    details = `${formatNumber(data.bills)} فاتورة | الزوار غير متوفرين`;
                 } else {
-                    document.getElementById(`shift${s}Details`).textContent =
-                        `${formatNumber(d.bills)} فاتورة | ${formatNumber(d.visitors)} زائر (${rate}%)`;
+                    details = `${formatNumber(data.bills)} فاتورة | ${formatNumber(data.visitors)} زائر${rate ? ` (${rate}%)` : ''}`;
                 }
-            });
+
+                return `
+                    <div class="shift-card shift-${definition.id}">
+                        <div class="shift-label">${definition.icon} ${definition.label}</div>
+                        <div class="shift-time">${definition.time}</div>
+                        <div class="shift-sales">${salesText}</div>
+                        <div class="shift-details">${details}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function getShiftBadgesHtml(storeId, shiftData) {
-            if (!shiftViewActive) return '';
-            const s1 = shiftData[1].byStore[storeId] || 0;
-            const s2 = shiftData[2].byStore[storeId] || 0;
-            if (s1 === 0 && s2 === 0) return '';
-
-            const b1 = shiftData[1].byStoreBills[storeId] || 0;
-            const b2 = shiftData[2].byStoreBills[storeId] || 0;
-            const v1 = shiftData[1].byStoreVisitors[storeId] || 0;
-            const v2 = shiftData[2].byStoreVisitors[storeId] || 0;
+            if (!shiftViewActive || shiftData.mode === 'mixed') return '';
+            const storeKey = String(storeId);
+            const visibleDefinitions = shiftData.definitions.filter(definition => {
+                const data = shiftData.shifts[definition.id];
+                return data.byStore[storeKey] !== undefined ||
+                    data.byStoreBills[storeKey] !== undefined ||
+                    data.byStoreVisitors[storeKey] !== undefined;
+            });
+            if (visibleDefinitions.length === 0) return '';
 
             const isHidden = shouldHideVisitors();
-            if (isHidden) {
-                return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
-                    <div style="display: grid; grid-template-columns: auto 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
+            const gridColumns = isHidden ? 'auto 1fr 1fr' : 'auto 1fr 1fr 1fr';
+            const rows = visibleDefinitions.map(definition => {
+                const data = shiftData.shifts[definition.id];
+                const sales = data.byStore[storeKey] || 0;
+                const bills = data.byStoreBills[storeKey] || 0;
+                const visitors = data.byStoreVisitors[storeKey] || 0;
+                return `
+                    <span class="shift-branch-badge s${definition.id}">${definition.icon} ش${definition.id}</span>
+                    <span style="text-align:center; font-weight:700;">${formatNumber(sales)}</span>
+                    <span style="text-align:center;">${formatNumber(bills)}</span>
+                    ${isHidden ? '' : `<span style="text-align:center;">${visitors ? formatNumber(visitors) : '-'}</span>`}
+                `;
+            }).join('');
+
+            return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
+                    <div style="display: grid; grid-template-columns: ${gridColumns}; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
                         <span style="font-weight:600; color:#888;"></span>
                         <span style="text-align:center; font-weight:600; color:#888;">مبيعات</span>
                         <span style="text-align:center; font-weight:600; color:#888;">فواتير</span>
-
-                        <span class="shift-branch-badge s1">🌅 ش1</span>
-                        <span style="text-align:center; font-weight:700;">${formatNumber(s1)}</span>
-                        <span style="text-align:center;">${b1}</span>
-
-                        <span class="shift-branch-badge s2">☀️ ش2</span>
-                        <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
-                        <span style="text-align:center;">${b2}</span>
+                        ${isHidden ? '' : '<span style="text-align:center; font-weight:600; color:#888;">زوار</span>'}
+                        ${rows}
                     </div>
                 </div>`;
-            } else {
-                return `<div style="padding: 8px 12px; background: #f8f9fa; border-top: 1px solid #eee;">
-                    <div style="display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 10px; font-size: 0.72rem; align-items: center;">
-                        <span style="font-weight:600; color:#888;"></span>
-                        <span style="text-align:center; font-weight:600; color:#888;">مبيعات</span>
-                        <span style="text-align:center; font-weight:600; color:#888;">فواتير</span>
-                        <span style="text-align:center; font-weight:600; color:#888;">زوار</span>
-
-                        <span class="shift-branch-badge s1">🌅 ش1</span>
-                        <span style="text-align:center; font-weight:700;">${formatNumber(s1)}</span>
-                        <span style="text-align:center;">${b1}</span>
-                        <span style="text-align:center;">${v1 || '-'}</span>
-
-                        <span class="shift-branch-badge s2">☀️ ش2</span>
-                        <span style="text-align:center; font-weight:700;">${formatNumber(s2)}</span>
-                        <span style="text-align:center;">${b2}</span>
-                        <span style="text-align:center;">${v2 || '-'}</span>
-                    </div>
-                </div>`;
-            }
         }
 
-        function renderMorningSummary(allowedBranches, periodSales, periodTrans, branchTargets, daysInMonth, currentDay, toDate) {
+        function renderMorningSummary(allowedBranches, periodSales, periodTrans, branchTargets, daysInMonth, currentDay, toDate, previousDate) {
             const followupEl = document.getElementById('morningFollowupList');
             const bestEl = document.getElementById('bestYesterdayBranch');
             const worstEl = document.getElementById('worstYesterdayConversion');
@@ -1245,7 +1431,7 @@
                 }).join('');
             }
 
-            const yesterdayStr = getYesterdayStr();
+            const yesterdayStr = previousDate;
             const yesterdaySalesByStore = {};
             const yesterdayTransByStore = {};
             const yesterdayVisitorsByStore = {};
@@ -1282,7 +1468,7 @@
                 const [storeId, sales] = bestYesterday;
                 bestEl.innerHTML = `
                     <div>${rawData.stores[storeId] || storeId}</div>
-                    <div class="morning-summary-sub">${formatNumber(sales)} مبيعات أمس</div>
+                    <div class="morning-summary-sub">${formatNumber(sales)} مبيعات اليوم السابق</div>
                 `;
             } else {
                 bestEl.textContent = 'لا توجد بيانات كافية';
@@ -1389,17 +1575,33 @@
         }
 
         // Load Data
+        async function ensureEmployeesData() {
+            if (employeesData) return employeesData;
+            if (employeesDataPromise) return employeesDataPromise;
+
+            employeesDataPromise = fetch('employees_data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    employeesData = data;
+                    employeeNames = data.employee_names || {};
+                    return data;
+                })
+                .catch(error => {
+                    employeesDataPromise = null;
+                    throw error;
+                });
+
+            return employeesDataPromise;
+        }
+
         async function loadData() {
             try {
-                const [mgmtRes, empRes] = await Promise.all([
-                    fetch('summary.json'),
-                    fetch('employees_data.json')
-                ]);
-
+                const mgmtRes = await fetch('summary.json');
+                if (!mgmtRes.ok) throw new Error(`HTTP ${mgmtRes.status}`);
                 rawData = await mgmtRes.json();
-                const empJson = await empRes.json();
-                employeesData = empJson;
-                employeeNames = empJson.employee_names || {};
 
                 if (rawData.metadata && rawData.metadata.generated_at) {
                     const genTime = rawData.metadata.generated_at.split(' ')[1];
@@ -1426,13 +1628,13 @@
         // Render Widget
         function renderWidget() {
             const todayStr = getTodayStr();
-            const yesterdayStr = getYesterdayStr();
-            const lyStr = getLastYearTodayStr();
 
             // Use selected date range or default to today
             const fromDate = selectedFromDate || todayStr;
             const toDate = selectedToDate || todayStr;
             const isRangeMode = fromDate !== toDate;
+            const comparisons = getComparisonRanges(fromDate, toDate);
+            const isToday = fromDate === todayStr && toDate === todayStr;
 
             // Update header date display
             if (isRangeMode) {
@@ -1441,6 +1643,23 @@
             } else {
                 document.getElementById('todayDate').textContent = formatArabicDate(fromDate);
             }
+
+            document.getElementById('followupSummaryLabel').textContent = isToday
+                ? 'أعلى 3 فروع تحتاج متابعة اليوم'
+                : isRangeMode
+                    ? 'أعلى 3 فروع تحتاج متابعة خلال الفترة'
+                    : 'أعلى 3 فروع تحتاج متابعة في اليوم المحدد';
+            document.getElementById('bestPreviousLabel').textContent = isRangeMode
+                ? 'أفضل فرع في اليوم السابق للفترة'
+                : 'أفضل فرع في اليوم السابق';
+            document.getElementById('worstPreviousLabel').textContent = isRangeMode
+                ? 'أسوأ معدل استحواذ في اليوم السابق للفترة'
+                : 'أسوأ معدل استحواذ في اليوم السابق';
+            document.getElementById('branchSectionTitle').textContent = isToday
+                ? '📍 مبيعات الفروع اليوم'
+                : isRangeMode
+                    ? '📍 مبيعات الفروع خلال الفترة المحددة'
+                    : '📍 مبيعات الفروع في اليوم المحدد';
 
             const allowedBranches = getUserAllowedBranches();
 
@@ -1454,7 +1673,7 @@
             // Filter sales by selected date range
             let periodSales = {};
             let periodTrans = {};
-            let yesterdaySales = {};
+            let previousSales = {};
             let lySales = {};
 
             // Process sales data
@@ -1470,10 +1689,10 @@
                     if (date >= fromDate && date <= toDate && value > 0) {
                         periodSales[storeId] = (periodSales[storeId] || 0) + value;
                     }
-                    if (date === yesterdayStr && value > 0) {
-                        yesterdaySales[storeId] = (yesterdaySales[storeId] || 0) + value;
+                    if (date >= comparisons.previousFrom && date <= comparisons.previousTo && value > 0) {
+                        previousSales[storeId] = (previousSales[storeId] || 0) + value;
                     }
-                    if (date === lyStr && value > 0) {
+                    if (date >= comparisons.lastYearFrom && date <= comparisons.lastYearTo && value > 0) {
                         lySales[storeId] = (lySales[storeId] || 0) + value;
                     }
                 });
@@ -1498,7 +1717,7 @@
             // Calculate totals
             let totalSalesVal = Object.values(periodSales).reduce((a, b) => a + b, 0);
             let totalTransVal = Object.values(periodTrans).reduce((a, b) => a + b, 0);
-            let totalYestVal = Object.values(yesterdaySales).reduce((a, b) => a + b, 0);
+            let totalPreviousVal = Object.values(previousSales).reduce((a, b) => a + b, 0);
             let totalLYVal = Object.values(lySales).reduce((a, b) => a + b, 0);
 
             // Process Visitors (for selected date range)
@@ -1527,24 +1746,29 @@
                 branchesWithSales > 0 ? formatNumber(totalSalesVal / branchesWithSales) : '0';
 
             // Avg Ticket
+            document.getElementById('avgTicket').textContent = 'متوسط: 0';
             if (totalTransVal > 0) {
                 document.getElementById('avgTicket').textContent = 'متوسط: ' + formatNumber(totalSalesVal / totalTransVal);
             }
 
-            // Change vs Yesterday
-            if (totalYestVal > 0) {
-                const changeYest = ((totalSalesVal - totalYestVal) / totalYestVal * 100).toFixed(0);
-                const changeEl = document.getElementById('changeYesterday');
-                changeEl.textContent = `${changeYest > 0 ? '+' : ''}${changeYest}% عن أمس`;
+            // Change vs equal previous period
+            const changeEl = document.getElementById('changeYesterday');
+            changeEl.textContent = '';
+            changeEl.className = 'kpi-sub';
+            if (totalPreviousVal > 0) {
+                const changeYest = ((totalSalesVal - totalPreviousVal) / totalPreviousVal * 100).toFixed(0);
+                changeEl.textContent = `${changeYest > 0 ? '+' : ''}${changeYest}% ${comparisons.previousLabel}`;
                 changeEl.className = 'kpi-sub ' + (changeYest >= 0 ? 'growth-pos' : 'growth-neg');
             }
 
             // Change vs LY
+            const changeLyEl = document.getElementById('changeLY');
+            changeLyEl.textContent = '';
+            changeLyEl.className = 'kpi-sub';
             if (totalLYVal > 0) {
                 const changeLY = ((totalSalesVal - totalLYVal) / totalLYVal * 100).toFixed(0);
-                const changeEl = document.getElementById('changeLY');
-                changeEl.textContent = `${changeLY > 0 ? '+' : ''}${changeLY}% vs LY`;
-                changeEl.className = 'kpi-sub ' + (changeLY >= 0 ? 'growth-pos' : 'growth-neg');
+                changeLyEl.textContent = `${changeLY > 0 ? '+' : ''}${changeLY}% عن العام السابق`;
+                changeLyEl.className = 'kpi-sub ' + (changeLY >= 0 ? 'growth-pos' : 'growth-neg');
             }
 
             const summaryBranchTargets = {};
@@ -1566,7 +1790,16 @@
                 summaryCurrentDay = 19;
             }
 
-            renderMorningSummary(allowedBranches, periodSales, periodTrans, summaryBranchTargets, summaryDaysInMonth, summaryCurrentDay, toDate);
+            renderMorningSummary(
+                allowedBranches,
+                periodSales,
+                periodTrans,
+                summaryBranchTargets,
+                summaryDaysInMonth,
+                summaryCurrentDay,
+                toDate,
+                comparisons.previousTo
+            );
 
             // Render branch cards
             const branchListEl = document.getElementById('branchList');
@@ -1734,13 +1967,21 @@
         }
 
         // Load Employees for a Branch
-        function loadEmployeesForBranch(storeId) {
+        async function loadEmployeesForBranch(storeId) {
             const todayStr = getTodayStr();
             // Use selected date range or default to today
             const fromDate = selectedFromDate || todayStr;
             const toDate = selectedToDate || todayStr;
 
             const empListEl = document.getElementById(`emp-list-${storeId}`);
+
+            try {
+                await ensureEmployeesData();
+            } catch (error) {
+                console.error('Error loading employee data:', error);
+                empListEl.innerHTML = '<div class="no-employees text-danger">تعذر تحميل بيانات الموظفين</div>';
+                return;
+            }
 
             if (!employeesData || !employeesData.history || !employeesData.history[storeId]) {
                 empListEl.innerHTML = '<div class="no-employees">لا توجد بيانات موظفين</div>';
