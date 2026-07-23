@@ -4156,8 +4156,8 @@
           return;
         }
 
-        // 2. Fetch today's logs for this showroom (based on Saudi Arabia local date YYYY-MM-DD)
-        const localDateStr = getLocalDateString();
+        // 2. Fetch today's logs for this showroom (based on Saudi Arabia date YYYY-MM-DD from server)
+        const localDateStr = await getServerSaudiDate();
         
         const { data: logs, error: logsErr } = await supabaseClient
           .from('catalog_checklist_logs')
@@ -4180,6 +4180,16 @@
         showToast("حدث خطأ أثناء تحميل قائمة التفقد", "error");
         closeChecklistModal();
       }
+    }
+
+    async function getServerSaudiDate() {
+      try {
+        const { data, error } = await supabaseClient.rpc('get_saudi_today');
+        if (!error && data) return data;
+      } catch (e) {
+        console.warn("Failed to fetch server Saudi date, fallback to device date", e);
+      }
+      return getLocalDateString();
     }
 
     function getLocalDateString() {
@@ -4303,7 +4313,7 @@
       
       try {
         if (isChecked) {
-          const localDateStr = getLocalDateString();
+          const localDateStr = await getServerSaudiDate();
           const { data, error } = await supabaseClient
             .from('catalog_checklist_logs')
             .insert({
@@ -4332,7 +4342,7 @@
               .eq('id', logId);
             if (error) throw error;
           } else {
-            const localDateStr = getLocalDateString();
+            const localDateStr = await getServerSaudiDate();
             const { error } = await supabaseClient
               .from('catalog_checklist_logs')
               .delete()

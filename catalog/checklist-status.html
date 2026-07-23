@@ -544,7 +544,17 @@
     let userManagedOutlets = [];
     let reportShowroomsList = [];
  
-    // Helper to get local date string (Saudi Arabia timezone)
+    // Helper to get server date string (Saudi Arabia timezone)
+    async function getServerSaudiDate() {
+      try {
+        const { data, error } = await supabaseClient.rpc('get_saudi_today');
+        if (!error && data) return data;
+      } catch (e) {
+        console.warn("Failed to fetch server Saudi date, fallback to device date", e);
+      }
+      return getLocalDateString();
+    }
+
     function getLocalDateString() {
       const d = new Date();
       const offset = d.getTimezoneOffset();
@@ -724,7 +734,7 @@
         // Set default date
         const dateInput = document.getElementById('reportDate');
         if (!dateInput.value) {
-          dateInput.value = getLocalDateString();
+          dateInput.value = await getServerSaudiDate();
         }
 
         // Populate Showrooms dropdown
