@@ -2048,15 +2048,7 @@
                     </select>
                 </div>
 
-                <!-- Comparison Reference Filter -->
-                <div class="col-md">
-                    <label class="form-label small text-muted fw-bold">مرجع المقارنة (Comparison)</label>
-                    <select id="compRefFilter" class="form-select form-select-sm" onchange="updateDashboard()">
-                        <option value="last_year">السنة الماضية</option>
-                        <option value="last_month">الشهر الماضي</option>
-                        <option value="last_week">الأسبوع الماضي</option>
-                    </select>
-                </div>
+
 
                 <!-- Branch Filter -->
                 <div class="col-md">
@@ -2158,14 +2150,12 @@
                 <div class="kpi-card border-bottom border-4 border-primary">
                     <div class="kpi-title">الفواتير (Transactions)</div>
                     <div class="kpi-value" id="totalTrans">0</div>
-                    <div class="kpi-sub text-muted">Avg Invoice: <span id="avgTicket" class="fw-bold">0</span></div>
                 </div>
             </div>
             <div class="col">
                 <div class="kpi-card border-bottom border-4 border-info">
                     <div class="kpi-title">الزوار (Visitors)</div>
                     <div class="kpi-value" id="totalVisitors">0</div>
-                    <div class="kpi-sub text-muted">Conv. Rate: <span id="convRate" class="fw-bold">0%</span></div>
                 </div>
             </div>
             <div class="col">
@@ -2186,39 +2176,58 @@
         <h6 class="text-muted fw-bold mb-2">أداء العام السابق (<span id="prevYearTitle">...</span>)</h6>
         <div class="row g-3 mb-4">
             <div class="col">
-                <div class="kpi-card bg-light">
-                    <div class="kpi-title text-muted">مبيعات العام السابق</div>
-                    <div class="kpi-value text-secondary" id="prevSales" style="font-size: 1.5rem;">0</div>
+                <div class="kpi-card border-bottom border-4 border-secondary">
+                    <div class="kpi-title">مبيعات العام السابق</div>
+                    <div class="kpi-value" id="prevSales">0</div>
                 </div>
             </div>
             <div class="col">
-                <div class="kpi-card bg-light">
-                    <div class="kpi-title text-muted">قيمة العميل (Cust Val LY)</div>
-                    <div class="kpi-value text-secondary" id="prevCustValue" style="font-size: 1.5rem;">0</div>
+                <div class="kpi-card border-bottom border-4 border-secondary">
+                    <div class="kpi-title">قيمة العميل (Cust Val LY)</div>
+                    <div class="kpi-value" id="prevCustValue">0</div>
                     <div class="kpi-sub text-muted">Sales / Visitors</div>
                 </div>
             </div>
             <div class="col">
-                <div class="kpi-card bg-light">
-                    <div class="kpi-title text-muted">فواتير العام السابق</div>
-                    <div class="kpi-value text-secondary" id="prevTrans" style="font-size: 1.5rem;">0</div>
-                    <div class="kpi-sub text-muted">Avg Invoice: <span id="prevAvgTicket">0</span></div>
+                <div class="kpi-card border-bottom border-4 border-secondary">
+                    <div class="kpi-title">فواتير العام السابق</div>
+                    <div class="kpi-value" id="prevTrans">0</div>
                 </div>
             </div>
             <div class="col">
-                <div class="kpi-card bg-light">
-                    <div class="kpi-title text-muted">زوار العام السابق</div>
-                    <div class="kpi-value text-secondary" id="prevVisitors" style="font-size: 1.5rem;">0</div>
-                    <div class="kpi-sub text-muted">Conv. Rate: <span id="prevConvRate">0%</span></div>
+                <div class="kpi-card border-bottom border-4 border-secondary">
+                    <div class="kpi-title">زوار العام السابق</div>
+                    <div class="kpi-value" id="prevVisitors">0</div>
                 </div>
             </div>
             <!-- Growth Amount -->
             <div class="col">
-                <div class="kpi-card bg-light d-flex align-items-center justify-content-center">
-                    <div class="text-center">
-                        <div class="kpi-title text-muted">قيمة النمو (Growth Value)</div>
-                        <div class="fw-bold fs-4" id="growthAbs">0</div>
-                    </div>
+                <div class="kpi-card border-bottom border-4 border-warning">
+                    <div class="kpi-title">نمو المبيعات (Sales Growth)</div>
+                    <div class="kpi-value" id="growthAbs">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2.2: Growth Indicators -->
+        <h6 class="text-muted fw-bold mb-2">مؤشرات النمو مقارنة بالعام السابق (Growth Indicators vs Prev Year)</h6>
+        <div class="row g-3 mb-4">
+            <div class="col">
+                <div class="kpi-card border-bottom border-4 border-info">
+                    <div class="kpi-title">نمو الزوار (Visitors Growth)</div>
+                    <div class="kpi-value" id="visitorsGrowthAbs">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="kpi-card border-bottom border-4 border-primary">
+                    <div class="kpi-title">نمو معدل الفاتورة (Inv Rate Growth)</div>
+                    <div class="kpi-value" id="avgTicketGrowthAbs">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="kpi-card border-bottom border-4 border-dark">
+                    <div class="kpi-title">نمو قيمة العميل - ر.س (Cust Value Growth)</div>
+                    <div class="kpi-value" id="custValueGrowthAbs">0</div>
                 </div>
             </div>
         </div>
@@ -4160,11 +4169,27 @@
 
             // --- 3. Update KPI Cards (Current) ---
             fmt(document.getElementById('totalSales'), curr.sales);
-            fmt(document.getElementById('totalTrans'), curr.trans);
-            if (shouldHideVisitors()) {
-                document.getElementById('totalVisitors').textContent = '-';
-            } else {
-                fmt(document.getElementById('totalVisitors'), curr.visitors);
+            let convRate = curr.visitors > 0 ? (curr.trans / curr.visitors) * 100 : 0;
+            const tvEl = document.getElementById('totalVisitors');
+            if (tvEl) {
+                if (shouldHideVisitors()) {
+                    tvEl.innerHTML = '<div class="text-center text-muted">—</div>';
+                } else {
+                    tvEl.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">الزوار</span>
+                                <span class="text-dark fs-4 fw-bold">${curr.visitors.toLocaleString()}</span>
+                            </div>
+                            <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">التحويل</span>
+                                <span class="text-dark fs-4 fw-bold" dir="ltr">${convRate.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    tvEl.className = 'kpi-value p-0';
+                }
             }
             fmt(document.getElementById('targetVal'), curr.target);
 
@@ -4176,10 +4201,23 @@
 
             // Rates
             let avgTicket = curr.trans > 0 ? curr.sales / curr.trans : 0;
-            document.getElementById('avgTicket').textContent = avgTicket.toFixed(0);
-
-            let convRate = curr.visitors > 0 ? (curr.trans / curr.visitors) * 100 : 0;
-            document.getElementById('convRate').textContent = convRate.toFixed(1) + '%';
+            const ttEl = document.getElementById('totalTrans');
+            if (ttEl) {
+                ttEl.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                        <div class="text-center">
+                            <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">الفواتير</span>
+                            <span class="text-dark fs-4 fw-bold">${curr.trans.toLocaleString()}</span>
+                        </div>
+                        <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                        <div class="text-center">
+                            <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">المعدل</span>
+                            <span class="text-dark fs-4 fw-bold" dir="ltr">${Math.round(avgTicket).toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+                ttEl.className = 'kpi-value p-0';
+            }
 
             // Target Pct
             let targetPct = curr.target > 0 ? (curr.sales / curr.target) * 100 : 0;
@@ -4192,28 +4230,138 @@
 
             // --- 4. Update KPI Cards (Previous) ---
             fmt(document.getElementById('prevSales'), prev.sales);
-            fmt(document.getElementById('prevTrans'), prev.trans);
-            if (shouldHideVisitors()) {
-                document.getElementById('prevVisitors').textContent = '-';
-            } else {
-                fmt(document.getElementById('prevVisitors'), prev.visitors);
+            let prevConvRate = prev.visitors > 0 ? (prev.trans / prev.visitors) * 100 : 0;
+            const pvEl = document.getElementById('prevVisitors');
+            if (pvEl) {
+                if (shouldHideVisitors()) {
+                    pvEl.innerHTML = '<div class="text-center text-muted">—</div>';
+                } else {
+                    pvEl.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">الزوار</span>
+                                <span class="text-dark fs-4 fw-bold">${prev.visitors.toLocaleString()}</span>
+                            </div>
+                            <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">التحويل</span>
+                                <span class="text-dark fs-4 fw-bold" dir="ltr">${prevConvRate.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    pvEl.className = 'kpi-value p-0';
+                }
             }
 
             // Prev Rates
             let prevCustValue = prev.visitors > 0 ? prev.sales / prev.visitors : 0;
-            document.getElementById('prevCustValue').textContent = prevCustValue.toFixed(0);
+            document.getElementById('prevCustValue').textContent = Math.round(prevCustValue).toLocaleString();
 
             let prevAvgTicket = prev.trans > 0 ? prev.sales / prev.trans : 0;
-            document.getElementById('prevAvgTicket').textContent = prevAvgTicket.toFixed(0);
-
-            let prevConvRate = prev.visitors > 0 ? (prev.trans / prev.visitors) * 100 : 0;
-            document.getElementById('prevConvRate').textContent = prevConvRate.toFixed(1) + '%';
+            const ptEl = document.getElementById('prevTrans');
+            if (ptEl) {
+                ptEl.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                        <div class="text-center">
+                            <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">الفواتير</span>
+                            <span class="text-dark fs-4 fw-bold">${prev.trans.toLocaleString()}</span>
+                        </div>
+                        <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                        <div class="text-center">
+                            <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">المعدل</span>
+                            <span class="text-dark fs-4 fw-bold" dir="ltr">${Math.round(prevAvgTicket).toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+                ptEl.className = 'kpi-value p-0';
+            }
 
             // Absolute Growth
             let absGrowth = curr.sales - prev.sales;
             let absGEl = document.getElementById('growthAbs');
-            absGEl.textContent = valFmt(absGrowth);
-            absGEl.className = absGrowth >= 0 ? 'fw-bold fs-4 text-success' : 'fw-bold fs-4 text-danger';
+            absGEl.textContent = (absGrowth >= 0 ? '+' : '') + valFmt(absGrowth);
+            absGEl.className = absGrowth >= 0 ? 'kpi-value text-success' : 'kpi-value text-danger';
+
+            // --- Growth Indicators (New Cards) ---
+            // 1. Visitors Growth
+            let visitorsGrowthAbs = curr.visitors - prev.visitors;
+            let visitorsGrowthPct = prev.visitors > 0 ? (visitorsGrowthAbs / prev.visitors) * 100 : 0;
+            const vgAbsEl = document.getElementById('visitorsGrowthAbs');
+            if (vgAbsEl) {
+                if (shouldHideVisitors()) {
+                    vgAbsEl.innerHTML = '<div class="text-center text-muted">—</div>';
+                } else {
+                    const colorClass = visitorsGrowthAbs >= 0 ? 'text-success' : 'text-danger';
+                    const signAbs = visitorsGrowthAbs >= 0 ? '+' : '-';
+                    const signPct = visitorsGrowthPct >= 0 ? '+' : '-';
+                    vgAbsEl.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">القيمة</span>
+                                <span class="${colorClass} fs-4 fw-bold" dir="ltr">${signAbs}${Math.abs(Math.round(visitorsGrowthAbs)).toLocaleString()}</span>
+                            </div>
+                            <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">النسبة</span>
+                                <span class="${colorClass} fs-4 fw-bold" dir="ltr">${signPct}${Math.abs(visitorsGrowthPct).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    vgAbsEl.className = 'kpi-value p-0';
+                }
+            }
+
+            // 2. Average Ticket Growth
+            let avgTicketGrowthAbs = avgTicket - prevAvgTicket;
+            let avgTicketGrowthPct = prevAvgTicket > 0 ? (avgTicketGrowthAbs / prevAvgTicket) * 100 : 0;
+            const atgAbsEl = document.getElementById('avgTicketGrowthAbs');
+            if (atgAbsEl) {
+                const colorClass = avgTicketGrowthAbs >= 0 ? 'text-success' : 'text-danger';
+                const signAbs = avgTicketGrowthAbs >= 0 ? '+' : '-';
+                const signPct = avgTicketGrowthPct >= 0 ? '+' : '-';
+                atgAbsEl.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                        <div class="text-center">
+                            <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">القيمة</span>
+                            <span class="${colorClass} fs-4 fw-bold" dir="ltr">${signAbs}${Math.abs(Math.round(avgTicketGrowthAbs)).toLocaleString()}</span>
+                        </div>
+                        <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                        <div class="text-center">
+                            <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">النسبة</span>
+                            <span class="${colorClass} fs-4 fw-bold" dir="ltr">${signPct}${Math.abs(avgTicketGrowthPct).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                `;
+                atgAbsEl.className = 'kpi-value p-0';
+            }
+
+            // 3. Customer Value Growth
+            let custValueGrowthAbs = custValue - prevCustValue;
+            let custValueGrowthPct = prevCustValue > 0 ? (custValueGrowthAbs / prevCustValue) * 100 : 0;
+            const cvgAbsEl = document.getElementById('custValueGrowthAbs');
+            if (cvgAbsEl) {
+                if (shouldHideVisitors()) {
+                    cvgAbsEl.innerHTML = '<div class="text-center text-muted">—</div>';
+                } else {
+                    const colorClass = custValueGrowthAbs >= 0 ? 'text-success' : 'text-danger';
+                    const signAbs = custValueGrowthAbs >= 0 ? '+' : '-';
+                    const signPct = custValueGrowthPct >= 0 ? '+' : '-';
+                    cvgAbsEl.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-around w-100 mt-2">
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">القيمة</span>
+                                <span class="${colorClass} fs-4 fw-bold" dir="ltr">${signAbs}${Math.abs(Math.round(custValueGrowthAbs)).toLocaleString()}</span>
+                            </div>
+                            <div style="width: 1px; height: 30px; background-color: #dee2e6;"></div>
+                            <div class="text-center">
+                                <span class="text-muted fw-bold d-block" style="font-size: 0.75rem; margin-bottom: 2px;">النسبة</span>
+                                <span class="${colorClass} fs-4 fw-bold" dir="ltr">${signPct}${Math.abs(custValueGrowthPct).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    cvgAbsEl.className = 'kpi-value p-0';
+                }
+            }
 
             // --- 4. Trend Chart ---
             // Extract Year for Chart Labels from starts
