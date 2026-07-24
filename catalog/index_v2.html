@@ -62,6 +62,14 @@
       --font-display: 'El Messiri', 'Tajawal', serif;
       --transition: 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
       --transition-fast: 0.15s ease;
+
+      /* Rail (dark-panel) on-dark text tones */
+      --on-dark-text: #F5EEDE;
+      --on-dark-muted: rgba(245, 238, 222, 0.6);
+      --on-dark-border: rgba(245, 238, 222, 0.16);
+      --on-dark-surface: rgba(245, 238, 222, 0.07);
+      --on-dark-surface-hover: rgba(245, 238, 222, 0.14);
+      --rail-width: 300px;
     }
 
     * {
@@ -169,17 +177,21 @@
       color: var(--text-main);
     }
 
-    /* Sticky Header */
+    /* Sticky Header — the "atelier rail": dark control panel, gallery-wall content beside/below it */
+    .atelier-shell {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
     .sticky-header {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: rgba(250, 246, 237, 0.9);
+      background: rgba(27, 19, 13, 0.94);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border-color);
-      padding: 12px 20px;
-      box-shadow: 0 4px 20px rgba(42, 28, 17, 0.05);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+      padding: 14px 20px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
       border-top: 3px solid var(--primary);
     }
 
@@ -192,7 +204,7 @@
       max-width: 1400px;
       margin: 0 auto 10px auto;
       padding-bottom: 10px;
-      border-bottom: 1px dashed var(--border-color);
+      border-bottom: 1px dashed var(--on-dark-border);
       flex-wrap: wrap;
     }
     .brand-lockup {
@@ -226,13 +238,13 @@
       font-weight: 700;
       font-size: 1.15em;
       letter-spacing: 2.5px;
-      color: var(--text-main);
+      color: var(--on-dark-text);
     }
     .brand-sub {
       font-style: normal;
       font-size: 0.62em;
       letter-spacing: 3px;
-      color: var(--text-muted);
+      color: var(--on-dark-muted);
       font-weight: 700;
     }
     .brand-page-title {
@@ -246,11 +258,11 @@
       font-family: var(--font-display);
       font-weight: 600;
       font-size: 1.05em;
-      color: var(--primary-dark);
+      color: #E8834A;
     }
     .brand-page-title-sub {
       font-size: 0.74em;
-      color: var(--text-muted);
+      color: var(--on-dark-muted);
       font-weight: 500;
     }
 
@@ -730,7 +742,7 @@
       transition: var(--transition);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow: visible; /* let the price hang-tag spill past the photo edge */
       position: relative;
       animation: cardRise 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) both;
     }
@@ -751,10 +763,11 @@
     .product-image-container {
       position: relative;
       width: 100%;
-      padding-top: 75%;
+      padding-top: 112%;
       background:
         linear-gradient(135deg, #FBF7EE 0%, #F3ECDD 100%);
       border-bottom: 1px solid var(--border-color);
+      border-radius: var(--border-radius) var(--border-radius) 0 0;
       cursor: pointer;
       overflow: hidden;
     }
@@ -852,6 +865,7 @@
 
     .product-content {
       padding: 16px;
+      padding-top: 8px;
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -871,17 +885,28 @@
       min-height: 2.8em;
     }
 
+    /* Price renders visually first (order:-1) and is pulled up to hang off the
+       photo's bottom edge, like a tag clipped to the corner of the product. */
     .product-price-row {
-      display: flex;
-      justify-content: space-between;
+      order: -1;
+      align-self: flex-start;
+      display: inline-flex;
       align-items: baseline;
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed var(--border-color);
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: calc(100% - 4px);
+      margin: -24px 0 14px 0;
+      padding: 7px 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 3px 14px 14px 3px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      z-index: 3;
     }
     .product-price {
       font-family: var(--font-display);
-      font-size: 1.32em;
+      font-size: 1.4em;
       color: var(--primary);
       font-weight: 700;
       font-variant-numeric: tabular-nums;
@@ -1073,7 +1098,7 @@
     .stock-badge {
       position: absolute;
       bottom: 10px;
-      right: 10px;
+      left: 10px;
       z-index: 2;
       padding: 3px 8px;
       border-radius: 12px;
@@ -1456,7 +1481,7 @@
       }
 
       .product-image-container {
-        padding-top: 78%;
+        padding-top: 100%;
       }
 
       .product-image-container img {
@@ -1533,7 +1558,7 @@
       }
 
       .stock-badge {
-        right: 6px;
+        left: 6px;
         bottom: 6px;
         padding: 2px 6px;
         font-size: 0.62rem;
@@ -1587,6 +1612,163 @@
       }
     }
 
+    /* ============================================================
+       DESKTOP: the header becomes a fixed vertical rail (an atelier
+       control panel) docked to the RTL start (right) edge, with the
+       product wall scrolling beside it — not just a recolored bar.
+       ============================================================ */
+    @media (min-width: 1100px) {
+      .atelier-shell {
+        display: flex;
+        align-items: flex-start;
+        gap: 0;
+      }
+
+      .atelier-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .sticky-header {
+        flex: 0 0 var(--rail-width);
+        width: var(--rail-width);
+        min-height: 100vh;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+        padding: 28px 22px;
+        border-top: none;
+        border-bottom: none;
+        border-left: 3px solid var(--primary);
+      }
+
+      .brand-masthead {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+        margin: 0;
+        max-width: none;
+      }
+
+      .brand-page-title {
+        align-items: flex-start;
+        text-align: right;
+      }
+
+      .header-main-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        max-width: none;
+        margin: 0;
+      }
+
+      .search-container {
+        max-width: none;
+        min-width: 0;
+      }
+
+      .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+      }
+
+      .btn-primary-action,
+      .btn-purple-action {
+        justify-content: center;
+        width: 100%;
+      }
+
+      .view-mode-toggle {
+        width: 100%;
+      }
+      .view-btn {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .tools-dropdown {
+        width: 100%;
+      }
+      .tools-btn {
+        width: 100%;
+        justify-content: center;
+        background: var(--on-dark-surface);
+        border: 1px solid var(--on-dark-border);
+        color: var(--on-dark-text);
+      }
+      .tools-btn:hover {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+      .dropdown-content {
+        top: 0;
+        left: auto;
+        right: calc(100% + 10px);
+      }
+
+      .all-filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+        max-width: none;
+        margin: 0;
+      }
+      .styled-select,
+      .styled-checkbox-label {
+        width: 100%;
+      }
+
+      /* Category pills become a vertical directory list — a "shelf sign" */
+      .category-pills-bar {
+        flex-direction: column;
+        align-items: stretch;
+        max-width: none;
+        max-height: 280px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 2px 0;
+      }
+      .pill-btn {
+        width: 100%;
+        justify-content: flex-start;
+        background: var(--on-dark-surface);
+        border-color: var(--on-dark-border);
+        color: var(--on-dark-text);
+      }
+      .pill-btn:hover {
+        background: var(--on-dark-surface-hover);
+        border-color: var(--primary);
+        color: var(--on-dark-text);
+      }
+      .pill-btn.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
+
+      .active-filters-summary {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 8px;
+        max-width: none;
+        margin: 0;
+      }
+
+      #userInfo {
+        margin-top: 15px;
+      }
+
+      /* Recenter the floating cart bar within the content column, not the whole viewport */
+      .floating-cart-bar {
+        left: calc(50% - (var(--rail-width) / 2));
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *,
       *::before,
@@ -1612,6 +1794,8 @@
   </div>
 
   <!-- Sticky Main Header -->
+  <!-- Atelier shell: rail (header) + gallery content, side-by-side on desktop -->
+  <div class="atelier-shell">
   <header class="sticky-header">
     <div class="brand-masthead">
       <div class="brand-lockup">
@@ -1749,6 +1933,7 @@
     </div>
   </header>
 
+  <div class="atelier-content">
   <!-- User Info Badge -->
   <div id="userInfo" aria-live="polite" style="display:none;"></div>
 
@@ -1990,6 +2175,8 @@
   </div>
 
   <div id="loadingSpinner" class="loading-spinner"></div>
+  </div><!-- /.atelier-content -->
+  </div><!-- /.atelier-shell -->
 
   <!-- View Mode State & Toggle Scripts -->
   <script>
