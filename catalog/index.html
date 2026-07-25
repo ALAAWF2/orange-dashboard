@@ -2898,13 +2898,15 @@
       return '<span class="stock-badge stock-ok">متوفر</span>';
     }
 
-    function addToCart(code, name, qty, warehouse) {
-      const product = (window.data || []).find(p => p.code === code);
+    function addToCart(code, name, qty, warehouse, aliasOverride = '') {
+      const codeKey = String(code);
+      const product = (window.data || []).find(p => String(p.code) === codeKey);
       if (qty && parseInt(qty) > 0) {
-        const wh = warehouse || (document.getElementById(`whSelect_${code}`)?.value) || userWarehouse;
-        cart[code] = { name, alias: product?.alias ?? '', qty: parseInt(qty), warehouse: wh };
+        const wh = warehouse || (document.getElementById(`whSelect_${codeKey}`)?.value) || userWarehouse;
+        const alias = String(aliasOverride ?? '').trim() || String(product?.alias ?? '').trim();
+        cart[codeKey] = { name, alias, qty: parseInt(qty), warehouse: wh };
       } else {
-        delete cart[code];
+        delete cart[codeKey];
       }
       updateCartBadge();
     }
@@ -3393,7 +3395,7 @@
             code: product?.code ?? code,
             gofrugal_code: product?.gofrugal_code ?? "",
             name: product?.name ?? item.name,
-            alias: item.alias ?? product?.alias ?? '',
+            alias: String(item.alias ?? '').trim() || String(product?.alias ?? '').trim(),
             qty: Number(item.qty) || 0
           };
         }).filter(item => item.qty > 0);
@@ -3502,7 +3504,27 @@
       const alias = document.getElementById('customAliasInput').value.trim();
       const qty = document.getElementById('customQtyInput').value.trim();
       if (!alias || !qty) { showToast("أدخل البيانات كاملة", "error"); return; }
-      addToCart(`CUSTOM-${Date.now()}`, `منتج مخصص (${alias})`, qty, userWarehouse);
+      const product = (window.data || []).find(candidate =>
+        [candidate.alias, candidate.code, candidate.gofrugal_code]
+          .some(value => String(value ?? '').trim() === alias)
+      );
+      if (product) {
+        addToCart(
+          product.code,
+          product.name,
+          qty,
+          userWarehouse,
+          product.alias ?? alias
+        );
+      } else {
+        addToCart(
+          `CUSTOM-${alias}`,
+          `منتج مخصص (${alias})`,
+          qty,
+          userWarehouse,
+          alias
+        );
+      }
       closeCustomProductModal();
       showSuccessModal("تمت إضافة المنتج المخصص");
     }
