@@ -4514,25 +4514,6 @@ const EMPLOYEES = [
         "addressBooks": "2103-C;2103-E"
     },
     {
-        "employeeId": "4661-فاطمه معدى البيشي",
-        "personnelNumber": "4661",
-        "name": "فاطمه معدى البيشي",
-        "startDate": "2025-07-31",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
-    },
-    {
         "employeeId": "4668-جميله محمد سفياني",
         "personnelNumber": "4668",
         "name": "جميله محمد سفياني",
