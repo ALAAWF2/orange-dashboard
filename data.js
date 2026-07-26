@@ -7274,6 +7274,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1501-C;1501-E"
+    },
+    {
+        "employeeId": "4996-بشرى علي الدويه",
+        "personnelNumber": "4996",
+        "name": "بشرى علي الدويه",
+        "startDate": "2026-07-19",
+        "manager": "جهاد ايوبي",
+        "showroom": "1601-16-Ehsa Othaim Mall",
+        "showroomDetails": [
+            {
+                "name": "1601-16-Ehsa Othaim Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1601-C",
+                    "1601-E"
+                ]
+            }
+        ],
+        "addressBooks": "1601-C;1601-E"
     }
 ];
 
