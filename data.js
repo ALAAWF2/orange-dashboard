@@ -1277,7 +1277,7 @@ const EMPLOYEES = [
         "name": "محمد جونيس ميمبار",
         "startDate": "2021-08-21",
         "manager": "جهاد ايوبي",
-        "showroom": "1601-16-Ehsa Othaim Mall",
+        "showroom": "1601-16-Ehsa Othaim Mall و 1602-49-AlAhsa Mall",
         "showroomDetails": [
             {
                 "name": "1601-16-Ehsa Othaim Mall",
@@ -1286,9 +1286,17 @@ const EMPLOYEES = [
                     "1601-C",
                     "1601-E"
                 ]
+            },
+            {
+                "name": "1602-49-AlAhsa Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1602-C",
+                    "1602-E"
+                ]
             }
         ],
-        "addressBooks": "1601-C;1601-E"
+        "addressBooks": "1601-C;1601-E;1602-C;1602-E"
     },
     {
         "employeeId": "1590-محمد نسيل كونغاث",
