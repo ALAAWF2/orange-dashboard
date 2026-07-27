@@ -5382,25 +5382,6 @@ const EMPLOYEES = [
         "addressBooks": "1113-C;1113-E"
     },
     {
-        "employeeId": "4806-رنا العمري",
-        "personnelNumber": "4806",
-        "name": "رنا العمري",
-        "startDate": "2026-01-04",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
-        "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            }
-        ],
-        "addressBooks": "1114-C;1114-E"
-    },
-    {
         "employeeId": "4807-اثير الخالدي",
         "personnelNumber": "4807",
         "name": "اثير الخالدي",
