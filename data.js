@@ -7241,7 +7241,7 @@ const EMPLOYEES = [
         "employeeId": "4997-شهد الجهني",
         "personnelNumber": "4997",
         "name": "شهد الجهني",
-        "startDate": "2026-07-19",
+        "startDate": "2026-07-20",
         "manager": "المنطقة الشمالية",
         "showroom": "1501-24-Yanbu Dana Mall",
         "showroomDetails": [
