@@ -4522,6 +4522,25 @@ const EMPLOYEES = [
         "addressBooks": "2103-C;2103-E"
     },
     {
+        "employeeId": "4661-فاطمه معدى البيشي",
+        "personnelNumber": "4661",
+        "name": "فاطمه معدى البيشي",
+        "startDate": "2025-07-31",
+        "manager": "عبدالله السرداح",
+        "showroom": "1105-30-Tala Mall Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1105-30-Tala Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1105-C",
+                    "1105-E"
+                ]
+            }
+        ],
+        "addressBooks": "1105-C;1105-E"
+    },
+    {
         "employeeId": "4668-جميله محمد سفياني",
         "personnelNumber": "4668",
         "name": "جميله محمد سفياني",
@@ -7263,6 +7282,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1601-C;1601-E"
+    },
+    {
+        "employeeId": "4998-سندس عسيري",
+        "personnelNumber": "4998",
+        "name": "سندس عسيري",
+        "startDate": "2026-07-26",
+        "manager": "اماني عسيري",
+        "showroom": "1901-21-Abha Al_Rashid Mall New",
+        "showroomDetails": [
+            {
+                "name": "1901-21-Abha Al_Rashid Mall New",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1901-C",
+                    "1901-E"
+                ]
+            }
+        ],
+        "addressBooks": "1901-C;1901-E"
     }
 ];
 
