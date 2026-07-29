@@ -2100,18 +2100,57 @@
       return String(v ?? "").toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
     }
 
-    function getSalesInMall(code) {
+    let salesLookupContext = {
+      mallKey: null,
+      dataRef: null,
+      salesByOutletRef: null,
+      values: new Map()
+    };
+
+    function rebuildSalesLookupIfNeeded() {
+      const mallKey = normalizeKey(userMall);
+      const dataRef = Array.isArray(window.data)
+        ? window.data
+        : (Array.isArray(window.products) ? window.products : null);
+      const salesByOutletRef = window.SALES_BY_OUTLET || null;
+
+      if (
+        salesLookupContext.mallKey === mallKey &&
+        salesLookupContext.dataRef === dataRef &&
+        salesLookupContext.salesByOutletRef === salesByOutletRef
+      ) {
+        return;
+      }
+
+      const values = new Map();
       if (userMall === 'إجمالي المستودعات') {
-        const p = (window.data || window.products || []).find(x => String(x.code) === String(code));
-        return p ? (Number(p.sales) || 0) : 0;
+        (dataRef || []).forEach(product => {
+          values.set(String(product.code), Number(product.sales) || 0);
+        });
+      } else if (mallKey && salesByOutletRef) {
+        Object.entries(salesByOutletRef).forEach(([code, outlets]) => {
+          if (!outlets || typeof outlets !== 'object') return;
+          for (const [mallName, value] of Object.entries(outlets)) {
+            if (normalizeKey(mallName) === mallKey) {
+              values.set(String(code), Number(value) || 0);
+              break;
+            }
+          }
+        });
       }
-      const obj = window.SALES_BY_OUTLET?.[String(code)];
-      if (!obj || !userMall) return 0;
-      const target = normalizeKey(userMall);
-      for (const mallName in obj) {
-        if (normalizeKey(mallName) === target) return Number(obj[mallName]) || 0;
-      }
-      return 0;
+
+      salesLookupContext = {
+        mallKey,
+        dataRef,
+        salesByOutletRef,
+        values
+      };
+    }
+
+    function getSalesInMall(code) {
+      if (!userMall) return 0;
+      rebuildSalesLookupIfNeeded();
+      return salesLookupContext.values.get(String(code)) || 0;
     }
 
     function getQtyInMall(d) {
@@ -2223,13 +2262,13 @@
       _renderTimer = setTimeout(() => renderProducts(), delay == null ? 250 : delay);
     }
 
-    function handleSearchInput() {
+    function handleSearchInput(scheduleRender = true) {
       const val = (document.getElementById('searchBar')?.value || '').trim();
       const clearBtn = document.getElementById('searchClearBtn');
       const hint = document.getElementById('searchShortcutHint');
       if (clearBtn) clearBtn.style.display = val ? 'block' : 'none';
       if (hint) hint.style.display = val ? 'none' : 'block';
-      debouncedRender();
+      if (scheduleRender) debouncedRender();
     }
 
     function clearSearch() {
@@ -2303,11 +2342,12 @@
       ['newOnly', 'promoOnly', 'favOnly', 'showroomStockOnly'].forEach(id => {
         const cb = document.getElementById(id); if (cb) cb.checked = false;
       });
-      handleSearchInput();
+      handleSearchInput(false);
       resetFiltersAndRender();
     }
 
     function resetFiltersAndRender() {
+      clearTimeout(_renderTimer);
       currentPage = 1;
       renderCategoryPills();
       updateActiveFiltersSummary();

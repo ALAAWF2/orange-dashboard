@@ -344,6 +344,16 @@
       border-color: rgba(231, 76, 60, 0.2);
       color: #c0392b;
     }
+    .branch-badge.warehouse-badge {
+      background: rgba(142, 68, 173, 0.08);
+      border-color: rgba(142, 68, 173, 0.25);
+      color: #8e44ad;
+    }
+    .branch-badge.transit-badge {
+      background: rgba(41, 128, 185, 0.08);
+      border-color: rgba(41, 128, 185, 0.25);
+      color: #2980b9;
+    }
 
     .copy-btn {
       margin: 15px;
@@ -744,7 +754,7 @@
         // Category filter matching
         if (selectedCat && product.category !== selectedCat) return;
 
-        // Check and build showroom stocks
+        // Check and build showroom and warehouse stocks
         const branchEntries = Object.entries(product.branches || {});
         const otherBranchStocks = [];
 
@@ -755,18 +765,18 @@
           const normalizedBranch = normalize(branchName);
           const normalizedOutlet = normalize(currentOutletName);
 
-          // Exclude the current showroom's stock
+          // Exclude the current showroom/outlet if logged in
           if (normalizedOutlet && normalizedBranch === normalizedOutlet) return;
           
-          // Exclude warehouses and transit from showroom stock results
-          if (normalizedBranch === 'warehouse' || normalizedBranch === 'warehouse riyadh' || normalizedBranch === 'transit') return;
+          const isWarehouse = (normalizedBranch === 'warehouse' || normalizedBranch === 'warehouse riyadh');
+          const isTransit = (normalizedBranch === 'transit');
 
-          otherBranchStocks.push({ branchName, qty });
+          otherBranchStocks.push({ branchName, qty, isWarehouse, isTransit });
         });
 
-        // If at least one other branch has stock, show the card
+        // If at least one branch or warehouse has stock, show the card
         if (otherBranchStocks.length > 0) {
-          // Sort branches by stock quantity descending
+          // Sort warehouses/branches by stock quantity descending
           otherBranchStocks.sort((a, b) => b.qty - a.qty);
 
           currentSearchResults.push({
@@ -781,12 +791,30 @@
 
           const stockBadgesHtml = otherBranchStocks.map(stock => {
             let stockClass = 'low-stock';
-            if (stock.qty >= 10) stockClass = 'high-stock';
-            else if (stock.qty >= 3) stockClass = 'medium-stock';
+            let icon = '';
+            let labelName = stock.branchName;
+
+            const norm = normalize(stock.branchName);
+            if (norm === 'warehouse') {
+              stockClass = 'warehouse-badge';
+              icon = '🏢 ';
+              labelName = 'مستودع جدة الرئيسي';
+            } else if (norm === 'warehouse riyadh') {
+              stockClass = 'warehouse-badge';
+              icon = '🏢 ';
+              labelName = 'مستودع الرياض';
+            } else if (norm === 'transit') {
+              stockClass = 'transit-badge';
+              icon = '🚚 ';
+              labelName = 'ترانزيت';
+            } else {
+              if (stock.qty >= 10) stockClass = 'high-stock';
+              else if (stock.qty >= 3) stockClass = 'medium-stock';
+            }
 
             return `
               <div class="branch-badge ${stockClass}">
-                <span>${stock.branchName}:</span>
+                <span>${icon}${labelName}:</span>
                 <strong>${stock.qty} قطعة</strong>
               </div>
             `;
@@ -811,7 +839,7 @@
               <div class="stocks-section">
                 <div class="stocks-title">
                   <span>📦</span>
-                  <span>المخزون المتوفر بالمعارض الأخرى:</span>
+                  <span>المخزون المتوفر بالمعارض والمستودعات:</span>
                 </div>
                 <div class="stocks-grid">
                   ${stockBadgesHtml}
@@ -830,11 +858,11 @@
       resultsGrid.innerHTML = matchingCards.join('');
 
       if (matchingCards.length === 0) {
-        toggleStatus('⚠️ لا توجد نتائج مطابقة أو أن المنتجات المتوفرة ليس لها مخزون في المعارض الأخرى.', 'info');
+        toggleStatus('⚠️ لا توجد نتائج مطابقة أو أن المنتجات المتوفرة ليس لها مخزون في المعارض أو المستودعات.', 'info');
         if (exportExcelBtn) exportExcelBtn.disabled = true;
       } else {
         if (searchMode === 'multi') {
-          toggleStatus(`✅ تم العثور على ${currentSearchResults.length} منتج متوفر بالفروع لأصل ${queries.length} عنصر إدخال.`, 'info');
+          toggleStatus(`✅ تم العثور على ${currentSearchResults.length} منتج متوفر بالفروع والمستودعات لأصل ${queries.length} عنصر إدخال.`, 'info');
         } else {
           toggleStatus('');
         }
@@ -856,15 +884,21 @@
         const totalOtherStock = stocks.reduce((sum, s) => sum + s.qty, 0);
 
         stocks.forEach(s => {
+          let branchLabel = s.branchName;
+          const norm = normalize(s.branchName);
+          if (norm === 'warehouse') branchLabel = 'المستودع الرئيسي (جدة)';
+          else if (norm === 'warehouse riyadh') branchLabel = 'مستودع الرياض';
+          else if (norm === 'transit') branchLabel = 'ترانزيت (Transit)';
+
           rows.push({
             'كود المنتج': p.code || '',
             'اسم المنتج': p.name || '',
             'Alias': p.alias || '',
             'التصنيف': p.category || '',
             'السعر (ريال)': p.price || 0,
-            'الفرع / المعرض': s.branchName,
-            'الكمية بالفرع': s.qty,
-            'إجمالي الفروع الأخرى': totalOtherStock
+            'الفرع / المعرض / المستودع': branchLabel,
+            'الكمية المتوفرة': s.qty,
+            'إجمالي الفروع والمستودعات': totalOtherStock
           });
         });
       });
