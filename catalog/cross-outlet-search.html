@@ -585,9 +585,54 @@
     let currentOutletName = '';
     let userChecked = false;
     let currentSearchResults = [];
+    let searchMode = 'single'; // 'single' or 'multi'
 
     // ===== Helpers =====
     function normalize(v) { return (v || '').toString().trim().toLowerCase(); }
+
+    function switchSearchMode(mode) {
+      searchMode = mode;
+      const singleInputContainer = document.getElementById('singleInputContainer');
+      const multiInputContainer = document.getElementById('multiInputContainer');
+      const btnSingleMode = document.getElementById('btnSingleMode');
+      const btnMultiMode = document.getElementById('btnMultiMode');
+      const searchCounterBadge = document.getElementById('searchCounterBadge');
+
+      if (mode === 'multi') {
+        singleInputContainer.classList.add('hidden');
+        multiInputContainer.classList.remove('hidden');
+        btnSingleMode.classList.remove('active');
+        btnMultiMode.classList.add('active');
+        searchCounterBadge.classList.remove('hidden');
+        const multiInput = document.getElementById('multiSearchInput');
+        if (multiInput) multiInput.focus();
+      } else {
+        multiInputContainer.classList.add('hidden');
+        singleInputContainer.classList.remove('hidden');
+        btnMultiMode.classList.remove('active');
+        btnSingleMode.classList.add('active');
+        searchCounterBadge.classList.add('hidden');
+        if (searchInput) searchInput.focus();
+      }
+      performSearch();
+    }
+
+    function getSearchQueries() {
+      let rawText = '';
+      if (searchMode === 'multi') {
+        const multiInput = document.getElementById('multiSearchInput');
+        rawText = multiInput ? multiInput.value : '';
+      } else {
+        rawText = searchInput ? searchInput.value : '';
+      }
+
+      const tokens = rawText
+        .split(/[\n,;\t]+/)
+        .map(s => normalize(s))
+        .filter(s => s.length >= 2);
+
+      return [...new Set(tokens)];
+    }
 
     function toggleStatus(message = '', type = 'info') {
       if (!message) {
@@ -661,16 +706,23 @@
 
     // ===== Rendering Grouped Cards =====
     function performSearch() {
-      const query = normalize(searchInput.value);
+      const queries = getSearchQueries();
       const selectedCat = categoryFilter.value;
       const minStockLimit = Number(stockFilter.value) || 1;
+      const queryCountNum = document.getElementById('queryCountNum');
 
-      // Ensure 3 chars minimum to avoid heavy layout freeze
-      if (!query || query.length < 3) {
+      if (queryCountNum) queryCountNum.textContent = queries.length;
+
+      if (queries.length === 0) {
         resultsGrid.innerHTML = '';
         currentSearchResults = [];
         if (exportExcelBtn) exportExcelBtn.disabled = true;
-        toggleStatus('💡 اكتب على الأقل 3 أحرف من اسم المنتج أو الكود أو الـ Alias لبدء البحث...', 'info');
+
+        if (searchMode === 'multi') {
+          toggleStatus('💡 الصق أو اكتب الأكواد أو أسماء المنتجات (سطر لكل عنصر أو مفصولة بفاصلة ,) لبدء البحث...', 'info');
+        } else {
+          toggleStatus('💡 اكتب على الأقل حرفين أو كود المنتج لبدء البحث...', 'info');
+        }
         return;
       }
 
@@ -678,11 +730,14 @@
       currentSearchResults = [];
 
       productsList.forEach(product => {
-        // Search filter matching
-        const matchesQuery =
-          normalize(product.name).includes(query) ||
-          normalize(product.code).includes(query) ||
-          normalize(product.alias).includes(query);
+        const prodName = normalize(product.name);
+        const prodCode = normalize(product.code);
+        const prodAlias = normalize(product.alias);
+
+        // Product matches if ANY query matches code, name, or alias
+        const matchesQuery = queries.some(q =>
+          prodName.includes(q) || prodCode.includes(q) || prodAlias.includes(q)
+        );
 
         if (!matchesQuery) return;
 
@@ -778,7 +833,11 @@
         toggleStatus('⚠️ لا توجد نتائج مطابقة أو أن المنتجات المتوفرة ليس لها مخزون في المعارض الأخرى.', 'info');
         if (exportExcelBtn) exportExcelBtn.disabled = true;
       } else {
-        toggleStatus('');
+        if (searchMode === 'multi') {
+          toggleStatus(`✅ تم العثور على ${currentSearchResults.length} منتج متوفر بالفروع لأصل ${queries.length} عنصر إدخال.`, 'info');
+        } else {
+          toggleStatus('');
+        }
         if (exportExcelBtn) exportExcelBtn.disabled = false;
       }
     }
@@ -828,8 +887,8 @@
         XLSX.utils.book_append_sheet(workbook, worksheet, "نتائج البحث");
 
         const todayStr = new Date().toISOString().slice(0, 10);
-        const searchVal = (searchInput.value || 'نتائج').trim().replace(/[\/\\?%*:|"<>]/g, '_');
-        const fileName = `بحث_الفروع_${searchVal}_${todayStr}.xlsx`;
+        const searchTag = (searchMode === 'multi' ? 'متعدد' : searchInput.value || 'نتائج').trim().replace(/[\/\\?%*:|"<>]/g, '_');
+        const fileName = `بحث_الفروع_${searchTag}_${todayStr}.xlsx`;
 
         XLSX.writeFile(workbook, fileName);
       } catch (err) {
@@ -849,7 +908,9 @@
 
     // ===== Authentication Check =====
     function handleUnauthenticated() {
-      searchInput.setAttribute('readonly', 'true');
+      if (searchInput) searchInput.setAttribute('readonly', 'true');
+      const multiInput = document.getElementById('multiSearchInput');
+      if (multiInput) multiInput.setAttribute('readonly', 'true');
       filterPanel.classList.add('hidden');
       resultsGrid.innerHTML = '';
       toggleStatus('🔒 الرجاء تسجيل الدخول أولاً للوصول إلى البحث. جاري تحويلك للصفحة الرئيسية...', 'error');
@@ -893,9 +954,11 @@
         _lastAuthUserId = user.id;
 
         // Unlock panel
-        searchInput.removeAttribute('readonly');
+        if (searchInput) searchInput.removeAttribute('readonly');
+        const multiInput = document.getElementById('multiSearchInput');
+        if (multiInput) multiInput.removeAttribute('readonly');
         filterPanel.classList.remove('hidden');
-        toggleStatus('💡 اكتب على الأقل 3 أحرف من اسم المنتج أو الكود أو الـ Alias لبدء البحث...', 'info');
+        toggleStatus('💡 اختر طريقة البحث (فردي أو متعدد) وابدأ بإدخال أكواد أو أسماء المنتجات...', 'info');
 
         // Load Profile to set userMall
         try {
