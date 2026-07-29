@@ -1966,18 +1966,18 @@ const EMPLOYEES = [
         "name": "راشيد بوناكادان",
         "startDate": "2022-10-30",
         "manager": "محمدكلو",
-        "showroom": "1101-12-Al_Hamra Mall",
+        "showroom": "1113-51-Park Avenue Riyadh",
         "showroomDetails": [
             {
-                "name": "1101-12-Al_Hamra Mall",
+                "name": "1113-51-Park Avenue Riyadh",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1101-C",
-                    "1101-E"
+                    "1113-C",
+                    "1113-E"
                 ]
             }
         ],
-        "addressBooks": "1101-C;1101-E"
+        "addressBooks": "1113-C;1113-E"
     },
     {
         "employeeId": "3373-محمد رافسال فينجاسير",
