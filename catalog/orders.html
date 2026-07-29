@@ -2119,9 +2119,22 @@
     async function loadCatalog() {
       if (catalogIndex !== null) return catalogIndex;
       try {
-        const res = await fetch('products.json?_=' + Date.now(), { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
+        let data;
+        try {
+          const res = await fetch('../ceo_data/products.json?_=' + Date.now(), { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const payload = await res.json();
+          data = Object.entries(payload.products || {}).map(([code, product]) => ({
+            code,
+            ...product
+          }));
+          if (data.length === 0) throw new Error('Empty product lookup');
+        } catch (primaryError) {
+          console.warn('Full product lookup unavailable, using catalog products:', primaryError);
+          const fallbackRes = await fetch('products.json?_=' + Date.now(), { cache: 'no-store' });
+          if (!fallbackRes.ok) throw new Error('HTTP ' + fallbackRes.status);
+          data = await fallbackRes.json();
+        }
         catalogIndex = {};
         (data || []).forEach(p => {
           const entry = {

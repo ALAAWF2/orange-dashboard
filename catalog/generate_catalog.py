@@ -396,10 +396,6 @@ def main():
 
     for _, r in df_items.iterrows():
         item_number = r["ItemNumber"]
-        
-        # Filter: Exclude barcodes starting with 3 or 29
-        if str(item_number).startswith("3") or str(item_number).startswith("29"):
-            continue
 
         # Prioritize ProductName from AllProducts, fallback to Barcode description, then to ProductSearchName
         name_ar = ""
