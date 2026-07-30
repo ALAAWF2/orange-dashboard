@@ -1880,8 +1880,23 @@
       syncMobileFilterState();
     }
 
-    function openShowroomSales(e) {
+    async function openShowroomSales(e) {
       if (e) e.preventDefault();
+
+      try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+        if (!session) {
+          showToast("سجّل الدخول أولاً لعرض مبيعات المعرض.", "warning");
+          await login();
+          return;
+        }
+      } catch (error) {
+        console.error("تعذر التحقق من جلسة الدخول قبل فتح المبيعات", error);
+        showToast("تعذر التحقق من جلسة الدخول. حاول مرة أخرى.", "error");
+        return;
+      }
+
       let storeParam = userMall || '';
       if (!storeParam && typeof currentUser !== 'undefined' && currentUser) {
         storeParam = currentUser.mall || '';
@@ -2824,6 +2839,20 @@
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         if (error) throw error;
         await queueAuthUser(session?.user || null);
+
+        const authParams = new URLSearchParams(window.location.search);
+        if (authParams.get('login') === 'required') {
+          authParams.delete('login');
+          const cleanUrl = window.location.pathname
+            + (authParams.toString() ? `?${authParams.toString()}` : '')
+            + window.location.hash;
+          window.history.replaceState(null, '', cleanUrl);
+
+          if (!session) {
+            showToast("سجّل الدخول أولاً لعرض مبيعات المعرض.", "warning");
+            await login();
+          }
+        }
 
         supabaseClient.auth.onAuthStateChange((event, nextSession) => {
           if (event === 'INITIAL_SESSION') return;

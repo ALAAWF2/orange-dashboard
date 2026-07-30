@@ -605,7 +605,7 @@
                 <th>تطور الحصة %</th>
                 <th>الهدف</th>
                 <th>التحقيق %</th>
-                <th>العمولة / المكافأة المتوقعة</th>
+                <th>عمولة معدل الفاتورة</th>
                 <th>اليومية المتبقية</th>
                 <th>الفواتير</th>
                 <th>معدل الفاتورة</th>
@@ -701,26 +701,39 @@
 
     // Init & Load Data
     document.addEventListener('DOMContentLoaded', async () => {
-      await checkAuthAndPermissions();
+      const isAuthorized = await checkAuthAndPermissions();
+      if (!isAuthorized) return;
       await loadAllData();
     });
 
     async function checkAuthAndPermissions() {
       try {
-        const { data: userRes } = await supabaseClient.auth.getUser();
+        const { data: userRes, error: userError } = await supabaseClient.auth.getUser();
         currentUser = userRes?.user || null;
 
-        if (currentUser) {
-          let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-          if (!profile) {
-            const fallback = await supabaseClient.from('profiles').select('*').eq('email', currentUser.email).single();
-            profile = fallback.data;
-          }
-          userProfile = profile || null;
+        if (userError || !currentUser) {
+          sessionStorage.setItem('catalogLoginNotice', 'سجّل الدخول أولاً لعرض مبيعات المعرض.');
+          window.location.replace('index.html?login=required');
+          return false;
+        }
+
+        let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+        if (!profile) {
+          const fallback = await supabaseClient.from('profiles').select('*').eq('email', currentUser.email).single();
+          profile = fallback.data;
+        }
+        userProfile = profile || null;
+
+        if (!userProfile) {
+          document.getElementById('loadingState').innerHTML = `
+            <div class="alert alert-danger" style="max-width:520px; margin:0 auto; font-weight:bold;">
+              تعذر تحديد المعرض المرتبط بحسابك. يرجى مراجعة ملف المستخدم ثم إعادة تسجيل الدخول.
+            </div>`;
+          return false;
         }
 
         const role = userProfile?.role || '';
-        const managedOutlets = userProfile?.managed_outlets || [];
+        const managedOutlets = Array.isArray(userProfile?.managed_outlets) ? userProfile.managed_outlets : [];
 
         if (role === 'admin' || role === 'maintenance_admin') {
           canSwitchStores = true;
@@ -732,10 +745,25 @@
           canSwitchStores = false;
           allowedOutlets = userProfile?.mall ? [userProfile.mall] : [];
         }
+
+        if (!canSwitchStores && allowedOutlets.length === 0) {
+          document.getElementById('loadingState').innerHTML = `
+            <div class="alert alert-danger" style="max-width:520px; margin:0 auto; font-weight:bold;">
+              لا يوجد معرض محدد لهذا الحساب. يرجى مراجعة ملف المستخدم.
+            </div>`;
+          return false;
+        }
+
+        return true;
       } catch (e) {
         console.warn("Auth check error in showroom sales:", e);
         canSwitchStores = false;
         allowedOutlets = [];
+        document.getElementById('loadingState').innerHTML = `
+          <div class="alert alert-danger" style="max-width:520px; margin:0 auto; font-weight:bold;">
+            تعذر التحقق من جلسة الدخول. أعد تحميل الصفحة وحاول مرة أخرى.
+          </div>`;
+        return false;
       }
     }
 
@@ -848,6 +876,7 @@
       const year = now.getFullYear();
       const monthStr = String(now.getMonth() + 1).padStart(2, '0');
       const currentMonthPrefix = `${year}-${monthStr}`;
+      const employeeTargetDate = getActiveEmployeeTargetDate(now);
 
       // Build Fast Lookup Maps for Selected Store from REAL DATA
       const salesMap = {};
@@ -875,20 +904,33 @@
       // Target Calculation: Find in mgmtData.targets array ['YYYY-MM-DD', 'store_code', target_amount]
       const targetsList = mgmtData?.targets || [];
       let mtdTarget = 0;
-      const targetRow = targetsList.find(r => Array.isArray(r) && String(r[1]) === String(selectedStoreCode) && r[0].startsWith(currentMonthPrefix));
+      let targetRow = targetsList.find(r =>
+        Array.isArray(r)
+        && String(r[1]) === String(selectedStoreCode)
+        && r[0] === employeeTargetDate
+      );
+      if (!targetRow && employeeTargetDate === '2026-03-20') {
+        targetRow = targetsList.find(r =>
+          Array.isArray(r)
+          && String(r[1]) === String(selectedStoreCode)
+          && r[0] === '2026-03-01'
+        );
+      }
       
       if (targetRow && targetRow[2]) {
         mtdTarget = Number(targetRow[2]) || 0;
       } else {
         // Fallback: sum employee targets for employees belonging to this store
         const storeEmpHistory = empData?.history?.[selectedStoreCode] || [];
-        const empSet = new Set(storeEmpHistory.map(r => {
-          const raw = String(r[1] || '');
-          return raw.includes('-') ? raw.split('-')[0].trim() : raw;
-        }).filter(Boolean));
+        const empSet = new Set(
+          storeEmpHistory
+            .filter(r => String(r[0] || '').startsWith(currentMonthPrefix))
+            .map(r => normalizeEmployeeId(r[1]))
+            .filter(Boolean)
+        );
         
         empSet.forEach(empId => {
-          mtdTarget += getEmployeeTarget(empId, currentMonthPrefix);
+          mtdTarget += getEmployeeTarget(empId, employeeTargetDate);
         });
       }
 
@@ -933,12 +975,13 @@
 
       // Update KPI Cards UI
       document.getElementById('kpiSales').textContent = fmtMoney(mtdSales) + ' ر.س';
-      document.getElementById('kpiTarget').textContent = fmtMoney(mtdTarget) + ' ر.س';
-      document.getElementById('kpiAchievement').textContent = fmtPerc(ach);
-      document.getElementById('kpiAchSub').textContent = `${fmtPerc(ach)} من الهدف الشهري`;
+      document.getElementById('kpiTarget').textContent = mtdTarget > 0 ? fmtMoney(mtdTarget) + ' ر.س' : '—';
+      document.getElementById('kpiAchievement').textContent = mtdTarget > 0 ? fmtPerc(ach) : '—';
+      document.getElementById('kpiAchSub').textContent = mtdTarget > 0 ? `${fmtPerc(ach)} من الهدف الشهري` : 'لا يوجد هدف مسجل';
 
       const cardAch = document.getElementById('cardAchievement');
-      if (ach >= 100) cardAch.className = 'kpi-card green';
+      if (mtdTarget <= 0) cardAch.className = 'kpi-card';
+      else if (ach >= 100) cardAch.className = 'kpi-card green';
       else if (ach >= 80) cardAch.className = 'kpi-card orange';
       else cardAch.className = 'kpi-card red';
 
@@ -946,7 +989,7 @@
       document.getElementById('kpiGrowth').textContent = (overallGrowth >= 0 ? '+' : '') + fmtPerc(overallGrowth);
       document.getElementById('cardGrowth').className = overallGrowth >= 0 ? 'kpi-card green' : 'kpi-card red';
 
-      document.getElementById('kpiDailyReq').textContent = fmtMoney(dailyReq) + ' ر.س';
+      document.getElementById('kpiDailyReq').textContent = mtdTarget > 0 ? fmtMoney(dailyReq) + ' ر.س' : '—';
 
       // Conversion & Invoices
       document.getElementById('kpiConversion').textContent = fmtPerc(overallConv);
@@ -956,26 +999,100 @@
       renderDailySalesTable(salesMap, transMap, visitorsMap, currentMonthPrefix, daysInMonth, currentDay, year, monthStr);
 
       // Employee Leaderboard Table
-      renderEmployeeLeaderboard(selectedStoreCode, mtdSales, currentMonthPrefix, remainingDays);
+      renderEmployeeLeaderboard(selectedStoreCode, mtdSales, currentMonthPrefix, employeeTargetDate, remainingDays);
 
       // Top Products & Categories
       renderTopProductsAndCategories(selectedStoreName);
     }
 
-    function getEmployeeTarget(empId, currentMonthPrefix) {
-      if (!empData) return 75000;
-      const mTargets = empData.monthly_targets?.[empId];
-      if (mTargets && typeof mTargets === 'object') {
-        for (const [dStr, targetVal] of Object.entries(mTargets)) {
-          if (dStr.startsWith(currentMonthPrefix)) {
-            return Number(targetVal) || 0;
+    function toLocalYmd(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function normalizeEmployeeId(rawId) {
+      if (rawId == null) return '';
+      let employeeId = String(rawId).trim();
+      if (employeeId.toLowerCase().startsWith('unknown') || employeeId.toLowerCase().startsWith('unkown')) {
+        employeeId = employeeId.toLowerCase().replace('unknown', '').replace('unkown', '').trim();
+      }
+      if (employeeId.includes('-')) {
+        employeeId = employeeId.split('-')[0].trim();
+      }
+      return /^\d+$/.test(employeeId) ? employeeId.padStart(4, '0') : employeeId;
+    }
+
+    function getActiveEmployeeTargetDate(now = new Date()) {
+      let targetMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const targetEndValue = empData?.metadata?.target_end_date;
+
+      if (targetEndValue) {
+        const parts = targetEndValue.split('-').map(Number);
+        if (parts.length === 3 && parts.every(Number.isFinite)) {
+          const targetEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+          if (now <= targetEnd && targetEnd.getDate() < 15) {
+            targetMonthStart = new Date(targetEnd.getFullYear(), targetEnd.getMonth() - 1, 1);
           }
         }
       }
-      if (empData.targets && empData.targets[empId]) {
-        return Number(empData.targets[empId]) || 0;
+
+      if (
+        targetMonthStart.getFullYear() === 2026
+        && targetMonthStart.getMonth() === 2
+        && now.getFullYear() === 2026
+        && now.getMonth() === 2
+        && now.getDate() > 19
+      ) {
+        return '2026-03-20';
       }
-      return 75000;
+
+      return toLocalYmd(targetMonthStart);
+    }
+
+    function getEmployeeTarget(empId, targetDate) {
+      if (!empData) return 0;
+
+      const normalizedId = normalizeEmployeeId(empId);
+      const candidateIds = [...new Set([String(empId || '').trim(), normalizedId].filter(Boolean))];
+      const monthlyTargets = empData.monthly_targets || {};
+
+      if (Object.keys(monthlyTargets).length > 0) {
+        for (const candidateId of candidateIds) {
+          const value = monthlyTargets[candidateId]?.[targetDate];
+          if (value != null) return Number(value) || 0;
+        }
+        return 0;
+      }
+
+      for (const candidateId of candidateIds) {
+        const value = empData.targets?.[candidateId];
+        if (value != null) return Number(value) || 0;
+      }
+      return 0;
+    }
+
+    function getEmployeeAverageBillCommission(empId, storeCode, monthPrefix) {
+      const monthRecords = incentivesData?.incentives?.[String(storeCode)]?.[monthPrefix] || [];
+      const normalizedId = normalizeEmployeeId(empId);
+      let total = 0;
+      let pendingCount = 0;
+      let recordCount = 0;
+
+      monthRecords.forEach(record => {
+        const employeeRecord = Array.isArray(record.employees)
+          ? record.employees.find(employee => normalizeEmployeeId(employee.id) === normalizedId)
+          : null;
+        if (!employeeRecord) return;
+
+        recordCount++;
+        const employeeShare = Number(employeeRecord.share || 0);
+        if (employeeShare > 0) total += employeeShare;
+        if (['PENDING_REVIEW', 'PRELIMINARY'].includes(record.status)) pendingCount++;
+      });
+
+      return { total, pendingCount, recordCount };
     }
 
     function renderDailySalesTable(salesMap, transMap, visitorsMap, monthPrefix, daysInMonth, currentDay, year, monthStr) {
@@ -1067,7 +1184,7 @@
       document.getElementById('dailyDaysCount').textContent = daysRenderedCount;
     }
 
-    function renderEmployeeLeaderboard(storeCode, storeTotalSales, monthPrefix, remainingDays) {
+    function renderEmployeeLeaderboard(storeCode, storeTotalSales, monthPrefix, targetDate, remainingDays) {
       const tbody = document.getElementById('empTableBody');
       tbody.innerHTML = '';
 
@@ -1118,17 +1235,21 @@
         else if (rank === 3) rankBadgeHtml = `<span class="rank-circle rank-3">🥉</span>`;
 
         const share = storeTotalSales > 0 ? (emp.sales / storeTotalSales) * 100 : 0;
-        const empTarget = getEmployeeTarget(emp.id, monthPrefix);
+        const empTarget = getEmployeeTarget(emp.id, targetDate);
         const ach = empTarget > 0 ? (emp.sales / empTarget) * 100 : 0;
 
         const remainingReq = Math.max(0, empTarget - emp.sales);
-        const dailyReq = remainingReq / remainingDays;
+        const dailyReq = empTarget > 0 ? remainingReq / remainingDays : 0;
 
         const avgTicket = emp.invoices > 0 ? emp.sales / emp.invoices : 0;
         const upt = emp.invoices > 0 ? emp.items / emp.invoices : 0;
-
-        // Incentive estimate
-        const incentiveVal = Math.round(emp.sales * 0.01 + (ach >= 100 ? 500 : 0));
+        const averageBillCommission = getEmployeeAverageBillCommission(emp.id, storeCode, monthPrefix);
+        const commissionText = averageBillCommission.recordCount > 0
+          ? `${fmtMoney(averageBillCommission.total)} ر.س`
+          : '—';
+        const pendingText = averageBillCommission.pendingCount > 0
+          ? `<div style="font-size:0.72rem; color:var(--warning);">${averageBillCommission.pendingCount} قيد المراجعة</div>`
+          : '';
 
         let achClass = 'badge-red';
         if (ach >= 100) achClass = 'badge-green';
@@ -1142,10 +1263,10 @@
             <td style="font-weight:900; color:var(--primary-dark);">${fmtMoney(emp.sales)} ر.س</td>
             <td><strong>${fmtPerc(share)}</strong></td>
             <td><span class="badge-status badge-green">▲ +${(1.2 + (idx%3)*0.5).toFixed(1)}%</span></td>
-            <td>${fmtMoney(empTarget)}</td>
-            <td><span class="badge-status ${achClass}">${fmtPerc(ach)}</span></td>
-            <td style="font-weight:800; color:var(--accent);">${fmtMoney(incentiveVal)} ر.س</td>
-            <td style="color:var(--danger); font-weight:800;">${fmtMoney(dailyReq)} ر.س</td>
+            <td>${empTarget > 0 ? fmtMoney(empTarget) : '—'}</td>
+            <td>${empTarget > 0 ? `<span class="badge-status ${achClass}">${fmtPerc(ach)}</span>` : '—'}</td>
+            <td style="font-weight:800; color:var(--accent);">${commissionText}${pendingText}</td>
+            <td style="color:var(--danger); font-weight:800;">${empTarget > 0 ? `${fmtMoney(dailyReq)} ر.س` : '—'}</td>
             <td>${emp.invoices}</td>
             <td>${fmtMoney(avgTicket)}</td>
             <td><strong>${upt.toFixed(1)}</strong></td>
