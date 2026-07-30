@@ -840,6 +840,28 @@
                 </select>
             </div>
             <div class="filter-group">
+                <label>💰 الفئة السعرية</label>
+                <select id="priceTierFilter" onchange="toggleCustomPriceInput()">
+                    <option value="all">الكل</option>
+                    <option value="0-50">أقل من 50 ر.س</option>
+                    <option value="50-100">50 - 100 ر.س</option>
+                    <option value="100-200">100 - 200 ر.س</option>
+                    <option value="200-300">200 - 300 ر.س</option>
+                    <option value="300-500">300 - 500 ر.س</option>
+                    <option value="500-1000">500 - 1000 ر.س</option>
+                    <option value="1000+">أكثر من 1000 ر.س</option>
+                    <option value="custom">نطاق مخصص (من - إلى)</option>
+                </select>
+            </div>
+            <div class="filter-group" id="customPriceInputs" style="display:none;">
+                <label>💵 نطاق السعر (ر.س)</label>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="number" id="priceMin" placeholder="من" style="width:80px;" min="0" />
+                    <span>-</span>
+                    <input type="number" id="priceMax" placeholder="إلى" style="width:80px;" min="0" />
+                </div>
+            </div>
+            <div class="filter-group">
                 <label>🏪 طريقة العرض</label>
                 <select id="viewMode">
                     <option value="by_item">مجمع حسب المنتج</option>
@@ -853,16 +875,18 @@
 
         <!-- Alias Conditions -->
         <div class="conditions-box">
-            <h6>🏷️ شروط البحث المتقدمة (كود أو اسم المنتج)</h6>
+            <h6>🏷️ شروط البحث المتقدمة (كود، اسم، سعر أو فئة سعرية)</h6>
             <div id="conditionsContainer">
                 <div class="condition-row">
                     <select class="cond-operator" style="display:none;">
                         <option value="AND">AND</option>
                         <option value="OR">OR</option>
                     </select>
-                    <select class="cond-field">
+                    <select class="cond-field" onchange="onCondFieldChange(this)">
                         <option value="alias">الكود (Alias)</option>
                         <option value="name">الاسم (Name)</option>
+                        <option value="price">السعر (Price)</option>
+                        <option value="price_tier">الفئة السعرية (Price Tier)</option>
                     </select>
                     <select class="cond-type">
                         <option value="contains">يحتوي على</option>
@@ -871,11 +895,21 @@
                         <option value="starts_with">يبدأ بـ</option>
                         <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
                     </select>
-                    <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." />
+                    <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." list="priceTierDatalist" />
                 </div>
             </div>
             <button class="btn-add-condition" onclick="addCondition()">+ إضافة شرط</button>
         </div>
+
+        <datalist id="priceTierDatalist">
+            <option value="0-50">أقل من 50 ر.س</option>
+            <option value="50-100">50 - 100 ر.س</option>
+            <option value="100-200">100 - 200 ر.س</option>
+            <option value="200-300">200 - 300 ر.س</option>
+            <option value="300-500">300 - 500 ر.س</option>
+            <option value="500-1000">500 - 1000 ر.س</option>
+            <option value="1000+">أكثر من 1000 ر.س</option>
+        </datalist>
 
         <!-- Actions -->
         <div class="action-bar">
@@ -1273,9 +1307,70 @@
             }
         }
 
+        function toggleCustomPriceInput() {
+            const val = document.getElementById('priceTierFilter').value;
+            const customGroup = document.getElementById('customPriceInputs');
+            if (customGroup) {
+                customGroup.style.display = (val === 'custom') ? 'flex' : 'none';
+            }
+        }
+
+        function matchPriceFilter(prodPrice, priceTier, priceMin, priceMax) {
+            if (priceTier === 'all') return true;
+            if (priceTier === '0-50') return prodPrice < 50;
+            if (priceTier === '50-100') return prodPrice >= 50 && prodPrice <= 100;
+            if (priceTier === '100-200') return prodPrice > 100 && prodPrice <= 200;
+            if (priceTier === '200-300') return prodPrice > 200 && prodPrice <= 300;
+            if (priceTier === '300-500') return prodPrice > 300 && prodPrice <= 500;
+            if (priceTier === '500-1000') return prodPrice > 500 && prodPrice <= 1000;
+            if (priceTier === '1000+') return prodPrice > 1000;
+            if (priceTier === 'custom') {
+                if (!isNaN(priceMin) && prodPrice < priceMin) return false;
+                if (!isNaN(priceMax) && prodPrice > priceMax) return false;
+                return true;
+            }
+            return true;
+        }
+
         // =====================
         // CONDITIONS
         // =====================
+        function onCondFieldChange(selectElem) {
+            const row = selectElem.closest('.condition-row');
+            if (!row) return;
+            const typeSelect = row.querySelector('.cond-type');
+            const fieldVal = selectElem.value;
+            const valInput = row.querySelector('.cond-value');
+
+            if (fieldVal === 'price') {
+                typeSelect.innerHTML = `
+                    <option value="gte">أكبر من أو يساوي (>=)</option>
+                    <option value="lte">أقل من أو يساوي (<=)</option>
+                    <option value="gt">أكبر من (>)</option>
+                    <option value="lt">أقل من (<)</option>
+                    <option value="is">يساوي (=)</option>
+                    <option value="is_not">لا يساوي (!=)</option>
+                    <option value="between">بين نطاق (مثال: 100-300)</option>
+                `;
+                valInput.placeholder = "أدخل السعر (مثال: 150 أو 100-300)...";
+            } else if (fieldVal === 'price_tier') {
+                typeSelect.innerHTML = `
+                    <option value="is">يساوي (الفئة)</option>
+                    <option value="is_not">لا يساوي</option>
+                `;
+                valInput.placeholder = "اختر الفئة (مثال: 100-200)...";
+            } else {
+                typeSelect.innerHTML = `
+                    <option value="contains">يحتوي على</option>
+                    <option value="is">يساوي</option>
+                    <option value="is_not">لا يساوي</option>
+                    <option value="starts_with">يبدأ بـ</option>
+                    <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
+                `;
+                valInput.placeholder = "أدخل قيمة البحث...";
+            }
+        }
+
         function addCondition() {
             const container = document.getElementById('conditionsContainer');
             const row = document.createElement('div');
@@ -1285,9 +1380,11 @@
                 <option value="AND">AND</option>
                 <option value="OR">OR</option>
             </select>
-            <select class="cond-field">
+            <select class="cond-field" onchange="onCondFieldChange(this)">
                 <option value="alias">الكود (Alias)</option>
                 <option value="name">الاسم (Name)</option>
+                <option value="price">السعر (Price)</option>
+                <option value="price_tier">الفئة السعرية (Price Tier)</option>
             </select>
             <select class="cond-type">
                 <option value="contains">يحتوي على</option>
@@ -1296,7 +1393,7 @@
                 <option value="starts_with">يبدأ بـ</option>
                 <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
             </select>
-            <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." />
+            <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." list="priceTierDatalist" />
             <button class="btn-remove-cond" onclick="this.parentElement.remove()">✕</button>
         `;
             container.appendChild(row);
@@ -1336,6 +1433,70 @@
         }
 
         function evaluateCondition(prod, cond) {
+            const priceVal = Number(prod.price || 0);
+
+            if (cond.field === 'price') {
+                const valStr = cond.value.toString().trim();
+                if (!valStr) return true;
+
+                if (cond.type === 'between') {
+                    const parts = valStr.split(/[-,\s]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+                    if (parts.length >= 2) {
+                        const min = Math.min(parts[0], parts[1]);
+                        const max = Math.max(parts[0], parts[1]);
+                        return priceVal >= min && priceVal <= max;
+                    } else if (parts.length === 1) {
+                        return priceVal >= parts[0];
+                    }
+                    return true;
+                }
+
+                const numVal = parseFloat(valStr);
+                if (isNaN(numVal)) return true;
+
+                switch (cond.type) {
+                    case 'is': return priceVal === numVal;
+                    case 'is_not': return priceVal !== numVal;
+                    case 'gt':
+                    case 'greater_than': return priceVal > numVal;
+                    case 'gte':
+                    case 'greater_or_equal': return priceVal >= numVal;
+                    case 'lt':
+                    case 'less_than': return priceVal < numVal;
+                    case 'lte':
+                    case 'less_or_equal': return priceVal <= numVal;
+                    default: return true;
+                }
+            }
+
+            if (cond.field === 'price_tier') {
+                const valStr = cond.value.toString().trim();
+                if (!valStr || valStr === 'all') return true;
+
+                let match = false;
+                if (valStr === '0-50') match = priceVal < 50;
+                else if (valStr === '50-100') match = priceVal >= 50 && priceVal <= 100;
+                else if (valStr === '100-200') match = priceVal > 100 && priceVal <= 200;
+                else if (valStr === '200-300') match = priceVal > 200 && priceVal <= 300;
+                else if (valStr === '300-500') match = priceVal > 300 && priceVal <= 500;
+                else if (valStr === '500-1000') match = priceVal > 500 && priceVal <= 1000;
+                else if (valStr === '1000+' || valStr === '>1000') match = priceVal > 1000;
+                else {
+                    const parts = valStr.split(/[-,\s]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+                    if (parts.length >= 2) {
+                        const min = Math.min(parts[0], parts[1]);
+                        const max = Math.max(parts[0], parts[1]);
+                        match = priceVal >= min && priceVal <= max;
+                    } else if (parts.length === 1) {
+                        match = priceVal >= parts[0];
+                    } else {
+                        match = true;
+                    }
+                }
+
+                return cond.type === 'is_not' ? !match : match;
+            }
+
             const fieldVal = (cond.field === 'name' ? prod.name : prod.alias) || '';
             const a = fieldVal.toLowerCase();
             const v = cond.value.toLowerCase();
@@ -1401,6 +1562,9 @@
             const offerFilterOptions = Array.from(document.getElementById('offerFilter').selectedOptions).map(opt => opt.value);
             const isAllOffers = offerFilterOptions.includes('all') || offerFilterOptions.length === 0;
             const stockFilter = document.getElementById('stockFilter').value;
+            const priceTier = document.getElementById('priceTierFilter').value;
+            const priceMinVal = parseFloat(document.getElementById('priceMin').value);
+            const priceMaxVal = parseFloat(document.getElementById('priceMax').value);
             const viewMode = document.getElementById('viewMode').value;
             const conditions = getConditions();
             
@@ -1568,13 +1732,12 @@
                         const pid = agg.item_id;
                         const storeId = agg.store_id;
 
-                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
-
                         const prod = PRODUCTS[pid];
                         if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!isAllOffers && !selectedOfferItemsSet.has(pid)) continue;
+                        if (!matchPriceFilter(prod.price || 0, priceTier, priceMinVal, priceMaxVal)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         // Stock for this specific store
@@ -1608,13 +1771,12 @@
                         const pid = agg.item_id;
                         const period = agg.month || agg.week || agg.day;
 
-                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
-
                         const prod = PRODUCTS[pid];
                         if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!isAllOffers && !selectedOfferItemsSet.has(pid)) continue;
+                        if (!matchPriceFilter(prod.price || 0, priceTier, priceMinVal, priceMaxVal)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         let totalStock = 0;
@@ -1656,12 +1818,11 @@
                         const pid = agg.item_id;
                         const month = agg.month;
 
-                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
-
                         const prod = PRODUCTS[pid];
                         if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
+                        if (!matchPriceFilter(prod.price || 0, priceTier, priceMinVal, priceMaxVal)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         let totalStock = 0;
@@ -1694,13 +1855,12 @@
                     const pidsToProcess = searchType === 'sales_stock' ? Object.keys(itemAgg) : Object.keys(PRODUCTS);
 
                     for (const pid of pidsToProcess) {
-                        if (pid.startsWith('300') || pid.startsWith('290')) continue;
-
                         const prod = PRODUCTS[pid];
                         if (!prod || prod.hasKitCounterpart) continue;
 
                         if (!isAllCategories && !categoryFilterOptions.includes(prod.category || '')) continue;
                         if (!isAllOffers && !selectedOfferItemsSet.has(pid)) continue;
+                        if (!matchPriceFilter(prod.price || 0, priceTier, priceMinVal, priceMaxVal)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
                         if (viewMode === 'by_store' && searchType === 'stock_only') {
@@ -3587,6 +3747,10 @@
         function resetFilters() {
             document.getElementById('searchType').value = 'sales_stock';
             document.getElementById('stockFilter').value = 'all';
+            document.getElementById('priceTierFilter').value = 'all';
+            document.getElementById('priceMin').value = '';
+            document.getElementById('priceMax').value = '';
+            toggleCustomPriceInput();
             document.getElementById('viewMode').value = 'by_item';
             toggleSearchType();
 
@@ -3614,9 +3778,11 @@
                     <option value="AND">AND</option>
                     <option value="OR">OR</option>
                 </select>
-                <select class="cond-field">
+                <select class="cond-field" onchange="onCondFieldChange(this)">
                     <option value="alias">الكود (Alias)</option>
                     <option value="name">الاسم (Name)</option>
+                    <option value="price">السعر (Price)</option>
+                    <option value="price_tier">الفئة السعرية (Price Tier)</option>
                 </select>
                 <select class="cond-type">
                     <option value="contains">يحتوي على</option>
@@ -3625,7 +3791,7 @@
                     <option value="starts_with">يبدأ بـ</option>
                     <option value="in_list">ضمن قائمة (مفصولة بمسافة أو فاصلة)</option>
                 </select>
-                <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." />
+                <input type="text" class="cond-value" placeholder="أدخل قيمة البحث..." list="priceTierDatalist" />
             </div>
         `;
 

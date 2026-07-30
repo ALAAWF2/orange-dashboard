@@ -217,6 +217,17 @@
       box-shadow: 0 0 0 3px var(--primary-light);
     }
 
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .month-select {
+      min-width: 205px;
+    }
+
     /* KPI Cards Grid */
     .kpi-grid {
       max-width: 1400px;
@@ -717,17 +728,26 @@
       <span class="period-badge" id="periodBadge">
         <i class="bi bi-calendar-event" aria-hidden="true"></i>
         <span class="period-badge-text">
-          <span>الشهر الحالي (MTD)</span>
+          <span id="periodTitleText">الشهر الحالي (MTD)</span>
           <small id="lastUpdatedText">آخر تحديث: جاري التحميل…</small>
         </span>
       </span>
     </div>
 
-    <div id="showroomSelectContainer" style="display: none;">
-      <label for="showroomSelect" class="visually-hidden">اختر المعرض</label>
-      <select id="showroomSelect" onchange="onShowroomChange(this.value)" class="styled-select" aria-label="اختر المعرض">
-        <option value="">جاري تحميل المعارض...</option>
-      </select>
+    <div class="filter-controls">
+      <div id="monthSelectContainer">
+        <label for="monthSelect" class="visually-hidden">اختر الشهر</label>
+        <select id="monthSelect" onchange="onMonthChange(this.value)" class="styled-select month-select" aria-label="اختر الشهر">
+          <option value="">جاري تحميل الأشهر...</option>
+        </select>
+      </div>
+
+      <div id="showroomSelectContainer" style="display: none;">
+        <label for="showroomSelect" class="visually-hidden">اختر المعرض</label>
+        <select id="showroomSelect" onchange="onShowroomChange(this.value)" class="styled-select" aria-label="اختر المعرض">
+          <option value="">جاري تحميل المعارض...</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -938,6 +958,8 @@
     let dataWarnings = [];
     let selectedStoreCode = null;
     let selectedStoreName = null;
+    let selectedMonthPrefix = toLocalYmd(new Date()).slice(0, 7);
+    let printInProgress = false;
 
     const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -1168,6 +1190,11 @@
           throw new Error('تعذر مطابقة المعرض المرتبط بالحساب مع قائمة المعارض.');
         }
 
+        const requestedMonth = new URLSearchParams(window.location.search).get('month');
+        if (/^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth || '')) {
+          selectedMonthPrefix = requestedMonth;
+        }
+        populateMonthSelect();
         renderDataStatus();
         renderShowroomData();
 
@@ -1218,7 +1245,124 @@
       if (!canSwitchStores) return;
       selectedStoreCode = code;
       selectedStoreName = mgmtData?.stores?.[code] || code;
+      populateMonthSelect();
       renderShowroomData();
+    }
+
+    function formatMonthLabel(monthPrefix) {
+      const [year, month] = String(monthPrefix).split('-').map(Number);
+      if (!year || !month) return monthPrefix;
+      return new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
+        month: 'long',
+        year: 'numeric'
+      }).format(new Date(year, month - 1, 1));
+    }
+
+    function populateMonthSelect() {
+      const select = document.getElementById('monthSelect');
+      if (!select || !selectedStoreCode) return;
+
+      const now = new Date();
+      const currentMonthPrefix = toLocalYmd(
+        new Date(now.getFullYear(), now.getMonth(), 1)
+      ).slice(0, 7);
+      const previousMonthPrefix = toLocalYmd(
+        new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      ).slice(0, 7);
+      const availableMonths = new Set([currentMonthPrefix, previousMonthPrefix]);
+
+      (mgmtData?.sales || []).forEach(row => {
+        if (
+          Array.isArray(row)
+          && String(row[1]) === String(selectedStoreCode)
+          && /^\d{4}-\d{2}-\d{2}$/.test(String(row[0] || ''))
+        ) {
+          const monthPrefix = String(row[0]).slice(0, 7);
+          if (monthPrefix <= currentMonthPrefix) availableMonths.add(monthPrefix);
+        }
+      });
+
+      const sortedMonths = [...availableMonths]
+        .sort((a, b) => b.localeCompare(a))
+        .slice(0, 18);
+
+      if (!sortedMonths.includes(selectedMonthPrefix)) {
+        selectedMonthPrefix = currentMonthPrefix;
+      }
+
+      select.innerHTML = '';
+      sortedMonths.forEach(monthPrefix => {
+        const option = document.createElement('option');
+        option.value = monthPrefix;
+        const marker = monthPrefix === currentMonthPrefix
+          ? 'الشهر الحالي'
+          : monthPrefix === previousMonthPrefix
+            ? 'الشهر السابق'
+            : '';
+        option.textContent = marker
+          ? `${marker} — ${formatMonthLabel(monthPrefix)}`
+          : formatMonthLabel(monthPrefix);
+        select.appendChild(option);
+      });
+      select.value = selectedMonthPrefix;
+    }
+
+    function onMonthChange(monthPrefix) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthPrefix || '')) return;
+      selectedMonthPrefix = monthPrefix;
+      renderShowroomData();
+    }
+
+    function getDashboardPeriod(monthPrefix = selectedMonthPrefix, now = new Date()) {
+      const [year, month] = String(monthPrefix).split('-').map(Number);
+      const safeStart = year && month
+        ? new Date(year, month - 1, 1)
+        : new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const isCurrent = safeStart.getTime() === currentMonthStart.getTime();
+      const daysInMonth = new Date(
+        safeStart.getFullYear(),
+        safeStart.getMonth() + 1,
+        0
+      ).getDate();
+      const endDay = isCurrent ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
+      const endDate = new Date(safeStart.getFullYear(), safeStart.getMonth(), endDay);
+      let targetDate = toLocalYmd(safeStart);
+
+      if (isCurrent) {
+        targetDate = getActiveEmployeeTargetDate(now);
+      } else if (
+        safeStart.getFullYear() === 2026
+        && safeStart.getMonth() === 2
+      ) {
+        targetDate = '2026-03-20';
+      }
+
+      const targetDateValue = parseLocalYmd(targetDate) || safeStart;
+      const targetMonthStart = new Date(
+        targetDateValue.getFullYear(),
+        targetDateValue.getMonth(),
+        1
+      );
+
+      return {
+        monthPrefix: toLocalYmd(safeStart).slice(0, 7),
+        startDate: safeStart,
+        endDate,
+        startYmd: toLocalYmd(safeStart),
+        endYmd: toLocalYmd(endDate),
+        year: safeStart.getFullYear(),
+        monthStr: String(safeStart.getMonth() + 1).padStart(2, '0'),
+        daysInMonth,
+        endDay,
+        isCurrent,
+        isClosed: !isCurrent,
+        targetDate,
+        remainingDays: isCurrent
+          ? getRemainingDays(empData?.metadata?.target_end_date, targetMonthStart)
+          : 0,
+        label: formatMonthLabel(toLocalYmd(safeStart).slice(0, 7))
+      };
     }
 
     function renderShowroomData() {
@@ -1227,10 +1371,23 @@
       document.getElementById('storeTitleName').textContent = selectedStoreName;
 
       const now = new Date();
-      const year = now.getFullYear();
-      const monthStr = String(now.getMonth() + 1).padStart(2, '0');
-      const currentMonthPrefix = `${year}-${monthStr}`;
-      const employeeTargetDate = getActiveEmployeeTargetDate(now);
+      const period = getDashboardPeriod(selectedMonthPrefix, now);
+      const year = period.year;
+      const monthStr = period.monthStr;
+      const currentMonthPrefix = period.monthPrefix;
+      const employeeTargetDate = period.targetDate;
+      const employeeComparisonPeriod = getEmployeeComparisonPeriod(period);
+
+      document.getElementById('periodTitleText').textContent = period.isCurrent
+        ? `الشهر الحالي (MTD) — ${period.label}`
+        : `شهر مكتمل — ${period.label}`;
+      document.getElementById('kpiSalesSub').textContent = period.isCurrent
+        ? `حتى ${period.endYmd}`
+        : `الشهر الكامل: ${period.startYmd} إلى ${period.endYmd}`;
+      document.getElementById('kpiGrowthSub').textContent = `مقارنة بـ ${year - 1}`;
+      document.getElementById('kpiDailyReqSub').textContent = period.isClosed
+        ? 'الفترة منتهية'
+        : 'لتحقيق 100%';
 
       // Build Fast Lookup Maps for Selected Store from REAL DATA
       const salesMap = {};
@@ -1278,7 +1435,13 @@
         const storeEmpHistory = empData?.history?.[selectedStoreCode] || [];
         const empSet = new Set(
           storeEmpHistory
-            .filter(r => String(r[0] || '').startsWith(currentMonthPrefix))
+            .filter(r => {
+              const dateValue = String(r[0] || '');
+              return (
+                dateValue >= employeeComparisonPeriod.currentStart
+                && dateValue <= employeeComparisonPeriod.currentEnd
+              );
+            })
             .map(r => normalizeEmployeeId(r[1]))
             .filter(Boolean)
         );
@@ -1289,8 +1452,8 @@
       }
 
       // Compute MTD Totals using REAL DATA
-      const daysInMonth = new Date(year, now.getMonth() + 1, 0).getDate();
-      const currentDay = now.getDate();
+      const daysInMonth = period.daysInMonth;
+      const currentDay = period.endDay;
 
       let mtdSales = 0;
       let mtdSalesLY = 0;
@@ -1320,11 +1483,9 @@
       const overallGrowth = mtdSalesLY > 0 ? ((mtdSales - mtdSalesLY) / mtdSalesLY) * 100 : 0;
 
       // Remaining Days & Daily Required
-      const targetDateParts = employeeTargetDate.split('-').map(Number);
-      const currentRangeStart = new Date(targetDateParts[0], targetDateParts[1] - 1, 1);
-      const remainingDays = getRemainingDays(empData?.metadata?.target_end_date, currentRangeStart);
+      const remainingDays = period.remainingDays;
       const remainingSalesReq = Math.max(0, mtdTarget - mtdSales);
-      const dailyReq = remainingSalesReq / remainingDays;
+      const dailyReq = remainingDays > 0 ? remainingSalesReq / remainingDays : 0;
 
       // Conversion %
       const overallConv = mtdVisitors > 0 ? (mtdTrans / mtdVisitors) * 100 : 0;
@@ -1345,7 +1506,10 @@
       document.getElementById('kpiGrowth').textContent = (overallGrowth >= 0 ? '+' : '') + fmtPerc(overallGrowth);
       document.getElementById('cardGrowth').className = overallGrowth >= 0 ? 'kpi-card green' : 'kpi-card red';
 
-      document.getElementById('kpiDailyReq').textContent = mtdTarget > 0 ? fmtMoney(dailyReq) + ' ر.س' : '—';
+      document.getElementById('kpiDailyReq').textContent =
+        mtdTarget > 0 && !period.isClosed
+          ? fmtMoney(dailyReq) + ' ر.س'
+          : '—';
 
       // Conversion & Invoices
       document.getElementById('kpiConversion').textContent = fmtPerc(overallConv);
@@ -1355,13 +1519,13 @@
       renderDailySalesTable(salesMap, transMap, visitorsMap, currentMonthPrefix, daysInMonth, currentDay, year, monthStr);
 
       // Employee Leaderboard Table
-      const employeeComparisonPeriod = getEmployeeComparisonPeriod(now);
       renderEmployeeLeaderboard(
         selectedStoreCode,
         currentMonthPrefix,
         employeeTargetDate,
         remainingDays,
-        employeeComparisonPeriod
+        employeeComparisonPeriod,
+        period.isClosed
       );
 
       // Top Products & Categories
@@ -1445,31 +1609,16 @@
       return Math.max(1, remainingDays);
     }
 
-    function getEmployeeComparisonPeriod(now = new Date()) {
-      let currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const currentEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      let isExtended = false;
-
-      const targetEndValue = empData?.metadata?.target_end_date;
-      if (targetEndValue) {
-        const parts = targetEndValue.split('-').map(Number);
-        if (parts.length === 3 && parts.every(Number.isFinite)) {
-          const targetEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
-          if (now <= targetEnd && targetEnd.getDate() < 15) {
-            currentStart = new Date(targetEnd.getFullYear(), targetEnd.getMonth() - 1, 1);
-            isExtended = true;
-          }
-        }
-      }
-
-      if (
-        !isExtended
-        && now.getFullYear() === 2026
-        && now.getMonth() === 2
-        && now.getDate() > 19
-      ) {
-        currentStart = new Date(2026, 2, 20);
-      }
+    function getEmployeeComparisonPeriod(
+      dashboardPeriod = getDashboardPeriod(selectedMonthPrefix)
+    ) {
+      const currentStart =
+        parseLocalYmd(dashboardPeriod.targetDate)
+        || new Date(dashboardPeriod.startDate);
+      const currentEnd = new Date(dashboardPeriod.endDate);
+      const isExtended =
+        currentStart.getFullYear() !== dashboardPeriod.startDate.getFullYear()
+        || currentStart.getMonth() !== dashboardPeriod.startDate.getMonth();
 
       const previousStart = new Date(currentStart.getFullYear(), currentStart.getMonth() - 1, 1);
       const previousMonthLastDay = new Date(
@@ -1477,9 +1626,9 @@
         previousStart.getMonth() + 1,
         0
       ).getDate();
-      const previousEndDay = isExtended
+      const previousEndDay = dashboardPeriod.isClosed || isExtended
         ? previousMonthLastDay
-        : Math.min(now.getDate(), previousMonthLastDay);
+        : Math.min(dashboardPeriod.endDay, previousMonthLastDay);
       const previousEnd = new Date(
         previousStart.getFullYear(),
         previousStart.getMonth(),
@@ -1625,9 +1774,8 @@
       for (let d = 1; d <= currentDay; d++) {
         const dayStr = String(d).padStart(2, '0');
         const dateKey = `${monthPrefix}-${dayStr}`;
-        const lyDateKey = `${year - 1}-${monthStr}-${dayStr}`;
-
-        const dateObj = new Date(dateKey);
+        const dateObj = parseLocalYmd(dateKey);
+        const lyDateKey = toLocalYmd(getPriorYearComparableDate(dateObj));
         const dayOfWeekName = ARABIC_DAYS[dateObj.getDay()];
 
         const sales = salesMap[dateKey] || 0;
@@ -1703,7 +1851,8 @@
       monthPrefix,
       targetDate,
       remainingDays,
-      comparisonPeriod
+      comparisonPeriod,
+      isClosedPeriod = false
     ) {
       const tbody = document.getElementById('empTableBody');
       tbody.innerHTML = '';
@@ -1766,7 +1915,7 @@
       document.getElementById('empsCount').textContent = empList.length;
 
       if (empList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted p-4">لا توجد بيانات موظفين مسجلة لهذا المعرض خلال الشهر الحالي</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted p-4">لا توجد بيانات موظفين مسجلة لهذا المعرض خلال الفترة المختارة</td></tr>';
         return;
       }
 
@@ -1799,7 +1948,9 @@
         const ach = empTarget > 0 ? (emp.sales / empTarget) * 100 : 0;
 
         const remainingReq = Math.max(0, empTarget - emp.sales);
-        const dailyReq = empTarget > 0 ? remainingReq / remainingDays : 0;
+        const dailyReq = empTarget > 0 && remainingDays > 0
+          ? remainingReq / remainingDays
+          : 0;
 
         const avgTicket = emp.invoices > 0 ? emp.sales / emp.invoices : 0;
         const upt = emp.invoices > 0 ? emp.items / emp.invoices : 0;
@@ -1834,7 +1985,11 @@
             <td>${empTarget > 0 ? `<span class="badge-status ${achClass}">${fmtPerc(ach)}</span>` : '—'}</td>
             <td style="font-weight:800; color:var(--text-main); background:var(--warning-light);">${salesCommission > 0 ? `${fmtMoney(salesCommission)} ر.س` : '—'}</td>
             <td style="font-weight:800; color:var(--accent);">${commissionText}${pendingText}</td>
-            <td style="color:var(--danger); font-weight:800;">${empTarget > 0 ? `${fmtMoney(dailyReq)} ر.س` : '—'}</td>
+            <td style="color:var(--danger); font-weight:800;">${
+              empTarget > 0 && !isClosedPeriod
+                ? `${fmtMoney(dailyReq)} ر.س`
+                : '—'
+            }</td>
             <td>${emp.invoices}</td>
             <td>${fmtMoney(avgTicket)}</td>
             <td><strong>${upt.toFixed(1)}</strong></td>
@@ -1917,6 +2072,22 @@
 
     function getPrintReportPeriod(now = new Date()) {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dashboardPeriod = getDashboardPeriod(selectedMonthPrefix, now);
+
+      if (dashboardPeriod.isClosed) {
+        return {
+          startDate: new Date(dashboardPeriod.startDate),
+          endDate: new Date(dashboardPeriod.endDate),
+          startYmd: dashboardPeriod.startYmd,
+          endYmd: dashboardPeriod.endYmd,
+          employeeStartYmd: dashboardPeriod.targetDate,
+          targetDate: dashboardPeriod.targetDate,
+          targetMonthPrefix: dashboardPeriod.targetDate.slice(0, 7),
+          remainingDays: 0,
+          isClosed: true
+        };
+      }
+
       const endDate = new Date(today);
       endDate.setDate(endDate.getDate() - 1);
 
@@ -1952,7 +2123,8 @@
         employeeStartYmd,
         targetDate: employeeStartYmd,
         targetMonthPrefix: employeeStartYmd.slice(0, 7),
-        remainingDays: getRemainingDays(targetEndValue, employeeMonthStart)
+        remainingDays: getRemainingDays(targetEndValue, employeeMonthStart),
+        isClosed: false
       };
     }
 
@@ -2051,7 +2223,7 @@
         : null;
       totals.achievement = totals.target > 0 ? (totals.sales / totals.target) * 100 : null;
       totals.remaining = Math.max(0, totals.target - totals.sales);
-      totals.dailyRequired = totals.target > 0
+      totals.dailyRequired = totals.target > 0 && period.remainingDays > 0
         ? totals.remaining / period.remainingDays
         : 0;
 
@@ -2209,7 +2381,9 @@
           const target = getReportEmployeeTarget(employee.id, period.targetDate);
           const achievement = target > 0 ? (employee.mtd.sales / target) * 100 : null;
           const remaining = Math.max(0, target - employee.mtd.sales);
-          const dailyRequired = target > 0 ? remaining / period.remainingDays : 0;
+          const dailyRequired = target > 0 && period.remainingDays > 0
+            ? remaining / period.remainingDays
+            : 0;
           const salesCommission =
             target > 0 && branchCommissionPercent > 0 && employee.mtd.sales > 0
               ? ((employee.mtd.sales / target) * branchCommissionPercent) * employee.mtd.sales
@@ -2275,7 +2449,7 @@
         ? (totals.mtdSales / totals.target) * 100
         : null;
       totals.remaining = Math.max(0, totals.target - totals.mtdSales);
-      totals.dailyRequired = totals.target > 0
+      totals.dailyRequired = totals.target > 0 && period.remainingDays > 0
         ? totals.remaining / period.remainingDays
         : 0;
 
@@ -2350,7 +2524,11 @@
               <td>${employee.salesCommission > 0 ? fmtMoney(employee.salesCommission) : '—'}</td>
               <td>${averageBillCommission}</td>
               <td>${employee.target > 0 ? fmtMoney(employee.remaining) : '—'}</td>
-              <td>${employee.target > 0 ? fmtMoney(employee.dailyRequired) : '—'}</td>
+              <td>${
+                employee.target > 0 && !period.isClosed
+                  ? fmtMoney(employee.dailyRequired)
+                  : '—'
+              }</td>
             </tr>
           `;
         }).join('')
@@ -2387,7 +2565,13 @@
             <div class="print-kpi"><span>الهدف</span><strong>${dailyTotals.target > 0 ? `${fmtMoney(dailyTotals.target)} ر.س` : '—'}</strong></div>
             <div class="print-kpi"><span>نسبة التحقيق</span><strong>${formatOptionalPercentage(dailyTotals.achievement)}</strong></div>
             <div class="print-kpi"><span>النمو عن العام السابق</span><strong>${formatOptionalPercentage(dailyTotals.growth, true)}</strong></div>
-            <div class="print-kpi"><span>اليومية المطلوبة</span><strong>${dailyTotals.target > 0 ? `${fmtMoney(dailyTotals.dailyRequired)} ر.س` : '—'}</strong></div>
+            <div class="print-kpi"><span>اليومية المطلوبة</span><strong>${
+              period.isClosed
+                ? 'فترة منتهية'
+                : dailyTotals.target > 0
+                  ? `${fmtMoney(dailyTotals.dailyRequired)} ر.س`
+                  : '—'
+            }</strong></div>
             <div class="print-kpi"><span>التحويل / الفواتير</span><strong>${formatOptionalPercentage(dailyTotals.conversion)} · ${Math.round(dailyTotals.invoices).toLocaleString('en-US')}</strong></div>
           </div>
 
@@ -2439,8 +2623,8 @@
             </div>
             <div class="print-meta">
               <div><strong>الفترة التراكمية:</strong> <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></div>
-              <div><strong>الأمس:</strong> <span dir="ltr">${period.endYmd}</span></div>
-              <div><strong>المتبقي:</strong> ${period.remainingDays} يوم</div>
+              <div><strong>${period.isClosed ? 'آخر يوم في الشهر' : 'الأمس'}:</strong> <span dir="ltr">${period.endYmd}</span></div>
+              <div><strong>المتبقي:</strong> ${period.isClosed ? 'فترة منتهية' : `${period.remainingDays} يوم`}</div>
               <div><strong>شريحة عمولة المعرض:</strong> ${(employeeData.branchCommissionPercent * 100).toFixed(1)}%</div>
             </div>
           </header>
@@ -2449,8 +2633,8 @@
             <thead>
               <tr>
                 <th rowspan="2">الموظف</th>
-                <th colspan="4">الأمس (Yesterday) — <span dir="ltr">${period.endYmd}</span></th>
-                <th colspan="10">الشهر الحالي (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
+                <th colspan="4">${period.isClosed ? 'آخر يوم في الشهر' : 'الأمس (Yesterday)'} — <span dir="ltr">${period.endYmd}</span></th>
+                <th colspan="10">الفترة التراكمية (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
               </tr>
               <tr class="print-subhead">
                 <th>المبيعات</th>
@@ -2486,7 +2670,11 @@
                 <td>${employeeTotals.salesCommission > 0 ? fmtMoney(employeeTotals.salesCommission) : '—'}</td>
                 <td>${employeeTotals.averageBillCommission > 0 ? fmtMoney(employeeTotals.averageBillCommission) : '—'}</td>
                 <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.remaining) : '—'}</td>
-                <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.dailyRequired) : '—'}</td>
+                <td>${
+                  employeeTotals.target > 0 && !period.isClosed
+                    ? fmtMoney(employeeTotals.dailyRequired)
+                    : '—'
+                }</td>
               </tr>
             </tbody>
           </table>
@@ -2505,20 +2693,25 @@
     }
 
     function printShowroomReport() {
+      if (printInProgress) return;
+      printInProgress = true;
+
       const reportElement = buildPrintableReport();
       if (!reportElement) {
+        printInProgress = false;
         alert('تعذر تجهيز التقرير. تأكد من تسجيل الدخول واكتمال تحميل بيانات المعرض.');
         return;
       }
 
       const originalTitle = document.title;
       const safeStoreName = String(selectedStoreName || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
-      document.title = `Orange_Showroom_Report_${selectedStoreCode}_${safeStoreName}`;
+      document.title = `Orange_Showroom_Report_${selectedStoreCode}_${safeStoreName}_${selectedMonthPrefix}`;
       reportElement.setAttribute('aria-hidden', 'false');
 
       const restoreAfterPrint = () => {
         document.title = originalTitle;
         reportElement.setAttribute('aria-hidden', 'true');
+        printInProgress = false;
         window.removeEventListener('afterprint', restoreAfterPrint);
       };
       window.addEventListener('afterprint', restoreAfterPrint);
@@ -2564,7 +2757,7 @@
 
       const blob = new Blob(["\ufeff" + csvData], { type: 'text/csv;charset=utf-8;' });
       const safeStoreName = String(selectedStoreName || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
-      saveAs(blob, `${filename}_${safeStoreName}.csv`);
+      saveAs(blob, `${filename}_${safeStoreName}_${selectedMonthPrefix}.csv`);
     }
   </script>
 </body>
