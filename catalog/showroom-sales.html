@@ -13,9 +13,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-  <!-- Supabase & Export Libraries -->
+  <!-- Supabase & CSV Export -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
@@ -155,6 +154,18 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+    }
+
+    .period-badge-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+
+    .period-badge-text small {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 500;
     }
 
     .styled-select {
@@ -478,7 +489,11 @@
     <div class="store-info-title">
       <h1 id="storeTitleName">جاري التحميل...</h1>
       <span class="period-badge" id="periodBadge">
-        <i class="bi bi-calendar-event"></i> الشهر الحالي (MTD)
+        <i class="bi bi-calendar-event" aria-hidden="true"></i>
+        <span class="period-badge-text">
+          <span>الشهر الحالي (MTD)</span>
+          <small id="lastUpdatedText">آخر تحديث: جاري التحميل…</small>
+        </span>
       </span>
     </div>
 
@@ -493,8 +508,10 @@
   <!-- Loading Indicator -->
   <div id="loadingState" class="loading-container">
     <div class="spinner"></div>
-    <div style="font-weight: 700; color: var(--text-muted);">جاري تحميل بيانات مبيعات المعرض والموظفين...</div>
+    <div style="font-weight: 700; color: var(--text-muted);">جاري تحميل بيانات مبيعات المعرض والموظفين…</div>
   </div>
+
+  <div id="dataWarning" class="alert alert-warning" style="display:none; max-width:1360px; margin:12px auto; font-weight:700;"></div>
 
   <!-- Main Content Area -->
   <main id="mainContent" style="display: none;">
@@ -555,8 +572,8 @@
       <div id="tabDaily" class="content-box">
         <div class="content-header">
           <h2><i class="bi bi-bar-chart-line-fill" style="color:var(--primary);"></i> حركة المبيعات اليومية خلال الشهر</h2>
-          <button onclick="exportTableToExcel('dailyTableBody', 'Orange_Daily_Sales')" class="btn-action-sm">
-            <i class="bi bi-file-earmark-excel-fill" style="color:#27ae60;"></i> تصدير Excel
+          <button onclick="exportTableToCsv('dailyTableBody', 'Orange_Daily_Sales')" class="btn-action-sm">
+            <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير CSV
           </button>
         </div>
 
@@ -588,8 +605,8 @@
       <div id="tabEmployees" class="content-box" style="display: none;">
         <div class="content-header">
           <h2><i class="bi bi-award-fill" style="color:#f39c12;"></i> ترتيب الموظفين (Leaderboard)</h2>
-          <button onclick="exportTableToExcel('empTableBody', 'Orange_Employee_Leaderboard')" class="btn-action-sm">
-            <i class="bi bi-file-earmark-excel-fill" style="color:#27ae60;"></i> تصدير Excel
+          <button onclick="exportTableToCsv('empTableBody', 'Orange_Employee_Leaderboard')" class="btn-action-sm">
+            <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير CSV
           </button>
         </div>
 
@@ -602,7 +619,7 @@
                 <th>الفرع</th>
                 <th>المبيعات</th>
                 <th>حصة الفرع %</th>
-                <th>تطور الحصة %</th>
+                <th title="الفرق بالنقاط المئوية مقارنة بنفس الفترة من الشهر السابق">تطور الحصة %</th>
                 <th>الهدف</th>
                 <th>التحقيق %</th>
                 <th title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
@@ -623,12 +640,15 @@
       <!-- TAB 3: Top Items & Categories -->
       <div id="tabTop" class="content-box" style="display: none;">
         <div class="content-header">
-          <h2><i class="bi bi-bag-check-fill" style="color:var(--primary);"></i> الفئات والمنتجات الأكثر مبيعاً بالمعرض</h2>
+          <div>
+            <h2><i class="bi bi-bag-check-fill" style="color:var(--primary);"></i> الفئات والمنتجات الأكثر مبيعاً بالمعرض</h2>
+            <div id="productPeriodText" style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">مبيعات آخر 7 أيام</div>
+          </div>
         </div>
 
         <div class="row g-4">
           <div class="col-md-6">
-            <h3 style="font-size:1rem; font-weight:800; margin-bottom:12px;">🏆 أعلى 10 منتجات مبيعاً بالمعرض</h3>
+            <h3 style="font-size:1rem; font-weight:800; margin-bottom:12px;">🏆 أعلى 10 منتجات مبيعاً بالمعرض خلال آخر 7 أيام</h3>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
@@ -647,7 +667,7 @@
           </div>
 
           <div class="col-md-6">
-            <h3 style="font-size:1rem; font-weight:800; margin-bottom:12px;">📊 توزيع المبيعات حسب القسم</h3>
+            <h3 style="font-size:1rem; font-weight:800; margin-bottom:12px;">📊 توزيع مبيعات آخر 7 أيام حسب القسم</h3>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
@@ -685,6 +705,9 @@
     let empData = null;
     let incentivesData = null;
     let productsData = null;
+    let salesByOutletData = null;
+    let catalogUpdatedAt = null;
+    let dataWarnings = [];
     let selectedStoreCode = null;
     let selectedStoreName = null;
 
@@ -698,6 +721,49 @@
     function fmtPerc(num) {
       if (num == null || isNaN(num)) return '0.0%';
       return Number(num).toFixed(1) + '%';
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatDataTimestamp(value) {
+      if (!value) return 'غير متوفر';
+      const parsed = new Date(String(value).replace(' ', 'T'));
+      if (Number.isNaN(parsed.getTime())) return String(value);
+      return new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }).format(parsed);
+    }
+
+    function renderDataStatus() {
+      const managementUpdatedAt = mgmtData?.metadata?.last_updated || mgmtData?.metadata?.generated_at;
+      document.getElementById('lastUpdatedText').textContent =
+        `آخر تحديث للمبيعات: ${formatDataTimestamp(managementUpdatedAt)}`;
+
+      const productStatus = catalogUpdatedAt
+        ? `مبيعات آخر 7 أيام • تحديث المنتجات: ${formatDataTimestamp(catalogUpdatedAt)}`
+        : 'مبيعات آخر 7 أيام';
+      document.getElementById('productPeriodText').textContent = productStatus;
+
+      const warningElement = document.getElementById('dataWarning');
+      if (dataWarnings.length > 0) {
+        warningElement.textContent = dataWarnings.join(' • ');
+        warningElement.style.display = 'block';
+      } else {
+        warningElement.style.display = 'none';
+        warningElement.textContent = '';
+      }
+    }
+
+    async function readJsonResponse(response) {
+      return response?.ok ? response.json() : null;
     }
 
     // Init & Load Data
@@ -770,17 +836,39 @@
 
     async function loadAllData() {
       try {
-        const [mgmtRes, empRes, incRes, prodRes] = await Promise.all([
-          fetch('../management_data.json?_=' + Date.now()).catch(() => null),
+        dataWarnings = [];
+        const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes] = await Promise.all([
+          fetch('../summary.json?_=' + Date.now()).catch(() => null),
           fetch('../employees_data.json?_=' + Date.now()).catch(() => null),
           fetch('../average_bill_incentives.json?_=' + Date.now()).catch(() => null),
-          fetch('products.json?_=' + Date.now()).catch(() => null)
+          fetch('products.json?_=' + Date.now()).catch(() => null),
+          fetch('sales_by_outlet.json?_=' + Date.now()).catch(() => null),
+          fetch('last_updated.json?_=' + Date.now()).catch(() => null)
         ]);
 
-        if (mgmtRes && mgmtRes.ok) mgmtData = await mgmtRes.json();
-        if (empRes && empRes.ok) empData = await empRes.json();
-        if (incRes && incRes.ok) incentivesData = await incRes.json();
-        if (prodRes && prodRes.ok) productsData = await prodRes.json();
+        mgmtData = await readJsonResponse(mgmtRes);
+        empData = await readJsonResponse(empRes);
+        incentivesData = await readJsonResponse(incRes);
+        productsData = await readJsonResponse(prodRes);
+        salesByOutletData = await readJsonResponse(outletSalesRes);
+        const updatedData = await readJsonResponse(updatedRes);
+        catalogUpdatedAt = updatedData?.last_updated || null;
+
+        if (!mgmtData?.stores || !Array.isArray(mgmtData.sales)) {
+          throw new Error('ملف ملخص المبيعات غير متوفر أو غير صالح.');
+        }
+        if (!empData?.history || !empData?.employee_names) {
+          throw new Error('ملف بيانات الموظفين غير متوفر أو غير صالح.');
+        }
+        if (!incentivesData?.incentives) {
+          incentivesData = { incentives: {} };
+          dataWarnings.push('تعذر تحميل عمولات معدل الفاتورة');
+        }
+        if (!Array.isArray(productsData) || !salesByOutletData) {
+          productsData = [];
+          salesByOutletData = {};
+          dataWarnings.push('تعذر تحميل مبيعات المنتجات حسب المعرض');
+        }
 
         // Permissions: If user cannot switch stores, force store to user's mall
         const userAssignedMall = userProfile?.mall || '';
@@ -816,6 +904,11 @@
           document.getElementById('showroomSelect').value = selectedStoreCode;
         }
 
+        if (!selectedStoreCode) {
+          throw new Error('تعذر مطابقة المعرض المرتبط بالحساب مع قائمة المعارض.');
+        }
+
+        renderDataStatus();
         renderShowroomData();
 
         document.getElementById('loadingState').style.display = 'none';
@@ -967,7 +1060,9 @@
       const overallGrowth = mtdSalesLY > 0 ? ((mtdSales - mtdSalesLY) / mtdSalesLY) * 100 : 0;
 
       // Remaining Days & Daily Required
-      const remainingDays = Math.max(1, daysInMonth - currentDay);
+      const targetDateParts = employeeTargetDate.split('-').map(Number);
+      const currentRangeStart = new Date(targetDateParts[0], targetDateParts[1] - 1, 1);
+      const remainingDays = getRemainingDays(empData?.metadata?.target_end_date, currentRangeStart);
       const remainingSalesReq = Math.max(0, mtdTarget - mtdSales);
       const dailyReq = remainingSalesReq / remainingDays;
 
@@ -1000,7 +1095,14 @@
       renderDailySalesTable(salesMap, transMap, visitorsMap, currentMonthPrefix, daysInMonth, currentDay, year, monthStr);
 
       // Employee Leaderboard Table
-      renderEmployeeLeaderboard(selectedStoreCode, mtdSales, currentMonthPrefix, employeeTargetDate, remainingDays);
+      const employeeComparisonPeriod = getEmployeeComparisonPeriod(now);
+      renderEmployeeLeaderboard(
+        selectedStoreCode,
+        currentMonthPrefix,
+        employeeTargetDate,
+        remainingDays,
+        employeeComparisonPeriod
+      );
 
       // Top Products & Categories
       renderTopProductsAndCategories(selectedStoreName);
@@ -1011,6 +1113,123 @@
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    }
+
+    function getRemainingDays(metadataEndDate, currentRangeStart) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (metadataEndDate && currentRangeStart) {
+        const parts = metadataEndDate.split('-').map(Number);
+        if (parts.length === 3 && parts.every(Number.isFinite)) {
+          const customEnd = new Date(parts[0], parts[1] - 1, parts[2]);
+          customEnd.setHours(0, 0, 0, 0);
+
+          let extendedTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
+          if (customEnd.getDate() < 15) {
+            extendedTargetMonthStart = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+          }
+
+          const isExtendedMonth =
+            currentRangeStart.getFullYear() === extendedTargetMonthStart.getFullYear()
+            && currentRangeStart.getMonth() === extendedTargetMonthStart.getMonth();
+
+          if (isExtendedMonth && today <= customEnd) {
+            const diffTime = customEnd.getTime() - today.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            return Math.max(1, diffDays);
+          }
+        }
+      }
+
+      const referenceDate = currentRangeStart || today;
+      let lastDayOfMonth = new Date(
+        referenceDate.getFullYear(),
+        referenceDate.getMonth() + 1,
+        0
+      ).getDate();
+      let todayDate = today.getDate();
+
+      if (
+        referenceDate.getFullYear() < today.getFullYear()
+        || (
+          referenceDate.getFullYear() === today.getFullYear()
+          && referenceDate.getMonth() < today.getMonth()
+        )
+      ) {
+        return 1;
+      }
+
+      if (
+        referenceDate.getFullYear() > today.getFullYear()
+        || (
+          referenceDate.getFullYear() === today.getFullYear()
+          && referenceDate.getMonth() > today.getMonth()
+        )
+      ) {
+        return lastDayOfMonth;
+      }
+
+      if (today.getFullYear() === 2026 && today.getMonth() === 2) {
+        if (todayDate <= 19) {
+          lastDayOfMonth = 19;
+        } else {
+          lastDayOfMonth = 12;
+          todayDate -= 19;
+        }
+      }
+
+      const remainingDays = lastDayOfMonth - todayDate + 1;
+      return Math.max(1, remainingDays);
+    }
+
+    function getEmployeeComparisonPeriod(now = new Date()) {
+      let currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      let isExtended = false;
+
+      const targetEndValue = empData?.metadata?.target_end_date;
+      if (targetEndValue) {
+        const parts = targetEndValue.split('-').map(Number);
+        if (parts.length === 3 && parts.every(Number.isFinite)) {
+          const targetEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+          if (now <= targetEnd && targetEnd.getDate() < 15) {
+            currentStart = new Date(targetEnd.getFullYear(), targetEnd.getMonth() - 1, 1);
+            isExtended = true;
+          }
+        }
+      }
+
+      if (
+        !isExtended
+        && now.getFullYear() === 2026
+        && now.getMonth() === 2
+        && now.getDate() > 19
+      ) {
+        currentStart = new Date(2026, 2, 20);
+      }
+
+      const previousStart = new Date(currentStart.getFullYear(), currentStart.getMonth() - 1, 1);
+      const previousMonthLastDay = new Date(
+        previousStart.getFullYear(),
+        previousStart.getMonth() + 1,
+        0
+      ).getDate();
+      const previousEndDay = isExtended
+        ? previousMonthLastDay
+        : Math.min(now.getDate(), previousMonthLastDay);
+      const previousEnd = new Date(
+        previousStart.getFullYear(),
+        previousStart.getMonth(),
+        previousEndDay
+      );
+
+      return {
+        currentStart: toLocalYmd(currentStart),
+        currentEnd: toLocalYmd(currentEnd),
+        previousStart: toLocalYmd(previousStart),
+        previousEnd: toLocalYmd(previousEnd)
+      };
     }
 
     function normalizeEmployeeId(rawId) {
@@ -1217,21 +1436,39 @@
       document.getElementById('dailyDaysCount').textContent = daysRenderedCount;
     }
 
-    function renderEmployeeLeaderboard(storeCode, storeTotalSales, monthPrefix, targetDate, remainingDays) {
+    function renderEmployeeLeaderboard(
+      storeCode,
+      monthPrefix,
+      targetDate,
+      remainingDays,
+      comparisonPeriod
+    ) {
       const tbody = document.getElementById('empTableBody');
       tbody.innerHTML = '';
 
       const storeEmpHistory = empData?.history?.[storeCode] || [];
       const empNames = empData?.employee_names || {};
+      let currentStoreTotalSales = 0;
+      let previousStoreTotalSales = 0;
 
       // Aggregate employee metrics for this store
       const empMap = {};
       storeEmpHistory.forEach(r => {
-        const d = r[0];
-        if (!d.startsWith(monthPrefix)) return;
+        const date = String(r[0] || '');
+        const isCurrent =
+          date >= comparisonPeriod.currentStart
+          && date <= comparisonPeriod.currentEnd;
+        const isPrevious =
+          date >= comparisonPeriod.previousStart
+          && date <= comparisonPeriod.previousEnd;
+        if (!isCurrent && !isPrevious) return;
+
+        const salesValue = Number(r[2]) || 0;
+        if (isCurrent) currentStoreTotalSales += salesValue;
+        if (isPrevious) previousStoreTotalSales += salesValue;
 
         const rawEmp = String(r[1] || '');
-        const empId = rawEmp.includes('-') ? rawEmp.split('-')[0].trim() : rawEmp;
+        const empId = normalizeEmployeeId(rawEmp);
         if (!empId) return;
 
         if (!empMap[empId]) {
@@ -1239,19 +1476,31 @@
             id: empId,
             name: empNames[empId] || rawEmp || `موظف (${empId})`,
             sales: 0,
+            previousSales: 0,
             invoices: 0,
             items: 0,
-            maxTicket: 0
+            maxTicket: 0,
+            hasCurrent: false
           };
         }
 
-        empMap[empId].sales += Number(r[2]) || 0;
-        empMap[empId].invoices += Number(r[3]) || 0;
-        empMap[empId].items += Number(r[4]) || 0;
-        if (r[5]) empMap[empId].maxTicket = Math.max(empMap[empId].maxTicket, Number(r[5]));
+        if (isCurrent) {
+          empMap[empId].hasCurrent = true;
+          empMap[empId].sales += salesValue;
+          empMap[empId].invoices += Number(r[3]) || 0;
+          empMap[empId].items += Number(r[4]) || 0;
+          if (r[5]) {
+            empMap[empId].maxTicket = Math.max(empMap[empId].maxTicket, Number(r[5]));
+          }
+        }
+        if (isPrevious) {
+          empMap[empId].previousSales += salesValue;
+        }
       });
 
-      const empList = Object.values(empMap).sort((a, b) => b.sales - a.sales);
+      const empList = Object.values(empMap)
+        .filter(employee => employee.hasCurrent)
+        .sort((a, b) => b.sales - a.sales);
       document.getElementById('empsCount').textContent = empList.length;
 
       if (empList.length === 0) {
@@ -1267,7 +1516,23 @@
         else if (rank === 2) rankBadgeHtml = `<span class="rank-circle rank-2">🥈</span>`;
         else if (rank === 3) rankBadgeHtml = `<span class="rank-circle rank-3">🥉</span>`;
 
-        const share = storeTotalSales > 0 ? (emp.sales / storeTotalSales) * 100 : 0;
+        const currentShare = currentStoreTotalSales > 0
+          ? (emp.sales / currentStoreTotalSales) * 100
+          : 0;
+        const previousShare = previousStoreTotalSales > 0
+          ? (emp.previousSales / previousStoreTotalSales) * 100
+          : 0;
+        const shareGrowth = currentShare - previousShare;
+        const shareGrowthClass = shareGrowth > 0
+          ? 'badge-green'
+          : shareGrowth < 0
+            ? 'badge-red'
+            : 'badge-orange';
+        const shareGrowthText = shareGrowth > 0
+          ? `▲ +${Math.abs(shareGrowth).toFixed(1)}%`
+          : shareGrowth < 0
+            ? `▼ -${Math.abs(shareGrowth).toFixed(1)}%`
+            : '— 0.0%';
         const empTarget = getEmployeeTarget(emp.id, targetDate);
         const ach = empTarget > 0 ? (emp.sales / empTarget) * 100 : 0;
 
@@ -1281,7 +1546,7 @@
           empTarget,
           storeCode,
           targetDate,
-          storeTotalSales
+          currentStoreTotalSales
         );
         const averageBillCommission = getEmployeeAverageBillCommission(emp.id, storeCode, monthPrefix);
         const commissionText = averageBillCommission.recordCount > 0
@@ -1298,11 +1563,11 @@
         rowsHtml += `
           <tr>
             <td>${rankBadgeHtml}</td>
-            <td style="font-weight:800; color:var(--text-main);">${emp.name}</td>
-            <td style="color:var(--text-muted);">${selectedStoreName}</td>
+            <td style="font-weight:800; color:var(--text-main);">${escapeHtml(emp.name)}</td>
+            <td style="color:var(--text-muted);">${escapeHtml(selectedStoreName)}</td>
             <td style="font-weight:900; color:var(--primary-dark);">${fmtMoney(emp.sales)} ر.س</td>
-            <td><strong>${fmtPerc(share)}</strong></td>
-            <td><span class="badge-status badge-green">▲ +${(1.2 + (idx%3)*0.5).toFixed(1)}%</span></td>
+            <td><strong>${fmtPerc(currentShare)}</strong></td>
+            <td><span class="badge-status ${shareGrowthClass}" title="الحصة السابقة: ${fmtPerc(previousShare)}">${shareGrowthText}</span></td>
             <td>${empTarget > 0 ? fmtMoney(empTarget) : '—'}</td>
             <td>${empTarget > 0 ? `<span class="badge-status ${achClass}">${fmtPerc(ach)}</span>` : '—'}</td>
             <td style="font-weight:800; color:var(--text-main); background:var(--warning-light);">${salesCommission > 0 ? `${fmtMoney(salesCommission)} ر.س` : '—'}</td>
@@ -1318,45 +1583,65 @@
       tbody.innerHTML = rowsHtml;
     }
 
+    function getOutletSalesQuantity(outletSales, storeName) {
+      if (!outletSales || !storeName) return 0;
+      if (outletSales[storeName] != null) return Number(outletSales[storeName]) || 0;
+
+      const normalizedStoreName = storeName.trim().toLowerCase();
+      const matchingEntry = Object.entries(outletSales).find(
+        ([outletName]) => outletName.trim().toLowerCase() === normalizedStoreName
+      );
+      return matchingEntry ? Number(matchingEntry[1]) || 0 : 0;
+    }
+
     function renderTopProductsAndCategories(storeName) {
       const topProductsBody = document.getElementById('topProductsBody');
       const topCategoriesBody = document.getElementById('topCategoriesBody');
 
-      if (!productsData || !Array.isArray(productsData)) {
-        topProductsBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات منتجات متوفرة</td></tr>';
-        topCategoriesBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">لا توجد بيانات أقسام متوفرة</td></tr>';
+      if (!Array.isArray(productsData) || !salesByOutletData) {
+        topProductsBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">تعذر تحميل بيانات مبيعات المنتجات</td></tr>';
+        topCategoriesBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">تعذر تحميل بيانات مبيعات الأقسام</td></tr>';
         return;
       }
 
-      // Filter products by stock / sales in store
-      const items = productsData
+      const storeItems = productsData
         .map(p => {
-          const qty = p.branches?.[storeName] || 0;
-          return { ...p, storeQty: qty };
+          const codeSales = salesByOutletData?.[String(p.code)];
+          const aliasSales = salesByOutletData?.[String(p.alias)];
+          const storeSales = getOutletSalesQuantity(codeSales || aliasSales, storeName);
+          return { ...p, storeSales };
         })
-        .sort((a, b) => (b.sales || 0) - (a.sales || 0))
+        .filter(item => item.storeSales > 0)
+        .sort((a, b) => b.storeSales - a.storeSales);
+
+      if (storeItems.length === 0) {
+        topProductsBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد مبيعات منتجات لهذا المعرض خلال آخر 7 أيام</td></tr>';
+        topCategoriesBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">لا توجد مبيعات أقسام لهذا المعرض خلال آخر 7 أيام</td></tr>';
+        return;
+      }
+
+      const items = storeItems
         .slice(0, 10);
 
       topProductsBody.innerHTML = items.map((item, idx) => `
         <tr>
           <td>${idx + 1}</td>
-          <td><strong>${item.alias || item.code}</strong></td>
-          <td>${item.name}</td>
-          <td style="font-weight:800; color:var(--primary);">${item.sales || 0} قطعة</td>
+          <td><strong>${escapeHtml(item.alias || item.code)}</strong></td>
+          <td>${escapeHtml(item.name)}</td>
+          <td style="font-weight:800; color:var(--primary);">${item.storeSales.toLocaleString()} قطعة</td>
         </tr>
       `).join('');
 
-      // Categories
       const catMap = {};
-      productsData.forEach(p => {
-        const cat = p.category || 'عام';
-        catMap[cat] = (catMap[cat] || 0) + (p.sales || 0);
+      storeItems.forEach(item => {
+        const category = item.category || 'عام';
+        catMap[category] = (catMap[category] || 0) + item.storeSales;
       });
 
       const catList = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
       topCategoriesBody.innerHTML = catList.map(([cat, qty]) => `
         <tr>
-          <td style="font-weight:700;">${cat}</td>
+          <td style="font-weight:700;">${escapeHtml(cat)}</td>
           <td style="font-weight:800; color:var(--accent);">${qty.toLocaleString()} قطعة</td>
         </tr>
       `).join('');
@@ -1383,18 +1668,22 @@
       });
     }
 
-    // Excel Export Helper
-    function exportTableToExcel(tableBodyId, filename) {
+    // CSV Export Helper
+    function exportTableToCsv(tableBodyId, filename) {
       const tbody = document.getElementById(tableBodyId);
       if (!tbody) return;
 
-      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const table = tbody.closest('table');
+      if (!table) return;
+
+      const rows = Array.from(table.querySelectorAll('thead tr, tbody tr'));
       const csvData = rows.map(tr => {
         return Array.from(tr.querySelectorAll('td, th')).map(cell => `"${cell.textContent.trim().replace(/"/g, '""')}"`).join(',');
       }).join('\n');
 
       const blob = new Blob(["\ufeff" + csvData], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, filename + '_' + selectedStoreName + '.csv');
+      const safeStoreName = String(selectedStoreName || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
+      saveAs(blob, `${filename}_${safeStoreName}.csv`);
     }
   </script>
 </body>
