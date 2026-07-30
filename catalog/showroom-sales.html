@@ -118,6 +118,30 @@
       border-color: var(--primary);
     }
 
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .print-report-btn {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .print-report-btn:hover {
+      background: var(--primary-dark);
+      color: #ffffff;
+      border-color: var(--primary-dark);
+    }
+
+    .print-report-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
     /* Store Header Banner */
     .store-banner {
       max-width: 1400px;
@@ -467,6 +491,208 @@
       margin: 0 auto 16px auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    #printReport {
+      display: none;
+    }
+
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 8mm;
+      }
+
+      html,
+      body {
+        width: auto;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        background: #ffffff !important;
+        color: #111827;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      body > :not(#printReport) {
+        display: none !important;
+      }
+
+      #printReport {
+        display: block !important;
+        direction: rtl;
+        font-family: 'Tajawal', Arial, sans-serif;
+        font-size: 8pt;
+        line-height: 1.35;
+      }
+
+      .print-section {
+        break-after: page;
+      }
+
+      .print-section + .print-section {
+        break-before: page;
+      }
+
+      .print-section:last-child {
+        break-after: auto;
+      }
+
+      .print-report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12mm;
+        padding-bottom: 3mm;
+        margin-bottom: 4mm;
+        border-bottom: 2.5px solid #fe7900;
+        break-inside: avoid;
+      }
+
+      .print-brand {
+        color: #fe7900;
+        font-size: 15pt;
+        font-weight: 900;
+      }
+
+      .print-title {
+        margin: 1mm 0;
+        color: #111827;
+        font-size: 18pt;
+        font-weight: 900;
+      }
+
+      .print-subtitle,
+      .print-meta {
+        color: #475569;
+        font-size: 8.5pt;
+        font-weight: 700;
+      }
+
+      .print-meta {
+        max-width: 92mm;
+        text-align: left;
+      }
+
+      .print-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 2.5mm;
+        margin: 0 0 4mm;
+      }
+
+      .print-kpi {
+        min-height: 19mm;
+        padding: 2.5mm;
+        border: 1px solid #dbe2ea;
+        border-top: 2.5px solid #fe7900;
+        border-radius: 2mm;
+        text-align: center;
+        break-inside: avoid;
+      }
+
+      .print-kpi span {
+        display: block;
+        color: #64748b;
+        font-size: 7pt;
+        font-weight: 700;
+      }
+
+      .print-kpi strong {
+        display: block;
+        margin-top: 1mm;
+        color: #111827;
+        font-size: 12pt;
+        font-weight: 900;
+      }
+
+      .print-section-title {
+        margin: 0 0 2.5mm;
+        color: #111827;
+        font-size: 12pt;
+        font-weight: 900;
+      }
+
+      .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        direction: rtl;
+        font-size: 7.2pt;
+      }
+
+      .print-table thead {
+        display: table-header-group;
+      }
+
+      .print-table tr {
+        break-inside: avoid;
+      }
+
+      .print-table th,
+      .print-table td {
+        padding: 1.45mm 1mm;
+        border: 0.3mm solid #d8dee7;
+        text-align: center;
+        vertical-align: middle;
+        overflow-wrap: anywhere;
+      }
+
+      .print-table th {
+        background: #fe7900 !important;
+        color: #ffffff !important;
+        font-weight: 900;
+      }
+
+      .print-table .print-subhead th {
+        background: #fff0e8 !important;
+        color: #9a4b00 !important;
+      }
+
+      .print-table tbody tr:nth-child(even) td {
+        background: #f8fafc !important;
+      }
+
+      .print-table .print-total td {
+        background: #fff0e8 !important;
+        color: #9a4b00;
+        font-weight: 900;
+        border-top: 0.6mm solid #fe7900;
+      }
+
+      .print-employee-table {
+        font-size: 6.3pt;
+      }
+
+      .print-employee-table th,
+      .print-employee-table td {
+        padding: 1.25mm 0.65mm;
+      }
+
+      .print-employee-table .employee-name {
+        min-width: 27mm;
+        font-weight: 800;
+        text-align: right;
+      }
+
+      .print-note {
+        margin-top: 2mm;
+        color: #64748b;
+        font-size: 7pt;
+        font-weight: 600;
+      }
+
+      .print-top-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 0.65fr;
+        gap: 5mm;
+        align-items: start;
+      }
+
+      .print-top-grid .print-table {
+        font-size: 8pt;
+      }
+    }
   </style>
 </head>
 
@@ -478,7 +704,17 @@
       <div class="brand-title">
         <span>🍊 أورانج</span> | مبيعات المعرض وأداء الموظفين
       </div>
-      <div>
+      <div class="top-actions">
+        <button
+          type="button"
+          id="printReportButton"
+          class="back-btn print-report-btn"
+          onclick="printShowroomReport()"
+          disabled
+        >
+          <i class="bi bi-printer-fill" aria-hidden="true"></i>
+          طباعة / حفظ PDF
+        </button>
         <a href="index.html" class="back-btn">← العودة لجدول البضاعة</a>
       </div>
     </div>
@@ -686,6 +922,8 @@
       </div>
     </div>
   </main>
+
+  <div id="printReport" aria-hidden="true"></div>
 
   <script>
     const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
@@ -1138,6 +1376,8 @@
 
       // Top Products & Categories
       renderTopProductsAndCategories(selectedStoreName);
+
+      document.getElementById('printReportButton').disabled = false;
     }
 
     function toLocalYmd(date) {
@@ -1677,6 +1917,664 @@
           <td style="font-weight:800; color:var(--accent);">${qty.toLocaleString()} قطعة</td>
         </tr>
       `).join('');
+    }
+
+    function parseLocalYmd(value) {
+      const parts = String(value || '').split('-').map(Number);
+      if (parts.length !== 3 || !parts.every(Number.isFinite)) return null;
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function getPrintReportPeriod(now = new Date()) {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() - 1);
+
+      let startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      const targetEndValue = mgmtData?.metadata?.target_end_date;
+      const targetEnd = parseLocalYmd(targetEndValue);
+
+      if (targetEnd && today <= targetEnd) {
+        startDate = new Date(targetEnd.getFullYear(), targetEnd.getMonth() - 1, 1);
+      }
+
+      let employeeStartYmd = toLocalYmd(startDate);
+      if (
+        today.getFullYear() === 2026
+        && today.getMonth() === 2
+        && today.getDate() > 19
+      ) {
+        employeeStartYmd = '2026-03-20';
+      }
+
+      const employeeStart = parseLocalYmd(employeeStartYmd) || startDate;
+      const employeeMonthStart = new Date(
+        employeeStart.getFullYear(),
+        employeeStart.getMonth(),
+        1
+      );
+
+      return {
+        startDate,
+        endDate,
+        startYmd: toLocalYmd(startDate),
+        endYmd: toLocalYmd(endDate),
+        employeeStartYmd,
+        targetDate: employeeStartYmd,
+        targetMonthPrefix: employeeStartYmd.slice(0, 7),
+        remainingDays: getRemainingDays(targetEndValue, employeeMonthStart)
+      };
+    }
+
+    function getPriorYearComparableDate(date) {
+      const comparisonDate = new Date(
+        date.getFullYear() - 1,
+        date.getMonth(),
+        date.getDate()
+      );
+
+      if (
+        date.getFullYear() === 2026
+        && [1, 2].includes(date.getMonth())
+      ) {
+        comparisonDate.setDate(comparisonDate.getDate() + 11);
+      }
+
+      return comparisonDate;
+    }
+
+    function buildSelectedStoreLookup(rows) {
+      const lookup = {};
+      (rows || []).forEach(row => {
+        if (
+          Array.isArray(row)
+          && String(row[1]) === String(selectedStoreCode)
+        ) {
+          lookup[row[0]] = (lookup[row[0]] || 0) + (Number(row[2]) || 0);
+        }
+      });
+      return lookup;
+    }
+
+    function buildPrintableDailyData(period) {
+      const salesLookup = buildSelectedStoreLookup(mgmtData?.sales);
+      const transactionLookup = buildSelectedStoreLookup(mgmtData?.transactions);
+      const visitorLookup = buildSelectedStoreLookup(mgmtData?.visitors);
+      const targetLookup = buildSelectedStoreLookup(mgmtData?.targets);
+      const rows = [];
+      const totals = {
+        sales: 0,
+        salesLy: 0,
+        invoices: 0,
+        visitors: 0,
+        visitorsLy: 0,
+        target: 0
+      };
+
+      const cursor = new Date(period.startDate);
+      while (cursor <= period.endDate) {
+        const dateYmd = toLocalYmd(cursor);
+        const comparisonDate = getPriorYearComparableDate(cursor);
+        const comparisonYmd = toLocalYmd(comparisonDate);
+        const sales = salesLookup[dateYmd] || 0;
+        const salesLy = salesLookup[comparisonYmd] || 0;
+        const invoices = transactionLookup[dateYmd] || 0;
+        const visitors = visitorLookup[dateYmd] || 0;
+        const visitorsLy = visitorLookup[comparisonYmd] || 0;
+
+        if (
+          cursor.getFullYear() === period.startDate.getFullYear()
+          && cursor.getMonth() === period.startDate.getMonth()
+        ) {
+          totals.target += targetLookup[dateYmd] || 0;
+        }
+
+        rows.push({
+          dateYmd,
+          comparisonYmd,
+          sales,
+          salesLy,
+          growth: salesLy > 0 ? ((sales - salesLy) / salesLy) * 100 : null,
+          invoices,
+          averageBill: invoices > 0 ? sales / invoices : 0,
+          customerValue: visitors > 0 ? sales / visitors : 0,
+          visitors,
+          visitorsLy,
+          conversion: visitors > 0 ? (invoices / visitors) * 100 : null
+        });
+
+        totals.sales += sales;
+        totals.salesLy += salesLy;
+        totals.invoices += invoices;
+        totals.visitors += visitors;
+        totals.visitorsLy += visitorsLy;
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      totals.growth = totals.salesLy > 0
+        ? ((totals.sales - totals.salesLy) / totals.salesLy) * 100
+        : null;
+      totals.averageBill = totals.invoices > 0 ? totals.sales / totals.invoices : 0;
+      totals.customerValue = totals.visitors > 0 ? totals.sales / totals.visitors : 0;
+      totals.conversion = totals.visitors > 0
+        ? (totals.invoices / totals.visitors) * 100
+        : null;
+      totals.achievement = totals.target > 0 ? (totals.sales / totals.target) * 100 : null;
+      totals.remaining = Math.max(0, totals.target - totals.sales);
+      totals.dailyRequired = totals.target > 0
+        ? totals.remaining / period.remainingDays
+        : 0;
+
+      return { rows, totals };
+    }
+
+    function parseReportEmployeeIdentity(rawValue) {
+      const raw = String(rawValue || '').trim();
+      let id = raw;
+      let name = raw;
+      const separatorIndex = raw.indexOf('-');
+
+      if (separatorIndex > -1) {
+        id = raw.slice(0, separatorIndex).trim();
+        name = raw.slice(separatorIndex + 1).trim();
+      } else if (/^(unknown|unkown)/i.test(raw)) {
+        name = raw.replace(/^(unknown|unkown)/i, '').trim();
+      }
+
+      return {
+        id: normalizeEmployeeId(id),
+        name: name || raw
+      };
+    }
+
+    function getReportEmployeeTarget(empId, targetDate) {
+      const normalizedId = normalizeEmployeeId(empId);
+      const unpaddedId = /^\d+$/.test(normalizedId)
+        ? String(Number(normalizedId))
+        : normalizedId;
+      const candidates = [...new Set(
+        [String(empId || '').trim(), normalizedId, unpaddedId].filter(Boolean)
+      )];
+      const monthlyTargets = empData?.monthly_targets || {};
+
+      for (const candidate of candidates) {
+        const value = monthlyTargets[candidate]?.[targetDate];
+        if (value != null) return Number(value) || 0;
+      }
+
+      for (const candidate of candidates) {
+        const value = empData?.targets?.[candidate];
+        if (value != null) return Number(value) || 0;
+      }
+
+      return 0;
+    }
+
+    function getReportStoreTarget(storeCode, targetDate) {
+      let targetRow = (mgmtData?.targets || []).find(row =>
+        Array.isArray(row)
+        && row[0] === targetDate
+        && String(row[1]) === String(storeCode)
+      );
+
+      if (!targetRow && targetDate === '2026-03-20') {
+        targetRow = (mgmtData?.targets || []).find(row =>
+          Array.isArray(row)
+          && row[0] === '2026-03-01'
+          && String(row[1]) === String(storeCode)
+        );
+      }
+
+      return Number(targetRow?.[2]) || 0;
+    }
+
+    function buildPrintableEmployeeData(period) {
+      const employeeNames = empData?.employee_names || {};
+      const globalEmployees = {};
+
+      Object.entries(empData?.history || {}).forEach(([storeCode, records]) => {
+        (records || []).forEach(record => {
+          const dateYmd = String(record[0] || '');
+          if (dateYmd < period.employeeStartYmd || dateYmd > period.endYmd) return;
+
+          const identity = parseReportEmployeeIdentity(record[1]);
+          if (!identity.id || identity.name === 'مرتجع') return;
+
+          if (!globalEmployees[identity.id]) {
+            globalEmployees[identity.id] = {
+              id: identity.id,
+              name: identity.name,
+              storeStats: {},
+              mtd: { sales: 0, invoices: 0, items: 0 },
+              yesterday: { sales: 0, invoices: 0, items: 0 },
+              lastStore: storeCode,
+              latestActiveStore: storeCode,
+              latestActiveDate: ''
+            };
+          }
+
+          const employee = globalEmployees[identity.id];
+          const sales = Number(record[2]) || 0;
+          const invoices = Number(record[3]) || 0;
+          const items = Number(record[4]) || 0;
+
+          employee.mtd.sales += sales;
+          employee.mtd.invoices += invoices;
+          employee.mtd.items += items;
+          employee.storeStats[storeCode] = (employee.storeStats[storeCode] || 0) + sales;
+
+          if (sales > 0 && dateYmd > employee.latestActiveDate) {
+            employee.latestActiveDate = dateYmd;
+            employee.latestActiveStore = storeCode;
+          }
+
+          if (dateYmd === period.endYmd) {
+            employee.yesterday.sales += sales;
+            employee.yesterday.invoices += invoices;
+            employee.yesterday.items += items;
+          }
+        });
+      });
+
+      Object.values(globalEmployees).forEach(employee => {
+        if (employee.latestActiveDate) {
+          employee.primaryStore = employee.latestActiveStore;
+        } else {
+          employee.primaryStore = Object.entries(employee.storeStats)
+            .sort((a, b) => b[1] - a[1])[0]?.[0] || employee.lastStore;
+        }
+
+        const normalizedName = employeeNames[employee.id];
+        const unpaddedId = /^\d+$/.test(employee.id) ? String(Number(employee.id)) : employee.id;
+        employee.name = normalizedName || employeeNames[unpaddedId] || employee.name;
+      });
+
+      const storeTotals = { yesterday: 0, mtd: 0 };
+      (empData?.history?.[selectedStoreCode] || []).forEach(record => {
+        const dateYmd = String(record[0] || '');
+        const sales = Number(record[2]) || 0;
+        if (dateYmd >= period.employeeStartYmd && dateYmd <= period.endYmd) {
+          storeTotals.mtd += sales;
+        }
+        if (dateYmd === period.endYmd) {
+          storeTotals.yesterday += sales;
+        }
+      });
+
+      const branchTarget = getReportStoreTarget(selectedStoreCode, period.targetDate);
+      const branchAchievement = branchTarget > 0
+        ? (storeTotals.mtd / branchTarget) * 100
+        : 0;
+      let branchCommissionPercent = 0;
+      if (branchAchievement >= 100) branchCommissionPercent = 0.02;
+      else if (branchAchievement >= 90) branchCommissionPercent = 0.01;
+      else if (branchAchievement >= 80) branchCommissionPercent = 0.005;
+
+      const employees = Object.values(globalEmployees)
+        .filter(employee =>
+          String(employee.primaryStore) === String(selectedStoreCode)
+          && (employee.mtd.sales > 0 || employee.mtd.invoices > 0)
+        )
+        .map(employee => {
+          const target = getReportEmployeeTarget(employee.id, period.targetDate);
+          const achievement = target > 0 ? (employee.mtd.sales / target) * 100 : null;
+          const remaining = Math.max(0, target - employee.mtd.sales);
+          const dailyRequired = target > 0 ? remaining / period.remainingDays : 0;
+          const salesCommission =
+            target > 0 && branchCommissionPercent > 0 && employee.mtd.sales > 0
+              ? ((employee.mtd.sales / target) * branchCommissionPercent) * employee.mtd.sales
+              : 0;
+          const averageBillCommission = getEmployeeAverageBillCommission(
+            employee.id,
+            selectedStoreCode,
+            period.targetMonthPrefix
+          );
+
+          return {
+            ...employee,
+            yesterdayContribution: storeTotals.yesterday > 0
+              ? (employee.yesterday.sales / storeTotals.yesterday) * 100
+              : 0,
+            yesterdayAverageBill: employee.yesterday.invoices > 0
+              ? employee.yesterday.sales / employee.yesterday.invoices
+              : 0,
+            mtdContribution: storeTotals.mtd > 0
+              ? (employee.mtd.sales / storeTotals.mtd) * 100
+              : 0,
+            mtdAverageBill: employee.mtd.invoices > 0
+              ? employee.mtd.sales / employee.mtd.invoices
+              : 0,
+            target,
+            achievement,
+            salesCommission,
+            averageBillCommission,
+            remaining,
+            dailyRequired
+          };
+        })
+        .sort((a, b) => b.mtd.sales - a.mtd.sales);
+
+      const totals = employees.reduce((result, employee) => {
+        result.yesterdaySales += employee.yesterday.sales;
+        result.yesterdayInvoices += employee.yesterday.invoices;
+        result.mtdSales += employee.mtd.sales;
+        result.mtdInvoices += employee.mtd.invoices;
+        result.target += employee.target;
+        result.salesCommission += employee.salesCommission;
+        result.averageBillCommission += employee.averageBillCommission.total;
+        result.pendingAverageBillRecords += employee.averageBillCommission.pendingCount;
+        return result;
+      }, {
+        yesterdaySales: 0,
+        yesterdayInvoices: 0,
+        mtdSales: 0,
+        mtdInvoices: 0,
+        target: 0,
+        salesCommission: 0,
+        averageBillCommission: 0,
+        pendingAverageBillRecords: 0
+      });
+
+      totals.yesterdayAverageBill = totals.yesterdayInvoices > 0
+        ? totals.yesterdaySales / totals.yesterdayInvoices
+        : 0;
+      totals.mtdAverageBill = totals.mtdInvoices > 0
+        ? totals.mtdSales / totals.mtdInvoices
+        : 0;
+      totals.achievement = totals.target > 0
+        ? (totals.mtdSales / totals.target) * 100
+        : null;
+      totals.remaining = Math.max(0, totals.target - totals.mtdSales);
+      totals.dailyRequired = totals.target > 0
+        ? totals.remaining / period.remainingDays
+        : 0;
+
+      return {
+        employees,
+        totals,
+        storeTotals,
+        branchTarget,
+        branchAchievement,
+        branchCommissionPercent
+      };
+    }
+
+    function formatOptionalPercentage(value, includeSign = false) {
+      if (value == null || !Number.isFinite(Number(value))) return '—';
+      const sign = includeSign && Number(value) >= 0 ? '+' : '';
+      return `${sign}${fmtPerc(value)}`;
+    }
+
+    function buildPrintableReport() {
+      if (!currentUser || !selectedStoreCode || !mgmtData || !empData) return null;
+
+      const period = getPrintReportPeriod();
+      const dailyData = buildPrintableDailyData(period);
+      const employeeData = buildPrintableEmployeeData(period);
+      const storeMeta = mgmtData?.store_meta?.[selectedStoreCode] || {};
+      const reportElement = document.getElementById('printReport');
+      const generatedAt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }).format(new Date());
+      const managerName = storeMeta.manager || '—';
+      const currentYear = period.startDate.getFullYear();
+      const priorYear = currentYear - 1;
+
+      const dailyRowsHtml = dailyData.rows.map(row => `
+        <tr>
+          <td dir="ltr">${row.dateYmd}</td>
+          <td>${fmtMoney(row.sales)}</td>
+          <td>${fmtMoney(row.salesLy)}</td>
+          <td>${formatOptionalPercentage(row.growth, true)}</td>
+          <td>${Math.round(row.invoices).toLocaleString('en-US')}</td>
+          <td>${fmtMoney(row.averageBill)}</td>
+          <td>${fmtMoney(row.customerValue)}</td>
+          <td>${Math.round(row.visitors).toLocaleString('en-US')}</td>
+          <td>${Math.round(row.visitorsLy).toLocaleString('en-US')}</td>
+          <td>${formatOptionalPercentage(row.conversion)}</td>
+        </tr>
+      `).join('');
+
+      const employeeRowsHtml = employeeData.employees.length > 0
+        ? employeeData.employees.map(employee => {
+          const averageBillCommission = employee.averageBillCommission.recordCount > 0
+            ? `${fmtMoney(employee.averageBillCommission.total)}${
+              employee.averageBillCommission.pendingCount > 0 ? ' *' : ''
+            }`
+            : '—';
+
+          return `
+            <tr>
+              <td class="employee-name">${escapeHtml(employee.name)}</td>
+              <td>${fmtMoney(employee.yesterday.sales)}</td>
+              <td>${fmtPerc(employee.yesterdayContribution)}</td>
+              <td>${Math.round(employee.yesterday.invoices).toLocaleString('en-US')}</td>
+              <td>${fmtMoney(employee.yesterdayAverageBill)}</td>
+              <td>${fmtMoney(employee.mtd.sales)}</td>
+              <td>${fmtPerc(employee.mtdContribution)}</td>
+              <td>${Math.round(employee.mtd.invoices).toLocaleString('en-US')}</td>
+              <td>${fmtMoney(employee.mtdAverageBill)}</td>
+              <td>${employee.target > 0 ? fmtMoney(employee.target) : '—'}</td>
+              <td>${formatOptionalPercentage(employee.achievement)}</td>
+              <td>${employee.salesCommission > 0 ? fmtMoney(employee.salesCommission) : '—'}</td>
+              <td>${averageBillCommission}</td>
+              <td>${employee.target > 0 ? fmtMoney(employee.remaining) : '—'}</td>
+              <td>${employee.target > 0 ? fmtMoney(employee.dailyRequired) : '—'}</td>
+            </tr>
+          `;
+        }).join('')
+        : '<tr><td colspan="15">لا توجد بيانات موظفين نشطين لهذا المعرض خلال فترة التقرير.</td></tr>';
+
+      const dailyTotals = dailyData.totals;
+      const employeeTotals = employeeData.totals;
+      const averageBillPendingNote = employeeTotals.pendingAverageBillRecords > 0
+        ? `* توجد ${employeeTotals.pendingAverageBillRecords} نتيجة عمولة معدل فاتورة قيد المراجعة.`
+        : 'عمولة معدل الفاتورة مستقلة عن عمولة المبيعات وتظهر من سجل الحوافز المعتمد.';
+
+      const topProductsRows = document.getElementById('topProductsBody')?.innerHTML
+        || '<tr><td colspan="4">لا توجد بيانات.</td></tr>';
+      const topCategoriesRows = document.getElementById('topCategoriesBody')?.innerHTML
+        || '<tr><td colspan="2">لا توجد بيانات.</td></tr>';
+
+      reportElement.innerHTML = `
+        <section class="print-section" data-report-section="store-performance">
+          <header class="print-report-header">
+            <div>
+              <div class="print-brand">🍊 ORANGE</div>
+              <h1 class="print-title">تقرير أداء المعرض</h1>
+              <div class="print-subtitle">
+                ${escapeHtml(selectedStoreCode)} — ${escapeHtml(selectedStoreName)}
+              </div>
+            </div>
+            <div class="print-meta">
+              <div><strong>مدير المعرض:</strong> ${escapeHtml(managerName)}</div>
+              <div><strong>الفترة:</strong> <span dir="ltr">${period.startYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></div>
+              <div><strong>وقت إنشاء التقرير:</strong> ${escapeHtml(generatedAt)}</div>
+              <div><strong>آخر تحديث للبيانات:</strong> ${escapeHtml(formatDataTimestamp(
+                mgmtData?.metadata?.last_updated || mgmtData?.metadata?.generated_at
+              ))}</div>
+            </div>
+          </header>
+
+          <div class="print-kpi-grid">
+            <div class="print-kpi"><span>إجمالي المبيعات</span><strong>${fmtMoney(dailyTotals.sales)} ر.س</strong></div>
+            <div class="print-kpi"><span>الهدف</span><strong>${dailyTotals.target > 0 ? `${fmtMoney(dailyTotals.target)} ر.س` : '—'}</strong></div>
+            <div class="print-kpi"><span>نسبة التحقيق</span><strong>${formatOptionalPercentage(dailyTotals.achievement)}</strong></div>
+            <div class="print-kpi"><span>النمو عن العام السابق</span><strong>${formatOptionalPercentage(dailyTotals.growth, true)}</strong></div>
+            <div class="print-kpi"><span>اليومية المطلوبة</span><strong>${dailyTotals.target > 0 ? `${fmtMoney(dailyTotals.dailyRequired)} ر.س` : '—'}</strong></div>
+            <div class="print-kpi"><span>التحويل / الفواتير</span><strong>${formatOptionalPercentage(dailyTotals.conversion)} · ${Math.round(dailyTotals.invoices).toLocaleString('en-US')}</strong></div>
+          </div>
+
+          <h2 class="print-section-title">تفاصيل المبيعات اليومية</h2>
+          <table class="print-table" aria-label="تقرير المبيعات اليومية">
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>مبيعات ${currentYear}</th>
+                <th>مبيعات ${priorYear}</th>
+                <th>النمو %</th>
+                <th>عدد الفواتير</th>
+                <th>متوسط الفاتورة</th>
+                <th>قيمة العميل</th>
+                <th>زوار ${currentYear}</th>
+                <th>زوار ${priorYear}</th>
+                <th>التحويل %</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dailyRowsHtml || '<tr><td colspan="10">لا توجد أيام مكتملة ضمن فترة التقرير.</td></tr>'}
+              <tr class="print-total">
+                <td>الإجمالي</td>
+                <td>${fmtMoney(dailyTotals.sales)}</td>
+                <td>${fmtMoney(dailyTotals.salesLy)}</td>
+                <td>${formatOptionalPercentage(dailyTotals.growth, true)}</td>
+                <td>${Math.round(dailyTotals.invoices).toLocaleString('en-US')}</td>
+                <td>${fmtMoney(dailyTotals.averageBill)}</td>
+                <td>${fmtMoney(dailyTotals.customerValue)}</td>
+                <td>${Math.round(dailyTotals.visitors).toLocaleString('en-US')}</td>
+                <td>${Math.round(dailyTotals.visitorsLy).toLocaleString('en-US')}</td>
+                <td>${formatOptionalPercentage(dailyTotals.conversion)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="print-note">
+            المقارنة السنوية لشهري فبراير ومارس 2026 تراعي إزاحة رمضان (+11 يومًا) وفق منطق التقرير التشغيلي.
+          </div>
+        </section>
+
+        <section class="print-section" data-report-section="employees">
+          <header class="print-report-header">
+            <div>
+              <div class="print-brand">🍊 ORANGE</div>
+              <h1 class="print-title">تقرير الموظفين</h1>
+              <div class="print-subtitle">
+                ${escapeHtml(selectedStoreCode)} — ${escapeHtml(selectedStoreName)}
+              </div>
+            </div>
+            <div class="print-meta">
+              <div><strong>الفترة التراكمية:</strong> <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></div>
+              <div><strong>الأمس:</strong> <span dir="ltr">${period.endYmd}</span></div>
+              <div><strong>المتبقي:</strong> ${period.remainingDays} يوم</div>
+              <div><strong>شريحة عمولة المعرض:</strong> ${(employeeData.branchCommissionPercent * 100).toFixed(1)}%</div>
+            </div>
+          </header>
+
+          <table class="print-table print-employee-table" aria-label="تقرير الموظفين">
+            <thead>
+              <tr>
+                <th rowspan="2">الموظف</th>
+                <th colspan="4">الأمس (Yesterday) — <span dir="ltr">${period.endYmd}</span></th>
+                <th colspan="10">الشهر الحالي (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
+              </tr>
+              <tr class="print-subhead">
+                <th>المبيعات</th>
+                <th>مساهمة %</th>
+                <th>الفواتير</th>
+                <th>متوسط الفاتورة</th>
+                <th>المبيعات</th>
+                <th>مساهمة %</th>
+                <th>الفواتير</th>
+                <th>متوسط الفاتورة</th>
+                <th>الهدف</th>
+                <th>تحقيق %</th>
+                <th>عمولة المبيعات</th>
+                <th>عمولة معدل الفاتورة</th>
+                <th>المتبقي</th>
+                <th>اليومية المتبقية</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${employeeRowsHtml}
+              <tr class="print-total">
+                <td>الإجمالي</td>
+                <td>${fmtMoney(employeeTotals.yesterdaySales)}</td>
+                <td>100.0%</td>
+                <td>${Math.round(employeeTotals.yesterdayInvoices).toLocaleString('en-US')}</td>
+                <td>${fmtMoney(employeeTotals.yesterdayAverageBill)}</td>
+                <td>${fmtMoney(employeeTotals.mtdSales)}</td>
+                <td>100.0%</td>
+                <td>${Math.round(employeeTotals.mtdInvoices).toLocaleString('en-US')}</td>
+                <td>${fmtMoney(employeeTotals.mtdAverageBill)}</td>
+                <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.target) : '—'}</td>
+                <td>${formatOptionalPercentage(employeeTotals.achievement)}</td>
+                <td>${employeeTotals.salesCommission > 0 ? fmtMoney(employeeTotals.salesCommission) : '—'}</td>
+                <td>${employeeTotals.averageBillCommission > 0 ? fmtMoney(employeeTotals.averageBillCommission) : '—'}</td>
+                <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.remaining) : '—'}</td>
+                <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.dailyRequired) : '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="print-note">
+            ${escapeHtml(averageBillPendingNote)}
+            عمولة المبيعات محسوبة من تحقيق الموظف × شريحة تحقيق المعرض × مبيعات الموظف، كما في التقرير المرجعي.
+          </div>
+        </section>
+
+        <section class="print-section" data-report-section="top-products">
+          <header class="print-report-header">
+            <div>
+              <div class="print-brand">🍊 ORANGE</div>
+              <h1 class="print-title">أعلى المنتجات والفئات</h1>
+              <div class="print-subtitle">
+                ${escapeHtml(selectedStoreCode)} — ${escapeHtml(selectedStoreName)}
+              </div>
+            </div>
+            <div class="print-meta">
+              ${escapeHtml(document.getElementById('productPeriodText')?.textContent || 'مبيعات آخر 7 أيام')}
+            </div>
+          </header>
+
+          <div class="print-top-grid">
+            <div>
+              <h2 class="print-section-title">أعلى 10 منتجات مبيعًا</h2>
+              <table class="print-table">
+                <thead>
+                  <tr><th>#</th><th>الكود / Alias</th><th>اسم المنتج</th><th>الكمية المبيعة</th></tr>
+                </thead>
+                <tbody>${topProductsRows}</tbody>
+              </table>
+            </div>
+            <div>
+              <h2 class="print-section-title">المبيعات حسب القسم</h2>
+              <table class="print-table">
+                <thead><tr><th>القسم</th><th>القطع المبيعة</th></tr></thead>
+                <tbody>${topCategoriesRows}</tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      `;
+
+      reportElement.dataset.periodStart = period.startYmd;
+      reportElement.dataset.periodEnd = period.endYmd;
+      reportElement.dataset.employeeCount = String(employeeData.employees.length);
+      reportElement.dataset.storeCode = String(selectedStoreCode);
+      return reportElement;
+    }
+
+    function printShowroomReport() {
+      const reportElement = buildPrintableReport();
+      if (!reportElement) {
+        alert('تعذر تجهيز التقرير. تأكد من تسجيل الدخول واكتمال تحميل بيانات المعرض.');
+        return;
+      }
+
+      const originalTitle = document.title;
+      const safeStoreName = String(selectedStoreName || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
+      document.title = `Orange_Showroom_Report_${selectedStoreCode}_${safeStoreName}`;
+      reportElement.setAttribute('aria-hidden', 'false');
+
+      const restoreAfterPrint = () => {
+        document.title = originalTitle;
+        reportElement.setAttribute('aria-hidden', 'true');
+        window.removeEventListener('afterprint', restoreAfterPrint);
+      };
+      window.addEventListener('afterprint', restoreAfterPrint);
+
+      requestAnimationFrame(() => {
+        window.print();
+      });
     }
 
     // Tab Switching Logic
