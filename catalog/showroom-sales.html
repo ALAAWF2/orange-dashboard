@@ -766,6 +766,37 @@
       return response?.ok ? response.json() : null;
     }
 
+    async function loadExtendedTargetRowsIfNeeded(now = new Date()) {
+      const activeTargetDate = getActiveEmployeeTargetDate(now);
+      const currentMonthPrefix = toLocalYmd(new Date(now.getFullYear(), now.getMonth(), 1)).slice(0, 7);
+      const activeTargetMonthPrefix = activeTargetDate.slice(0, 7);
+
+      if (activeTargetMonthPrefix === currentMonthPrefix) return;
+
+      const existingTargets = Array.isArray(mgmtData?.targets) ? mgmtData.targets : [];
+      if (existingTargets.some(row => Array.isArray(row) && row[0] === activeTargetDate)) return;
+
+      const fullResponse = await fetch('../management_data.json?_=' + Date.now()).catch(() => null);
+      const fullManagementData = await readJsonResponse(fullResponse);
+      const extendedTargetRows = Array.isArray(fullManagementData?.targets)
+        ? fullManagementData.targets.filter(
+          row => Array.isArray(row) && String(row[0]).startsWith(activeTargetMonthPrefix)
+        )
+        : [];
+
+      if (extendedTargetRows.length === 0) {
+        dataWarnings.push('تعذر تحميل تارجت فترة التمديد');
+        return;
+      }
+
+      const existingKeys = new Set(
+        existingTargets.map(row => `${row?.[0]}|${row?.[1]}`)
+      );
+      mgmtData.targets = existingTargets.concat(
+        extendedTargetRows.filter(row => !existingKeys.has(`${row[0]}|${row[1]}`))
+      );
+    }
+
     // Init & Load Data
     document.addEventListener('DOMContentLoaded', async () => {
       const isAuthorized = await checkAuthAndPermissions();
@@ -860,6 +891,7 @@
         if (!empData?.history || !empData?.employee_names) {
           throw new Error('ملف بيانات الموظفين غير متوفر أو غير صالح.');
         }
+        await loadExtendedTargetRowsIfNeeded();
         if (!incentivesData?.incentives) {
           incentivesData = { incentives: {} };
           dataWarnings.push('تعذر تحميل عمولات معدل الفاتورة');
