@@ -950,6 +950,7 @@
     let allowedOutlets = [];
 
     let mgmtData = null;
+    let historicalMgmtData = null;
     let empData = null;
     let incentivesData = null;
     let productsData = null;
@@ -1028,6 +1029,9 @@
 
       const fullResponse = await fetch('../management_data.json?_=' + Date.now()).catch(() => null);
       const fullManagementData = await readJsonResponse(fullResponse);
+      if (fullManagementData?.sales && fullManagementData?.transactions) {
+        historicalMgmtData = fullManagementData;
+      }
       const extendedTargetRows = Array.isArray(fullManagementData?.targets)
         ? fullManagementData.targets.filter(
           row => Array.isArray(row) && String(row[0]).startsWith(activeTargetMonthPrefix)
@@ -1045,6 +1049,34 @@
       mgmtData.targets = existingTargets.concat(
         extendedTargetRows.filter(row => !existingKeys.has(`${row[0]}|${row[1]}`))
       );
+    }
+
+    function getReportingManagementData() {
+      const currentMonthPrefix = toLocalYmd(new Date()).slice(0, 7);
+      if (selectedMonthPrefix !== currentMonthPrefix && historicalMgmtData) {
+        return historicalMgmtData;
+      }
+      return mgmtData;
+    }
+
+    async function ensureHistoricalManagementData() {
+      if (historicalMgmtData?.sales && historicalMgmtData?.transactions) {
+        return historicalMgmtData;
+      }
+
+      const response = await fetch('../management_data.json?_=' + Date.now());
+      const fullData = await readJsonResponse(response);
+      if (
+        !fullData
+        || !Array.isArray(fullData.sales)
+        || !Array.isArray(fullData.transactions)
+        || !Array.isArray(fullData.visitors)
+      ) {
+        throw new Error('ملف السجل الكامل للمبيعات غير متوفر أو غير صالح.');
+      }
+
+      historicalMgmtData = fullData;
+      return historicalMgmtData;
     }
 
     // Init & Load Data
