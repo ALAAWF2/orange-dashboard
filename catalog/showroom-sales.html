@@ -605,6 +605,7 @@
                 <th>تطور الحصة %</th>
                 <th>الهدف</th>
                 <th>التحقيق %</th>
+                <th title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
                 <th>عمولة معدل الفاتورة</th>
                 <th>اليومية المتبقية</th>
                 <th>الفواتير</th>
@@ -1073,6 +1074,38 @@
       return 0;
     }
 
+    function getEmployeeSalesCommission(empSales, empTarget, storeCode, targetDate, storeTotalSales) {
+      const storeTargets = mgmtData?.targets || [];
+      let storeTargetRow = storeTargets.find(row =>
+        Array.isArray(row)
+        && String(row[1]) === String(storeCode)
+        && row[0] === targetDate
+      );
+
+      if (!storeTargetRow && targetDate === '2026-03-20') {
+        storeTargetRow = storeTargets.find(row =>
+          Array.isArray(row)
+          && String(row[1]) === String(storeCode)
+          && row[0] === '2026-03-01'
+        );
+      }
+
+      const branchTargetComm = Number(storeTargetRow?.[2]) || 0;
+      const branchAchComm = branchTargetComm > 0
+        ? (storeTotalSales / branchTargetComm) * 100
+        : 0;
+
+      let branchCommPercent = 0;
+      if (branchAchComm >= 100) branchCommPercent = 0.02;
+      else if (branchAchComm >= 90) branchCommPercent = 0.01;
+      else if (branchAchComm >= 80) branchCommPercent = 0.005;
+
+      if (empTarget <= 0 || branchCommPercent <= 0 || empSales <= 0) return 0;
+
+      const empAchPercent = empSales / empTarget;
+      return (empAchPercent * branchCommPercent) * empSales;
+    }
+
     function getEmployeeAverageBillCommission(empId, storeCode, monthPrefix) {
       const monthRecords = incentivesData?.incentives?.[String(storeCode)]?.[monthPrefix] || [];
       const normalizedId = normalizeEmployeeId(empId);
@@ -1222,7 +1255,7 @@
       document.getElementById('empsCount').textContent = empList.length;
 
       if (empList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted p-4">لا توجد بيانات موظفين مسجلة لهذا المعرض خلال الشهر الحالي</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted p-4">لا توجد بيانات موظفين مسجلة لهذا المعرض خلال الشهر الحالي</td></tr>';
         return;
       }
 
@@ -1243,6 +1276,13 @@
 
         const avgTicket = emp.invoices > 0 ? emp.sales / emp.invoices : 0;
         const upt = emp.invoices > 0 ? emp.items / emp.invoices : 0;
+        const salesCommission = getEmployeeSalesCommission(
+          emp.sales,
+          empTarget,
+          storeCode,
+          targetDate,
+          storeTotalSales
+        );
         const averageBillCommission = getEmployeeAverageBillCommission(emp.id, storeCode, monthPrefix);
         const commissionText = averageBillCommission.recordCount > 0
           ? `${fmtMoney(averageBillCommission.total)} ر.س`
@@ -1265,6 +1305,7 @@
             <td><span class="badge-status badge-green">▲ +${(1.2 + (idx%3)*0.5).toFixed(1)}%</span></td>
             <td>${empTarget > 0 ? fmtMoney(empTarget) : '—'}</td>
             <td>${empTarget > 0 ? `<span class="badge-status ${achClass}">${fmtPerc(ach)}</span>` : '—'}</td>
+            <td style="font-weight:800; color:var(--text-main); background:var(--warning-light);">${salesCommission > 0 ? `${fmtMoney(salesCommission)} ر.س` : '—'}</td>
             <td style="font-weight:800; color:var(--accent);">${commissionText}${pendingText}</td>
             <td style="color:var(--danger); font-weight:800;">${empTarget > 0 ? `${fmtMoney(dailyReq)} ر.س` : '—'}</td>
             <td>${emp.invoices}</td>
