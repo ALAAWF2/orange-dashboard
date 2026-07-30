@@ -4481,7 +4481,7 @@ const EMPLOYEES = [
         "name": "خالد محمد النهاري",
         "startDate": "2025-07-08",
         "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall و 1004-07-Arab Mall",
+        "showroom": "1002-05-Haifa Mall",
         "showroomDetails": [
             {
                 "name": "1002-05-Haifa Mall",
@@ -4490,17 +4490,9 @@ const EMPLOYEES = [
                     "1002-C",
                     "1002-E"
                 ]
-            },
-            {
-                "name": "1004-07-Arab Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1004-C",
-                    "1004-E"
-                ]
             }
         ],
-        "addressBooks": "1002-C;1002-E;1004-C;1004-E"
+        "addressBooks": "1002-C;1002-E"
     },
     {
         "employeeId": "4651-اماني سعد المالكي",
@@ -6147,6 +6139,25 @@ const EMPLOYEES = [
         "addressBooks": "1801-C;1801-E"
     },
     {
+        "employeeId": "4892-راسيلل أمان كيزاكيتي",
+        "personnelNumber": "4892",
+        "name": "راسيلل أمان كيزاكيتي",
+        "startDate": "2026-02-26",
+        "manager": "المنطقة الشمالية",
+        "showroom": "1401-23-Alia Mall Madinah",
+        "showroomDetails": [
+            {
+                "name": "1401-23-Alia Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1401-C",
+                    "1401-E"
+                ]
+            }
+        ],
+        "addressBooks": "1401-C;1401-E"
+    },
+    {
         "employeeId": "4895-تاريك عباس",
         "personnelNumber": "4895",
         "name": "تاريك عباس",
@@ -6449,6 +6460,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1501-C;1501-E"
+    },
+    {
+        "employeeId": "4904-محمد ياشير شيتيان تو",
+        "personnelNumber": "4904",
+        "name": "محمد ياشير شيتيان تو",
+        "startDate": "2026-03-12",
+        "manager": "المنطقة الشمالية",
+        "showroom": "1401-23-Alia Mall Madinah",
+        "showroomDetails": [
+            {
+                "name": "1401-23-Alia Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1401-C",
+                    "1401-E"
+                ]
+            }
+        ],
+        "addressBooks": "1401-C;1401-E"
     },
     {
         "employeeId": "4938-طارق الخلف",
