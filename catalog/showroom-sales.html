@@ -41,7 +41,6 @@
       --border-radius-lg: 24px;
       --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
       --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.06);
-      --shadow-glow: 0 8px 24px rgba(254, 121, 0, 0.2);
 
       --font-family: 'Tajawal', sans-serif;
       --transition: 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -483,7 +482,7 @@
       </span>
     </div>
 
-    <div>
+    <div id="showroomSelectContainer" style="display: none;">
       <label for="showroomSelect" class="visually-hidden">اختر المعرض</label>
       <select id="showroomSelect" onchange="onShowroomChange(this.value)" class="styled-select" aria-label="اختر المعرض">
         <option value="">جاري تحميل المعارض...</option>
@@ -544,7 +543,7 @@
         <button class="tab-btn active" id="tabBtnDaily" onclick="switchTab('daily')" role="tab">
           <i class="bi bi-calendar3"></i> المبيعات اليومية <span class="tab-badge" id="dailyDaysCount">0</span>
         </button>
-        <button class="tab-btn" id="tabBtnEmps" onclick="switchTab('employees')" role="tab">
+        <button class="tab-btn" id="tabBtnEmployees" onclick="switchTab('employees')" role="tab">
           <i class="bi bi-people-fill"></i> ترتيب الموظفين <span class="tab-badge" id="empsCount">0</span>
         </button>
         <button class="tab-btn" id="tabBtnTop" onclick="switchTab('top')" role="tab">
@@ -573,7 +572,7 @@
                 <th>الفواتير</th>
                 <th>م. الفاتورة</th>
                 <th>الزوار</th>
-                <th>زوار 17</th>
+                <th>زوار LY</th>
                 <th>قيمة العميل</th>
                 <th>التحويل %</th>
               </tr>
@@ -668,7 +667,19 @@
   </main>
 
   <script>
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+    });
+
     // Global State
+    let currentUser = null;
+    let userProfile = null;
+    let canSwitchStores = false;
+    let allowedOutlets = [];
+
     let mgmtData = null;
     let empData = null;
     let incentivesData = null;
@@ -690,8 +701,43 @@
 
     // Init & Load Data
     document.addEventListener('DOMContentLoaded', async () => {
+      await checkAuthAndPermissions();
       await loadAllData();
     });
+
+    async function checkAuthAndPermissions() {
+      try {
+        const { data: userRes } = await supabaseClient.auth.getUser();
+        currentUser = userRes?.user || null;
+
+        if (currentUser) {
+          let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+          if (!profile) {
+            const fallback = await supabaseClient.from('profiles').select('*').eq('email', currentUser.email).single();
+            profile = fallback.data;
+          }
+          userProfile = profile || null;
+        }
+
+        const role = userProfile?.role || '';
+        const managedOutlets = userProfile?.managed_outlets || [];
+
+        if (role === 'admin' || role === 'maintenance_admin') {
+          canSwitchStores = true;
+          allowedOutlets = []; // all allowed
+        } else if (role === 'manager' && managedOutlets.length > 0) {
+          canSwitchStores = true;
+          allowedOutlets = managedOutlets;
+        } else {
+          canSwitchStores = false;
+          allowedOutlets = userProfile?.mall ? [userProfile.mall] : [];
+        }
+      } catch (e) {
+        console.warn("Auth check error in showroom sales:", e);
+        canSwitchStores = false;
+        allowedOutlets = [];
+      }
+    }
 
     async function loadAllData() {
       try {
@@ -707,23 +753,40 @@
         if (incRes && incRes.ok) incentivesData = await incRes.json();
         if (prodRes && prodRes.ok) productsData = await prodRes.json();
 
-        populateStoreSelect();
+        // Permissions: If user cannot switch stores, force store to user's mall
+        const userAssignedMall = userProfile?.mall || '';
 
-        // Determine initial store from URL or fallback
-        const urlParams = new URLSearchParams(window.location.search);
-        const requestedStore = urlParams.get('store');
-
-        if (requestedStore && findStoreCodeByName(requestedStore)) {
-          selectedStoreName = requestedStore;
-          selectedStoreCode = findStoreCodeByName(requestedStore);
+        if (!canSwitchStores && userAssignedMall) {
+          // Hide selector
+          document.getElementById('showroomSelectContainer').style.display = 'none';
+          selectedStoreName = userAssignedMall;
+          selectedStoreCode = findStoreCodeByName(userAssignedMall);
         } else {
-          // Default to first showroom
-          const firstCode = Object.keys(mgmtData?.stores || {})[0];
-          selectedStoreCode = firstCode || "1001";
-          selectedStoreName = mgmtData?.stores?.[selectedStoreCode] || "المعرض";
+          // Can switch stores: populate dropdown
+          populateStoreSelect();
+          document.getElementById('showroomSelectContainer').style.display = 'block';
+
+          // Determine store from URL or fallback
+          const urlParams = new URLSearchParams(window.location.search);
+          const requestedStore = urlParams.get('store');
+
+          if (requestedStore && findStoreCodeByName(requestedStore) && (allowedOutlets.length === 0 || allowedOutlets.includes(requestedStore))) {
+            selectedStoreName = requestedStore;
+            selectedStoreCode = findStoreCodeByName(requestedStore);
+          } else if (userAssignedMall && findStoreCodeByName(userAssignedMall)) {
+            selectedStoreName = userAssignedMall;
+            selectedStoreCode = findStoreCodeByName(userAssignedMall);
+          } else {
+            const firstCode = allowedOutlets.length > 0 
+              ? findStoreCodeByName(allowedOutlets[0])
+              : Object.keys(mgmtData?.stores || {})[0];
+            selectedStoreCode = firstCode || "1001";
+            selectedStoreName = mgmtData?.stores?.[selectedStoreCode] || "المعرض";
+          }
+
+          document.getElementById('showroomSelect').value = selectedStoreCode;
         }
 
-        document.getElementById('showroomSelect').value = selectedStoreCode;
         renderShowroomData();
 
         document.getElementById('loadingState').style.display = 'none';
@@ -738,7 +801,7 @@
     }
 
     function findStoreCodeByName(name) {
-      if (!mgmtData || !mgmtData.stores) return null;
+      if (!mgmtData || !mgmtData.stores || !name) return null;
       const target = name.trim().toLowerCase();
       for (const [code, sName] of Object.entries(mgmtData.stores)) {
         if (sName.trim().toLowerCase() === target) return code;
@@ -754,7 +817,10 @@
       const entries = Object.entries(mgmtData.stores)
         .filter(([code, name]) => {
           const lower = name.toLowerCase();
-          return code !== '0' && code !== '1013' && lower !== 'warehouse' && !lower.includes('riyadh') && !lower.includes('مستودع') && name !== 'PLATFORMS';
+          const isValidType = code !== '0' && code !== '1013' && lower !== 'warehouse' && !lower.includes('riyadh') && !lower.includes('مستودع') && name !== 'PLATFORMS';
+          if (!isValidType) return false;
+          if (allowedOutlets.length > 0) return allowedOutlets.includes(name);
+          return true;
         })
         .sort((a, b) => a[1].localeCompare(b[1], 'ar'));
 
@@ -767,6 +833,7 @@
     }
 
     function onShowroomChange(code) {
+      if (!canSwitchStores) return;
       selectedStoreCode = code;
       selectedStoreName = mgmtData?.stores?.[code] || code;
       renderShowroomData();
@@ -777,39 +844,92 @@
 
       document.getElementById('storeTitleName').textContent = selectedStoreName;
 
-      // Filter Current Month Sales for this store (e.g. 2026-07)
       const now = new Date();
       const year = now.getFullYear();
       const monthStr = String(now.getMonth() + 1).padStart(2, '0');
       const currentMonthPrefix = `${year}-${monthStr}`;
 
-      const allSales = mgmtData?.sales || [];
-      const storeSalesRows = allSales.filter(r => r[1] === selectedStoreCode && r[0].startsWith(currentMonthPrefix));
+      // Build Fast Lookup Maps for Selected Store from REAL DATA
+      const salesMap = {};
+      const transMap = {};
+      const visitorsMap = {};
 
-      // Calculate MTD Totals
-      let mtdSales = 0;
-      const salesByDate = {};
-      storeSalesRows.forEach(r => {
-        const d = r[0];
-        const val = Number(r[2]) || 0;
-        mtdSales += val;
-        salesByDate[d] = (salesByDate[d] || 0) + val;
+      (mgmtData?.sales || []).forEach(r => {
+        if (String(r[1]) === String(selectedStoreCode)) {
+          salesMap[r[0]] = (salesMap[r[0]] || 0) + (Number(r[2]) || 0);
+        }
       });
 
-      // Target
+      (mgmtData?.transactions || []).forEach(r => {
+        if (String(r[1]) === String(selectedStoreCode)) {
+          transMap[r[0]] = (transMap[r[0]] || 0) + (Number(r[2]) || 0);
+        }
+      });
+
+      (mgmtData?.visitors || []).forEach(r => {
+        if (String(r[1]) === String(selectedStoreCode)) {
+          visitorsMap[r[0]] = (visitorsMap[r[0]] || 0) + (Number(r[2]) || 0);
+        }
+      });
+
+      // Target Calculation: Find in mgmtData.targets array ['YYYY-MM-DD', 'store_code', target_amount]
       const targetsList = mgmtData?.targets || [];
-      const targetObj = targetsList.find(t => String(t.store_code) === String(selectedStoreCode) && t.period === currentMonthPrefix);
-      const mtdTarget = Number(targetObj?.target) || 1000000; // fallback
+      let mtdTarget = 0;
+      const targetRow = targetsList.find(r => Array.isArray(r) && String(r[1]) === String(selectedStoreCode) && r[0].startsWith(currentMonthPrefix));
+      
+      if (targetRow && targetRow[2]) {
+        mtdTarget = Number(targetRow[2]) || 0;
+      } else {
+        // Fallback: sum employee targets for employees belonging to this store
+        const storeEmpHistory = empData?.history?.[selectedStoreCode] || [];
+        const empSet = new Set(storeEmpHistory.map(r => {
+          const raw = String(r[1] || '');
+          return raw.includes('-') ? raw.split('-')[0].trim() : raw;
+        }).filter(Boolean));
+        
+        empSet.forEach(empId => {
+          mtdTarget += getEmployeeTarget(empId, currentMonthPrefix);
+        });
+      }
 
-      // Achievement
-      const ach = mtdTarget > 0 ? (mtdSales / mtdTarget) * 100 : 0;
-
-      // Remaining Days & Daily Required
+      // Compute MTD Totals using REAL DATA
       const daysInMonth = new Date(year, now.getMonth() + 1, 0).getDate();
       const currentDay = now.getDate();
+
+      let mtdSales = 0;
+      let mtdSalesLY = 0;
+      let mtdTrans = 0;
+      let mtdVisitors = 0;
+
+      for (let d = 1; d <= currentDay; d++) {
+        const dayStr = String(d).padStart(2, '0');
+        const dateKey = `${currentMonthPrefix}-${dayStr}`;
+        const lyDateKey = `${year - 1}-${monthStr}-${dayStr}`;
+
+        const s = salesMap[dateKey] || 0;
+        const sLY = salesMap[lyDateKey] || 0;
+        const t = transMap[dateKey] || 0;
+        const v = visitorsMap[dateKey] || 0;
+
+        mtdSales += s;
+        mtdSalesLY += sLY;
+        mtdTrans += t;
+        mtdVisitors += v;
+      }
+
+      // Achievement %
+      const ach = mtdTarget > 0 ? (mtdSales / mtdTarget) * 100 : 0;
+
+      // Overall Growth % vs Last Year MTD
+      const overallGrowth = mtdSalesLY > 0 ? ((mtdSales - mtdSalesLY) / mtdSalesLY) * 100 : 0;
+
+      // Remaining Days & Daily Required
       const remainingDays = Math.max(1, daysInMonth - currentDay);
       const remainingSalesReq = Math.max(0, mtdTarget - mtdSales);
       const dailyReq = remainingSalesReq / remainingDays;
+
+      // Conversion %
+      const overallConv = mtdVisitors > 0 ? (mtdTrans / mtdVisitors) * 100 : 0;
 
       // Update KPI Cards UI
       document.getElementById('kpiSales').textContent = fmtMoney(mtdSales) + ' ر.س';
@@ -822,15 +942,18 @@
       else if (ach >= 80) cardAch.className = 'kpi-card orange';
       else cardAch.className = 'kpi-card red';
 
-      // Growth placeholder/calc
-      const growth = 5.4; // Simulated positive growth indicator
-      document.getElementById('kpiGrowth').textContent = (growth >= 0 ? '+' : '') + fmtPerc(growth);
-      document.getElementById('cardGrowth').className = growth >= 0 ? 'kpi-card green' : 'kpi-card red';
+      // Growth vs LY
+      document.getElementById('kpiGrowth').textContent = (overallGrowth >= 0 ? '+' : '') + fmtPerc(overallGrowth);
+      document.getElementById('cardGrowth').className = overallGrowth >= 0 ? 'kpi-card green' : 'kpi-card red';
 
       document.getElementById('kpiDailyReq').textContent = fmtMoney(dailyReq) + ' ر.س';
 
-      // Daily Sales Table
-      renderDailySalesTable(salesByDate, currentMonthPrefix, daysInMonth, currentDay);
+      // Conversion & Invoices
+      document.getElementById('kpiConversion').textContent = fmtPerc(overallConv);
+      document.getElementById('kpiInvoicesSub').textContent = `${mtdTrans.toLocaleString()} فاتورة`;
+
+      // Daily Sales Table with Real Data
+      renderDailySalesTable(salesMap, transMap, visitorsMap, currentMonthPrefix, daysInMonth, currentDay, year, monthStr);
 
       // Employee Leaderboard Table
       renderEmployeeLeaderboard(selectedStoreCode, mtdSales, currentMonthPrefix, remainingDays);
@@ -839,74 +962,102 @@
       renderTopProductsAndCategories(selectedStoreName);
     }
 
-    function renderDailySalesTable(salesByDate, monthPrefix, daysInMonth, currentDay) {
+    function getEmployeeTarget(empId, currentMonthPrefix) {
+      if (!empData) return 75000;
+      const mTargets = empData.monthly_targets?.[empId];
+      if (mTargets && typeof mTargets === 'object') {
+        for (const [dStr, targetVal] of Object.entries(mTargets)) {
+          if (dStr.startsWith(currentMonthPrefix)) {
+            return Number(targetVal) || 0;
+          }
+        }
+      }
+      if (empData.targets && empData.targets[empId]) {
+        return Number(empData.targets[empId]) || 0;
+      }
+      return 75000;
+    }
+
+    function renderDailySalesTable(salesMap, transMap, visitorsMap, monthPrefix, daysInMonth, currentDay, year, monthStr) {
       const tbody = document.getElementById('dailyTableBody');
       tbody.innerHTML = '';
 
       let totalSales = 0;
+      let totalSalesLY = 0;
       let totalInvoices = 0;
       let totalVisitors = 0;
+      let totalVisitorsLY = 0;
+
       let rowsHtml = '';
       let daysRenderedCount = 0;
 
       for (let d = 1; d <= currentDay; d++) {
         const dayStr = String(d).padStart(2, '0');
         const dateKey = `${monthPrefix}-${dayStr}`;
+        const lyDateKey = `${year - 1}-${monthStr}-${dayStr}`;
+
         const dateObj = new Date(dateKey);
         const dayOfWeekName = ARABIC_DAYS[dateObj.getDay()];
 
-        const sales = salesByDate[dateKey] || 0;
+        const sales = salesMap[dateKey] || 0;
+        const salesLY = salesMap[lyDateKey] || 0;
+        const invoices = transMap[dateKey] || 0;
+        const visitors = visitorsMap[dateKey] || 0;
+        const visitorsLY = visitorsMap[lyDateKey] || 0;
+
         totalSales += sales;
+        totalSalesLY += salesLY;
+        totalInvoices += invoices;
+        totalVisitors += visitors;
+        totalVisitorsLY += visitorsLY;
         daysRenderedCount++;
 
-        // Simulated visitors & invoices for complete visual output matching design
-        const invoices = Math.max(1, Math.round(sales / (220 + (d % 3) * 15)));
-        const visitors = Math.round(invoices * (3.8 + (d % 2) * 0.4));
-        const visitors17 = Math.round(visitors * 0.85);
-        const prevYearSales = Math.round(sales * (0.92 + (d % 5) * 0.03));
-        const growth = prevYearSales > 0 ? ((sales - prevYearSales) / prevYearSales) * 100 : 0;
+        const growth = salesLY > 0 ? ((sales - salesLY) / salesLY) * 100 : 0;
         const avgTicket = invoices > 0 ? sales / invoices : 0;
         const custVal = visitors > 0 ? sales / visitors : 0;
         const convRate = visitors > 0 ? (invoices / visitors) * 100 : 0;
 
-        totalInvoices += invoices;
-        totalVisitors += visitors;
-
         const growthClass = growth >= 0 ? 'badge-green' : 'badge-red';
         const growthSign = growth >= 0 ? '+' : '';
 
+        const isWeekend = dateObj.getDay() === 5 || dateObj.getDay() === 6; // Friday or Saturday
+        const rowBgStyle = isWeekend ? 'style="background-color: #fffcf5;"' : '';
+
         rowsHtml += `
-          <tr>
+          <tr ${rowBgStyle}>
             <td><strong>${dateKey}</strong></td>
             <td>${dayOfWeekName}</td>
             <td style="font-weight:800; color:var(--text-main);">${fmtMoney(sales)} ر.س</td>
-            <td style="color:var(--text-muted);">${fmtMoney(prevYearSales)}</td>
+            <td style="color:var(--text-muted);">${fmtMoney(salesLY)}</td>
             <td><span class="badge-status ${growthClass}">${growthSign}${fmtPerc(growth)}</span></td>
             <td>${invoices}</td>
             <td>${fmtMoney(avgTicket)}</td>
-            <td style="color:var(--primary-dark); font-weight:700;">${visitors}</td>
-            <td>${visitors17}</td>
+            <td style="color:var(--primary-dark); font-weight:700;">${visitors > 0 ? visitors.toLocaleString() : '-'}</td>
+            <td style="color:var(--text-muted);">${visitorsLY > 0 ? visitorsLY.toLocaleString() : '-'}</td>
             <td>${fmtMoney(custVal)}</td>
-            <td><strong>${fmtPerc(convRate)}</strong></td>
+            <td><strong>${visitors > 0 ? fmtPerc(convRate) : '-'}</strong></td>
           </tr>
         `;
       }
 
       // Total Row
+      const totalGrowth = totalSalesLY > 0 ? ((totalSales - totalSalesLY) / totalSalesLY) * 100 : 0;
       const totalAvgTicket = totalInvoices > 0 ? totalSales / totalInvoices : 0;
       const totalCustVal = totalVisitors > 0 ? totalSales / totalVisitors : 0;
       const totalConvRate = totalVisitors > 0 ? (totalInvoices / totalVisitors) * 100 : 0;
+      const totalGrowthSign = totalGrowth >= 0 ? '+' : '';
+      const totalGrowthClass = totalGrowth >= 0 ? 'badge-green' : 'badge-red';
 
       rowsHtml += `
         <tr class="total-row">
           <td colspan="2">المجموع التراكمي (MTD)</td>
           <td>${fmtMoney(totalSales)} ر.س</td>
-          <td>—</td>
-          <td>—</td>
-          <td>${totalInvoices}</td>
+          <td>${fmtMoney(totalSalesLY)}</td>
+          <td><span class="badge-status ${totalGrowthClass}">${totalGrowthSign}${fmtPerc(totalGrowth)}</span></td>
+          <td>${totalInvoices.toLocaleString()}</td>
           <td>${fmtMoney(totalAvgTicket)}</td>
-          <td>${totalVisitors}</td>
-          <td>—</td>
+          <td>${totalVisitors.toLocaleString()}</td>
+          <td>${totalVisitorsLY.toLocaleString()}</td>
           <td>${fmtMoney(totalCustVal)}</td>
           <td>${fmtPerc(totalConvRate)}</td>
         </tr>
@@ -914,8 +1065,6 @@
 
       tbody.innerHTML = rowsHtml;
       document.getElementById('dailyDaysCount').textContent = daysRenderedCount;
-      document.getElementById('kpiConversion').textContent = fmtPerc(totalConvRate);
-      document.getElementById('kpiInvoicesSub').textContent = `${totalInvoices.toLocaleString()} فاتورة`;
     }
 
     function renderEmployeeLeaderboard(storeCode, storeTotalSales, monthPrefix, remainingDays) {
@@ -924,7 +1073,6 @@
 
       const storeEmpHistory = empData?.history?.[storeCode] || [];
       const empNames = empData?.employee_names || {};
-      const empTargets = empData?.monthly_targets?.[monthPrefix] || empData?.targets || {};
 
       // Aggregate employee metrics for this store
       const empMap = {};
@@ -970,7 +1118,7 @@
         else if (rank === 3) rankBadgeHtml = `<span class="rank-circle rank-3">🥉</span>`;
 
         const share = storeTotalSales > 0 ? (emp.sales / storeTotalSales) * 100 : 0;
-        const empTarget = Number(empTargets[emp.id]) || 75000;
+        const empTarget = getEmployeeTarget(emp.id, monthPrefix);
         const ach = empTarget > 0 ? (emp.sales / empTarget) * 100 : 0;
 
         const remainingReq = Math.max(0, empTarget - emp.sales);
@@ -1054,12 +1202,21 @@
 
     // Tab Switching Logic
     function switchTab(tabId) {
-      ['daily', 'employees', 'top'].forEach(t => {
-        const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-        const btnEl = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
-        if (tabEl && btnEl) {
-          tabEl.style.display = t === tabId ? 'block' : 'none';
-          btnEl.classList.toggle('active', t === tabId);
+      const tabs = [
+        { key: 'daily', divId: 'tabDaily', btnId: 'tabBtnDaily' },
+        { key: 'employees', divId: 'tabEmployees', btnId: 'tabBtnEmployees' },
+        { key: 'top', divId: 'tabTop', btnId: 'tabBtnTop' }
+      ];
+
+      tabs.forEach(t => {
+        const tabEl = document.getElementById(t.divId);
+        const btnEl = document.getElementById(t.btnId) || document.getElementById('tabBtnEmps');
+        const isActive = t.key === tabId;
+        if (tabEl) {
+          tabEl.style.display = isActive ? 'block' : 'none';
+        }
+        if (btnEl) {
+          btnEl.classList.toggle('active', isActive);
         }
       });
     }
