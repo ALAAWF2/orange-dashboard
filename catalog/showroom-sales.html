@@ -686,13 +686,6 @@
         text-align: right;
       }
 
-      .print-note {
-        margin-top: 2mm;
-        color: #64748b;
-        font-size: 7pt;
-        font-weight: 600;
-      }
-
     }
   </style>
 </head>
@@ -1302,8 +1295,9 @@
         new Date(now.getFullYear(), now.getMonth() - 1, 1)
       ).slice(0, 7);
       const availableMonths = new Set([currentMonthPrefix, previousMonthPrefix]);
+      const monthSource = historicalMgmtData || mgmtData;
 
-      (mgmtData?.sales || []).forEach(row => {
+      (monthSource?.sales || []).forEach(row => {
         if (
           Array.isArray(row)
           && String(row[1]) === String(selectedStoreCode)
@@ -1339,9 +1333,31 @@
       select.value = selectedMonthPrefix;
     }
 
-    function onMonthChange(monthPrefix) {
+    async function onMonthChange(monthPrefix) {
       if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthPrefix || '')) return;
+
+      const select = document.getElementById('monthSelect');
+      const previousSelection = selectedMonthPrefix;
       selectedMonthPrefix = monthPrefix;
+      const currentMonthPrefix = toLocalYmd(new Date()).slice(0, 7);
+
+      if (monthPrefix !== currentMonthPrefix) {
+        select.disabled = true;
+        document.getElementById('periodTitleText').textContent = 'جاري تحميل السجل الكامل…';
+        try {
+          await ensureHistoricalManagementData();
+          populateMonthSelect();
+        } catch (error) {
+          console.error('Failed to load historical management data:', error);
+          selectedMonthPrefix = previousSelection;
+          select.value = previousSelection;
+          dataWarnings.push('تعذر تحميل السجل الكامل للشهر السابق');
+          renderDataStatus();
+        } finally {
+          select.disabled = false;
+        }
+      }
+
       renderShowroomData();
     }
 
@@ -1403,6 +1419,7 @@
       document.getElementById('storeTitleName').textContent = selectedStoreName;
 
       const now = new Date();
+      const reportingData = getReportingManagementData();
       const period = getDashboardPeriod(selectedMonthPrefix, now);
       const year = period.year;
       const monthStr = period.monthStr;
@@ -1426,26 +1443,26 @@
       const transMap = {};
       const visitorsMap = {};
 
-      (mgmtData?.sales || []).forEach(r => {
+      (reportingData?.sales || []).forEach(r => {
         if (String(r[1]) === String(selectedStoreCode)) {
           salesMap[r[0]] = (salesMap[r[0]] || 0) + (Number(r[2]) || 0);
         }
       });
 
-      (mgmtData?.transactions || []).forEach(r => {
+      (reportingData?.transactions || []).forEach(r => {
         if (String(r[1]) === String(selectedStoreCode)) {
           transMap[r[0]] = (transMap[r[0]] || 0) + (Number(r[2]) || 0);
         }
       });
 
-      (mgmtData?.visitors || []).forEach(r => {
+      (reportingData?.visitors || []).forEach(r => {
         if (String(r[1]) === String(selectedStoreCode)) {
           visitorsMap[r[0]] = (visitorsMap[r[0]] || 0) + (Number(r[2]) || 0);
         }
       });
 
       // Target Calculation: Find in mgmtData.targets array ['YYYY-MM-DD', 'store_code', target_amount]
-      const targetsList = mgmtData?.targets || [];
+      const targetsList = reportingData?.targets || [];
       let mtdTarget = 0;
       let targetRow = targetsList.find(r =>
         Array.isArray(r)
@@ -1737,7 +1754,7 @@
     }
 
     function getEmployeeSalesCommission(empSales, empTarget, storeCode, targetDate, storeTotalSales) {
-      const storeTargets = mgmtData?.targets || [];
+      const storeTargets = getReportingManagementData()?.targets || [];
       let storeTargetRow = storeTargets.find(row =>
         Array.isArray(row)
         && String(row[1]) === String(storeCode)
@@ -2191,10 +2208,11 @@
     }
 
     function buildPrintableDailyData(period) {
-      const salesLookup = buildSelectedStoreLookup(mgmtData?.sales);
-      const transactionLookup = buildSelectedStoreLookup(mgmtData?.transactions);
-      const visitorLookup = buildSelectedStoreLookup(mgmtData?.visitors);
-      const targetLookup = buildSelectedStoreLookup(mgmtData?.targets);
+      const reportingData = getReportingManagementData();
+      const salesLookup = buildSelectedStoreLookup(reportingData?.sales);
+      const transactionLookup = buildSelectedStoreLookup(reportingData?.transactions);
+      const visitorLookup = buildSelectedStoreLookup(reportingData?.visitors);
+      const targetLookup = buildSelectedStoreLookup(reportingData?.targets);
       const rows = [];
       const totals = {
         sales: 0,
@@ -2305,14 +2323,15 @@
     }
 
     function getReportStoreTarget(storeCode, targetDate) {
-      let targetRow = (mgmtData?.targets || []).find(row =>
+      const targets = getReportingManagementData()?.targets || [];
+      let targetRow = targets.find(row =>
         Array.isArray(row)
         && row[0] === targetDate
         && String(row[1]) === String(storeCode)
       );
 
       if (!targetRow && targetDate === '2026-03-20') {
-        targetRow = (mgmtData?.targets || []).find(row =>
+        targetRow = targets.find(row =>
           Array.isArray(row)
           && row[0] === '2026-03-01'
           && String(row[1]) === String(storeCode)
@@ -2568,9 +2587,6 @@
 
       const dailyTotals = dailyData.totals;
       const employeeTotals = employeeData.totals;
-      const averageBillPendingNote = employeeTotals.pendingAverageBillRecords > 0
-        ? `* توجد ${employeeTotals.pendingAverageBillRecords} نتيجة عمولة معدل فاتورة قيد المراجعة.`
-        : 'عمولة معدل الفاتورة مستقلة عن عمولة المبيعات وتظهر من سجل الحوافز المعتمد.';
 
       reportElement.innerHTML = `
         <section class="print-section" data-report-section="store-performance">
@@ -2639,9 +2655,6 @@
               </tr>
             </tbody>
           </table>
-          <div class="print-note">
-            المقارنة السنوية لشهري فبراير ومارس 2026 تراعي إزاحة رمضان (+11 يومًا) وفق منطق التقرير التشغيلي.
-          </div>
         </section>
 
         <section class="print-section" data-report-section="employees">
@@ -2710,10 +2723,6 @@
               </tr>
             </tbody>
           </table>
-          <div class="print-note">
-            ${escapeHtml(averageBillPendingNote)}
-            عمولة المبيعات محسوبة من تحقيق الموظف × شريحة تحقيق المعرض × مبيعات الموظف، كما في التقرير المرجعي.
-          </div>
         </section>
       `;
 
