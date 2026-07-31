@@ -4465,7 +4465,7 @@ const EMPLOYEES = [
         "name": "خالد محمد النهاري",
         "startDate": "2025-07-08",
         "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall",
+        "showroom": "1002-05-Haifa Mall و 1004-07-Arab Mall",
         "showroomDetails": [
             {
                 "name": "1002-05-Haifa Mall",
@@ -4474,9 +4474,17 @@ const EMPLOYEES = [
                     "1002-C",
                     "1002-E"
                 ]
+            },
+            {
+                "name": "1004-07-Arab Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1004-C",
+                    "1004-E"
+                ]
             }
         ],
-        "addressBooks": "1002-C;1002-E"
+        "addressBooks": "1002-C;1002-E;1004-C;1004-E"
     },
     {
         "employeeId": "4651-اماني سعد المالكي",
