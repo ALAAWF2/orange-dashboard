@@ -1187,7 +1187,7 @@
           selectedStoreCode = findStoreCodeByName(userAssignedMall);
         } else {
           // Can switch stores: populate dropdown
-          populateStoreSelect();
+          const availableStoreEntries = populateStoreSelect();
           document.getElementById('showroomSelectContainer').style.display = 'block';
 
           // Determine store from URL or fallback
@@ -1201,9 +1201,9 @@
             selectedStoreName = userAssignedMall;
             selectedStoreCode = findStoreCodeByName(userAssignedMall);
           } else {
-            const firstCode = allowedOutlets.length > 0 
+            const firstCode = allowedOutlets.length > 0
               ? findStoreCodeByName(allowedOutlets[0])
-              : Object.keys(mgmtData?.stores || {})[0];
+              : availableStoreEntries[0]?.[0];
             selectedStoreCode = firstCode || "1001";
             selectedStoreName = mgmtData?.stores?.[selectedStoreCode] || "المعرض";
           }
@@ -1246,12 +1246,17 @@
     function populateStoreSelect() {
       const select = document.getElementById('showroomSelect');
       select.innerHTML = '';
-      if (!mgmtData || !mgmtData.stores) return;
+      if (!mgmtData || !mgmtData.stores) return [];
 
       const entries = Object.entries(mgmtData.stores)
         .filter(([code, name]) => {
           const lower = name.toLowerCase();
-          const isValidType = code !== '0' && code !== '1013' && lower !== 'warehouse' && !lower.includes('riyadh') && !lower.includes('مستودع') && name !== 'PLATFORMS';
+          const isValidType = code !== '0'
+            && code !== '1013'
+            && lower !== 'warehouse'
+            && lower !== 'warehouse riyadh'
+            && !lower.includes('مستودع')
+            && name !== 'PLATFORMS';
           if (!isValidType) return false;
           if (allowedOutlets.length > 0) return allowedOutlets.includes(name);
           return true;
@@ -1264,6 +1269,8 @@
         opt.textContent = name;
         select.appendChild(opt);
       });
+
+      return entries;
     }
 
     function onShowroomChange(code) {

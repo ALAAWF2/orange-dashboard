@@ -756,6 +756,9 @@
                         <option value="transactions">الفواتير</option>
                         <option value="avg_ticket">معدل الفاتورة</option>
                         <option value="items_per_inv">متوسط القطع</option>
+                        <option value="expected_comm">العمولة المتوقعة</option>
+                        <option value="avg_bill_comm">عمولة معدل الفاتورة</option>
+                        <option value="total_comm">مجموع العمولات</option>
                     </select>
                 </div>
                 <!-- Search -->
@@ -870,8 +873,10 @@
                                                 onclick="sortTable('target')">الهدف</th>
                                             <th class="text-center sortable" data-sort="achievement"
                                                 onclick="sortTable('achievement')">التحقيق %</th>
-                                            <th class="text-center sortable px-2 bg-warning-subtle text-dark border-start border-end border-warning" data-sort="expected_comm"
+                                            <th class="text-center sortable" data-sort="expected_comm"
                                                 onclick="sortTable('expected_comm')" title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
+                                            <th class="text-center sortable" data-sort="avg_bill_comm"
+                                                onclick="sortTable('avg_bill_comm')" title="عمولة معدل الفاتورة من برنامج مكافآت متوسط الفاتورة">عمولة معدل الفاتورة</th>
                                             <th class="text-center sortable" data-sort="dailyReq"
                                                 onclick="sortTable('dailyReq')">اليومية المتبقية</th>
                                             <th class="d-none d-md-table-cell sortable" data-sort="transactions"
@@ -880,6 +885,8 @@
                                                 onclick="sortTable('avg_ticket')">معدل الفاتورة</th>
                                             <th class="d-none d-md-table-cell sortable" data-sort="items_per_inv"
                                                 onclick="sortTable('items_per_inv')">متوسط القطع</th>
+                                            <th class="text-center sortable" data-sort="total_comm"
+                                                onclick="sortTable('total_comm')" title="إجمالي العمولات (العمولة المتوقعة + عمولة معدل الفاتورة)">مجموع العمولات</th>
                                         </tr>
                                     </thead>
                                     <tbody id="leaderboardBody">
@@ -1437,6 +1444,50 @@
             let monthlyTargetsData = {}; // Global for new targets
 
             // Helpers
+            function normalizeEmployeeId(rawId) {
+                if (rawId == null) return '';
+                let employeeId = String(rawId).trim();
+                if (employeeId.toLowerCase().startsWith('unknown') || employeeId.toLowerCase().startsWith('unkown')) {
+                    employeeId = employeeId.toLowerCase().replace('unknown', '').replace('unkown', '').trim();
+                }
+                if (employeeId.includes('-')) {
+                    employeeId = employeeId.split('-')[0].trim();
+                }
+                return /^\d+$/.test(employeeId) ? employeeId.padStart(4, '0') : employeeId;
+            }
+
+            function getEmployeeAverageBillCommission(empId, storeCode, monthPrefix, storeStats = null) {
+                if (!averageBillIncentivesCache || !averageBillIncentivesCache.incentives) {
+                    return { total: 0, pendingCount: 0, recordCount: 0 };
+                }
+                const storesToCheck = new Set();
+                if (storeCode) storesToCheck.add(String(storeCode));
+                if (storeStats) {
+                    Object.keys(storeStats).forEach(sc => storesToCheck.add(String(sc)));
+                }
+                const normalizedId = normalizeEmployeeId(empId);
+                let total = 0;
+                let pendingCount = 0;
+                let recordCount = 0;
+
+                storesToCheck.forEach(sc => {
+                    const monthRecords = averageBillIncentivesCache.incentives?.[sc]?.[monthPrefix] || [];
+                    monthRecords.forEach(record => {
+                        const employeeRecord = Array.isArray(record.employees)
+                            ? record.employees.find(employee => normalizeEmployeeId(employee.id) === normalizedId)
+                            : null;
+                        if (!employeeRecord) return;
+
+                        recordCount++;
+                        const employeeShare = Number(employeeRecord.share || 0);
+                        if (employeeShare > 0) total += employeeShare;
+                        if (['PENDING_REVIEW', 'PRELIMINARY'].includes(record.status)) pendingCount++;
+                    });
+                });
+
+                return { total, pendingCount, recordCount };
+            }
+
             function getRemainingDays(metadataEndDate, currentRangeStart) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -2122,6 +2173,14 @@
                                 + (storeEmployeeSales * empAchPercent * storeCommissionPercent);
                         }, 0);
                     }
+
+                    // Calculate Average Bill Commission & Total Commissions
+                    let targetMonthPrefix = targetDateStr.slice(0, 7);
+                    const avgBillInfo = getEmployeeAverageBillCommission(e.id, e.storeCode, targetMonthPrefix, e.storeStats);
+                    e.avg_bill_comm = avgBillInfo.total;
+                    e.avg_bill_pending = avgBillInfo.pendingCount;
+                    e.avg_bill_records = avgBillInfo.recordCount;
+                    e.total_comm = (e.expected_comm || 0) + (e.avg_bill_comm || 0);
                 });
 
                 let remainingDays = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null, currentStart);
@@ -2317,6 +2376,16 @@
                         achBadge = `<span class="badge ${color}">${emp.achievement.toFixed(1)}%</span>`;
                     }
 
+                    let avgBillCommDisplay = '-';
+                    if (emp.avg_bill_comm > 0) {
+                        avgBillCommDisplay = Math.round(emp.avg_bill_comm).toLocaleString('en-US') + ' ر.س';
+                        if (emp.avg_bill_pending > 0) {
+                            avgBillCommDisplay += `<div style="font-size:0.72rem; color:#b78103;">${emp.avg_bill_pending} قيد المراجعة</div>`;
+                        }
+                    } else if (emp.avg_bill_pending > 0) {
+                        avgBillCommDisplay = `<span class="text-warning small">${emp.avg_bill_pending} قيد المراجعة</span>`;
+                    }
+
                     return `
     <tr onclick="openEmployeeInsights('${emp.id}')">
         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
@@ -2342,11 +2411,13 @@
 
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
-        <td class="text-center fw-bold text-dark bg-warning-subtle border-start border-end border-warning">${emp.expected_comm > 0 ? Math.round(emp.expected_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
+        <td class="text-center fw-bold">${emp.expected_comm > 0 ? Math.round(emp.expected_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
+        <td class="text-center fw-bold">${avgBillCommDisplay}</td>
         <td class="text-center fw-bold text-danger">${dailyReqText}</td>
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
         <td class="d-none d-md-table-cell">${emp.avg_ticket.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
         <td class="d-none d-md-table-cell">${emp.items_per_inv.toFixed(1)}</td>
+        <td class="text-center fw-bold">${emp.total_comm > 0 ? Math.round(emp.total_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
     </tr>
     `;
                 }).join('');
@@ -2379,6 +2450,8 @@
                         };
                         if (includeComm) {
                             r["العمولة المتوقعة"] = Math.round(e.expected_comm || 0);
+                            r["عمولة معدل الفاتورة"] = Math.round(e.avg_bill_comm || 0);
+                            r["مجموع العمولات"] = Math.round(e.total_comm || 0);
                         }
                         r["حصة الفرع %"] = (e.branchShare || 0).toFixed(1) + '%';
                         return r;
@@ -2387,7 +2460,7 @@
                     const ws = XLSX.utils.json_to_sheet(data);
                     // Adjust column widths
                     if (includeComm) {
-                        ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
+                        ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
                     } else {
                         ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
                     }
