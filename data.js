@@ -5786,18 +5786,18 @@ const EMPLOYEES = [
         "name": "شهير عبدالله",
         "startDate": "2025-11-02",
         "manager": "محمدكلو",
-        "showroom": "1113-51-Park Avenue Riyadh",
+        "showroom": "1106-32-Atyaf Mall Riyadh",
         "showroomDetails": [
             {
-                "name": "1113-51-Park Avenue Riyadh",
+                "name": "1106-32-Atyaf Mall Riyadh",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1113-C",
-                    "1113-E"
+                    "1106-C",
+                    "1106-E"
                 ]
             }
         ],
-        "addressBooks": "1113-C;1113-E"
+        "addressBooks": "1106-C;1106-E"
     },
     {
         "employeeId": "4869-مرام الحربي",
