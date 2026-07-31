@@ -2086,31 +2086,41 @@
                         targetDateStr = '2026-03-20';
                     }
 
-                    let branchTargetComm = 0;
-                    if (window.storeTargets) {
-                        const sto = window.storeTargets.find(t => t[1] === e.storeCode && t[0] === targetDateStr);
-                        if (sto) {
-                            branchTargetComm = sto[2];
-                        } else if (targetDateStr === '2026-03-20') {
-                            const stoAlt = window.storeTargets.find(t => t[1] === e.storeCode && t[0] === '2026-03-01');
-                            if (stoAlt) branchTargetComm = stoAlt[2];
-                        }
-                    }
-
-                    let branchAchComm = 0;
-                    if (branchTargetComm > 0) {
-                        branchAchComm = (branchTotalCurr / branchTargetComm) * 100;
-                    }
-
-                    let branchCommPercent = 0;
-                    if (branchAchComm >= 100) branchCommPercent = 0.02;
-                    else if (branchAchComm >= 90) branchCommPercent = 0.01;
-                    else if (branchAchComm >= 80) branchCommPercent = 0.005;
-
                     e.expected_comm = 0;
-                    if (e.target > 0 && branchCommPercent > 0 && e.sales > 0) {
+                    if (e.target > 0 && e.sales > 0) {
                         const empAchPercent = e.sales / e.target;
-                        e.expected_comm = (empAchPercent * branchCommPercent) * e.sales;
+                        e.expected_comm = Object.entries(e.storeStats).reduce((commissionTotal, [storeCode, storeEmployeeSales]) => {
+                            if (storeEmployeeSales <= 0) return commissionTotal;
+
+                            const storePeriodStats = branchStats[storeCode];
+                            const storeTotalSales = storePeriodStats ? storePeriodStats.current : 0;
+                            let storeTarget = 0;
+
+                            if (window.storeTargets) {
+                                const targetRow = window.storeTargets.find(t =>
+                                    String(t[1]) === String(storeCode) && t[0] === targetDateStr
+                                );
+                                if (targetRow) {
+                                    storeTarget = Number(targetRow[2]) || 0;
+                                } else if (targetDateStr === '2026-03-20') {
+                                    const fallbackRow = window.storeTargets.find(t =>
+                                        String(t[1]) === String(storeCode) && t[0] === '2026-03-01'
+                                    );
+                                    if (fallbackRow) storeTarget = Number(fallbackRow[2]) || 0;
+                                }
+                            }
+
+                            const storeAchievement = storeTarget > 0
+                                ? (storeTotalSales / storeTarget) * 100
+                                : 0;
+                            let storeCommissionPercent = 0;
+                            if (storeAchievement >= 100) storeCommissionPercent = 0.02;
+                            else if (storeAchievement >= 90) storeCommissionPercent = 0.01;
+                            else if (storeAchievement >= 80) storeCommissionPercent = 0.005;
+
+                            return commissionTotal
+                                + (storeEmployeeSales * empAchPercent * storeCommissionPercent);
+                        }, 0);
                     }
                 });
 

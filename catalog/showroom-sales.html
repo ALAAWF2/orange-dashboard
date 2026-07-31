@@ -1761,7 +1761,7 @@
       return 0;
     }
 
-    function getEmployeeSalesCommission(empSales, empTarget, storeCode, targetDate, storeTotalSales) {
+    function getStoreSalesCommissionPercent(storeCode, targetDate, storeTotalSales) {
       const storeTargets = getReportingManagementData()?.targets || [];
       let storeTargetRow = storeTargets.find(row =>
         Array.isArray(row)
@@ -1786,11 +1786,31 @@
       if (branchAchComm >= 100) branchCommPercent = 0.02;
       else if (branchAchComm >= 90) branchCommPercent = 0.01;
       else if (branchAchComm >= 80) branchCommPercent = 0.005;
+      return branchCommPercent;
+    }
 
-      if (empTarget <= 0 || branchCommPercent <= 0 || empSales <= 0) return 0;
+    function getEmployeeSalesCommission(
+      empStoreSales,
+      empTotalSales,
+      empTarget,
+      storeCode,
+      targetDate,
+      storeTotalSales
+    ) {
+      const branchCommPercent = getStoreSalesCommissionPercent(
+        storeCode,
+        targetDate,
+        storeTotalSales
+      );
+      if (
+        empTarget <= 0
+        || branchCommPercent <= 0
+        || empStoreSales <= 0
+        || empTotalSales <= 0
+      ) return 0;
 
-      const empAchPercent = empSales / empTarget;
-      return (empAchPercent * branchCommPercent) * empSales;
+      const empAchPercent = empTotalSales / empTarget;
+      return empStoreSales * empAchPercent * branchCommPercent;
     }
 
     function getEmployeeAverageBillCommission(empId, storeCode, monthPrefix) {
@@ -1919,6 +1939,22 @@
       const empNames = empData?.employee_names || {};
       let currentStoreTotalSales = 0;
       let previousStoreTotalSales = 0;
+      const globalEmployeeSales = {};
+
+      Object.values(empData?.history || {}).forEach(records => {
+        (records || []).forEach(record => {
+          const date = String(record[0] || '');
+          if (
+            date < comparisonPeriod.currentStart
+            || date > comparisonPeriod.currentEnd
+          ) return;
+
+          const empId = normalizeEmployeeId(record[1]);
+          if (!empId) return;
+          globalEmployeeSales[empId] =
+            (globalEmployeeSales[empId] || 0) + (Number(record[2]) || 0);
+        });
+      });
 
       // Aggregate employee metrics for this store
       const empMap = {};
@@ -2018,6 +2054,7 @@
         const upt = emp.invoices > 0 ? emp.items / emp.invoices : 0;
         const salesCommission = getEmployeeSalesCommission(
           emp.sales,
+          globalEmployeeSales[emp.id] || 0,
           empTarget,
           storeCode,
           targetDate,
@@ -2357,11 +2394,15 @@
     function buildPrintableEmployeeData(period) {
       const employeeNames = empData?.employee_names || {};
       const globalEmployees = {};
+      const storeSalesTotals = {};
 
       Object.entries(empData?.history || {}).forEach(([storeCode, records]) => {
         (records || []).forEach(record => {
           const dateYmd = String(record[0] || '');
           if (dateYmd < period.employeeStartYmd || dateYmd > period.endYmd) return;
+
+          const sales = Number(record[2]) || 0;
+          storeSalesTotals[storeCode] = (storeSalesTotals[storeCode] || 0) + sales;
 
           const identity = parseReportEmployeeIdentity(record[1]);
           if (!identity.id || identity.name === 'مرتجع') return;
@@ -2380,7 +2421,6 @@
           }
 
           const employee = globalEmployees[identity.id];
-          const sales = Number(record[2]) || 0;
           const invoices = Number(record[3]) || 0;
           const items = Number(record[4]) || 0;
 
@@ -2448,10 +2488,24 @@
           const dailyRequired = target > 0 && period.remainingDays > 0
             ? remaining / period.remainingDays
             : 0;
-          const salesCommission =
-            target > 0 && branchCommissionPercent > 0 && employee.mtd.sales > 0
-              ? ((employee.mtd.sales / target) * branchCommissionPercent) * employee.mtd.sales
-              : 0;
+          const employeeAchievement = target > 0
+            ? employee.mtd.sales / target
+            : 0;
+          const salesCommission = target > 0 && employee.mtd.sales > 0
+            ? Object.entries(employee.storeStats).reduce(
+                (commissionTotal, [storeCode, storeEmployeeSales]) => {
+                  if (storeEmployeeSales <= 0) return commissionTotal;
+                  const storeCommissionPercent = getStoreSalesCommissionPercent(
+                    storeCode,
+                    period.targetDate,
+                    storeSalesTotals[storeCode] || 0
+                  );
+                  return commissionTotal
+                    + (storeEmployeeSales * employeeAchievement * storeCommissionPercent);
+                },
+                0
+              )
+            : 0;
           const averageBillCommission = getEmployeeAverageBillCommission(
             employee.id,
             selectedStoreCode,

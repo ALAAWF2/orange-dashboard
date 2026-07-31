@@ -345,6 +345,207 @@ async function exportStoreSales(startDate, endDate) {
     XLSX.writeFile(wb, `Store_Sales_${startDate}_${endDate}.xlsx`);
 }
 
+function getCommissionTargetDate(dateYmd) {
+    if (dateYmd >= '2026-03-20' && dateYmd <= '2026-03-31') {
+        return '2026-03-20';
+    }
+    return `${dateYmd.slice(0, 7)}-01`;
+}
+
+function parseCommissionEmployeeIdentity(rawEmployee) {
+    const raw = String(rawEmployee || '').trim();
+    if (!raw || /^(none|r)$/i.test(raw)) return null;
+
+    const separatorIndex = raw.indexOf('-');
+    const oldNumber = (separatorIndex >= 0 ? raw.slice(0, separatorIndex) : raw).trim();
+    const fallbackName = separatorIndex >= 0 ? raw.slice(separatorIndex + 1).trim() : '';
+    if (!oldNumber || fallbackName === 'مرتجع') return null;
+
+    const normalizedId = /^\d+$/.test(oldNumber)
+        ? oldNumber.padStart(4, '0')
+        : oldNumber;
+    return { oldNumber, normalizedId, fallbackName };
+}
+
+function getCommissionEmployeeCandidates(identity, salesGroupMap) {
+    const unpaddedId = /^\d+$/.test(identity.normalizedId)
+        ? String(Number(identity.normalizedId))
+        : identity.normalizedId;
+    const directCandidates = [
+        identity.oldNumber,
+        identity.normalizedId,
+        unpaddedId
+    ].filter(Boolean);
+    const mappedId = directCandidates
+        .map(candidate => salesGroupMap[candidate])
+        .find(value => value != null && String(value).trim() !== '');
+    const mappedText = mappedId == null ? '' : String(mappedId).trim();
+    const mappedNormalized = /^\d+$/.test(mappedText)
+        ? mappedText.padStart(4, '0')
+        : mappedText;
+    const mappedUnpadded = /^\d+$/.test(mappedNormalized)
+        ? String(Number(mappedNormalized))
+        : mappedNormalized;
+
+    return {
+        mappedId: mappedText,
+        candidates: [...new Set([
+            ...directCandidates,
+            mappedText,
+            mappedNormalized,
+            mappedUnpadded
+        ].filter(Boolean))]
+    };
+}
+
+function getCommissionEmployeeTarget(empData, identity, targetDate) {
+    const unpaddedId = /^\d+$/.test(identity.normalizedId)
+        ? String(Number(identity.normalizedId))
+        : identity.normalizedId;
+    const candidates = [...new Set([
+        identity.oldNumber,
+        identity.normalizedId,
+        unpaddedId
+    ].filter(Boolean))];
+    const monthlyTargets = empData.monthly_targets || {};
+
+    for (const candidate of candidates) {
+        const value = monthlyTargets[candidate]?.[targetDate];
+        if (value != null) return Number(value) || 0;
+    }
+    for (const candidate of candidates) {
+        const value = empData.targets?.[candidate];
+        if (value != null) return Number(value) || 0;
+    }
+    return 0;
+}
+
+function getCommissionStoreTarget(storeCode, targetDate) {
+    const storeTargets = window.rawData?.targets || [];
+    let targetRow = storeTargets.find(row =>
+        Array.isArray(row)
+        && row[0] === targetDate
+        && String(row[1]) === String(storeCode)
+    );
+    if (!targetRow && targetDate === '2026-03-20') {
+        targetRow = storeTargets.find(row =>
+            Array.isArray(row)
+            && row[0] === '2026-03-01'
+            && String(row[1]) === String(storeCode)
+        );
+    }
+    return Number(targetRow?.[2]) || 0;
+}
+
+function getCommissionRate(storeSales, storeTarget) {
+    const achievement = storeTarget > 0 ? (storeSales / storeTarget) * 100 : 0;
+    if (achievement >= 100) return 0.02;
+    if (achievement >= 90) return 0.01;
+    if (achievement >= 80) return 0.005;
+    return 0;
+}
+
+function buildEmployeeCommissionRows(empData, targetStoreIds, startDate, endDate) {
+    const selectedStores = new Set(targetStoreIds.map(String));
+    const salesGroupMap = empData.sales_group_map || {};
+    const employeeNames = empData.employee_names || {};
+    const storePeriodTotals = new Map();
+    const employeePeriodTotals = new Map();
+    const employeeStoreTotals = new Map();
+
+    Object.entries(empData.history || {}).forEach(([storeCode, records]) => {
+        (records || []).forEach(record => {
+            const date = String(record[0] || '');
+            if (date < startDate || date > endDate) return;
+
+            const sales = Number(record[2]) || 0;
+            const targetDate = getCommissionTargetDate(date);
+            const storePeriodKey = `${targetDate}\u0001${storeCode}`;
+            storePeriodTotals.set(
+                storePeriodKey,
+                (storePeriodTotals.get(storePeriodKey) || 0) + sales
+            );
+
+            const identity = parseCommissionEmployeeIdentity(record[1]);
+            if (!identity) return;
+
+            const employeePeriodKey = `${targetDate}\u0001${identity.normalizedId}`;
+            employeePeriodTotals.set(
+                employeePeriodKey,
+                (employeePeriodTotals.get(employeePeriodKey) || 0) + sales
+            );
+
+            if (!selectedStores.has(String(storeCode))) return;
+
+            const employeeStoreKey =
+                `${targetDate}\u0001${storeCode}\u0001${identity.normalizedId}`;
+            if (!employeeStoreTotals.has(employeeStoreKey)) {
+                const { mappedId, candidates } =
+                    getCommissionEmployeeCandidates(identity, salesGroupMap);
+                const resolvedName = candidates
+                    .map(candidate => employeeNames[candidate])
+                    .find(Boolean);
+                employeeStoreTotals.set(employeeStoreKey, {
+                    targetDate,
+                    storeCode,
+                    identity,
+                    mappedId,
+                    name: resolvedName || identity.fallbackName || identity.oldNumber,
+                    sales: 0
+                });
+            }
+            employeeStoreTotals.get(employeeStoreKey).sales += sales;
+        });
+    });
+
+    return [...employeeStoreTotals.values()]
+        .filter(record => Math.abs(record.sales) > 0.000001)
+        .map(record => {
+            const employeeTotalSales = employeePeriodTotals.get(
+                `${record.targetDate}\u0001${record.identity.normalizedId}`
+            ) || 0;
+            const storeTotalSales = storePeriodTotals.get(
+                `${record.targetDate}\u0001${record.storeCode}`
+            ) || 0;
+            const employeeTarget = getCommissionEmployeeTarget(
+                empData,
+                record.identity,
+                record.targetDate
+            );
+            const storeTarget = getCommissionStoreTarget(
+                record.storeCode,
+                record.targetDate
+            );
+            const commissionRate = getCommissionRate(storeTotalSales, storeTarget);
+            const proposedCommission =
+                record.sales > 0 && employeeTotalSales > 0 && employeeTarget > 0
+                    ? record.sales
+                        * (employeeTotalSales / employeeTarget)
+                        * commissionRate
+                    : 0;
+
+            return {
+                "التاريخ": record.targetDate,
+                "المعرض": window.rawData?.stores?.[record.storeCode] || record.storeCode,
+                "الرقم الوظيفي (قديم)": String(record.identity.oldNumber),
+                "الرقم الوظيفي (جديد)": String(record.mappedId || ''),
+                "اسم الموظف": record.name,
+                "المبيعات": record.sales,
+                "الهدف (الشهري)": employeeTarget,
+                "العمولة المقترحة": Math.round(proposedCommission * 100) / 100
+            };
+        })
+        .sort((a, b) => {
+            if (a["التاريخ"] !== b["التاريخ"]) {
+                return a["التاريخ"].localeCompare(b["التاريخ"]);
+            }
+            if (a["المعرض"] !== b["المعرض"]) {
+                return a["المعرض"].localeCompare(b["المعرض"]);
+            }
+            return a["اسم الموظف"].localeCompare(b["اسم الموظف"]);
+        });
+}
+
 // --- OPTION 2: Employee Sales Export (Sales Manager Only) ---
 async function exportEmployeeSales(startDate, endDate) {
     // 1. Fetch employees_data.json
@@ -518,6 +719,28 @@ async function exportEmployeeSales(startDate, endDate) {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Employee Sales");
+
+    const commissionRows = buildEmployeeCommissionRows(
+        empData,
+        targetStoreIds,
+        startDate,
+        endDate
+    );
+    const commissionSheet = XLSX.utils.json_to_sheet(commissionRows);
+    commissionSheet['!cols'] = [
+        { wch: 12 }, // Date
+        { wch: 28 }, // Store
+        { wch: 20 }, // Old employee number
+        { wch: 20 }, // New employee number
+        { wch: 25 }, // Employee name
+        { wch: 14 }, // Sales
+        { wch: 16 }, // Monthly target
+        { wch: 18 }  // Proposed commission
+    ];
+    if (commissionSheet['!ref']) {
+        commissionSheet['!autofilter'] = { ref: commissionSheet['!ref'] };
+    }
+    XLSX.utils.book_append_sheet(wb, commissionSheet, "Commissions");
 
     // Export
     XLSX.writeFile(wb, `Employee_Sales_${startDate}_${endDate}.xlsx`);
