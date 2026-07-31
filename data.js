@@ -505,16 +505,8 @@ const EMPLOYEES = [
         "name": "محمد أسامة جمال الدي",
         "startDate": "2015-08-27",
         "manager": "عبيدة السباعي",
-        "showroom": "1007-18-Al_Khayyat Center و 1009-53-Al Basateen Mall",
+        "showroom": "1009-53-Al Basateen Mall",
         "showroomDetails": [
-            {
-                "name": "1007-18-Al_Khayyat Center",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1007-C",
-                    "1007-E"
-                ]
-            },
             {
                 "name": "1009-53-Al Basateen Mall",
                 "manager": "عبيدة السباعي",
@@ -524,7 +516,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1007-C;1007-E;1009-C;1009-E"
+        "addressBooks": "1009-C;1009-E"
     },
     {
         "employeeId": "0037-محمد شافي كونابارامب",
@@ -570,7 +562,7 @@ const EMPLOYEES = [
         "name": "سليم شمس الدين",
         "startDate": "2015-10-01",
         "manager": "عبيدة السباعي",
-        "showroom": "1001-04-Andalos Mall و 1007-18-Al_Khayyat Center و 1012-57-Sauq7",
+        "showroom": "1001-04-Andalos Mall و 1012-57-Sauq7",
         "showroomDetails": [
             {
                 "name": "1001-04-Andalos Mall",
@@ -578,14 +570,6 @@ const EMPLOYEES = [
                 "codes": [
                     "1001-C",
                     "1001-E"
-                ]
-            },
-            {
-                "name": "1007-18-Al_Khayyat Center",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1007-C",
-                    "1007-E"
                 ]
             },
             {
@@ -597,7 +581,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1001-C;1001-E;1007-C;1007-E;1012-C;1012-E"
+        "addressBooks": "1001-C;1001-E;1012-C;1012-E"
     },
     {
         "employeeId": "0090-عبد الناظر اون يابا",
@@ -6177,25 +6161,6 @@ const EMPLOYEES = [
         "addressBooks": "1002-C;1002-E"
     },
     {
-        "employeeId": "4846-محمد سلمان المسدي",
-        "personnelNumber": "4846",
-        "name": "محمد سلمان المسدي",
-        "startDate": "2026-02-01",
-        "manager": "عبيدة السباعي",
-        "showroom": "1007-18-Al_Khayyat Center",
-        "showroomDetails": [
-            {
-                "name": "1007-18-Al_Khayyat Center",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1007-C",
-                    "1007-E"
-                ]
-            }
-        ],
-        "addressBooks": "1007-C;1007-E"
-    },
-    {
         "employeeId": "4916-شمسير اب",
         "personnelNumber": "4916",
         "name": "شمسير اب",
@@ -6296,16 +6261,8 @@ const EMPLOYEES = [
         "name": "حمدي حمود",
         "startDate": "2026-04-09",
         "manager": "محمدكلو",
-        "showroom": "1115-1115-Alrabie Mall و 1114-1114-Malgha Mall",
+        "showroom": "1114-1114-Malgha Mall و 1115-1115-Alrabie Mall",
         "showroomDetails": [
-            {
-                "name": "1115-1115-Alrabie Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1115-C",
-                    "1115-E"
-                ]
-            },
             {
                 "name": "1114-1114-Malgha Mall",
                 "manager": "محمدكلو",
@@ -6313,9 +6270,17 @@ const EMPLOYEES = [
                     "1114-C",
                     "1114-E"
                 ]
+            },
+            {
+                "name": "1115-1115-Alrabie Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1115-C",
+                    "1115-E"
+                ]
             }
         ],
-        "addressBooks": "1115-C;1115-E;1114-C;1114-E"
+        "addressBooks": "1114-C;1114-E;1115-C;1115-E"
     },
     {
         "employeeId": "4937-نوره حمدان",
