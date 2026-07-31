@@ -863,7 +863,7 @@
                 <th>التحقيق %</th>
                 <th title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
                 <th>عمولة معدل الفاتورة</th>
-                <th>اليومية المتبقية</th>
+                <th title="محسوبة من مبيعات أول الشهر حتى نهاية يوم أمس">اليومية المتبقية</th>
                 <th>الفواتير</th>
                 <th>معدل الفاتورة</th>
                 <th>متوسط القطع UPT</th>
@@ -1436,7 +1436,7 @@
       document.getElementById('kpiGrowthSub').textContent = `مقارنة بـ ${year - 1}`;
       document.getElementById('kpiDailyReqSub').textContent = period.isClosed
         ? 'الفترة منتهية'
-        : 'لتحقيق 100%';
+        : 'من مبيعات أول الشهر حتى أمس';
 
       // Build Fast Lookup Maps for Selected Store from REAL DATA
       const salesMap = {};
@@ -1505,9 +1505,15 @@
       const currentDay = period.endDay;
 
       let mtdSales = 0;
+      let completedMtdSales = 0;
       let mtdSalesLY = 0;
       let mtdTrans = 0;
       let mtdVisitors = 0;
+      const completedSalesEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      completedSalesEnd.setDate(completedSalesEnd.getDate() - 1);
+      const completedSalesEndYmd = period.isCurrent
+        ? toLocalYmd(completedSalesEnd)
+        : period.endYmd;
 
       for (let d = 1; d <= currentDay; d++) {
         const dayStr = String(d).padStart(2, '0');
@@ -1520,6 +1526,7 @@
         const v = visitorsMap[dateKey] || 0;
 
         mtdSales += s;
+        if (dateKey <= completedSalesEndYmd) completedMtdSales += s;
         mtdSalesLY += sLY;
         mtdTrans += t;
         mtdVisitors += v;
@@ -1533,7 +1540,7 @@
 
       // Remaining Days & Daily Required
       const remainingDays = period.remainingDays;
-      const remainingSalesReq = Math.max(0, mtdTarget - mtdSales);
+      const remainingSalesReq = Math.max(0, mtdTarget - completedMtdSales);
       const dailyReq = remainingDays > 0 ? remainingSalesReq / remainingDays : 0;
 
       // Conversion %
@@ -1574,6 +1581,7 @@
         employeeTargetDate,
         remainingDays,
         employeeComparisonPeriod,
+        completedSalesEndYmd,
         period.isClosed
       );
 
@@ -1901,6 +1909,7 @@
       targetDate,
       remainingDays,
       comparisonPeriod,
+      completedSalesEndYmd,
       isClosedPeriod = false
     ) {
       const tbody = document.getElementById('empTableBody');
@@ -1940,6 +1949,7 @@
             invoices: 0,
             items: 0,
             maxTicket: 0,
+            completedSales: 0,
             hasCurrent: false
           };
         }
@@ -1947,6 +1957,9 @@
         if (isCurrent) {
           empMap[empId].hasCurrent = true;
           empMap[empId].sales += salesValue;
+          if (date <= completedSalesEndYmd) {
+            empMap[empId].completedSales += salesValue;
+          }
           empMap[empId].invoices += Number(r[3]) || 0;
           empMap[empId].items += Number(r[4]) || 0;
           if (r[5]) {
@@ -1996,7 +2009,7 @@
         const empTarget = getEmployeeTarget(emp.id, targetDate);
         const ach = empTarget > 0 ? (emp.sales / empTarget) * 100 : 0;
 
-        const remainingReq = Math.max(0, empTarget - emp.sales);
+        const remainingReq = Math.max(0, empTarget - emp.completedSales);
         const dailyReq = empTarget > 0 && remainingDays > 0
           ? remainingReq / remainingDays
           : 0;
