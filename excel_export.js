@@ -409,9 +409,12 @@ function getCommissionEmployeeTarget(empData, identity, targetDate) {
     ].filter(Boolean))];
     const monthlyTargets = empData.monthly_targets || {};
 
-    for (const candidate of candidates) {
-        const value = monthlyTargets[candidate]?.[targetDate];
-        if (value != null) return Number(value) || 0;
+    if (Object.keys(monthlyTargets).length > 0) {
+        for (const candidate of candidates) {
+            const value = monthlyTargets[candidate]?.[targetDate];
+            if (value != null) return Number(value) || 0;
+        }
+        return 0;
     }
     for (const candidate of candidates) {
         const value = empData.targets?.[candidate];
@@ -726,7 +729,20 @@ async function exportEmployeeSales(startDate, endDate) {
         startDate,
         endDate
     );
-    const commissionSheet = XLSX.utils.json_to_sheet(commissionRows);
+    const commissionHeaders = [
+        "التاريخ",
+        "المعرض",
+        "الرقم الوظيفي (قديم)",
+        "الرقم الوظيفي (جديد)",
+        "اسم الموظف",
+        "المبيعات",
+        "الهدف (الشهري)",
+        "العمولة المقترحة"
+    ];
+    const commissionSheet = XLSX.utils.json_to_sheet(
+        commissionRows,
+        { header: commissionHeaders }
+    );
     commissionSheet['!cols'] = [
         { wch: 12 }, // Date
         { wch: 28 }, // Store
@@ -740,7 +756,20 @@ async function exportEmployeeSales(startDate, endDate) {
     if (commissionSheet['!ref']) {
         commissionSheet['!autofilter'] = { ref: commissionSheet['!ref'] };
     }
-    XLSX.utils.book_append_sheet(wb, commissionSheet, "Commissions");
+    for (let rowNumber = 2; rowNumber <= commissionRows.length + 1; rowNumber++) {
+        ['C', 'D'].forEach(column => {
+            const cell = commissionSheet[`${column}${rowNumber}`];
+            if (cell) {
+                cell.t = 's';
+                cell.v = String(cell.v || '');
+            }
+        });
+        ['F', 'G', 'H'].forEach(column => {
+            const cell = commissionSheet[`${column}${rowNumber}`];
+            if (cell) cell.z = '#,##0.00';
+        });
+    }
+    XLSX.utils.book_append_sheet(wb, commissionSheet, "العمولات");
 
     // Export
     XLSX.writeFile(wb, `Employee_Sales_${startDate}_${endDate}.xlsx`);
