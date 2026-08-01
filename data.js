@@ -5957,7 +5957,7 @@ const EMPLOYEES = [
         "name": "سعيدة الفهمي",
         "startDate": "2026-02-16",
         "manager": "رضوان عطيوي",
-        "showroom": "1201-08-Makkah Mall و 1203-55- Jabl Omar",
+        "showroom": "1201-08-Makkah Mall و 1202-20-Sitten Street Makkah",
         "showroomDetails": [
             {
                 "name": "1201-08-Makkah Mall",
@@ -5968,15 +5968,15 @@ const EMPLOYEES = [
                 ]
             },
             {
-                "name": "1203-55- Jabl Omar",
+                "name": "1202-20-Sitten Street Makkah",
                 "manager": "رضوان عطيوي",
                 "codes": [
-                    "1203-C",
-                    "1203-E"
+                    "1202-C",
+                    "1202-E"
                 ]
             }
         ],
-        "addressBooks": "1201-C;1201-E;1203-C;1203-E"
+        "addressBooks": "1201-C;1201-E;1202-C;1202-E"
     },
     {
         "employeeId": "4882-سديم الشهراني",
