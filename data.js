@@ -6269,16 +6269,8 @@ const EMPLOYEES = [
         "name": "حمدي حمود",
         "startDate": "2026-04-09",
         "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall و 1115-1115-Alrabie Mall",
+        "showroom": "1115-1115-Alrabie Mall",
         "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            },
             {
                 "name": "1115-1115-Alrabie Mall",
                 "manager": "محمدكلو",
@@ -6288,7 +6280,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1114-C;1114-E;1115-C;1115-E"
+        "addressBooks": "1115-C;1115-E"
     },
     {
         "employeeId": "4937-نوره حمدان",
