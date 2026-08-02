@@ -13,6 +13,14 @@ async function initNavbar() {
         return;
     }
 
+    if (currentUser && typeof getUserDisplayName === 'function') {
+        const resolvedDisplayName = getUserDisplayName(currentUser.name);
+        if (resolvedDisplayName && currentUser.displayName !== resolvedDisplayName) {
+            currentUser.displayName = resolvedDisplayName;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+    }
+
     // Determine current page and page title
     const path = window.location.pathname;
     let pageTitle = "DASHBOARD";

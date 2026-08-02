@@ -905,6 +905,7 @@
             color: var(--orange);
         }
     </style>
+    <script src="users.js"></script>
 </head>
 
 <body>
@@ -1383,7 +1384,7 @@
                         <table class="table table-premium text-center align-middle">
                             <thead>
                                 <tr>
-                                    <th>اسم المستخدم / المدير</th>
+                                    <th>اسم العرض</th>
                                     <th>الرمز السري (PIN)</th>
                                     <th>الدور (Role)</th>
                                     <th>الإجراءات والعمليات</th>
@@ -2330,8 +2331,13 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small text-muted fw-bold">اسم المستخدم (الاسم المعروض):</label>
+                        <label class="form-label small text-muted fw-bold">اسم المستخدم الداخلي:</label>
                         <input type="text" id="modalUsername" class="form-control form-control-dark" placeholder="مثال: أحمد العتيبي">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold" for="modalUserDisplayName">اسم العرض في الداشبورد:</label>
+                        <input type="text" id="modalUserDisplayName" class="form-control form-control-dark" maxlength="80" placeholder="الاسم الذي سيظهر للمستخدمين">
+                        <div class="form-text">هذا الاسم للعرض فقط ولا يغيّر المعارض أو الصلاحيات أو تسجيل الدخول.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">رمز الدخول (PIN Code - 4 أرقام):</label>
@@ -4437,6 +4443,12 @@
         // ==========================================
         let editingOriginalUsername = null; // Track if we are editing or creating
 
+        function getAdminUserDisplayName(username) {
+            const user = allSystemUsers[username] || {};
+            const displayName = typeof user.displayName === 'string' ? user.displayName.trim() : '';
+            return displayName || username;
+        }
+
         async function loadUsersData() {
             const tbody = document.getElementById('usersListBody');
             if (!tbody) return;
@@ -4452,8 +4464,11 @@
 
                 tbody.innerHTML = '';
 
-                Object.keys(allSystemUsers).sort().forEach(username => {
+                Object.keys(allSystemUsers)
+                    .sort((a, b) => getAdminUserDisplayName(a).localeCompare(getAdminUserDisplayName(b), 'ar'))
+                    .forEach(username => {
                     const user = allSystemUsers[username];
+                    const displayName = getAdminUserDisplayName(username);
                     const tr = document.createElement('tr');
                     
                     const roleBadge = user.role === 'Admin'
@@ -4474,7 +4489,7 @@
                            <button class="btn btn-outline-danger btn-sm px-3" style="border-radius:6px;" onclick="deleteUser('${username}')"><i class="fa-solid fa-trash-can"></i> حذف</button>`;
 
                     tr.innerHTML = `
-                        <td class="fw-bold text-start ps-4"><i class="fa-solid fa-circle-user text-orange me-2"></i> ${username}</td>
+                        <td class="fw-bold text-start ps-4"><i class="fa-solid fa-circle-user text-orange me-2"></i> ${escapeHtml(displayName)}</td>
                         <td class="fw-bold" style="letter-spacing: 2px;">•••• (${user.pin})</td>
                         <td>${roleBadge} ${visitorsStatus}</td>
                         <td>${actionButtons}</td>
@@ -4491,6 +4506,8 @@
             document.getElementById('userModalTitle').textContent = 'إضافة مستخدم جديد للنظام';
             document.getElementById('modalUsername').value = '';
             document.getElementById('modalUsername').disabled = false;
+            document.getElementById('modalUsername').closest('.mb-3').hidden = false;
+            document.getElementById('modalUserDisplayName').value = '';
             document.getElementById('modalUserPin').value = '';
             document.getElementById('modalUserRole').value = 'Manager';
             document.getElementById('modalUserHideVisitors').checked = false;
@@ -4504,9 +4521,11 @@
             editingOriginalUsername = username;
             const user = allSystemUsers[username];
             
-            document.getElementById('userModalTitle').textContent = `تعديل حساب المستخدم: ${username}`;
+            document.getElementById('userModalTitle').textContent = `تعديل اسم العرض: ${getAdminUserDisplayName(username)}`;
             document.getElementById('modalUsername').value = username;
             document.getElementById('modalUsername').disabled = true; // Lock username during edit to prevent conflicts
+            document.getElementById('modalUsername').closest('.mb-3').hidden = true;
+            document.getElementById('modalUserDisplayName').value = getAdminUserDisplayName(username);
             document.getElementById('modalUserPin').value = user.pin;
             document.getElementById('modalUserRole').value = user.role || 'Manager';
             document.getElementById('modalUserHideVisitors').checked = user.hide_visitors === true;
@@ -4545,12 +4564,17 @@
 
         async function saveUserFromModal() {
             const username = document.getElementById('modalUsername').value.trim();
+            const displayName = document.getElementById('modalUserDisplayName').value.trim();
             const pin = document.getElementById('modalUserPin').value.trim();
             const role = document.getElementById('modalUserRole').value;
             const hide_visitors = document.getElementById('modalUserHideVisitors').checked;
 
             if (!username) {
                 alert("الرجاء إدخال اسم المستخدم!");
+                return;
+            }
+            if (!displayName) {
+                alert("الرجاء إدخال اسم العرض!");
                 return;
             }
             if (pin.length !== 4 || isNaN(pin)) {
@@ -4563,14 +4587,20 @@
             // Handle edit vs create
             if (editingOriginalUsername) {
                 // Editing
-                updatedUsers[editingOriginalUsername] = { pin, role, hide_visitors };
+                updatedUsers[editingOriginalUsername] = {
+                    ...updatedUsers[editingOriginalUsername],
+                    displayName,
+                    pin,
+                    role,
+                    hide_visitors
+                };
             } else {
                 // Creating new
                 if (updatedUsers[username]) {
                     alert(`خطأ: المستخدم "${username}" موجود بالفعل في النظام!`);
                     return;
                 }
-                updatedUsers[username] = { pin, role, hide_visitors };
+                updatedUsers[username] = { displayName, pin, role, hide_visitors };
             }
 
             // Hide Modal
@@ -4594,11 +4624,22 @@
 
                 if (res.ok) {
                     alert(`✅ ${successMessage}`);
+
+                    Object.keys(usersDict).forEach(username => {
+                        if (typeof USERS !== 'undefined' && USERS[username]) {
+                            USERS[username].displayName = usersDict[username].displayName || username;
+                        }
+                    });
                     
                     // Check if current user credentials were changed and force logout if so
                     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
                     if (currentUser && usersDict[currentUser.name]) {
                         const newPin = usersDict[currentUser.name].pin;
+                        const newDisplayName = usersDict[currentUser.name].displayName || currentUser.name;
+                        if (currentUser.displayName !== newDisplayName) {
+                            currentUser.displayName = newDisplayName;
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        }
                         if (newPin !== currentUser.pin) {
                             alert("⚠️ لقد قمت بتغيير الرمز السري الخاص بك. سيتم تسجيل الخروج تلقائياً لتسجيل الدخول بالرمز الجديد.");
                             logout();
@@ -4607,6 +4648,9 @@
                     }
                     
                     await loadUsersData(); // Reload Table
+                    if (typeof applyUserDisplayNames === 'function') {
+                        applyUserDisplayNames(document.body);
+                    }
                 } else {
                     const err = await res.json();
                     alert(`❌ خطأ أثناء حفظ التعديلات: ${err.error}`);
@@ -4659,7 +4703,7 @@
                     selectHtml += `<option value="online" ${store.manager === 'online' ? 'selected' : ''}>أونلاين (online)</option>`;
                     
                     managerNames.forEach(m => {
-                        selectHtml += `<option value="${m}" ${store.manager === m ? 'selected' : ''}>${m}</option>`;
+                        selectHtml += `<option value="${m}" ${store.manager === m ? 'selected' : ''}>${escapeHtml(getAdminUserDisplayName(m))}</option>`;
                     });
                     selectHtml += `</select>`;
 
@@ -4671,7 +4715,7 @@
                         <td class="fw-bold text-start ps-4"><i class="fa-solid fa-store text-orange me-2"></i> ${store.name}</td>
                         <td><strong>${store.id}</strong></td>
                         <td class="text-uppercase small text-muted">${store.city}</td>
-                        <td><span class="badge bg-secondary py-1 px-2">${store.manager}</span></td>
+                        <td><span class="badge bg-secondary py-1 px-2">${escapeHtml(getAdminUserDisplayName(store.manager))}</span></td>
                         <td>${selectHtml}</td>
                         <td>${actionButton}</td>
                     `;

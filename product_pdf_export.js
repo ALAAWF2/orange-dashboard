@@ -137,7 +137,7 @@ async function generateProductPDF() {
     doc.setFontSize(10);
     // Fix Overlap: Move these to line 35
     doc.text(`تاريخ التصدير: ${exportDate}`, pageWidth - 15, 35, { align: 'right' });
-    doc.text(`المستخدم: ${currentUser.name}`, 15, 35);
+    doc.text(`المستخدم: ${getCurrentUserDisplayName(currentUser)}`, 15, 35);
 
     let finalY = 45; // Start content lower
 
