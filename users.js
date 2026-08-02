@@ -1,18 +1,108 @@
 const USERS = {
-    "CS": { "pin": "7531", "role": "CRM", "hide_visitors": true },
-    "Sales Manager": { "pin": "6587", "role": "Admin", "hide_visitors": false, "email": "m.hamadon@orangebedbath.com", "password": "Mh@852" },
-    "المالية": { "pin": "2026", "role": "Finance", "hide_visitors": false, "email": "supervisor.reader@orangebedbath.com", "password": "OrangeReader2026!" },
-    "المنطقة الشمالية": { "pin": "6342", "role": "Manager", "hide_visitors": false, "email": "bakr@orangebedbath.com", "password": "ZSgy" },
-    "المنطقة الغربية": { "pin": "1478", "role": "Manager", "hide_visitors": false, "email": "mehyar.s@orangebedbath.com", "password": "Smdc" },
-    "اماني عسيري": { "pin": "3698", "role": "Manager", "hide_visitors": false, "email": "amani.a@orangebedbath.com", "password": "qiBK" },
-    "جهاد ايوبي": { "pin": "2587", "role": "Manager", "hide_visitors": false, "email": "jihad@orangebedbath.com", "password": "2yT7" },
-    "رضوان عطيوي": { "pin": "7643", "role": "Manager", "hide_visitors": false, "email": "radwan@orangebedbath.com", "password": "TUdJ" },
-    "عبدالله السرداح": { "pin": "4618", "role": "Manager", "hide_visitors": false, "email": "abd.serdah@orangebedbath.com", "password": "RvvL" },
-    "عبيدة السباعي": { "pin": "1647", "role": "Manager", "hide_visitors": false, "email": "obieda.sebaee@orangebedbath.com", "password": "Pvoo" },
-    "علاء": { "pin": "9630", "role": "Admin", "hide_visitors": false, "email": "alaa.wafae@orangebedbath.com", "password": "Am@w0531" },
-    "محمدكلو": { "pin": "4891", "role": "Manager", "hide_visitors": false, "email": "m.kello@orangebedbath.com", "password": "c7Yw" },
-    "الغربية 2": { "pin": "5123", "role": "Manager", "hide_visitors": false, "email": "supervisor.reader@orangebedbath.com", "password": "OrangeReader2026!" }
+    "CS": {
+        "displayName": "CS",
+        "hide_visitors": true,
+        "pin": "7531",
+        "role": "CRM"
+    },
+    "Sales Manager": {
+        "displayName": "Sales Manager",
+        "email": "m.hamadon@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "Mh@852",
+        "pin": "6587",
+        "role": "Admin"
+    },
+    "الغربية 2": {
+        "displayName": "المنطقة الغربية 2",
+        "email": "supervisor.reader@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "OrangeReader2026!",
+        "pin": "5123",
+        "role": "Manager"
+    },
+    "المالية": {
+        "displayName": "المالية",
+        "email": "supervisor.reader@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "OrangeReader2026!",
+        "pin": "2026",
+        "role": "Finance"
+    },
+    "المنطقة الشمالية": {
+        "displayName": "المنطقة الشمالية",
+        "email": "bakr@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "ZSgy",
+        "pin": "6342",
+        "role": "Manager"
+    },
+    "المنطقة الغربية": {
+        "displayName": "المنطقة الغربية",
+        "email": "mehyar.s@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "Smdc",
+        "pin": "1478",
+        "role": "Manager"
+    },
+    "اماني عسيري": {
+        "displayName": "المنطقة الجنوبية",
+        "email": "amani.a@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "qiBK",
+        "pin": "3698",
+        "role": "Manager"
+    },
+    "جهاد ايوبي": {
+        "displayName": "المنطقة الشرقية",
+        "email": "jihad@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "2yT7",
+        "pin": "2587",
+        "role": "Manager"
+    },
+    "رضوان عطيوي": {
+        "displayName": "منطقة مكة المكرمة",
+        "email": "radwan@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "TUdJ",
+        "pin": "7643",
+        "role": "Manager"
+    },
+    "عبدالله السرداح": {
+        "displayName": "المنطقة الوسطى 2",
+        "email": "abd.serdah@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "RvvL",
+        "pin": "4618",
+        "role": "Manager"
+    },
+    "عبيدة السباعي": {
+        "displayName": "المنطقة الغربية 3",
+        "email": "obieda.sebaee@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "Pvoo",
+        "pin": "1647",
+        "role": "Manager"
+    },
+    "علاء": {
+        "displayName": "علاء",
+        "email": "alaa.wafae@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "Am@w0531",
+        "pin": "9630",
+        "role": "Admin"
+    },
+    "محمدكلو": {
+        "displayName": "المنطقة الوسطى",
+        "email": "m.kello@orangebedbath.com",
+        "hide_visitors": false,
+        "password": "c7Yw",
+        "pin": "4891",
+        "role": "Manager"
+    }
 };
+
 
 function getUserDisplayName(username) {
     const internalName = typeof username === 'string' ? username.trim() : '';
@@ -38,14 +128,30 @@ function getCurrentUserDisplayName(user) {
 
 function replaceUserDisplayNames(value) {
     let result = String(value ?? '');
-    Object.keys(USERS)
+    const replacements = Object.keys(USERS)
+        .map(username => [username, getUserDisplayName(username)])
+        .filter(([username, displayName]) => displayName && displayName !== username)
+        .sort(([a], [b]) => b.length - a.length);
+
+    const protectedDisplayNames = [];
+    [...new Set(replacements.map(([, displayName]) => displayName))]
         .sort((a, b) => b.length - a.length)
-        .forEach(username => {
-            const displayName = getUserDisplayName(username);
-            if (displayName && displayName !== username && result.includes(username)) {
-                result = result.split(username).join(displayName);
-            }
+        .forEach((displayName, index) => {
+            if (!result.includes(displayName)) return;
+            const token = `\uE000orange-display-${index}\uE001`;
+            result = result.split(displayName).join(token);
+            protectedDisplayNames.push([token, displayName]);
         });
+
+    replacements.forEach(([username, displayName]) => {
+        if (result.includes(username)) {
+            result = result.split(username).join(displayName);
+        }
+    });
+
+    protectedDisplayNames.forEach(([token, displayName]) => {
+        result = result.split(token).join(displayName);
+    });
     return result;
 }
 
