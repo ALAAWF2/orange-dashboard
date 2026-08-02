@@ -3261,7 +3261,7 @@
                                     </div>
                                 </div>
                                 <div class="col-5 col-md-3">
-                                    <button class="btn btn-outline-orange-premium w-100 btn-sm py-2" onclick="saveEmployeeTarget('${month}', '${emp.id}', '${emp.name}', ${store.id})">
+                                    <button class="btn btn-outline-orange-premium w-100 btn-sm py-2 js-save-employee-target">
                                         <i class="fa-solid fa-save"></i> حفظ
                                     </button>
                                 </div>
@@ -3300,7 +3300,7 @@
                                         </div>
                                     </div>
                                     <div class="col-5 col-md-3">
-                                        <button class="btn btn-orange-premium w-100 py-2" onclick="saveStoreTarget('${month}', '${store.outlet}', ${store.id})">
+                                        <button class="btn btn-orange-premium w-100 py-2 js-save-store-target">
                                             <i class="fa-solid fa-cloud-arrow-up"></i> حفظ التارجت
                                         </button>
                                     </div>
@@ -3312,7 +3312,7 @@
                                 ${empRowsHtml}
                                 ${storeEmployees.length > 0 ? `
                                 <div class="text-start mt-3">
-                                    <button class="btn btn-outline-success w-100 py-2" id="btn-save-all-emps-${store.id}" onclick="saveAllStoreEmployeeTargets(${store.id}, '${month}')">
+                                    <button class="btn btn-outline-success w-100 py-2 js-save-all-store-employee-targets" id="btn-save-all-emps-${store.id}">
                                         <i class="fa-solid fa-save me-1"></i> حفظ جميع مستهدفات الموظفين بالفرع دفعة واحدة
                                     </button>
                                 </div>
@@ -3320,6 +3320,23 @@
                             </div>
                         </div>
                     `;
+
+                    accItem.querySelector('.js-save-store-target')?.addEventListener('click', () => {
+                        saveStoreTarget(month, store.outlet, store.id);
+                    });
+
+                    accItem.querySelectorAll('.js-save-employee-target').forEach((button, employeeIndex) => {
+                        const employee = storeEmployees[employeeIndex];
+                        if (!employee) return;
+                        button.addEventListener('click', () => {
+                            saveEmployeeTarget(month, employee.id, employee.name, store.id);
+                        });
+                    });
+
+                    accItem.querySelector('.js-save-all-store-employee-targets')?.addEventListener('click', () => {
+                        saveAllStoreEmployeeTargets(store.id, month);
+                    });
+
                     container.appendChild(accItem);
                 });
             } catch (e) {
