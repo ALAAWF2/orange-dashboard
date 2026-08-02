@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-average-bill-enabled="false">
 
 <head>
     <script>
@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="assets/orange-ui.css">
     <script src="assets/fmt.js"></script>
     <script src="assets/nav.js"></script>
+    <script src="assets/average-bill-program.js"></script>
 
     <style>
         :root {
@@ -2654,7 +2655,7 @@
             </div>
         </div>
 
-        <section class="row mt-4" id="averageBillCommandSection" style="display: none;" aria-labelledby="averageBillCommandTitle">
+        <section class="row mt-4" id="averageBillCommandSection" style="display: none;" aria-labelledby="averageBillCommandTitle" data-average-bill-prize>
             <div class="col-12">
                 <div class="bill-command-board">
                     <div class="bill-command-header">
@@ -3528,7 +3529,10 @@
 
         async function init() {
             if (!hasDashboardSession) return;
-            loadAverageBillCommandCenter();
+            const averageBillProgramStatePromise = window.AverageBillProgram.load(averageBillApiBase());
+            averageBillProgramStatePromise.then(programState => {
+                if (programState.enabled) loadAverageBillCommandCenter();
+            });
             // Init Month Filter
             const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
             const mSelect = document.getElementById('monthFilter');
@@ -3561,10 +3565,15 @@
 
             // Load Average Bill Incentives
             try {
-                const incentivesRes = await fetch('average_bill_incentives.json');
-                if (incentivesRes.ok) {
-                    window.averageBillIncentivesCache = await incentivesRes.json();
+                const averageBillProgramState = await averageBillProgramStatePromise;
+                const incentivesRes = averageBillProgramState.enabled
+                    ? await fetch('average_bill_incentives.json')
+                    : null;
+                if (incentivesRes?.ok) {
+                    window.averageBillIncentivesCache = window.AverageBillProgram.filterIncentivesPayload(await incentivesRes.json());
                     console.log("Average bill incentives loaded successfully.");
+                } else {
+                    window.averageBillIncentivesCache = null;
                 }
             } catch (e) {
                 console.warn("Failed to load average_bill_incentives.json", e);
@@ -5457,7 +5466,7 @@
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'rhythm', this)">تحليل الساعات</button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'topsell', this)" style="color:#d35400;font-weight:bold;">📊 الأكثر مبيعاً</button>
                         <button class="drill-tab" onclick="switchDrillTab('${uid}', 'topcat', this)" style="color:#8e44ad;font-weight:bold;">📋 تقرير الفئات</button>
-                        <button class="drill-tab" onclick="switchDrillTab('${uid}', 'average-bill-incentives', this)" style="color:#fe7900;font-weight:bold;"><i class="fa-solid fa-gift me-1"></i> مكافأة متوسط الفاتورة</button>
+                        <button class="drill-tab" data-average-bill-prize onclick="switchDrillTab('${uid}', 'average-bill-incentives', this)" style="color:#fe7900;font-weight:bold;"><i class="fa-solid fa-gift me-1"></i> مكافأة متوسط الفاتورة</button>
                     </div>
 
                     <!-- Tab Panes -->
@@ -5486,7 +5495,7 @@
                         <div id="drill-topcat-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderTopCatDrill(topProductsList, catList, uid)}
                         </div>
-                        <div id="drill-average-bill-incentives-${uid}" class="drill-tab-pane" style="display:none;">
+                        <div id="drill-average-bill-incentives-${uid}" class="drill-tab-pane" data-average-bill-prize style="display:none;">
                             ${renderAverageBillIncentivesDrill(storeId, uid)}
                         </div>
                     </div>

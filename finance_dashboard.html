@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-average-bill-enabled="false">
 
 <head>
     <meta charset="UTF-8">
@@ -401,6 +401,7 @@
         }
     </style>
     <script src="users.js"></script>
+    <script src="assets/average-bill-program.js"></script>
 </head>
 
 <body>
@@ -427,7 +428,7 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax-panel" type="button" role="tab" aria-controls="tax-panel" aria-selected="true"><i class="fa-solid fa-percent me-1"></i> تقرير ضريبة المبيعات</button>
             </li>
-            <li class="nav-item" role="presentation">
+            <li class="nav-item" role="presentation" data-average-bill-prize>
                 <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance(); loadReviewQueue(); loadReviewAudit();"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
             </li>
         </ul>
@@ -557,7 +558,7 @@
             </div>
 
             <!-- Tab 2: Prizes & Payouts -->
-            <div class="tab-pane fade" id="prizes-panel" role="tabpanel" aria-labelledby="prizes-tab">
+            <div class="tab-pane fade" id="prizes-panel" role="tabpanel" aria-labelledby="prizes-tab" data-average-bill-prize>
 
                 <section class="review-command-center mb-4" aria-labelledby="financeReviewQueueTitle">
                     <div class="review-command-header">
@@ -801,10 +802,13 @@
         }
 
         // Initialize Dates
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             if (!hasFinanceSession) return;
             setFilterDates('thisMonth');
             loadFinancialData();
+
+            const programState = await window.AverageBillProgram.load(API_BASE);
+            if (!programState.enabled) return;
             
             // Set default date for prizes tab to yesterday
             const yesterday = new Date();

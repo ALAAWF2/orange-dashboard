@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-average-bill-enabled="false">
 
 <head>
     <script>
@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="assets/orange-ui.css">
     <script src="assets/fmt.js"></script>
     <script src="assets/nav.js"></script>
+    <script src="assets/average-bill-program.js"></script>
 
     <style>
         :root {
@@ -757,7 +758,7 @@
                         <option value="avg_ticket">معدل الفاتورة</option>
                         <option value="items_per_inv">متوسط القطع</option>
                         <option value="expected_comm">العمولة المتوقعة</option>
-                        <option value="avg_bill_comm">عمولة معدل الفاتورة</option>
+                        <option value="avg_bill_comm" data-average-bill-prize>عمولة معدل الفاتورة</option>
                         <option value="total_comm">مجموع العمولات</option>
                     </select>
                 </div>
@@ -875,7 +876,7 @@
                                                 onclick="sortTable('achievement')">التحقيق %</th>
                                             <th class="text-center sortable" data-sort="expected_comm"
                                                 onclick="sortTable('expected_comm')" title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
-                                            <th class="text-center sortable" data-sort="avg_bill_comm"
+                                            <th class="text-center sortable" data-sort="avg_bill_comm" data-average-bill-prize
                                                 onclick="sortTable('avg_bill_comm')" title="عمولة معدل الفاتورة من برنامج مكافآت متوسط الفاتورة">عمولة معدل الفاتورة</th>
                                             <th class="text-center sortable" data-sort="dailyReq"
                                                 onclick="sortTable('dailyReq')">اليومية المتبقية</th>
@@ -886,7 +887,7 @@
                                             <th class="d-none d-md-table-cell sortable" data-sort="items_per_inv"
                                                 onclick="sortTable('items_per_inv')">متوسط القطع</th>
                                             <th class="text-center sortable" data-sort="total_comm"
-                                                onclick="sortTable('total_comm')" title="إجمالي العمولات (العمولة المتوقعة + عمولة معدل الفاتورة)">مجموع العمولات</th>
+                                                onclick="sortTable('total_comm')" title="إجمالي العمولات الظاهرة">مجموع العمولات</th>
                                         </tr>
                                     </thead>
                                     <tbody id="leaderboardBody">
@@ -1196,7 +1197,7 @@
                 <hr>
 
                 <!-- 1.5. Average Bill Incentives Card -->
-                <div class="insight-card" id="panelAverageBillIncentivesCard" style="display:none; border: 1px solid #fe7900; background-color: #fff9f3;">
+                <div class="insight-card" id="panelAverageBillIncentivesCard" data-average-bill-prize style="display:none; border: 1px solid #fe7900; background-color: #fff9f3;">
                     <div class="insight-label fw-bold" style="color: #fe7900; font-size: 0.95rem; border-bottom: 1px solid #ffe8d6; padding-bottom: 6px; margin-bottom: 8px;">
                         <i class="fa-solid fa-gift me-1"></i> مكافأة متوسط الفاتورة (الشهر الحالي)
                     </div>
@@ -1559,17 +1560,22 @@
             async function loadData() {
                 // ... existing loadData code ...
                 try {
+                    const averageBillProgramState = await window.AverageBillProgram.load();
                     const [empRes, mgmtRes, prodRes, incentivesRes] = await Promise.all([
                         fetch('employees_data.json'),
                         fetch('management_data.json'),
                         fetch('data/products/employee_products_data.json').catch(() => null),
-                        fetch('average_bill_incentives.json').catch(() => null)
+                        averageBillProgramState.enabled
+                            ? fetch('average_bill_incentives.json').catch(() => null)
+                            : Promise.resolve(null)
                     ]);
 
                     const empJson = await empRes.json();
                     if (incentivesRes && incentivesRes.ok) {
-                        averageBillIncentivesCache = await incentivesRes.json();
+                        averageBillIncentivesCache = window.AverageBillProgram.filterIncentivesPayload(await incentivesRes.json());
                         console.log("Average bill incentives loaded in employees.html");
+                    } else {
+                        averageBillIncentivesCache = null;
                     }
                     historyData = empJson.history;
 
@@ -2412,7 +2418,7 @@
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
         <td class="text-center fw-bold">${emp.expected_comm > 0 ? Math.round(emp.expected_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
-        <td class="text-center fw-bold">${avgBillCommDisplay}</td>
+        <td class="text-center fw-bold" data-average-bill-prize>${avgBillCommDisplay}</td>
         <td class="text-center fw-bold text-danger">${dailyReqText}</td>
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
         <td class="d-none d-md-table-cell">${emp.avg_ticket.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
@@ -2450,7 +2456,9 @@
                         };
                         if (includeComm) {
                             r["العمولة المتوقعة"] = Math.round(e.expected_comm || 0);
-                            r["عمولة معدل الفاتورة"] = Math.round(e.avg_bill_comm || 0);
+                            if (window.AverageBillProgram.getState().enabled) {
+                                r["عمولة معدل الفاتورة"] = Math.round(e.avg_bill_comm || 0);
+                            }
                             r["مجموع العمولات"] = Math.round(e.total_comm || 0);
                         }
                         r["حصة الفرع %"] = (e.branchShare || 0).toFixed(1) + '%';

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-average-bill-enabled="false">
 
 <head>
   <meta charset="UTF-8">
@@ -16,6 +16,7 @@
   <!-- Supabase & CSV Export -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="../assets/average-bill-program.js"></script>
 
   <style>
     :root {
@@ -862,7 +863,7 @@
                 <th>الهدف</th>
                 <th>التحقيق %</th>
                 <th title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
-                <th>عمولة معدل الفاتورة</th>
+                <th data-average-bill-prize>عمولة معدل الفاتورة</th>
                 <th title="محسوبة من مبيعات أول الشهر حتى نهاية يوم أمس">اليومية المتبقية</th>
                 <th>الفواتير</th>
                 <th>معدل الفاتورة</th>
@@ -1143,10 +1144,13 @@
     async function loadAllData() {
       try {
         dataWarnings = [];
+        const averageBillProgramState = await window.AverageBillProgram.load();
         const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes] = await Promise.all([
           fetch('../summary.json?_=' + Date.now()).catch(() => null),
           fetch('../employees_data.json?_=' + Date.now()).catch(() => null),
-          fetch('../average_bill_incentives.json?_=' + Date.now()).catch(() => null),
+          averageBillProgramState.enabled
+            ? fetch('../average_bill_incentives.json?_=' + Date.now()).catch(() => null)
+            : Promise.resolve(null),
           fetch('products.json?_=' + Date.now()).catch(() => null),
           fetch('sales_by_outlet.json?_=' + Date.now()).catch(() => null),
           fetch('last_updated.json?_=' + Date.now()).catch(() => null)
@@ -1154,7 +1158,7 @@
 
         mgmtData = await readJsonResponse(mgmtRes);
         empData = await readJsonResponse(empRes);
-        incentivesData = await readJsonResponse(incRes);
+        incentivesData = window.AverageBillProgram.filterIncentivesPayload(await readJsonResponse(incRes));
         productsData = await readJsonResponse(prodRes);
         salesByOutletData = await readJsonResponse(outletSalesRes);
         const updatedData = await readJsonResponse(updatedRes);
@@ -1169,7 +1173,9 @@
         await loadExtendedTargetRowsIfNeeded();
         if (!incentivesData?.incentives) {
           incentivesData = { incentives: {} };
-          dataWarnings.push('تعذر تحميل عمولات معدل الفاتورة');
+          if (averageBillProgramState.enabled) {
+            dataWarnings.push('تعذر تحميل عمولات معدل الفاتورة');
+          }
         }
         if (!Array.isArray(productsData) || !salesByOutletData) {
           productsData = [];
@@ -2090,7 +2096,7 @@
             <td>${empTarget > 0 ? fmtMoney(empTarget) : '—'}</td>
             <td>${empTarget > 0 ? `<span class="badge-status ${achClass}">${fmtPerc(ach)}</span>` : '—'}</td>
             <td style="font-weight:800; color:var(--text-main); background:var(--warning-light);">${salesCommission > 0 ? `${fmtMoney(salesCommission)}` : '—'}</td>
-            <td style="font-weight:800; color:var(--accent);">${commissionText}${pendingText}</td>
+            <td style="font-weight:800; color:var(--accent);" data-average-bill-prize>${commissionText}${pendingText}</td>
             <td style="color:var(--danger); font-weight:800;">${
               empTarget > 0 && !isClosedPeriod
                 ? `${fmtMoney(dailyReq)}`
@@ -2647,7 +2653,7 @@
               <td>${employee.target > 0 ? fmtMoney(employee.target) : '—'}</td>
               <td>${formatOptionalPercentage(employee.achievement)}</td>
               <td>${employee.salesCommission > 0 ? fmtMoney(employee.salesCommission) : '—'}</td>
-              <td>${averageBillCommission}</td>
+              <td data-average-bill-prize>${averageBillCommission}</td>
               <td>${employee.target > 0 ? fmtMoney(employee.remaining) : '—'}</td>
               <td>${
                 employee.target > 0 && !period.isClosed
@@ -2753,7 +2759,7 @@
               <tr>
                 <th rowspan="2">الموظف</th>
                 <th colspan="4">${period.isClosed ? 'آخر يوم في الشهر' : 'الأمس (Yesterday)'} — <span dir="ltr">${period.endYmd}</span></th>
-                <th colspan="10">الفترة التراكمية (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
+                <th colspan="${window.AverageBillProgram.getState().enabled ? 10 : 9}">الفترة التراكمية (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
               </tr>
               <tr class="print-subhead">
                 <th>المبيعات</th>
@@ -2767,7 +2773,7 @@
                 <th>الهدف</th>
                 <th>تحقيق %</th>
                 <th>عمولة المبيعات</th>
-                <th>عمولة معدل الفاتورة</th>
+                <th data-average-bill-prize>عمولة معدل الفاتورة</th>
                 <th>المتبقي</th>
                 <th>اليومية المتبقية</th>
               </tr>
@@ -2787,7 +2793,7 @@
                 <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.target) : '—'}</td>
                 <td>${formatOptionalPercentage(employeeTotals.achievement)}</td>
                 <td>${employeeTotals.salesCommission > 0 ? fmtMoney(employeeTotals.salesCommission) : '—'}</td>
-                <td>${employeeTotals.averageBillCommission > 0 ? fmtMoney(employeeTotals.averageBillCommission) : '—'}</td>
+                <td data-average-bill-prize>${employeeTotals.averageBillCommission > 0 ? fmtMoney(employeeTotals.averageBillCommission) : '—'}</td>
                 <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.remaining) : '—'}</td>
                 <td>${
                   employeeTotals.target > 0 && !period.isClosed

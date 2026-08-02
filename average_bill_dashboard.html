@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-average-bill-enabled="false">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -405,6 +405,7 @@
         }
     </style>
     <script src="users.js"></script>
+    <script src="assets/average-bill-program.js"></script>
 </head>
 <body>
 
@@ -422,8 +423,19 @@
         </div>
     </nav>
 
+    <div class="container py-5" data-average-bill-stopped>
+        <div class="card border-0 shadow-sm mx-auto text-center" style="max-width:720px; border-top:5px solid #fe7900 !important; border-radius:18px;">
+            <div class="card-body p-5">
+                <div class="mb-3" style="font-size:3rem; color:#fe7900;"><i class="fa-solid fa-circle-pause"></i></div>
+                <h2 class="fw-bold mb-3">برنامج جائزة معدل الفاتورة متوقف مؤقتًا</h2>
+                <p class="text-muted mb-2">تم إخفاء الجائزة وعمولتها من الداشبورد بقرار الإدارة، مع الاحتفاظ بالقوانين والبيانات التاريخية.</p>
+                <p class="small fw-bold mb-0">تاريخ الإيقاف: <span data-average-bill-disabled-date>2 أغسطس 2026</span></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <div class="container-fluid dashboard-container">
+    <div class="container-fluid dashboard-container" data-average-bill-prize>
         
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs custom-tabs mb-4 border-0" id="dashboardTabs" role="tablist">
@@ -805,8 +817,10 @@
         }
 
         // Initialize Dates
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             if (!hasAverageBillSession) return;
+            const programState = await window.AverageBillProgram.load(API_BASE);
+            if (!programState.enabled) return;
             const today = new Date();
             const todayValue = formatDateInput(today);
             const riyadhTodayValue = getRiyadhTodayValue();

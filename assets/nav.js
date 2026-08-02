@@ -142,7 +142,7 @@ async function initNavbar() {
                         ${isManager ? `
                         <li><a class="dropdown-item" href="yoy_report.html">📊 مقارنة السنوات والزوار (YoY)</a></li>
                         <li><a class="dropdown-item" href="booff_report.html">📈 مقارنة الأعوام والنسب (BooFF)</a></li>
-                        <li><a class="dropdown-item" href="average_bill_dashboard.html">🎯 مستهدفات وجوائز متوسط الفاتورة</a></li>
+                        <li data-average-bill-prize><a class="dropdown-item" href="average_bill_dashboard.html">🎯 مستهدفات وجوائز متوسط الفاتورة</a></li>
                         <li><a class="dropdown-item" href="catalog/checklist-status.html">✅ تقرير التفقد اليومي</a></li>
                         ` : ''}
                     </ul>
