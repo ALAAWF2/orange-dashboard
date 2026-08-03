@@ -4123,7 +4123,7 @@ const EMPLOYEES = [
         "name": "هناء عبدالله",
         "startDate": "2025-05-04",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
+        "showroom": "1401-23-Alia Mall Madinah",
         "showroomDetails": [
             {
                 "name": "1401-23-Alia Mall Madinah",
@@ -4132,17 +4132,9 @@ const EMPLOYEES = [
                     "1401-C",
                     "1401-E"
                 ]
-            },
-            {
-                "name": "1402-26-Al-Noor Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1402-C",
-                    "1402-E"
-                ]
             }
         ],
-        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
+        "addressBooks": "1401-C;1401-E"
     },
     {
         "employeeId": "4586-ريناد عبدالله",
