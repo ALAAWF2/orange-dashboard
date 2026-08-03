@@ -5865,25 +5865,6 @@ const EMPLOYEES = [
         "addressBooks": "1010-C;1010-E"
     },
     {
-        "employeeId": "4845-نوير القحطاني",
-        "personnelNumber": "4845",
-        "name": "نوير القحطاني",
-        "startDate": "2026-02-02",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
-    },
-    {
         "employeeId": "4854-محمد شهيم",
         "personnelNumber": "4854",
         "name": "محمد شهيم",
