@@ -2235,7 +2235,7 @@ const EMPLOYEES = [
         "name": "محمد مبشر تشيراياكوث",
         "startDate": "2023-09-13",
         "manager": "عبدالله السرداح",
-        "showroom": "1801-19-Hail Othaim Mall",
+        "showroom": "1801-19-Hail Othaim Mall و 2401-47-Al-Nakheel Plaza",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
@@ -2244,9 +2244,17 @@ const EMPLOYEES = [
                     "1801-C",
                     "1801-E"
                 ]
+            },
+            {
+                "name": "2401-47-Al-Nakheel Plaza",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "2401-C",
+                    "2401-E"
+                ]
             }
         ],
-        "addressBooks": "1801-C;1801-E"
+        "addressBooks": "1801-C;1801-E;2401-C;2401-E"
     },
     {
         "employeeId": "3731-محمد سابيل باثاري",
