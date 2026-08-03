@@ -6044,25 +6044,6 @@ const EMPLOYEES = [
         "addressBooks": "1115-C;1115-E"
     },
     {
-        "employeeId": "4890-بلقيس الزهراني",
-        "personnelNumber": "4890",
-        "name": "بلقيس الزهراني",
-        "startDate": "2026-02-25",
-        "manager": "محمدكلو",
-        "showroom": "1113-51-Park Avenue Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1113-51-Park Avenue Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1113-C",
-                    "1113-E"
-                ]
-            }
-        ],
-        "addressBooks": "1113-C;1113-E"
-    },
-    {
         "employeeId": "4871-نوره البيشي",
         "personnelNumber": "4871",
         "name": "نوره البيشي",
