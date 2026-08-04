@@ -6698,25 +6698,6 @@ const EMPLOYEES = [
         "addressBooks": "1401-C;1401-E"
     },
     {
-        "employeeId": "4959-ليان الشهري",
-        "personnelNumber": "4959",
-        "name": "ليان الشهري",
-        "startDate": "2026-05-14",
-        "manager": "محمدكلو",
-        "showroom": "1111-46-Khaleej Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1111-46-Khaleej Mall Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1111-C",
-                    "1111-E"
-                ]
-            }
-        ],
-        "addressBooks": "1111-C;1111-E"
-    },
-    {
         "employeeId": "4960-ريما عبدالله",
         "personnelNumber": "4960",
         "name": "ريما عبدالله",
