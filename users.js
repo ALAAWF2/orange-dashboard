@@ -18,7 +18,7 @@ const USERS = {
         "email": "supervisor.reader@orangebedbath.com",
         "hide_visitors": false,
         "password": "OrangeReader2026!",
-        "pin": "5123",
+        "pin": "5821",
         "role": "Manager"
     },
     "المالية": {
@@ -42,7 +42,7 @@ const USERS = {
         "email": "mehyar.s@orangebedbath.com",
         "hide_visitors": false,
         "password": "Smdc",
-        "pin": "1478",
+        "pin": "5574",
         "role": "Manager"
     },
     "اماني عسيري": {
@@ -66,7 +66,7 @@ const USERS = {
         "email": "radwan@orangebedbath.com",
         "hide_visitors": false,
         "password": "TUdJ",
-        "pin": "7643",
+        "pin": "7156",
         "role": "Manager"
     },
     "عبدالله السرداح": {
@@ -82,7 +82,7 @@ const USERS = {
         "email": "obieda.sebaee@orangebedbath.com",
         "hide_visitors": false,
         "password": "Pvoo",
-        "pin": "1647",
+        "pin": "7482",
         "role": "Manager"
     },
     "علاء": {
