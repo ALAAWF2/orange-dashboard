@@ -1041,9 +1041,14 @@
     }
     .checklist-item:hover { border-color: var(--primary); }
     .checklist-item.checked { background: #f0fdf4; border-color: var(--accent); }
+    .checklist-item.time-locked { background: #f8fafc; border-color: #e2e8f0; cursor: not-allowed; }
+    .checklist-item.time-locked:hover { border-color: #cbd5e1; }
+    .checklist-item.time-locked .checklist-text { color: var(--text-muted); }
     .checklist-item-right { display: flex; align-items: center; gap: 10px; }
     .checklist-checkbox-wrapper { position: relative; width: 22px; height: 22px; }
     .checklist-checkbox-wrapper input { opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .checklist-checkbox-wrapper input:disabled { cursor: not-allowed; }
+    .checklist-checkbox-wrapper input:disabled ~ .checklist-checkmark { background: #f1f5f9; border-color: #cbd5e1; }
     .checklist-checkmark {
       position: absolute; top:0; left:0; width:22px; height:22px;
       border: 2px solid #cbd5e1; border-radius: 6px; background: #ffffff;
@@ -1055,6 +1060,7 @@
     .checklist-checkmark svg { width: 14px; height: 14px; stroke: white; stroke-width: 3; fill: none; }
     .checklist-text { font-weight: 700; font-size: 0.95em; color: var(--text-main); }
     .checklist-meta { font-size: 0.8em; color: var(--accent-dark); font-weight: bold; }
+    .checklist-category-window { color: var(--text-muted); font-size: 0.78em; font-weight: 700; }
 
     /* Lightbox */
     #imageLightbox {
@@ -3835,6 +3841,16 @@
     // === DAILY CHECKLIST LOGIC ===
     let checklistItems = [];
     let todayLogs = {};
+    let checklistLoadedSaudiDate = '';
+    let checklistRefreshTimer = null;
+
+    const CHECKLIST_TIME_DEFAULTS = {
+      morning_start: '10:00',
+      morning_end: '12:00',
+      closing_start: '23:00',
+      closing_end: '00:30'
+    };
+    let checklistTimeSettings = { ...CHECKLIST_TIME_DEFAULTS };
 
     function openChecklistModal() {
       if (!currentUser || !userMall) {
@@ -3851,14 +3867,26 @@
       document.getElementById('checklistModal').style.display = 'flex';
       
       loadChecklistData();
+      clearInterval(checklistRefreshTimer);
+      checklistRefreshTimer = setInterval(() => {
+        const currentSaudiDate = getSaudiDateTimeParts().date;
+        if (currentSaudiDate !== checklistLoadedSaudiDate) {
+          loadChecklistData();
+        } else {
+          renderChecklist();
+        }
+      }, 30_000);
     }
 
     function closeChecklistModal() {
       document.getElementById('checklistModal').style.display = 'none';
+      clearInterval(checklistRefreshTimer);
+      checklistRefreshTimer = null;
     }
 
     async function loadChecklistData() {
       try {
+        await loadChecklistTimeSettings();
         const { data: items, error: itemsErr } = await supabaseClient
           .from('catalog_checklist_items')
           .select('*')
@@ -3874,18 +3902,23 @@
         }
 
         const localDateStr = await getServerSaudiDate();
+        checklistLoadedSaudiDate = localDateStr;
+        const previousDateStr = getPreviousDateString(localDateStr);
         const { data: logs, error: logsErr } = await supabaseClient
           .from('catalog_checklist_logs')
           .select('*')
           .eq('mall', userMall)
-          .eq('checked_date', localDateStr);
+          .in('checked_date', [localDateStr, previousDateStr]);
           
         if (logsErr) throw logsErr;
         
         todayLogs = {};
         if (logs) {
           logs.forEach(log => {
-            todayLogs[log.item_id] = log;
+            const item = checklistItems.find(candidate => Number(candidate.id) === Number(log.item_id));
+            if (!item) return;
+            const businessDate = getChecklistBusinessDate(item, new Date(), localDateStr);
+            if (log.checked_date === businessDate) todayLogs[log.item_id] = log;
           });
         }
         
@@ -3902,30 +3935,120 @@
         const { data, error } = await supabaseClient.rpc('get_saudi_today');
         if (!error && data) return data;
       } catch (e) {}
-      const d = new Date();
-      const offset = d.getTimezoneOffset();
-      const localTime = new Date(d.getTime() - (offset * 60 * 1000));
-      return localTime.toISOString().split('T')[0];
+      return getSaudiDateTimeParts().date;
     }
 
-    const NIGHT_CHECKLIST_ITEM_IDS = [27, 28, 29, 30, 31];
-
-    function isNightInspectionItem(itemId) {
-      return NIGHT_CHECKLIST_ITEM_IDS.includes(Number(itemId));
+    async function loadChecklistTimeSettings() {
+      try {
+        const response = await fetch('/api/catalog/checklist-settings?_=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const settings = await response.json();
+        checklistTimeSettings = {
+          morning_start: settings.morning_start || CHECKLIST_TIME_DEFAULTS.morning_start,
+          morning_end: settings.morning_end || CHECKLIST_TIME_DEFAULTS.morning_end,
+          closing_start: settings.closing_start || CHECKLIST_TIME_DEFAULTS.closing_start,
+          closing_end: settings.closing_end || CHECKLIST_TIME_DEFAULTS.closing_end
+        };
+      } catch (err) {
+        console.warn('Using default checklist time settings:', err);
+        checklistTimeSettings = { ...CHECKLIST_TIME_DEFAULTS };
+      }
     }
 
-    function isNightInspectionWindow() {
-      const saudiString = new Date().toLocaleString("en-US", { timeZone: "Asia/Riyadh" });
-      const saudiDate = new Date(saudiString);
-      const hour = saudiDate.getHours();
-      return hour === 23 || hour === 0 || hour === 1;
+    function getSaudiDateTimeParts(date = new Date()) {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Riyadh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      });
+      const parts = Object.fromEntries(
+        formatter.formatToParts(date)
+          .filter(part => part.type !== 'literal')
+          .map(part => [part.type, part.value])
+      );
+      return {
+        date: `${parts.year}-${parts.month}-${parts.day}`,
+        minutes: (Number(parts.hour) * 60) + Number(parts.minute)
+      };
+    }
+
+    function timeToMinutes(value) {
+      const [hours, minutes] = String(value || '00:00').split(':').map(Number);
+      return (hours * 60) + minutes;
+    }
+
+    function isMinuteWithinWindow(currentMinutes, startTime, endTime) {
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+      if (startMinutes < endMinutes) {
+        return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+      }
+      return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+    }
+
+    function isClosingChecklistItem(item) {
+      return (item?.category || 'عام') === 'إجراءات الإغلاق';
+    }
+
+    function getChecklistWindow(item) {
+      if (isClosingChecklistItem(item)) {
+        return {
+          start: checklistTimeSettings.closing_start,
+          end: checklistTimeSettings.closing_end
+        };
+      }
+      return {
+        start: checklistTimeSettings.morning_start,
+        end: checklistTimeSettings.morning_end
+      };
+    }
+
+    function isChecklistItemAvailable(item, date = new Date()) {
+      const windowConfig = getChecklistWindow(item);
+      return isMinuteWithinWindow(
+        getSaudiDateTimeParts(date).minutes,
+        windowConfig.start,
+        windowConfig.end
+      );
+    }
+
+    function formatChecklistTime(value) {
+      const [hours, minutes] = value.split(':').map(Number);
+      const date = new Date(2000, 0, 1, hours, minutes);
+      return date.toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+
+    function getChecklistWindowLabel(item) {
+      const windowConfig = getChecklistWindow(item);
+      return `${formatChecklistTime(windowConfig.start)} – ${formatChecklistTime(windowConfig.end)}`;
+    }
+
+    function getPreviousDateString(dateString) {
+      const date = new Date(`${dateString}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate() - 1);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function getChecklistBusinessDate(item, date = new Date(), saudiDateString = getSaudiDateTimeParts(date).date) {
+      if (!isClosingChecklistItem(item)) return saudiDateString;
+      const currentMinutes = getSaudiDateTimeParts(date).minutes;
+      const startMinutes = timeToMinutes(checklistTimeSettings.closing_start);
+      const endMinutes = timeToMinutes(checklistTimeSettings.closing_end);
+      const crossesMidnight = startMinutes > endMinutes;
+      if (crossesMidnight && currentMinutes <= endMinutes) {
+        return getPreviousDateString(saudiDateString);
+      }
+      return saudiDateString;
     }
 
     function renderChecklist() {
       const container = document.getElementById('checklistItemsContainer');
       container.innerHTML = '';
       
-      const isNightTime = isNightInspectionWindow();
       const totalItems = checklistItems.length;
       const checkedItems = checklistItems.filter(item => !!todayLogs[item.id]).length;
       const percentage = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
@@ -3959,29 +4082,31 @@
         if (categoryItems.length === 0) return;
 
         const headerEl = document.createElement('div');
-        headerEl.style.cssText = 'margin-top: 15px; margin-bottom: 10px; font-weight: 800; color: var(--primary); font-size: 1.05em; border-bottom: 1.5px dashed rgba(242, 101, 34, 0.3); padding-bottom: 4px;';
-        headerEl.innerHTML = `<span>${categoryIcons[category] || '📋'}</span> <span>${category}</span>`;
+        headerEl.style.cssText = 'margin-top: 15px; margin-bottom: 10px; font-weight: 800; color: var(--primary); font-size: 1.05em; border-bottom: 1.5px dashed rgba(242, 101, 34, 0.3); padding-bottom: 4px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;';
+        headerEl.innerHTML = `<span><span>${categoryIcons[category] || '📋'}</span> <span>${category}</span></span><span class="checklist-category-window">متاح ${getChecklistWindowLabel(categoryItems[0])}</span>`;
         container.appendChild(headerEl);
 
         categoryItems.forEach(item => {
           const log = todayLogs[item.id];
           const isChecked = !!log;
           const checkedTimeStr = isChecked ? formatCheckedTime(log.checked_at) : '';
-          const isNightItem = isNightInspectionItem(item.id);
-          const isNightRestricted = isNightItem && !isNightTime && !isChecked;
+          const isAvailable = isChecklistItemAvailable(item);
+          const isTimeRestricted = !isAvailable && !isChecked;
+          const windowLabel = getChecklistWindowLabel(item);
           
           const itemEl = document.createElement('div');
-          itemEl.className = `checklist-item ${isChecked ? 'checked' : ''}`;
+          itemEl.className = `checklist-item ${isChecked ? 'checked' : ''} ${isTimeRestricted ? 'time-locked' : ''}`;
           itemEl.style.marginBottom = '8px';
+          if (isTimeRestricted) itemEl.title = `متاح فقط من ${windowLabel} بتوقيت الرياض`;
           
           itemEl.onclick = (e) => {
             const checkbox = itemEl.querySelector('input[type="checkbox"]');
-            if (checkbox.disabled) return;
-            if (e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper')) return;
-            if (isNightRestricted) {
-              showToast("عفواً، هذا البند مخصص للتفقد الليلي فقط (من 11:00 مساءً وحتى 1:59 صباحاً)", "error");
+            const clickedCheckbox = e.target.tagName === 'INPUT' || e.target.closest('.checklist-checkbox-wrapper');
+            if (isTimeRestricted) {
+              showToast(`عفواً، يمكن إكمال هذا البند فقط من ${windowLabel} بتوقيت الرياض`, 'error');
               return;
             }
+            if (clickedCheckbox) return;
             checkbox.checked = !checkbox.checked;
             handleChecklistToggle(item.id, checkbox.checked, log ? log.id : null);
           };
@@ -3989,15 +4114,16 @@
           itemEl.innerHTML = `
             <div class="checklist-item-right">
               <div class="checklist-checkbox-wrapper">
-                <input type="checkbox" ${isChecked ? 'checked' : ''} ${isNightRestricted ? 'disabled' : ''}
+                <input type="checkbox" ${isChecked ? 'checked' : ''} ${isTimeRestricted ? 'disabled' : ''}
+                       aria-label="${isChecked ? 'إلغاء' : 'إكمال'} بند قائمة التفقد"
                        onchange="handleChecklistToggle(${item.id}, this.checked, ${log ? log.id : null})">
                 <span class="checklist-checkmark">
                   <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </span>
               </div>
-              <span class="checklist-text">${item.text} ${isNightItem ? '🌙 (ليلي)' : ''}</span>
+              <span class="checklist-text">${item.text} ${isClosingChecklistItem(item) ? '🌙' : ''}</span>
             </div>
-            ${isChecked ? `<span class="checklist-meta">✓ تفقد ${checkedTimeStr}</span>` : ''}
+            ${isChecked ? `<span class="checklist-meta">✓ تفقد ${checkedTimeStr}</span>` : (isTimeRestricted ? '<span class="checklist-meta" style="color:var(--text-muted);">🔒 خارج الوقت</span>' : '')}
           `;
           container.appendChild(itemEl);
         });
@@ -4015,19 +4141,22 @@
 
     async function handleChecklistToggle(itemId, isChecked, logId) {
       if (!currentUser || !userMall) return;
+      const item = checklistItems.find(candidate => Number(candidate.id) === Number(itemId));
+      if (!item) return;
       
-      if (isChecked && isNightInspectionItem(itemId) && !isNightInspectionWindow()) {
-        showToast("عفواً، هذا البند مخصص للتفقد الليلي فقط (من 11:00 مساءً وحتى 1:59 صباحاً)", "error");
+      if (isChecked && !isChecklistItemAvailable(item)) {
+        showToast(`عفواً، يمكن إكمال هذا البند فقط من ${getChecklistWindowLabel(item)} بتوقيت الرياض`, 'error');
         renderChecklist();
         return;
       }
       
       try {
         if (isChecked) {
-          const localDateStr = await getServerSaudiDate();
+          const saudiDateStr = await getServerSaudiDate();
+          const checklistDateStr = getChecklistBusinessDate(item, new Date(), saudiDateStr);
           const { data, error } = await supabaseClient
             .from('catalog_checklist_logs')
-            .insert({ item_id: itemId, mall: userMall, email: currentUser.email, checked_date: localDateStr })
+            .insert({ item_id: itemId, mall: userMall, email: currentUser.email, checked_date: checklistDateStr })
             .select()
             .single();
           if (error) throw error;

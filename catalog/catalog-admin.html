@@ -908,6 +908,41 @@
           <h3 style="margin-bottom: 1rem; color: var(--secondary); display: flex; align-items: center; gap: 8px;">
             <span>🛠️ إدارة بنود قائمة التفقد اليومية</span>
           </h3>
+          <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem; border-right: 4px solid var(--primary);">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+              <div>
+                <div style="font-weight:800; color:var(--secondary); margin-bottom:4px;">⏱️ أوقات السماح بإكمال قائمة التفقد</div>
+                <div style="font-size:0.86rem; color:var(--text-muted);">تُطبّق الأوقات بتوقيت الرياض على جميع المعارض. فترة الإغلاق يمكن أن تعبر منتصف الليل.</div>
+              </div>
+              <span id="checklistTimesStatus" style="font-size:0.82rem; font-weight:700; color:var(--text-muted);">جاري تحميل الإعدادات...</span>
+            </div>
+            <div class="controls-row" style="align-items:flex-end; gap:15px;">
+              <div class="control-group" style="flex:1; min-width:145px;">
+                <label for="checklistMorningStart">بداية الفترة الصباحية</label>
+                <input type="time" id="checklistMorningStart" value="10:00" step="60" style="height:44px;">
+              </div>
+              <div class="control-group" style="flex:1; min-width:145px;">
+                <label for="checklistMorningEnd">نهاية الفترة الصباحية</label>
+                <input type="time" id="checklistMorningEnd" value="12:00" step="60" style="height:44px;">
+              </div>
+              <div class="control-group" style="flex:1; min-width:145px;">
+                <label for="checklistClosingStart">بداية إجراءات الإغلاق</label>
+                <input type="time" id="checklistClosingStart" value="23:00" step="60" style="height:44px;">
+              </div>
+              <div class="control-group" style="flex:1; min-width:145px;">
+                <label for="checklistClosingEnd">نهاية إجراءات الإغلاق</label>
+                <input type="time" id="checklistClosingEnd" value="00:30" step="60" style="height:44px;">
+              </div>
+              <div class="control-group">
+                <button id="saveChecklistTimesBtn" onclick="saveChecklistTimeSettings()" class="btn btn-primary" style="height:44px; display:flex; align-items:center; gap:8px; font-weight:bold;">
+                  <i class="fa-solid fa-floppy-disk"></i> حفظ الأوقات
+                </button>
+              </div>
+            </div>
+            <div style="margin-top:10px; padding:9px 12px; border-radius:8px; background:#fff7ed; color:#9a3412; font-size:0.82rem; font-weight:700;">
+              الفترة الصباحية تشمل: النظافة، الصيانة، العمليات اليومية، الموظفين، والبنود العامة.
+            </div>
+          </div>
           <div class="controls-container" style="padding: 1.2rem; margin-bottom: 1rem;">
             <div class="controls-row" style="align-items: flex-end; gap: 15px;">
               <div class="control-group" style="flex: 2;">
@@ -3766,11 +3801,19 @@
     let adminChecklistItems = [];
     let reportShowroomsList = [];
 
+    const CHECKLIST_TIME_DEFAULTS = {
+      morning_start: '10:00',
+      morning_end: '12:00',
+      closing_start: '23:00',
+      closing_end: '00:30'
+    };
+
     async function initializeChecklistTab() {
       // Show/hide management section based on role
       const adminSection = document.getElementById('checklistItemsAdminSection');
       if (adminSection) {
-        adminSection.style.display = (currentUserRole === 'admin' || currentUserRole === 'maintenance_admin') ? 'block' : 'none';
+        const isMasterAdmin = currentUser?.email?.toLowerCase() === 'alaa.wafae@orangebedbath.com';
+        adminSection.style.display = (isMasterAdmin || currentUserRole === 'admin' || currentUserRole === 'maintenance_admin') ? 'block' : 'none';
       }
 
       // Populate Report Date with today's local date if empty
@@ -3783,9 +3826,95 @@
       }
 
       // Fetch checklist items and showrooms
+      await loadChecklistTimeSettings();
       await loadChecklistItems();
       await populateReportShowroomsFilter();
       await loadChecklistReport();
+    }
+
+    function applyChecklistTimeSettings(settings) {
+      const values = { ...CHECKLIST_TIME_DEFAULTS, ...(settings || {}) };
+      document.getElementById('checklistMorningStart').value = values.morning_start;
+      document.getElementById('checklistMorningEnd').value = values.morning_end;
+      document.getElementById('checklistClosingStart').value = values.closing_start;
+      document.getElementById('checklistClosingEnd').value = values.closing_end;
+    }
+
+    async function loadChecklistTimeSettings() {
+      const status = document.getElementById('checklistTimesStatus');
+      try {
+        const response = await fetch('/api/catalog/checklist-settings?_=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const settings = await response.json();
+        applyChecklistTimeSettings(settings);
+        if (status) {
+          status.textContent = settings.source === 'defaults' ? 'القيم الافتراضية مفعّلة مؤقتاً' : 'الإعدادات الحالية محمّلة';
+          status.style.color = settings.source === 'defaults' ? 'var(--danger)' : 'var(--accent-dark)';
+        }
+      } catch (err) {
+        console.error('Failed to load checklist time settings:', err);
+        applyChecklistTimeSettings(CHECKLIST_TIME_DEFAULTS);
+        if (status) {
+          status.textContent = 'تعذر التحميل — تظهر القيم الافتراضية';
+          status.style.color = 'var(--danger)';
+        }
+      }
+    }
+
+    async function saveChecklistTimeSettings() {
+      const payload = {
+        morning_start: document.getElementById('checklistMorningStart').value,
+        morning_end: document.getElementById('checklistMorningEnd').value,
+        closing_start: document.getElementById('checklistClosingStart').value,
+        closing_end: document.getElementById('checklistClosingEnd').value
+      };
+      if (Object.values(payload).some(value => !/^([01]\d|2[0-3]):[0-5]\d$/.test(value))) {
+        showToast('⚠️ الرجاء تعبئة جميع الأوقات بصيغة صحيحة', 'error');
+        return;
+      }
+      if (payload.morning_start === payload.morning_end || payload.closing_start === payload.closing_end) {
+        showToast('⚠️ يجب أن يختلف وقت البداية عن وقت النهاية', 'error');
+        return;
+      }
+      if (!userSessionToken) {
+        showToast('❌ انتهت جلسة الدخول، أعد تسجيل الدخول', 'error');
+        return;
+      }
+
+      const button = document.getElementById('saveChecklistTimesBtn');
+      const status = document.getElementById('checklistTimesStatus');
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+      if (status) status.textContent = 'جاري حفظ الإعدادات...';
+
+      try {
+        const response = await fetch('/api/catalog/checklist-settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userSessionToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        applyChecklistTimeSettings(result);
+        if (status) {
+          status.textContent = 'تم حفظ الأوقات وتطبيقها على جميع المعارض';
+          status.style.color = 'var(--accent-dark)';
+        }
+        showToast('✅ تم حفظ أوقات قائمة التفقد بنجاح', 'success');
+      } catch (err) {
+        console.error('Failed to save checklist time settings:', err);
+        if (status) {
+          status.textContent = 'فشل حفظ الإعدادات';
+          status.style.color = 'var(--danger)';
+        }
+        showToast('❌ تعذر حفظ أوقات قائمة التفقد', 'error');
+      } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ الأوقات';
+      }
     }
 
     async function loadChecklistItems() {
