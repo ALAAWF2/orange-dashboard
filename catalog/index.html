@@ -3843,6 +3843,7 @@
     let todayLogs = {};
     let checklistLoadedSaudiDate = '';
     let checklistRefreshTimer = null;
+    let checklistServerClock = null;
 
     const CHECKLIST_TIME_DEFAULTS = {
       morning_start: '10:00',
@@ -3869,7 +3870,7 @@
       loadChecklistData();
       clearInterval(checklistRefreshTimer);
       checklistRefreshTimer = setInterval(() => {
-        const currentSaudiDate = getSaudiDateTimeParts().date;
+        const currentSaudiDate = getSaudiDateTimeParts(getChecklistReferenceDate()).date;
         if (currentSaudiDate !== checklistLoadedSaudiDate) {
           loadChecklistData();
         } else {
@@ -3917,7 +3918,7 @@
           logs.forEach(log => {
             const item = checklistItems.find(candidate => Number(candidate.id) === Number(log.item_id));
             if (!item) return;
-            const businessDate = getChecklistBusinessDate(item, new Date(), localDateStr);
+            const businessDate = getChecklistBusinessDate(item, getChecklistReferenceDate(), localDateStr);
             if (log.checked_date === businessDate) todayLogs[log.item_id] = log;
           });
         }
@@ -3943,6 +3944,7 @@
         const response = await fetch('/api/catalog/checklist-settings?_=' + Date.now(), { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const settings = await response.json();
+        syncChecklistServerClock(settings.server_now);
         checklistTimeSettings = {
           morning_start: settings.morning_start || CHECKLIST_TIME_DEFAULTS.morning_start,
           morning_end: settings.morning_end || CHECKLIST_TIME_DEFAULTS.morning_end,
@@ -3953,6 +3955,21 @@
         console.warn('Using default checklist time settings:', err);
         checklistTimeSettings = { ...CHECKLIST_TIME_DEFAULTS };
       }
+    }
+
+    function syncChecklistServerClock(serverNow) {
+      const serverEpoch = Date.parse(serverNow || '');
+      if (!Number.isFinite(serverEpoch)) return;
+      checklistServerClock = {
+        serverEpoch,
+        receivedAt: performance.now()
+      };
+    }
+
+    function getChecklistReferenceDate() {
+      if (!checklistServerClock) return new Date();
+      const elapsed = performance.now() - checklistServerClock.receivedAt;
+      return new Date(checklistServerClock.serverEpoch + elapsed);
     }
 
     function getSaudiDateTimeParts(date = new Date()) {
@@ -4007,7 +4024,7 @@
       };
     }
 
-    function isChecklistItemAvailable(item, date = new Date()) {
+    function isChecklistItemAvailable(item, date = getChecklistReferenceDate()) {
       const windowConfig = getChecklistWindow(item);
       return isMinuteWithinWindow(
         getSaudiDateTimeParts(date).minutes,
@@ -4033,7 +4050,7 @@
       return date.toISOString().slice(0, 10);
     }
 
-    function getChecklistBusinessDate(item, date = new Date(), saudiDateString = getSaudiDateTimeParts(date).date) {
+    function getChecklistBusinessDate(item, date = getChecklistReferenceDate(), saudiDateString = getSaudiDateTimeParts(date).date) {
       if (!isClosingChecklistItem(item)) return saudiDateString;
       const currentMinutes = getSaudiDateTimeParts(date).minutes;
       const startMinutes = timeToMinutes(checklistTimeSettings.closing_start);
@@ -4151,28 +4168,43 @@
       }
       
       try {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (sessionError || !accessToken) throw new Error('انتهت جلسة الدخول. يرجى تسجيل الدخول مرة أخرى.');
+
         if (isChecked) {
-          const saudiDateStr = await getServerSaudiDate();
-          const checklistDateStr = getChecklistBusinessDate(item, new Date(), saudiDateStr);
-          const { data, error } = await supabaseClient
-            .from('catalog_checklist_logs')
-            .insert({ item_id: itemId, mall: userMall, email: currentUser.email, checked_date: checklistDateStr })
-            .select()
-            .single();
-          if (error) throw error;
-          todayLogs[itemId] = data;
+          const response = await fetch('/api/catalog/checklist/logs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ item_id: itemId, mall: userMall })
+          });
+          const result = await response.json().catch(() => ({}));
+          syncChecklistServerClock(result.server_now);
+          if (!response.ok) {
+            const requestError = new Error(result.error || 'فشلت عملية حفظ التفقد');
+            requestError.code = result.code || 'request_failed';
+            throw requestError;
+          }
+          todayLogs[itemId] = result.log;
           showToast("تم حفظ التعديل بنجاح", "success");
         } else {
           if (logId) {
-            const { error } = await supabaseClient.from('catalog_checklist_logs').delete().eq('id', logId);
-            if (error) throw error;
+            const response = await fetch(`/api/catalog/checklist/logs/${logId}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || 'فشل إلغاء التفقد');
           }
           delete todayLogs[itemId];
           showToast("تم إلغاء التفقد", "info");
         }
         renderChecklist();
       } catch (err) {
-        showToast("فشلت عملية حفظ التعديل", "error");
+        showToast(err.message || "فشلت عملية حفظ التعديل", "error");
         await loadChecklistData();
       }
     }
