@@ -4682,7 +4682,7 @@ const EMPLOYEES = [
         "name": "عريب فرج القحطاني",
         "startDate": "2025-09-03",
         "manager": "عبدالله السرداح",
-        "showroom": "1103-25-Rabwa Othaim Mall و 1109-40-Hayat Mall Riyad",
+        "showroom": "1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
@@ -4691,17 +4691,9 @@ const EMPLOYEES = [
                     "1103-C",
                     "1103-E"
                 ]
-            },
-            {
-                "name": "1109-40-Hayat Mall Riyad",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1109-C",
-                    "1109-E"
-                ]
             }
         ],
-        "addressBooks": "1103-C;1103-E;1109-C;1109-E"
+        "addressBooks": "1103-C;1103-E"
     },
     {
         "employeeId": "4689-رنا سعد العنزي",
@@ -6416,6 +6408,25 @@ const EMPLOYEES = [
         "addressBooks": "1005-C;1005-E"
     },
     {
+        "employeeId": "4918-فهد فالافالي",
+        "personnelNumber": "4918",
+        "name": "فهد فالافالي",
+        "startDate": "2026-03-12",
+        "manager": "المنطقة الغربية",
+        "showroom": "1008-48 - Jeddah Park",
+        "showroomDetails": [
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
+            }
+        ],
+        "addressBooks": "1008-C;1008-E"
+    },
+    {
         "employeeId": "4922-مونافير علي باليالتو",
         "personnelNumber": "4922",
         "name": "مونافير علي باليالتو",
@@ -6535,7 +6546,7 @@ const EMPLOYEES = [
         "name": "منال هلال",
         "startDate": "2026-04-19",
         "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall و 1109-40-Hayat Mall Riyad",
+        "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
@@ -6544,17 +6555,9 @@ const EMPLOYEES = [
                     "1102-C",
                     "1102-E"
                 ]
-            },
-            {
-                "name": "1109-40-Hayat Mall Riyad",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1109-C",
-                    "1109-E"
-                ]
             }
         ],
-        "addressBooks": "1102-C;1102-E;1109-C;1109-E"
+        "addressBooks": "1102-C;1102-E"
     },
     {
         "employeeId": "4943-منى العمري",
