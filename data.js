@@ -707,19 +707,19 @@ const EMPLOYEES = [
         "personnelNumber": "0263",
         "name": "فيصل كوتارتودي (بابو",
         "startDate": "2017-08-20",
-        "manager": "محمدكلو",
-        "showroom": "1107-38-Al_Riyadh Park",
+        "manager": "المنطقة الشمالية",
+        "showroom": "1401-23-Alia Mall Madinah",
         "showroomDetails": [
             {
-                "name": "1107-38-Al_Riyadh Park",
-                "manager": "محمدكلو",
+                "name": "1401-23-Alia Mall Madinah",
+                "manager": "المنطقة الشمالية",
                 "codes": [
-                    "1107-C",
-                    "1107-E"
+                    "1401-C",
+                    "1401-E"
                 ]
             }
         ],
-        "addressBooks": "1107-C;1107-E"
+        "addressBooks": "1401-C;1401-E"
     },
     {
         "employeeId": "0284-محمد عدنان محمد بشير",
