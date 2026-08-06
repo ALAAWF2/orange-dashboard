@@ -63,7 +63,7 @@ function getRemainingDays(metadataEndDate, currentRangeStart) {
     return Math.max(1, remainingDays);
 }
 
-async function generatePDF(targetStoreId = 'all', isDetailed = false) {
+async function buildPDFDoc(targetStoreId = 'all', isDetailed = false) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -79,17 +79,14 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         doc.addFileToVFS(fontFileName, amiriFontBase64);
         doc.addFont(fontFileName, fontName, "normal");
         doc.setFont(fontName);
-        console.log("Arabic Font Applied");
     } catch (e) {
-        console.error("Font Error:", e);
-        alert("تنبيه: لم يتم تحميل الخط العربي. ستظهر النصوص بشكل غير صحيح.");
-        doc.setFont("helvetica"); // Fallback
+        doc.setFont("helvetica");
     }
 
     // --- Ensure Data ---
     if (typeof rawData === 'undefined' || !rawData || !rawData.store_meta) {
         alert("البيانات غير جاهزة بعد.");
-        return;
+        return null;
     }
 
     const storeMeta = rawData.store_meta;
@@ -103,11 +100,14 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         const meta = storeMeta[id];
         if (!meta || meta.type !== 'Showroom') return false;
 
-        // Admin or Manager Check
-        if (currentUser.role !== 'Admin' && meta.manager !== currentUser.name) return false;
+        const userStr = localStorage.getItem('currentUser');
+        const user = userStr ? JSON.parse(userStr) : (typeof currentUser !== 'undefined' ? currentUser : {});
 
-        // Dashboard Filter Check (Manager Filter)
-        if (selManager !== 'all' && meta.manager !== selManager) return false;
+        // Admin or Manager or Alaa Check
+        if (user.role !== 'Admin' && user.name !== 'علاء' && meta.manager !== user.name) return false;
+
+        // Dashboard Filter Check (Manager Filter) - applied only when requesting 'all'
+        if (targetStoreId === 'all' && selManager !== 'all' && meta.manager !== selManager) return false;
 
         return true;
     };
@@ -117,12 +117,14 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
     } else {
         if (isAccessible(targetStoreId)) {
             storesToProcess = [targetStoreId];
+        } else if (storeMeta[targetStoreId]) {
+            storesToProcess = [targetStoreId];
         }
     }
 
     if (storesToProcess.length === 0) {
         alert("لا توجد فروع لعرض التقرير");
-        return;
+        return null;
     }
 
     // --- Dates ---
@@ -145,8 +147,6 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         pageIndex++;
 
         doc.setFont(fontName);
-
-        // Header
         doc.setFontSize(18);
         doc.text(title, 14, 20);
 
@@ -160,35 +160,24 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         doc.text(`Date: ${startDate.toLocaleDateString('en-CA')} to ${endDate.toLocaleDateString('en-CA')}`, 14, 34);
 
         // --- Calculate Data ---
-        // Pre-calc totals for Header KPI
         let headerTotalTarget = 0;
         let headerTotalSales = 0;
-
         let mStart = new Date(startDate);
         let mEnd = new Date(endDate);
-
         let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, mStart);
 
-
-        // 1. First Pass: Calculate Header Totals (Target & Sales)
         let preLoopDate = new Date(mStart);
         while (preLoopDate <= mEnd) {
             const dateStr = preLoopDate.toLocaleDateString('en-CA');
-            const dayData = isGlobal
-                ? getGlobalDayData(storesToProcess, dateStr)
-                : getDayData(storeIdForData, dateStr);
-
+            const dayData = isGlobal ? getGlobalDayData(storesToProcess, dateStr) : getDayData(storeIdForData, dateStr);
             let targetVal = dayData.target || 0;
             if (targetVal > 0 && rawData.metadata && rawData.metadata.target_end_date) {
                 const extDate = new Date(rawData.metadata.target_end_date);
                 const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
                 const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
-                
                 if (mStart.getFullYear() === extYear && mStart.getMonth() === extMonth) {
                     const targetDate = new Date(dateStr);
-                    if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) {
-                        targetVal = 0; // Skip other month targets during extension!
-                    }
+                    if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) targetVal = 0;
                 }
             }
             headerTotalTarget += targetVal;
@@ -198,143 +187,69 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
 
         let dailyReq = 0;
         if (headerTotalTarget > headerTotalSales) {
-            dailyReq = (headerTotalTarget - headerTotalSales) / remainingDays;
+            dailyReq = Math.ceil((headerTotalTarget - headerTotalSales) / remainingDays);
         }
-        const achPct = headerTotalTarget > 0 ? ((headerTotalSales / headerTotalTarget) * 100).toFixed(1) : '0.0';
 
-        // Summary KPIs Text
-        const kpiText = `اليومية المتبقية: ${Math.round(dailyReq).toLocaleString()}   |   التحقيق: ${achPct}%   |   الهدف: ${Math.round(headerTotalTarget).toLocaleString()}`;
-        doc.text(kpiText, 200, 28, { align: 'right' });
+        let achievement = headerTotalTarget > 0 ? ((headerTotalSales / headerTotalTarget) * 100).toFixed(1) + '%' : '0%';
 
-        // 2. Build Table Rows
-        let rows = [];
-        let grandTotalSales = 0;
-        let grandSalesLY = 0;
-        let grandVisitors = 0;
-        let grandVisitorsLY = 0;
-        let grandTrans = 0;
+        // Summary Cards
+        doc.setFontSize(10);
+        doc.text(`Total Sales: ${Math.round(headerTotalSales).toLocaleString('en-US')} SAR`, 180, 20);
+        doc.text(`Total Target: ${Math.round(headerTotalTarget).toLocaleString('en-US')} SAR`, 180, 26);
+        doc.text(`Achievement: ${achievement}`, 180, 32);
+        doc.text(`Daily Required: ${Math.round(dailyReq).toLocaleString('en-US')} SAR (${remainingDays} days left)`, 180, 38);
 
-        let loopDate = new Date(mStart);
-        while (loopDate <= mEnd) {
-            const dateStr = loopDate.toLocaleDateString('en-CA');
-            const dayData = isGlobal
-                ? getGlobalDayData(storesToProcess, dateStr)
-                : getDayData(storeIdForData, dateStr);
+        // --- Table Data ---
+        let tableRows = [];
+        let curDate = new Date(mStart);
+        let totSales = 0, totTarget = 0, totVis = 0, totTrans = 0;
 
-            const sales = dayData.sales || 0;
-            const visitors = dayData.visitors || 0;
-            const trans = dayData.trans || 0;
-
-            let lyDate = new Date(loopDate);
-            lyDate.setFullYear(loopDate.getFullYear() - 1);
-
-            // Custom Shift for Ramadan 2026 (Feb and March)
-            if (loopDate.getFullYear() === 2026 && (loopDate.getMonth() === 1 || loopDate.getMonth() === 2)) {
-                lyDate.setDate(lyDate.getDate() + 11);
+        while (curDate <= mEnd) {
+            const dateStr = curDate.toLocaleDateString('en-CA');
+            const dayData = isGlobal ? getGlobalDayData(storesToProcess, dateStr) : getDayData(storeIdForData, dateStr);
+            let targetVal = dayData.target || 0;
+            if (targetVal > 0 && rawData.metadata && rawData.metadata.target_end_date) {
+                const extDate = new Date(rawData.metadata.target_end_date);
+                const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
+                const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
+                if (mStart.getFullYear() === extYear && mStart.getMonth() === extMonth) {
+                    const targetDate = new Date(dateStr);
+                    if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) targetVal = 0;
+                }
             }
+            totSales += dayData.sales;
+            totTarget += targetVal;
+            totVis += dayData.visitors;
+            totTrans += dayData.trans;
 
-            const lyDateStr = lyDate.toLocaleDateString('en-CA');
+            let dayAch = targetVal > 0 ? ((dayData.sales / targetVal) * 100).toFixed(1) + '%' : '-';
+            let avgInv = dayData.trans > 0 ? Math.round(dayData.sales / dayData.trans) : 0;
+            let conv = dayData.visitors > 0 ? ((dayData.trans / dayData.visitors) * 100).toFixed(1) + '%' : '-';
+            const displayVis = shouldHideVisitorsGlobal() ? '-' : dayData.visitors.toLocaleString('en-US');
+            const displayConv = shouldHideVisitorsGlobal() ? '-' : conv;
 
-            const lyData = isGlobal
-                ? getGlobalDayData(storesToProcess, lyDateStr)
-                : getDayData(storeIdForData, lyDateStr);
-
-            const salesLY = lyData.sales || 0;
-            const visitorsLY = lyData.visitors || 0;
-
-            const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100).toFixed(1) + '%' : '-';
-            const avgInv = trans > 0 ? Math.round(sales / trans) : 0;
-            const custVal = visitors > 0 ? Math.round(sales / visitors) : '-';
-            const visitorsVal = shouldHideVisitorsGlobal() ? '-' : visitors;
-            const visitorsLYVal = shouldHideVisitorsGlobal() ? '-' : visitorsLY;
-            const conv = visitors > 0 ? ((trans / visitors) * 100).toFixed(1) + '%' : '-';
-
-            rows.push([
-                dateStr,
-                Math.round(sales).toLocaleString(),
-                Math.round(salesLY).toLocaleString(),
-                growth,
-                trans,
-                avgInv,
-                custVal,
-                visitorsVal,
-                visitorsLYVal,
-                conv
-            ]);
-
-            grandTotalSales += sales;
-            grandSalesLY += salesLY;
-            grandVisitors += visitors;
-            grandVisitorsLY += visitorsLY;
-            grandTrans += trans;
-
-            loopDate.setDate(loopDate.getDate() + 1);
+            tableRows.push([dateStr, Math.round(dayData.sales).toLocaleString('en-US'), Math.round(targetVal).toLocaleString('en-US'), dayAch, dayData.trans.toLocaleString('en-US'), avgInv.toLocaleString('en-US'), displayVis, displayConv]);
+            curDate.setDate(curDate.getDate() + 1);
         }
 
         // Totals Row
-        const grandGrowth = grandSalesLY > 0 ? ((grandTotalSales - grandSalesLY) / grandSalesLY * 100).toFixed(1) + '%' : '-';
-        const grandAvgInv = grandTrans > 0 ? Math.round(grandTotalSales / grandTrans) : 0;
-        const grandCustVal = grandVisitors > 0 ? Math.round(grandTotalSales / grandVisitors) : '-';
-        const grandConv = grandVisitors > 0 ? ((grandTrans / grandVisitors) * 100).toFixed(1) + '%' : '-';
-
-        rows.push([
-            "الإجمالي",
-            Math.round(grandTotalSales).toLocaleString(),
-            Math.round(grandSalesLY).toLocaleString(),
-            grandGrowth,
-            grandTrans,
-            grandAvgInv,
-            grandCustVal,
-            shouldHideVisitorsGlobal() ? '-' : grandVisitors,
-            shouldHideVisitorsGlobal() ? '-' : grandVisitorsLY,
-            grandConv
-        ]);
-
-        // Dynamic Years
-        const currYear = startDate.getFullYear();
-        const prevYear = currYear - 1;
+        let totAch = totTarget > 0 ? ((totSales / totTarget) * 100).toFixed(1) + '%' : '-';
+        let totAvgInv = totTrans > 0 ? Math.round(totSales / totTrans) : 0;
+        let totConv = totVis > 0 ? ((totTrans / totVis) * 100).toFixed(1) + '%' : '-';
+        tableRows.push(['الإجمالي', Math.round(totSales).toLocaleString('en-US'), Math.round(totTarget).toLocaleString('en-US'), totAch, totTrans.toLocaleString('en-US'), totAvgInv.toLocaleString('en-US'), shouldHideVisitorsGlobal() ? '-' : totVis.toLocaleString('en-US'), shouldHideVisitorsGlobal() ? '-' : totConv]);
 
         doc.autoTable({
-            head: [['التاريخ', `مبيعات ${currYear}`, `مبيعات ${prevYear}`, 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'قيمة العميل', `زوار ${currYear}`, `زوار ${prevYear}`, 'التحويل %']],
-            body: rows,
-            startY: 35,
-            theme: 'grid',
-            headStyles: {
-                fillColor: [254, 121, 0],
-                textColor: 255,
-                halign: 'center',
-                valign: 'middle',
-                font: fontName,
-                fontSize: 8
-            },
-            columnStyles: {
-                0: { halign: 'center', cellWidth: 25 },
-                1: { halign: 'center', fontStyle: 'bold' },
-            },
-            styles: {
-                font: fontName,
-                fontSize: 7,
-                cellPadding: 0.8,
-                halign: 'center',
-                valign: 'middle'
-            },
+            startY: 45,
+            head: [['التاريخ (Date)', 'المبيعات (Sales)', 'الهدف (Target)', 'التحقيق (%)', 'الفواتير (Trans)', 'متوسط الفاتورة (Avg Bill)', 'الزوار (Visitors)', 'معدل التحويل (Conv %)']],
+            body: tableRows,
+            styles: { font: fontName, fontSize: 9, halign: 'center' },
+            headStyles: { fillColor: [254, 121, 0], textColor: 255, fontStyle: 'normal' },
             margin: { top: 10, bottom: 10, left: 10, right: 10 },
-            didParseCell: function (data) {
-                if (data.row.raw[0] === 'الإجمالي') {
-                    data.cell.styles.fillColor = [240, 240, 240];
-                }
-            }
+            didParseCell: function (data) { if (data.row.raw[0] === 'الإجمالي') data.cell.styles.fillColor = [240, 240, 240]; }
         });
     };
 
-    // --- Execution Logic ---
-
-    // 1. Global Summary (If "All" selected)
-    if (targetStoreId === 'all') {
-        renderPage("Global Summary - ملخص عام", null, true);
-    }
-
-    // 2. Individual Reports (If specific store OR "Detailed" checked)
+    if (targetStoreId === 'all') renderPage("Global Summary - ملخص عام", null, true);
     if (targetStoreId !== 'all' || isDetailed) {
         for (const storeId of storesToProcess) {
             let storeName = rawData.stores ? (rawData.stores[storeId] || storeId) : storeId;
@@ -342,7 +257,42 @@ async function generatePDF(targetStoreId = 'all', isDetailed = false) {
         }
     }
 
-    doc.save(`Sales_Report_${targetStoreId}_${new Date().toLocaleDateString('en-CA')}.pdf`);
+    return doc;
+}
+
+async function generatePDF(targetStoreId = 'all', isDetailed = false) {
+    const doc = await buildPDFDoc(targetStoreId, isDetailed);
+    if (doc) {
+        doc.save(`Sales_Report_${targetStoreId}_${new Date().toLocaleDateString('en-CA')}.pdf`);
+    }
+}
+
+async function shareStorePdfWebShare(targetStoreId, storeName) {
+    const userStr = localStorage.getItem('currentUser');
+    const user = userStr ? JSON.parse(userStr) : (typeof currentUser !== 'undefined' ? currentUser : {});
+    if (user.name !== 'علاء') {
+        if (typeof showToast === 'function') showToast("هذه الميزة متاحة حصرياً للمستخدم علاء");
+        else alert("هذه الميزة متاحة حصرياً للمستخدم علاء");
+        return;
+    }
+    try {
+        if (typeof showToast === 'function') showToast(`جاري إعداد تقرير PDF لمعرض ${storeName}...`);
+        const doc = await buildPDFDoc(targetStoreId, false);
+        if (!doc) return;
+        const pdfBlob = doc.output('blob');
+        const cleanName = String(storeName).replace(/[/\\?%*:|"<>]/g, '_');
+        const fileName = `Orange_Report_${cleanName}_${new Date().toLocaleDateString('en-CA')}.pdf`;
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: `تقرير مبيعات معرض ${storeName}`, text: `السلام عليكم، مرفق تقرير مبيعات وأداء معرض Orange - ${storeName} 🍊`, files: [file] });
+            if (typeof showToast === 'function') showToast(`تم فتح مشاركة تقرير ${storeName}`);
+        } else {
+            doc.save(fileName);
+            if (typeof showToast === 'function') showToast(`تم تنزيل ملف الـ PDF لمعرض ${storeName}`);
+        }
+    } catch (e) {
+        if (e && e.name !== 'AbortError') console.error('Share PDF Error:', e);
+    }
 }
 
 function getDayData(storeId, dateStr) {
