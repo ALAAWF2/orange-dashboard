@@ -249,53 +249,116 @@ async function buildPDFDoc(targetStoreId = 'all', isDetailed = false) {
             dailyReq = Math.ceil((headerTotalTarget - headerTotalSales) / remainingDays);
         }
 
-        let achievement = headerTotalTarget > 0 ? ((headerTotalSales / headerTotalTarget) * 100).toFixed(1) + '%' : '0%';
+        const achievement = headerTotalTarget > 0 ? ((headerTotalSales / headerTotalTarget) * 100).toFixed(1) : '0.0';
+        const kpiText = `اليومية المتبقية: ${Math.round(dailyReq).toLocaleString('en-US')}   |   التحقيق: ${achievement}%   |   الهدف: ${Math.round(headerTotalTarget).toLocaleString('en-US')}`;
+        doc.setFontSize(12);
+        doc.text(kpiText, 200, 28, { align: 'right' });
 
-        // Summary Cards
-        doc.setFontSize(10);
-        doc.text(`Total Sales: ${Math.round(headerTotalSales).toLocaleString('en-US')} SAR`, 180, 20);
-        doc.text(`Total Target: ${Math.round(headerTotalTarget).toLocaleString('en-US')} SAR`, 180, 26);
-        doc.text(`Achievement: ${achievement}`, 180, 32);
-        doc.text(`Daily Required: ${Math.round(dailyReq).toLocaleString('en-US')} SAR (${remainingDays} days left)`, 180, 38);
-
-        // --- Table Data ---
-        let tableRows = [];
+        // --- Daily comparison table ---
+        const tableRows = [];
+        let totalSales = 0;
+        let totalSalesLY = 0;
+        let totalVisitors = 0;
+        let totalVisitorsLY = 0;
+        let totalTrans = 0;
         let curDate = new Date(mStart);
-        let totSales = 0, totTarget = 0, totVis = 0, totTrans = 0;
 
         while (curDate <= mEnd) {
             const dateStr = curDate.toLocaleDateString('en-CA');
             const dayData = isGlobal ? getGlobalDayData(storesToProcess, dateStr) : getDayData(storeIdForData, dateStr);
-            const targetVal = getPdfTargetPlan(dateStr, reportStoreIds, metadataEndDate, targetLookup).daily;
-            totSales += dayData.sales;
-            totTarget += targetVal;
-            totVis += dayData.visitors;
-            totTrans += dayData.trans;
+            const sales = dayData.sales || 0;
+            const visitors = dayData.visitors || 0;
+            const trans = dayData.trans || 0;
 
-            let dayAch = targetVal > 0 ? ((dayData.sales / targetVal) * 100).toFixed(1) + '%' : '-';
-            let avgInv = dayData.trans > 0 ? Math.round(dayData.sales / dayData.trans) : 0;
-            let conv = dayData.visitors > 0 ? ((dayData.trans / dayData.visitors) * 100).toFixed(1) + '%' : '-';
-            const displayVis = shouldHideVisitorsGlobal() ? '-' : dayData.visitors.toLocaleString('en-US');
-            const displayConv = shouldHideVisitorsGlobal() ? '-' : conv;
+            const lyDate = new Date(curDate);
+            lyDate.setFullYear(curDate.getFullYear() - 1);
 
-            tableRows.push([dateStr, Math.round(dayData.sales).toLocaleString('en-US'), Math.round(targetVal).toLocaleString('en-US'), dayAch, dayData.trans.toLocaleString('en-US'), avgInv.toLocaleString('en-US'), displayVis, displayConv]);
+            // Preserve the established Ramadan comparison shift.
+            if (curDate.getFullYear() === 2026 && (curDate.getMonth() === 1 || curDate.getMonth() === 2)) {
+                lyDate.setDate(lyDate.getDate() + 11);
+            }
+
+            const lyDateStr = lyDate.toLocaleDateString('en-CA');
+            const lyData = isGlobal ? getGlobalDayData(storesToProcess, lyDateStr) : getDayData(storeIdForData, lyDateStr);
+            const salesLY = lyData.sales || 0;
+            const visitorsLY = lyData.visitors || 0;
+            const growth = salesLY > 0 ? ((sales - salesLY) / salesLY * 100).toFixed(1) + '%' : '-';
+            const avgBill = trans > 0 ? Math.round(sales / trans) : 0;
+            const customerValue = visitors > 0 ? Math.round(sales / visitors) : '-';
+            const conversion = visitors > 0 ? ((trans / visitors) * 100).toFixed(1) + '%' : '-';
+
+            tableRows.push([
+                dateStr,
+                Math.round(sales).toLocaleString('en-US'),
+                Math.round(salesLY).toLocaleString('en-US'),
+                growth,
+                trans.toLocaleString('en-US'),
+                avgBill.toLocaleString('en-US'),
+                customerValue === '-' ? '-' : customerValue.toLocaleString('en-US'),
+                shouldHideVisitorsGlobal() ? '-' : visitors.toLocaleString('en-US'),
+                shouldHideVisitorsGlobal() ? '-' : visitorsLY.toLocaleString('en-US'),
+                conversion
+            ]);
+
+            totalSales += sales;
+            totalSalesLY += salesLY;
+            totalVisitors += visitors;
+            totalVisitorsLY += visitorsLY;
+            totalTrans += trans;
             curDate.setDate(curDate.getDate() + 1);
         }
 
-        // Totals Row
-        let totAch = totTarget > 0 ? ((totSales / totTarget) * 100).toFixed(1) + '%' : '-';
-        let totAvgInv = totTrans > 0 ? Math.round(totSales / totTrans) : 0;
-        let totConv = totVis > 0 ? ((totTrans / totVis) * 100).toFixed(1) + '%' : '-';
-        tableRows.push(['الإجمالي', Math.round(totSales).toLocaleString('en-US'), Math.round(totTarget).toLocaleString('en-US'), totAch, totTrans.toLocaleString('en-US'), totAvgInv.toLocaleString('en-US'), shouldHideVisitorsGlobal() ? '-' : totVis.toLocaleString('en-US'), shouldHideVisitorsGlobal() ? '-' : totConv]);
+        const totalGrowth = totalSalesLY > 0 ? ((totalSales - totalSalesLY) / totalSalesLY * 100).toFixed(1) + '%' : '-';
+        const totalAvgBill = totalTrans > 0 ? Math.round(totalSales / totalTrans) : 0;
+        const totalCustomerValue = totalVisitors > 0 ? Math.round(totalSales / totalVisitors) : '-';
+        const totalConversion = totalVisitors > 0 ? ((totalTrans / totalVisitors) * 100).toFixed(1) + '%' : '-';
+
+        tableRows.push([
+            'الإجمالي',
+            Math.round(totalSales).toLocaleString('en-US'),
+            Math.round(totalSalesLY).toLocaleString('en-US'),
+            totalGrowth,
+            totalTrans.toLocaleString('en-US'),
+            totalAvgBill.toLocaleString('en-US'),
+            totalCustomerValue === '-' ? '-' : totalCustomerValue.toLocaleString('en-US'),
+            shouldHideVisitorsGlobal() ? '-' : totalVisitors.toLocaleString('en-US'),
+            shouldHideVisitorsGlobal() ? '-' : totalVisitorsLY.toLocaleString('en-US'),
+            totalConversion
+        ]);
+
+        const currentYear = startDate.getFullYear();
+        const previousYear = currentYear - 1;
 
         doc.autoTable({
-            startY: 45,
-            head: [['التاريخ (Date)', 'المبيعات (Sales)', 'الهدف (Target)', 'التحقيق (%)', 'الفواتير (Trans)', 'متوسط الفاتورة (Avg Bill)', 'الزوار (Visitors)', 'معدل التحويل (Conv %)']],
+            startY: 35,
+            theme: 'grid',
+            head: [['التاريخ', `مبيعات ${currentYear}`, `مبيعات ${previousYear}`, 'النمو %', 'عدد الفواتير', 'متوسط الفاتورة', 'قيمة العميل', `زوار ${currentYear}`, `زوار ${previousYear}`, 'التحويل %']],
             body: tableRows,
-            styles: { font: fontName, fontSize: 9, halign: 'center' },
-            headStyles: { fillColor: [254, 121, 0], textColor: 255, fontStyle: 'normal' },
+            headStyles: {
+                fillColor: [254, 121, 0],
+                textColor: 255,
+                halign: 'center',
+                valign: 'middle',
+                font: fontName,
+                fontSize: 8
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 25 },
+                1: { halign: 'center', fontStyle: 'bold' }
+            },
+            styles: {
+                font: fontName,
+                fontSize: 7,
+                cellPadding: 0.8,
+                halign: 'center',
+                valign: 'middle'
+            },
             margin: { top: 10, bottom: 10, left: 10, right: 10 },
-            didParseCell: function (data) { if (data.row.raw[0] === 'الإجمالي') data.cell.styles.fillColor = [240, 240, 240]; }
+            didParseCell: function (data) {
+                if (data.row.raw[0] === 'الإجمالي') {
+                    data.cell.styles.fillColor = [240, 240, 240];
+                }
+            }
         });
     };
 
