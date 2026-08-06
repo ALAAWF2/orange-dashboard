@@ -676,33 +676,6 @@ const EMPLOYEES = [
         "addressBooks": "2201-C;2201-E"
     },
     {
-        "employeeId": "0262-فهد كوتي",
-        "personnelNumber": "0262",
-        "name": "فهد كوتي",
-        "startDate": "2017-08-30",
-        "manager": "المنطقة الشمالية",
-        "showroom": "1501-24-Yanbu Dana Mall و 2301-44-Al-Jouf Center",
-        "showroomDetails": [
-            {
-                "name": "1501-24-Yanbu Dana Mall",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1501-C",
-                    "1501-E"
-                ]
-            },
-            {
-                "name": "2301-44-Al-Jouf Center",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "2301-C",
-                    "2301-E"
-                ]
-            }
-        ],
-        "addressBooks": "1501-C;1501-E;2301-C;2301-E"
-    },
-    {
         "employeeId": "0263-فيصل كوتارتودي (بابو",
         "personnelNumber": "0263",
         "name": "فيصل كوتارتودي (بابو",
@@ -6102,6 +6075,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1801-C;1801-E"
+    },
+    {
+        "employeeId": "4891-محمد فيل تاراكان تود",
+        "personnelNumber": "4891",
+        "name": "محمد فيل تاراكان تود",
+        "startDate": "2026-02-26",
+        "manager": "المنطقة الغربية",
+        "showroom": "1003-06-Red Sea Mall",
+        "showroomDetails": [
+            {
+                "name": "1003-06-Red Sea Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1003-C",
+                    "1003-E"
+                ]
+            }
+        ],
+        "addressBooks": "1003-C;1003-E"
     },
     {
         "employeeId": "4892-راسيلل أمان كيزاكيتي",

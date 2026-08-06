@@ -1135,7 +1135,7 @@
                             <div class="col-md-3">
                                 <div class="glass-card p-3">
                                     <span class="kpi-title d-block mb-1">مبيعات اليوم حتى الآن</span>
-                                    <div class="kpi-value text-orange tabular-nums fs-3" id="overviewTodaySales">0 ر.س</div>
+                                    <div class="kpi-value text-orange tabular-nums fs-3" id="overviewTodaySales">0</div>
                                     <div class="mt-2" style="font-size: 0.78rem;">
                                         <div class="d-flex justify-content-between mb-1">
                                             <span class="text-muted">مقارنة بأمس:</span>
@@ -1154,7 +1154,7 @@
                                     <div>
                                         <span class="kpi-title d-block mb-1">تقدم تحقيق الشهر (MTD)</span>
                                         <div class="d-flex align-items-baseline gap-2">
-                                            <div class="kpi-value fs-3 tabular-nums" id="overviewMonthSales">0 ر.س</div>
+                                            <div class="kpi-value fs-3 tabular-nums" id="overviewMonthSales">0</div>
                                             <small class="text-muted tabular-nums" id="overviewMonthAchievementPercent">(0%)</small>
                                         </div>
                                     </div>
@@ -1163,8 +1163,8 @@
                                             <div class="progress-bar bg-orange" role="progressbar" id="overviewMonthProgressBar" style="width: 0%"></div>
                                         </div>
                                         <div class="d-flex justify-content-between mt-2" style="font-size: 0.72rem;">
-                                            <span class="text-muted">التوقع: <strong class="text-dark tabular-nums" id="overviewMonthExpected">0 ر.س</strong></span>
-                                            <span class="text-muted">المستهدف: <strong class="text-dark tabular-nums" id="overviewMonthTarget">0 ر.س</strong></span>
+                                            <span class="text-muted">التوقع: <strong class="text-dark tabular-nums" id="overviewMonthExpected">0</strong></span>
+                                            <span class="text-muted">المستهدف: <strong class="text-dark tabular-nums" id="overviewMonthTarget">0</strong></span>
                                         </div>
                                     </div>
                                 </div>
@@ -1177,7 +1177,7 @@
                                     <div class="mt-3 pt-1" style="font-size: 0.78rem;">
                                         <div class="d-flex justify-content-between">
                                             <span class="text-muted">متوسط قيمة الفاتورة:</span>
-                                            <span class="fw-bold text-dark tabular-nums" id="overviewTodayAverageInvoice">0 ر.س</span>
+                                            <span class="fw-bold text-dark tabular-nums" id="overviewTodayAverageInvoice">0</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2677,8 +2677,21 @@
                 delete loadedTabs['#sales-content'];
                 delete loadedTabs['#targets-content'];
                 
-                // Set MTD KPIs
-                document.getElementById('kpiActiveStores').textContent = Object.keys(mgmtData.stores).filter(id => !['0', '1013'].includes(id)).length;
+                // Set the header KPIs whenever management data is loaded, even
+                // when the Operations Room is the first tab opened.
+                const activeStoreCount = Object.keys(mgmtData.stores || {})
+                    .filter(id => !['0', '1013'].includes(id)).length;
+                document.getElementById('kpiActiveStores').textContent = activeStoreCount;
+
+                const selectedMonth = document.getElementById('salesMonthFilter')?.value
+                    || new Date().toISOString().slice(0, 7);
+                const monthSales = (mgmtData.sales || []).reduce((total, row) => {
+                    const [date, , amount] = row;
+                    return String(date).startsWith(selectedMonth)
+                        ? total + Number(amount || 0)
+                        : total;
+                }, 0);
+                document.getElementById('kpiMtdSales').textContent = formatSAR(monthSales);
             } catch (e) {
                 console.error("Failed to load management data:", e);
                 throw e;
@@ -2764,6 +2777,7 @@
                     // Smart Assistant initialization if any (none required)
                     break;
                 case '#dashboard-content':
+                    await ensureMgmtDataLoaded();
                     await loadOverviewData(forceRefresh);
                     break;
                 case '#alerts-content':
@@ -2824,9 +2838,9 @@
         function copyWhatsappSummary(storeName, yesterdaySales, mtdSales, target, achievement, conversion, visitors, bills) {
             const text = `*تقرير مبيعات معرض Orange - ${storeName}* 🍊
 ---------------------------------------
-📅 مبيعات أمس: *${Math.round(yesterdaySales).toLocaleString('ar-SA')} ر.س*
-📈 مبيعات الشهر (MTD): *${Math.round(mtdSales).toLocaleString('ar-SA')} ر.س*
-🎯 المستهدف المطلوب: *${Math.round(target).toLocaleString('ar-SA')} ر.س*
+📅 مبيعات أمس: *${Math.round(yesterdaySales).toLocaleString('ar-SA')}*
+📈 مبيعات الشهر (MTD): *${Math.round(mtdSales).toLocaleString('ar-SA')}*
+🎯 المستهدف المطلوب: *${Math.round(target).toLocaleString('ar-SA')}*
 📊 تحقيق المستهدف: *${achievement.toFixed(1)}%*
 🛒 معدل التحويل (CR): *${conversion.toFixed(2)}%*
 👥 إجمالي الزوار: *${visitors.toLocaleString('ar-SA')} زائر*
@@ -7322,7 +7336,7 @@
         }
 
         function formatCurrency(val) {
-            return Math.round(val).toLocaleString('ar-SA') + " ر.س";
+            return Math.round(val).toLocaleString('ar-SA');
         }
 
         function buildAttentionList(data) {
