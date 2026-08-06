@@ -20,6 +20,8 @@
             --accent-hover: #ff9100;
             --border-color: #e9ecef;
             --success: #198754;
+            --warning: #b45309;
+            --danger: #c62828;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
@@ -128,6 +130,84 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        .target-comparison {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+            gap: 14px;
+            align-items: center;
+            margin: 18px 20px 8px;
+            padding: 16px 18px;
+            background: #fffaf5;
+            border: 1px solid #ffe0c2;
+            border-right: 5px solid var(--accent);
+            border-radius: 10px;
+        }
+
+        .target-comparison[data-status="matched"] {
+            background: #f1fbf5;
+            border-color: #b9e5c9;
+            border-right-color: var(--success);
+        }
+
+        .target-comparison[data-status="over"] {
+            background: #fff7f7;
+            border-color: #f2c2c2;
+            border-right-color: var(--danger);
+        }
+
+        .target-comparison[data-status="missing"] {
+            background: #fffaf0;
+            border-color: #f3d5a3;
+            border-right-color: var(--warning);
+        }
+
+        .comparison-metric {
+            min-width: 0;
+        }
+
+        .comparison-label {
+            display: block;
+            margin-bottom: 3px;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .comparison-value {
+            color: var(--text-primary);
+            font-size: 1.05rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .comparison-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 190px;
+            padding: 10px 14px;
+            color: var(--accent);
+            background: #ffffff;
+            border: 1px solid currentColor;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .target-comparison[data-status="matched"] .comparison-status {
+            color: var(--success);
+        }
+
+        .target-comparison[data-status="over"] .comparison-status {
+            color: var(--danger);
+        }
+
+        .target-comparison[data-status="missing"] .comparison-status {
+            color: var(--warning);
         }
 
         .emp-list {
@@ -295,6 +375,13 @@
                 text-align: center;
                 margin-top: 5px;
             }
+            .target-comparison {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .comparison-status {
+                grid-column: 1 / -1;
+                width: 100%;
+            }
         }
 
         @media (max-width: 576px) {
@@ -344,6 +431,13 @@
                 width: 90%;
                 max-width: 340px;
                 padding: 25px 20px;
+            }
+            .target-comparison {
+                grid-template-columns: 1fr;
+                margin: 12px 10px 5px;
+            }
+            .comparison-status {
+                grid-column: auto;
             }
         }
     </style>
@@ -401,6 +495,24 @@
                     </div>
                     <div class="text-secondary fw-bold" id="employeeCountLabel">الموظفين: 0</div>
                 </div>
+                <section class="target-comparison" id="targetComparison" data-status="missing" aria-live="polite">
+                    <div class="comparison-metric">
+                        <span class="comparison-label">تارجت المعرض</span>
+                        <span class="comparison-value" id="storeTargetValue">0 ر.س</span>
+                    </div>
+                    <div class="comparison-metric">
+                        <span class="comparison-label">مجموع تارجت الموظفين</span>
+                        <span class="comparison-value" id="employeesTargetTotal">0 ر.س</span>
+                    </div>
+                    <div class="comparison-metric">
+                        <span class="comparison-label">الفرق</span>
+                        <span class="comparison-value" id="targetDifferenceValue">0 ر.س</span>
+                    </div>
+                    <div class="comparison-status" id="targetComparisonStatus">
+                        <i class="fas fa-circle-info" aria-hidden="true"></i>
+                        <span>اختر المعرض والشهر</span>
+                    </div>
+                </section>
                 <div id="employeesContainer" class="emp-list">
                     <div style="text-align:center; padding: 30px; color:#888;">الرجاء اختيار فرع للبدء...</div>
                 </div>
@@ -422,6 +534,7 @@
         let employeeHistory = {};
         let employeeNamesMap = {};
         let isEditAllowed = true; // Lock state flag
+        let currentStoreTarget = 0;
 
         // Safe base64 utf-8 encoding function to handle Arabic characters in username
         function getUtf8Base64(str) {
@@ -622,6 +735,17 @@
                 });
                 const targetsData = await targetsRes.json();
                 globalEmpTargets = targetsData.employee_targets_raw || {};
+
+                const normalizeStoreId = value => {
+                    const textValue = String(value ?? '').trim();
+                    const digits = textValue.replace(/\D/g, '');
+                    return digits ? String(Number(digits)) : textValue.toLowerCase();
+                };
+                const selectedStoreTarget = (targetsData.stores || []).find(store =>
+                    normalizeStoreId(store.id) === normalizeStoreId(storeCode) ||
+                    String(store.outlet || '').trim() === String(storeName || '').trim()
+                );
+                currentStoreTarget = Number(selectedStoreTarget?.target) || 0;
                 
                 // Determine if manager is allowed to edit targets
                 const isManager = (currentUser.role === 'Manager');
@@ -728,10 +852,12 @@
 
                 if (emps.length === 0) {
                     container.innerHTML = '<div style="text-align:center; padding: 30px; color:#888;">لا يوجد موظفين نشطين خلال هذا الشهر في هذا المعرض.</div>';
+                    updateTargetComparison();
                     return;
                 }
 
                 renderEmployeesList(emps, container);
+                updateTargetComparison();
 
             } catch (e) {
                 console.error(e);
@@ -787,7 +913,7 @@
                                 data-emp-id="${emp.id}"
                                 data-emp-name="${emp.name}"
                                 ${isEditAllowed ? '' : 'disabled'}
-                                oninput="this.classList.add('modified')">
+                                oninput="handleTargetInput(this)">
                         <span class="save-indicator" id="save-indicator-${idx}"><i class="fas fa-check-circle"></i></span>
                     </div>
                 `;
@@ -803,6 +929,48 @@
                     </button>
                 `;
                 container.appendChild(btnContainer);
+            }
+        }
+
+        function handleTargetInput(inputEl) {
+            inputEl.classList.add('modified');
+            updateTargetComparison();
+        }
+
+        function formatTargetAmount(amount) {
+            return `${new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 2 }).format(amount)} ر.س`;
+        }
+
+        function updateTargetComparison() {
+            const comparison = document.getElementById('targetComparison');
+            const status = document.getElementById('targetComparisonStatus');
+            const inputs = document.querySelectorAll('.target-input-field');
+            const employeesTotal = Array.from(inputs).reduce((sum, inputEl) => {
+                return sum + (Number.parseFloat(inputEl.value) || 0);
+            }, 0);
+            const difference = employeesTotal - currentStoreTarget;
+            const absoluteDifference = Math.abs(difference);
+            const isMatched = absoluteDifference < 0.01;
+
+            document.getElementById('storeTargetValue').textContent = formatTargetAmount(currentStoreTarget);
+            document.getElementById('employeesTargetTotal').textContent = formatTargetAmount(employeesTotal);
+            document.getElementById('targetDifferenceValue').textContent = formatTargetAmount(absoluteDifference);
+
+            if (currentStoreTarget <= 0) {
+                comparison.dataset.status = 'missing';
+                status.innerHTML = '<i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>تارجت المعرض غير محدد</span>';
+                return;
+            }
+
+            if (isMatched) {
+                comparison.dataset.status = 'matched';
+                status.innerHTML = '<i class="fas fa-circle-check" aria-hidden="true"></i><span>المجموع مطابق لتارجت المعرض</span>';
+            } else if (difference < 0) {
+                comparison.dataset.status = 'under';
+                status.innerHTML = `<i class="fas fa-arrow-trend-down" aria-hidden="true"></i><span>متبقي ${formatTargetAmount(absoluteDifference)}</span>`;
+            } else {
+                comparison.dataset.status = 'over';
+                status.innerHTML = `<i class="fas fa-arrow-trend-up" aria-hidden="true"></i><span>زيادة ${formatTargetAmount(absoluteDifference)}</span>`;
             }
         }
 
