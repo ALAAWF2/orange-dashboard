@@ -63,6 +63,66 @@ function getRemainingDays(metadataEndDate, currentRangeStart) {
     return Math.max(1, remainingDays);
 }
 
+function parsePdfDate(dateValue) {
+    if (typeof dateValue === 'string') {
+        const parts = dateValue.split('-').map(Number);
+        if (parts.length === 3 && parts.every(Number.isFinite)) {
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+    }
+    return new Date(dateValue);
+}
+
+function formatPdfDate(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getInclusivePdfDayCount(startDate, endDate) {
+    const startUtc = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endUtc = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    return Math.floor((endUtc - startUtc) / 86400000) + 1;
+}
+
+function buildPdfTargetLookup(targetRows) {
+    const lookup = new Map();
+    (targetRows || []).forEach(([date, storeId, value]) => {
+        const key = `${date}|${storeId}`;
+        lookup.set(key, (lookup.get(key) || 0) + (Number(value) || 0));
+    });
+    return lookup;
+}
+
+function getPdfTargetPlan(dateStr, storeIds, metadataEndDate, targetLookup) {
+    const reportDate = parsePdfDate(dateStr);
+    let periodStart = new Date(reportDate.getFullYear(), reportDate.getMonth(), 1);
+    let periodEnd = new Date(reportDate.getFullYear(), reportDate.getMonth() + 1, 0);
+
+    if (metadataEndDate) {
+        const customEnd = parsePdfDate(metadataEndDate);
+        let extendedStart = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
+        if (customEnd.getDate() < 15) {
+            extendedStart = new Date(customEnd.getFullYear(), customEnd.getMonth() - 1, 1);
+        }
+
+        if (reportDate >= extendedStart && reportDate <= customEnd) {
+            periodStart = extendedStart;
+            periodEnd = customEnd;
+        }
+    }
+
+    const targetDateKey = formatPdfDate(periodStart);
+    const total = storeIds.reduce((sum, storeId) => {
+        return sum + (targetLookup.get(`${targetDateKey}|${storeId}`) || 0);
+    }, 0);
+    const dayCount = Math.max(1, getInclusivePdfDayCount(periodStart, periodEnd));
+
+    return {
+        key: `${formatPdfDate(periodStart)}|${formatPdfDate(periodEnd)}`,
+        total,
+        daily: total / dayCount
+    };
+}
+
 async function buildPDFDoc(targetStoreId = 'all', isDetailed = false) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -127,6 +187,9 @@ async function buildPDFDoc(targetStoreId = 'all', isDetailed = false) {
         return null;
     }
 
+    const targetLookup = buildPdfTargetLookup(rawData.targets);
+    const metadataEndDate = rawData.metadata ? rawData.metadata.target_end_date : null;
+
     // --- Dates ---
     let startDate, endDate;
     if (window.dashboardState && window.dashboardState.start && window.dashboardState.end) {
@@ -164,23 +227,19 @@ async function buildPDFDoc(targetStoreId = 'all', isDetailed = false) {
         let headerTotalSales = 0;
         let mStart = new Date(startDate);
         let mEnd = new Date(endDate);
-        let remainingDays = getRemainingDays(rawData.metadata ? rawData.metadata.target_end_date : null, mStart);
+        let remainingDays = getRemainingDays(metadataEndDate, mStart);
+        const reportStoreIds = isGlobal ? storesToProcess : [storeIdForData];
+        const countedTargetPeriods = new Set();
 
         let preLoopDate = new Date(mStart);
         while (preLoopDate <= mEnd) {
             const dateStr = preLoopDate.toLocaleDateString('en-CA');
             const dayData = isGlobal ? getGlobalDayData(storesToProcess, dateStr) : getDayData(storeIdForData, dateStr);
-            let targetVal = dayData.target || 0;
-            if (targetVal > 0 && rawData.metadata && rawData.metadata.target_end_date) {
-                const extDate = new Date(rawData.metadata.target_end_date);
-                const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
-                const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
-                if (mStart.getFullYear() === extYear && mStart.getMonth() === extMonth) {
-                    const targetDate = new Date(dateStr);
-                    if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) targetVal = 0;
-                }
+            const targetPlan = getPdfTargetPlan(dateStr, reportStoreIds, metadataEndDate, targetLookup);
+            if (!countedTargetPeriods.has(targetPlan.key)) {
+                headerTotalTarget += targetPlan.total;
+                countedTargetPeriods.add(targetPlan.key);
             }
-            headerTotalTarget += targetVal;
             headerTotalSales += dayData.sales || 0;
             preLoopDate.setDate(preLoopDate.getDate() + 1);
         }
@@ -207,16 +266,7 @@ async function buildPDFDoc(targetStoreId = 'all', isDetailed = false) {
         while (curDate <= mEnd) {
             const dateStr = curDate.toLocaleDateString('en-CA');
             const dayData = isGlobal ? getGlobalDayData(storesToProcess, dateStr) : getDayData(storeIdForData, dateStr);
-            let targetVal = dayData.target || 0;
-            if (targetVal > 0 && rawData.metadata && rawData.metadata.target_end_date) {
-                const extDate = new Date(rawData.metadata.target_end_date);
-                const extMonth = extDate.getMonth() === 0 ? 11 : extDate.getMonth() - 1;
-                const extYear = extDate.getMonth() === 0 ? extDate.getFullYear() - 1 : extDate.getFullYear();
-                if (mStart.getFullYear() === extYear && mStart.getMonth() === extMonth) {
-                    const targetDate = new Date(dateStr);
-                    if (targetDate.getFullYear() !== extYear || targetDate.getMonth() !== extMonth) targetVal = 0;
-                }
-            }
+            const targetVal = getPdfTargetPlan(dateStr, reportStoreIds, metadataEndDate, targetLookup).daily;
             totSales += dayData.sales;
             totTarget += targetVal;
             totVis += dayData.visitors;
