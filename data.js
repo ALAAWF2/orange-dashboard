@@ -6538,18 +6538,18 @@ const EMPLOYEES = [
         "name": "منال هلال",
         "startDate": "2026-04-19",
         "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall",
+        "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
-                "name": "1102-15-Riyadh Othaim Mall",
+                "name": "1105-30-Tala Mall Riyadh",
                 "manager": "عبدالله السرداح",
                 "codes": [
-                    "1102-C",
-                    "1102-E"
+                    "1105-C",
+                    "1105-E"
                 ]
             }
         ],
-        "addressBooks": "1102-C;1102-E"
+        "addressBooks": "1105-C;1105-E"
     },
     {
         "employeeId": "4943-منى العمري",
