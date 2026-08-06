@@ -17,6 +17,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <script src="../assets/average-bill-program.js"></script>
+  <script src="../assets/commission-visibility.js"></script>
 
   <style>
     :root {
@@ -862,7 +863,7 @@
                 <th title="الفرق بالنقاط المئوية مقارنة بنفس الفترة من الشهر السابق">تطور الحصة %</th>
                 <th>الهدف</th>
                 <th>التحقيق %</th>
-                <th title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
+                <th title="العمولة المتوقعة بناءً على أداء الموظف والمعرض" data-expected-commission>العمولة المتوقعة</th>
                 <th data-average-bill-prize>عمولة معدل الفاتورة</th>
                 <th title="محسوبة من مبيعات أول الشهر حتى نهاية يوم أمس">اليومية المتبقية</th>
                 <th>الفواتير</th>
@@ -1144,7 +1145,10 @@
     async function loadAllData() {
       try {
         dataWarnings = [];
-        const averageBillProgramState = await window.AverageBillProgram.load();
+        const [averageBillProgramState] = await Promise.all([
+          window.AverageBillProgram.load(),
+          window.ExpectedCommissionVisibility.load()
+        ]);
         const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes] = await Promise.all([
           fetch('../summary.json?_=' + Date.now()).catch(() => null),
           fetch('../employees_data.json?_=' + Date.now()).catch(() => null),
@@ -2095,7 +2099,7 @@
             <td><span class="badge-status ${shareGrowthClass}" title="الحصة السابقة: ${fmtPerc(previousShare)}">${shareGrowthText}</span></td>
             <td>${empTarget > 0 ? fmtMoney(empTarget) : '—'}</td>
             <td>${empTarget > 0 ? `<span class="badge-status ${achClass}">${fmtPerc(ach)}</span>` : '—'}</td>
-            <td style="font-weight:800; color:var(--text-main); background:var(--warning-light);">${salesCommission > 0 ? `${fmtMoney(salesCommission)}` : '—'}</td>
+            <td style="font-weight:800; color:var(--text-main); background:var(--warning-light);" data-expected-commission>${salesCommission > 0 ? `${fmtMoney(salesCommission)}` : '—'}</td>
             <td style="font-weight:800; color:var(--accent);" data-average-bill-prize>${commissionText}${pendingText}</td>
             <td style="color:var(--danger); font-weight:800;">${
               empTarget > 0 && !isClosedPeriod
@@ -2606,6 +2610,11 @@
       const period = getPrintReportPeriod();
       const dailyData = buildPrintableDailyData(period);
       const employeeData = buildPrintableEmployeeData(period);
+      const expectedCommissionVisible = window.ExpectedCommissionVisibility.getState().visible;
+      const averageBillVisible = window.AverageBillProgram.getState().enabled;
+      const employeeReportColumnCount = 13
+        + Number(expectedCommissionVisible)
+        + Number(averageBillVisible);
       const storeMeta = mgmtData?.store_meta?.[selectedStoreCode] || {};
       const reportElement = document.getElementById('printReport');
       const generatedAt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
@@ -2652,7 +2661,7 @@
               <td>${fmtMoney(employee.mtdAverageBill)}</td>
               <td>${employee.target > 0 ? fmtMoney(employee.target) : '—'}</td>
               <td>${formatOptionalPercentage(employee.achievement)}</td>
-              <td>${employee.salesCommission > 0 ? fmtMoney(employee.salesCommission) : '—'}</td>
+              <td data-expected-commission>${employee.salesCommission > 0 ? fmtMoney(employee.salesCommission) : '—'}</td>
               <td data-average-bill-prize>${averageBillCommission}</td>
               <td>${employee.target > 0 ? fmtMoney(employee.remaining) : '—'}</td>
               <td>${
@@ -2663,7 +2672,7 @@
             </tr>
           `;
         }).join('')
-        : '<tr><td colspan="15">لا توجد بيانات موظفين نشطين لهذا المعرض خلال فترة التقرير.</td></tr>';
+        : `<tr><td colspan="${employeeReportColumnCount}">لا توجد بيانات موظفين نشطين لهذا المعرض خلال فترة التقرير.</td></tr>`;
 
       const dailyTotals = dailyData.totals;
       const employeeTotals = employeeData.totals;
@@ -2750,7 +2759,7 @@
               <div><strong>الفترة التراكمية:</strong> <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></div>
               <div><strong>${period.isClosed ? 'آخر يوم في الشهر' : 'الأمس'}:</strong> <span dir="ltr">${period.endYmd}</span></div>
               <div><strong>المتبقي:</strong> ${period.isClosed ? 'فترة منتهية' : `${period.remainingDays} يوم`}</div>
-              <div><strong>شريحة عمولة المعرض:</strong> ${(employeeData.branchCommissionPercent * 100).toFixed(1)}%</div>
+              <div data-expected-commission><strong>شريحة عمولة المعرض:</strong> ${(employeeData.branchCommissionPercent * 100).toFixed(1)}%</div>
             </div>
           </header>
 
@@ -2759,7 +2768,7 @@
               <tr>
                 <th rowspan="2">الموظف</th>
                 <th colspan="4">${period.isClosed ? 'آخر يوم في الشهر' : 'الأمس (Yesterday)'} — <span dir="ltr">${period.endYmd}</span></th>
-                <th colspan="${window.AverageBillProgram.getState().enabled ? 10 : 9}">الفترة التراكمية (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
+                <th colspan="${8 + Number(expectedCommissionVisible) + Number(averageBillVisible)}">الفترة التراكمية (MTD) — <span dir="ltr">${period.employeeStartYmd}</span> إلى <span dir="ltr">${period.endYmd}</span></th>
               </tr>
               <tr class="print-subhead">
                 <th>المبيعات</th>
@@ -2772,7 +2781,7 @@
                 <th>متوسط الفاتورة</th>
                 <th>الهدف</th>
                 <th>تحقيق %</th>
-                <th>عمولة المبيعات</th>
+                <th data-expected-commission>عمولة المبيعات</th>
                 <th data-average-bill-prize>عمولة معدل الفاتورة</th>
                 <th>المتبقي</th>
                 <th>اليومية المتبقية</th>
@@ -2792,7 +2801,7 @@
                 <td>${fmtMoney(employeeTotals.mtdAverageBill)}</td>
                 <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.target) : '—'}</td>
                 <td>${formatOptionalPercentage(employeeTotals.achievement)}</td>
-                <td>${employeeTotals.salesCommission > 0 ? fmtMoney(employeeTotals.salesCommission) : '—'}</td>
+                <td data-expected-commission>${employeeTotals.salesCommission > 0 ? fmtMoney(employeeTotals.salesCommission) : '—'}</td>
                 <td data-average-bill-prize>${employeeTotals.averageBillCommission > 0 ? fmtMoney(employeeTotals.averageBillCommission) : '—'}</td>
                 <td>${employeeTotals.target > 0 ? fmtMoney(employeeTotals.remaining) : '—'}</td>
                 <td>${

@@ -20,6 +20,7 @@
     <script src="assets/fmt.js"></script>
     <script src="assets/nav.js"></script>
     <script src="assets/average-bill-program.js"></script>
+    <script src="assets/commission-visibility.js"></script>
 
     <style>
         :root {
@@ -579,7 +580,7 @@
                 </button>
                 <ul class="dropdown-menu px-2">
                     <li>
-                        <div class="form-check form-switch mt-1 ms-1 mb-2 border-bottom pb-2">
+                        <div class="form-check form-switch mt-1 ms-1 mb-2 border-bottom pb-2" data-expected-commission>
                             <input class="form-check-input" type="checkbox" id="exportCommExcel" checked>
                             <label class="form-check-label small fw-bold" for="exportCommExcel">تضمين العمولة</label>
                         </div>
@@ -757,9 +758,9 @@
                         <option value="transactions">الفواتير</option>
                         <option value="avg_ticket">معدل الفاتورة</option>
                         <option value="items_per_inv">متوسط القطع</option>
-                        <option value="expected_comm">العمولة المتوقعة</option>
+                        <option value="expected_comm" data-expected-commission>العمولة المتوقعة</option>
                         <option value="avg_bill_comm" data-average-bill-prize>عمولة معدل الفاتورة</option>
-                        <option value="total_comm">مجموع العمولات</option>
+                        <option value="total_comm" data-expected-commission>مجموع العمولات</option>
                     </select>
                 </div>
                 <!-- Search -->
@@ -874,7 +875,7 @@
                                                 onclick="sortTable('target')">الهدف</th>
                                             <th class="text-center sortable" data-sort="achievement"
                                                 onclick="sortTable('achievement')">التحقيق %</th>
-                                            <th class="text-center sortable" data-sort="expected_comm"
+                                            <th class="text-center sortable" data-sort="expected_comm" data-expected-commission
                                                 onclick="sortTable('expected_comm')" title="العمولة المتوقعة بناءً على أداء الموظف والمعرض">العمولة المتوقعة</th>
                                             <th class="text-center sortable" data-sort="avg_bill_comm" data-average-bill-prize
                                                 onclick="sortTable('avg_bill_comm')" title="عمولة معدل الفاتورة من برنامج مكافآت متوسط الفاتورة">عمولة معدل الفاتورة</th>
@@ -886,7 +887,7 @@
                                                 onclick="sortTable('avg_ticket')">معدل الفاتورة</th>
                                             <th class="d-none d-md-table-cell sortable" data-sort="items_per_inv"
                                                 onclick="sortTable('items_per_inv')">متوسط القطع</th>
-                                            <th class="text-center sortable" data-sort="total_comm"
+                                            <th class="text-center sortable" data-sort="total_comm" data-expected-commission
                                                 onclick="sortTable('total_comm')" title="إجمالي العمولات الظاهرة">مجموع العمولات</th>
                                         </tr>
                                     </thead>
@@ -1352,7 +1353,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-check form-switch mb-3 p-2 bg-warning-subtle rounded border border-warning" id="pdfCommToggleContainer" style="display:none; text-align: left;" dir="ltr">
+                        <div class="form-check form-switch mb-3 p-2 bg-warning-subtle rounded border border-warning" id="pdfCommToggleContainer" data-expected-commission style="display:none; text-align: left;" dir="ltr">
                             <input class="form-check-input me-2 ms-0" type="checkbox" id="exportCommPdf" checked style="cursor: pointer;">
                             <label class="form-check-label small fw-bold" for="exportCommPdf" style="cursor: pointer;" dir="rtl">تضمين العمولة المتوقعة فى التقرير</label>
                         </div>
@@ -1560,7 +1561,10 @@
             async function loadData() {
                 // ... existing loadData code ...
                 try {
-                    const averageBillProgramState = await window.AverageBillProgram.load();
+                    const [averageBillProgramState] = await Promise.all([
+                        window.AverageBillProgram.load(),
+                        window.ExpectedCommissionVisibility.load()
+                    ]);
                     const [empRes, mgmtRes, prodRes, incentivesRes] = await Promise.all([
                         fetch('employees_data.json'),
                         fetch('management_data.json'),
@@ -2186,7 +2190,8 @@
                     e.avg_bill_comm = avgBillInfo.total;
                     e.avg_bill_pending = avgBillInfo.pendingCount;
                     e.avg_bill_records = avgBillInfo.recordCount;
-                    e.total_comm = (e.expected_comm || 0) + (e.avg_bill_comm || 0);
+                    e.total_comm = (e.expected_comm || 0)
+                        + (window.AverageBillProgram.getState().enabled ? (e.avg_bill_comm || 0) : 0);
                 });
 
                 let remainingDays = getRemainingDays(window.employeesMetadata ? window.employeesMetadata.target_end_date : null, currentStart);
@@ -2417,13 +2422,13 @@
 
         <td class="text-center">${targetText}</td>
         <td class="text-center">${achBadge}</td>
-        <td class="text-center fw-bold">${emp.expected_comm > 0 ? Math.round(emp.expected_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
+        <td class="text-center fw-bold" data-expected-commission>${emp.expected_comm > 0 ? Math.round(emp.expected_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
         <td class="text-center fw-bold" data-average-bill-prize>${avgBillCommDisplay}</td>
         <td class="text-center fw-bold text-danger">${dailyReqText}</td>
         <td class="d-none d-md-table-cell">${emp.transactions}</td>
         <td class="d-none d-md-table-cell">${emp.avg_ticket.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
         <td class="d-none d-md-table-cell">${emp.items_per_inv.toFixed(1)}</td>
-        <td class="text-center fw-bold">${emp.total_comm > 0 ? Math.round(emp.total_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
+        <td class="text-center fw-bold" data-expected-commission>${emp.total_comm > 0 ? Math.round(emp.total_comm).toLocaleString('en-US') + ' ر.س' : '-'}</td>
     </tr>
     `;
                 }).join('');
@@ -2440,7 +2445,8 @@
                 }
 
                 if (type === 'current') {
-                    const includeComm = document.getElementById('exportCommExcel').checked;
+                    const includeComm = window.ExpectedCommissionVisibility.getState().visible
+                        && document.getElementById('exportCommExcel').checked;
                     // 1. Export Current View (Aggregated)
                     const data = currentEmpList.map((e, i) => {
                         let r = {
@@ -2742,7 +2748,8 @@
                     const selectedIds = selectedEmps.map(e => e.id);
                     localStorage.setItem('pdf_selected_employees', JSON.stringify(selectedIds));
 
-                    const includeComm = document.getElementById('exportCommPdf').checked;
+                    const includeComm = window.ExpectedCommissionVisibility.getState().visible
+                        && document.getElementById('exportCommPdf').checked;
 
                     // Generate PDF
                     generateEmployeePDF(selectedIds, includeComm);

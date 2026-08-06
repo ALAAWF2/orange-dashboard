@@ -50,6 +50,8 @@ function getRemainingDays(metadataEndDate, currentRangeStart) {
 }
 
 async function generateEmployeePDF(targetEmps = null, includeCommission = true, overrideStores = null) {
+    includeCommission = includeCommission
+        && window.ExpectedCommissionVisibility?.getState().visible === true;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 

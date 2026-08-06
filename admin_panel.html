@@ -1490,6 +1490,20 @@
                     </div>
                 </div>
 
+                <!-- System Settings: Expected Commission Visibility -->
+                <div class="glass-card mb-4 border-start border-4 border-success">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div style="max-width:760px;">
+                            <h5 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-money-bill-trend-up text-success me-2"></i>عرض العمولة المتوقعة</h5>
+                            <p class="text-muted small mb-0">يتحكم بإظهار أو إخفاء العمولة المتوقعة ومجموع العمولات في صفحات الموظفين ومبيعات المعرض وتقارير PDF وExcel. لا يغيّر الحسابات، ولا يؤثر على زر جائزة معدل الفاتورة.</p>
+                        </div>
+                        <div class="form-check form-switch bg-white border rounded px-3 py-2 d-flex align-items-center gap-2" style="min-height:46px; direction:rtl;">
+                            <input class="form-check-input ms-0" type="checkbox" id="toggleExpectedCommissionSwitch" onchange="toggleExpectedCommissionVisibility(this.checked)" style="width:44px; height:22px; cursor:pointer;">
+                            <label class="form-check-label fw-bold text-dark small" for="toggleExpectedCommissionSwitch" id="toggleExpectedCommissionLabel" style="margin-right:8px;">جاري التحميل...</label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- System Settings: Average Bill Prize Visibility -->
                 <div class="glass-card mb-4 border-start border-4" style="border-color:#fe7900 !important;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -4316,6 +4330,14 @@
                         sw.checked = allowEdit;
                         lbl.textContent = allowEdit ? "مسموح بالتعديل ✅" : "مغلق ومحمي 🔒";
                     }
+
+                    const expectedCommissionVisible = settings.expected_commission_visible === 'true';
+                    const expectedCommissionSwitch = document.getElementById('toggleExpectedCommissionSwitch');
+                    const expectedCommissionLabel = document.getElementById('toggleExpectedCommissionLabel');
+                    if (expectedCommissionSwitch && expectedCommissionLabel) {
+                        expectedCommissionSwitch.checked = expectedCommissionVisible;
+                        expectedCommissionLabel.textContent = expectedCommissionVisible ? 'العمولة ظاهرة ✅' : 'العمولة مخفية 🔒';
+                    }
                     
                     const targetEndDate = settings.target_end_date || '';
                     const dateInput = document.getElementById('targetEndDateInput');
@@ -4394,6 +4416,42 @@
             } catch (e) {
                 alert("❌ خطأ اتصال: " + e.message);
                 loadSystemSettings(); // Reset switch
+            }
+        }
+
+        async function toggleExpectedCommissionVisibility(checked) {
+            const sw = document.getElementById('toggleExpectedCommissionSwitch');
+            const lbl = document.getElementById('toggleExpectedCommissionLabel');
+            if (sw) sw.disabled = true;
+            if (lbl) lbl.textContent = 'جاري الحفظ...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/save_setting`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        key: 'expected_commission_visible',
+                        value: checked ? 'true' : 'false'
+                    })
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'تعذر حفظ إعداد عرض العمولة.');
+
+                if (lbl) lbl.textContent = checked ? 'العمولة ظاهرة ✅' : 'العمولة مخفية 🔒';
+                alert(checked
+                    ? '✅ تم إظهار العمولة المتوقعة ومجموع العمولات.'
+                    : '🔒 تم إخفاء العمولة المتوقعة ومجموع العمولات من الصفحات والتقارير.');
+                loadAuditLogs();
+            } catch (error) {
+                alert('❌ ' + error.message);
+                if (sw) sw.checked = !checked;
+                await loadSystemSettings();
+            } finally {
+                if (sw) sw.disabled = false;
             }
         }
 
