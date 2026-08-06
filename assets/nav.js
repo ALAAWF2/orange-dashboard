@@ -317,6 +317,10 @@ function triggerPageRefresh() {
 }
 
 function logout() {
+    if (typeof logoutDashboardSession === 'function') {
+        logoutDashboardSession('login.html');
+        return;
+    }
     localStorage.removeItem('currentUser');
     window.location.href = 'login.html';
 }

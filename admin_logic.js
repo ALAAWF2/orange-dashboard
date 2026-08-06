@@ -33,13 +33,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     document.getElementById('targetMonth').value = `${yyyy}-${mm}`;
 
-    // Check if logged in (simple session storage)
-    const storedAuth = sessionStorage.getItem('auth');
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
     const storedIp = sessionStorage.getItem('serverIp');
 
-    if (storedAuth) {
+    if (currentUser) {
         if (storedIp) API_BASE = storedIp;
-        authHeader = storedAuth;
+        authHeader = '';
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('appContent').style.filter = 'none';
         document.getElementById('appContent').style.pointerEvents = 'all';
@@ -49,6 +48,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function logout() {
+    fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        keepalive: true
+    }).catch(() => {});
+    localStorage.removeItem('currentUser');
     sessionStorage.removeItem('auth');
     location.reload();
 }
@@ -71,17 +76,12 @@ async function login() {
         }
     }
 
-    // Create Basic Auth Header
-    const creds = btoa(u + ":" + p);
-    const header = "Basic " + creds;
-
-    // Test Auth
     try {
-        const res = await fetch(`${API_BASE}/api/targets`, {
-            headers: {
-                'Authorization': header,
-                'ngrok-skip-browser-warning': 'true'
-            }
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, pin: p })
         });
 
         if (!res.ok) {
@@ -94,9 +94,10 @@ async function login() {
             return;
         }
 
-        // Success
-        authHeader = header;
-        sessionStorage.setItem('auth', header);
+        const payload = await res.json();
+        authHeader = '';
+        localStorage.setItem('currentUser', JSON.stringify(payload.user));
+        sessionStorage.removeItem('auth');
         sessionStorage.setItem('serverIp', API_BASE); // Save IP for future loads within session
 
         document.getElementById('loginOverlay').style.display = 'none';
