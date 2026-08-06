@@ -453,20 +453,12 @@
                 return;
             }
 
-            let finalAuth = null;
-            if (currentUser && typeof USERS !== 'undefined' && USERS[currentUser.name]) {
-                const userPin = USERS[currentUser.name].pin;
-                const creds = getUtf8Base64(currentUser.name + ":" + userPin);
-                finalAuth = "Basic " + creds;
-                localStorage.setItem('auth', finalAuth);
-            } else {
-                finalAuth = localStorage.getItem('auth') || sessionStorage.getItem('auth');
-            }
+            const finalAuth = '';
             const storedIp = localStorage.getItem('serverIp') || sessionStorage.getItem('serverIp');
 
-            if (finalAuth) {
+            if (currentUser) {
                 if (storedIp) API_BASE = storedIp;
-                authHeader = finalAuth;
+                authHeader = '';
                 
                 // Hide overlay
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -497,15 +489,12 @@
                 }
             }
 
-            const creds = getUtf8Base64(u + ":" + p);
-            const header = "Basic " + creds;
-
             try {
-                const res = await fetch(`${API_BASE}/api/targets`, {
-                    headers: {
-                        'Authorization': header,
-                        'ngrok-skip-browser-warning': 'true'
-                    }
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, pin: p })
                 });
 
                 if (!res.ok) {
@@ -514,9 +503,10 @@
                     return;
                 }
 
-                authHeader = header;
-                // Persistent save so they never type it again!
-                localStorage.setItem('auth', header);
+                const payload = await res.json();
+                authHeader = '';
+                localStorage.setItem('currentUser', JSON.stringify(payload.user));
+                localStorage.removeItem('auth');
                 localStorage.setItem('serverIp', API_BASE);
 
                 document.getElementById('loginOverlay').style.display = 'none';

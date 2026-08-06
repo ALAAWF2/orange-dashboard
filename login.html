@@ -4,7 +4,7 @@
 <head>
     <script>
         if (window.location.hostname.includes('github.io')) {
-            window.location.replace('http://dashboard.orangebedbath.com' + window.location.pathname.replace('/orange-dashboard', ''));
+            window.location.replace('https://dashboard.orangebedbath.com' + window.location.pathname.replace('/orange-dashboard', ''));
         }
     </script>
     <meta charset="UTF-8">
@@ -73,15 +73,16 @@
 
     <script src="users.js"></script>
     <script>
-        // Populate Select
         const select = document.getElementById('userSelect');
-        Object.keys(USERS)
-            .sort((a, b) => getUserDisplayName(a).localeCompare(getUserDisplayName(b), 'ar'))
-            .forEach(user => {
-            let opt = document.createElement('option');
-            opt.value = user;
-            opt.textContent = getUserDisplayName(user);
-            select.appendChild(opt);
+        USERS_READY.then(() => {
+            Object.keys(USERS)
+                .sort((a, b) => getUserDisplayName(a).localeCompare(getUserDisplayName(b), 'ar'))
+                .forEach(user => {
+                    const opt = document.createElement('option');
+                    opt.value = user;
+                    opt.textContent = getUserDisplayName(user);
+                    select.appendChild(opt);
+                });
         });
 
         const loginNotice = sessionStorage.getItem('loginNotice');
@@ -90,41 +91,50 @@
             sessionStorage.removeItem('loginNotice');
         }
 
-        function login() {
+        function routeUser(userData) {
+            if (userData.role === 'CRM') {
+                window.location.href = 'crm.html';
+            } else if (userData.name === 'علاء') {
+                window.location.href = 'admin_panel.html';
+            } else if (userData.role === 'Auditor') {
+                window.location.href = 'data_audit.html';
+            } else if (userData.role === 'Finance') {
+                window.location.href = 'finance_dashboard.html';
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function login() {
             const user = document.getElementById('userSelect').value;
             const pin = document.getElementById('pinInput').value;
-            const errorDiv = document.getElementById('errorMsg');
 
             if (!user) {
                 showError('الرجاء اختيار اسم المستخدم');
                 return;
             }
 
-            if (USERS[user] && USERS[user].pin === pin) {
-                // Success
-                const userData = {
-                    name: user,
-                    displayName: getUserDisplayName(user),
-                    role: USERS[user].role,
-                    pin: pin
-                };
+            try {
+                const response = await dashboardAuthFetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, pin })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.user) {
+                    showError(response.status === 429
+                        ? 'محاولات كثيرة، يرجى المحاولة بعد قليل'
+                        : 'رمز الدخول غير صحيح');
+                    return;
+                }
+
+                const userData = payload.user;
                 localStorage.setItem('currentUser', JSON.stringify(userData));
                 sessionStorage.removeItem('averageBillAuthRedirecting');
                 sessionStorage.removeItem('loginNotice');
-
-                if (userData.role === 'CRM') {
-                     window.location.href = 'crm.html';
-                 } else if (userData.name === 'علاء') {
-                     window.location.href = 'admin_panel.html';
-                 } else if (userData.role === 'Auditor') {
-                     window.location.href = 'data_audit.html';
-                 } else if (userData.role === 'Finance') {
-                     window.location.href = 'finance_dashboard.html';
-                 } else {
-                     window.location.href = 'index.html';
-                 }
-            } else {
-                showError('رمز الدخول غير صحيح');
+                routeUser(userData);
+            } catch (_error) {
+                showError('تعذر الاتصال بالسيرفر، حاول مرة أخرى');
             }
         }
 

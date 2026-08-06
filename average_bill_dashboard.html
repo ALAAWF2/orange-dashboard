@@ -775,7 +775,7 @@
     <script>
         // Authentication check
         const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
-        const hasAverageBillSession = Boolean(currentUser.name && currentUser.pin && ['Admin', 'Manager'].includes(currentUser.role));
+        const hasAverageBillSession = Boolean(currentUser.name && ['Admin', 'Manager'].includes(currentUser.role));
         if (!hasAverageBillSession) {
             localStorage.removeItem('currentUser');
             sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى لعرض تقرير معدل الفاتورة.');
@@ -796,9 +796,7 @@
             API_BASE = storedIp;
         }
 
-        const authHeader = hasAverageBillSession
-            ? 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)))
-            : '';
+        const authHeader = '';
 
         function redirectOnAverageBillUnauthorized(response) {
             if (response.status !== 401) return response;
@@ -812,7 +810,7 @@
         }
 
         async function fetchAverageBillWithAuth(url, options = {}) {
-            const response = await fetch(url, options);
+            const response = await fetch(url, { ...options, credentials: 'same-origin' });
             return redirectOnAverageBillUnauthorized(response);
         }
 

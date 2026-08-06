@@ -1955,7 +1955,7 @@
     <script>
         // Session Check
         let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
-        const hasDashboardSession = Boolean(currentUser.name && currentUser.pin);
+        const hasDashboardSession = Boolean(currentUser.name);
         if (!hasDashboardSession) {
             localStorage.removeItem('currentUser');
             sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى لعرض بيانات الجوائز.');
@@ -2035,7 +2035,12 @@
             }
         }
 
-        function logout() {
+        async function logout() {
+            try {
+                await dashboardAuthFetch('/api/auth/logout', { method: 'POST' });
+            } catch (_error) {
+                // Local cleanup still runs if the network is unavailable.
+            }
             localStorage.removeItem('currentUser');
             sessionStorage.removeItem('averageBillAuthRedirecting');
             window.location.href = 'login.html';
@@ -3365,7 +3370,7 @@
         }
 
         function averageBillAuthHeader() {
-            return 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+            return '';
         }
 
         function redirectOnAverageBillUnauthorized(response) {
@@ -3380,7 +3385,7 @@
         }
 
         async function fetchAverageBillWithAuth(url, options = {}) {
-            const response = await fetch(url, options);
+            const response = await fetch(url, { ...options, credentials: 'same-origin' });
             return redirectOnAverageBillUnauthorized(response);
         }
 
@@ -3400,7 +3405,7 @@
             const tbody = document.getElementById('averageBillCommandBody');
             tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm text-warning me-2"></span>جاري تحميل المعارض المرتبطة بحسابك...</td></tr>';
             try {
-                const headers = { 'Authorization': averageBillAuthHeader() };
+                const headers = {};
                 const today = averageBillToday();
                 const [reviewResponse, todayResponse] = await Promise.all([
                     fetchAverageBillWithAuth(`${averageBillApiBase()}/api/average-bill/reviews`, { headers }),
@@ -3512,10 +3517,7 @@
             try {
                 const response = await fetchAverageBillWithAuth(`${averageBillApiBase()}/api/average-bill/reviews`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': averageBillAuthHeader()
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ attendance_date: date, store_number: storeId, sales_group: salesGroup, decision })
                 });
                 const result = await response.json();
@@ -7650,25 +7652,9 @@
                     return;
                 }
 
-                // Silent login in the background using the logged-in user's credentials
-                let targetEmail = 'supervisor.reader@orangebedbath.com';
-                let targetPass = 'OrangeReader2026!';
-                if (currentUser && typeof USERS !== 'undefined' && USERS[currentUser.name]) {
-                    const matchedUser = USERS[currentUser.name];
-                    if (matchedUser.email && matchedUser.password) {
-                        targetEmail = matchedUser.email;
-                        targetPass = matchedUser.password;
-                    }
-                }
-
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (!session || !session.user || session.user.email.toLowerCase() !== targetEmail.toLowerCase()) {
-                    console.log("Silent login to Supabase as:", targetEmail);
-                    await supabaseClient.auth.signInWithPassword({
-                        email: targetEmail,
-                        password: targetPass
-                    });
-                }
+                // The server exchanges the encrypted mapped credentials for a
+                // normal user JWT. Supabase RLS continues to apply unchanged.
+                await ensureDashboardSupabaseSession(supabaseClient);
 
                 // Determine target showrooms based on dashboard session user
                 let targetShowrooms = [];

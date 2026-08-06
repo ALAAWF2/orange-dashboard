@@ -2374,6 +2374,7 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">رمز الدخول (PIN Code - 4 أرقام):</label>
                         <input type="text" id="modalUserPin" class="form-control form-control-dark" maxlength="4" placeholder="مثال: 1234">
+                        <div class="form-text">عند التعديل اتركه فارغاً للإبقاء على الرمز الحالي.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">صلاحيات النظام (Role):</label>
@@ -2452,8 +2453,7 @@
         }
 
         // Setup Authorization Header
-        const AUTH_PIN = currentUser ? currentUser.pin : "0000";
-        const authHeader = "Basic " + btoa(unescape(encodeURIComponent("علاء:" + AUTH_PIN)));
+        const authHeader = '';
         
         let API_BASE = "http://localhost:5000"; // Will be auto-detected on load
 
@@ -2628,7 +2628,12 @@
         });
 
         // Logout
-        function logout() {
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+            } catch (_error) {
+                // Continue with local logout when the network is unavailable.
+            }
             localStorage.clear();
             window.location.href = 'login.html';
         }
@@ -4652,7 +4657,13 @@
 
                     tr.innerHTML = `
                         <td class="fw-bold text-start ps-4"><i class="fa-solid fa-circle-user text-orange me-2"></i> ${escapeHtml(displayName)}</td>
-                        <td class="fw-bold" style="letter-spacing: 2px;">•••• (${user.pin})</td>
+                        <td class="fw-bold" style="letter-spacing: 2px;">
+                            <span class="me-2">••••</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="revealUserPin(decodeURIComponent('${encodeURIComponent(username)}'), this)">
+                                <i class="fa-solid fa-eye"></i> إظهار
+                            </button>
+                        </td>
                         <td>${roleBadge} ${visitorsStatus}</td>
                         <td>${actionButtons}</td>
                     `;
@@ -4660,6 +4671,43 @@
                 });
             } catch (err) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-danger py-3">فشل استرداد بيانات المستخدمين: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function revealUserPin(username, button) {
+            const adminPin = window.prompt('أدخل رمز دخولك للتأكد قبل إظهار رمز المستخدم:');
+            if (adminPin === null) return;
+            if (!/^\d{4}$/.test(adminPin.trim())) {
+                alert('رمز المدير يجب أن يتكون من 4 أرقام.');
+                return;
+            }
+
+            const originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                const response = await fetch(
+                    `${API_BASE}/api/admin/users/${encodeURIComponent(username)}/pin`,
+                    {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ admin_pin: adminPin.trim() })
+                    }
+                );
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.pin) {
+                    throw new Error(payload.error || 'تعذر إظهار الرمز');
+                }
+                button.textContent = payload.pin;
+                window.setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                    button.disabled = false;
+                }, 20000);
+            } catch (error) {
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+                alert(`تعذر إظهار الرمز: ${error.message}`);
             }
         }
 
@@ -4688,7 +4736,7 @@
             document.getElementById('modalUsername').disabled = true; // Lock username during edit to prevent conflicts
             document.getElementById('modalUsername').closest('.mb-3').hidden = true;
             document.getElementById('modalUserDisplayName').value = getAdminUserDisplayName(username);
-            document.getElementById('modalUserPin').value = user.pin;
+            document.getElementById('modalUserPin').value = '';
             document.getElementById('modalUserRole').value = user.role || 'Manager';
             document.getElementById('modalUserHideVisitors').checked = user.hide_visitors === true;
             
@@ -4739,7 +4787,7 @@
                 alert("الرجاء إدخال اسم العرض!");
                 return;
             }
-            if (pin.length !== 4 || isNaN(pin)) {
+            if ((!editingOriginalUsername || pin) && !/^\d{4}$/.test(pin)) {
                 alert("الرجاء إدخال رمز دخول PIN مكون من 4 أرقام فقط!");
                 return;
             }
@@ -4752,10 +4800,10 @@
                 updatedUsers[editingOriginalUsername] = {
                     ...updatedUsers[editingOriginalUsername],
                     displayName,
-                    pin,
                     role,
                     hide_visitors
                 };
+                if (pin) updatedUsers[editingOriginalUsername].pin = pin;
             } else {
                 // Creating new
                 if (updatedUsers[username]) {
@@ -4796,13 +4844,12 @@
                     // Check if current user credentials were changed and force logout if so
                     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
                     if (currentUser && usersDict[currentUser.name]) {
-                        const newPin = usersDict[currentUser.name].pin;
                         const newDisplayName = usersDict[currentUser.name].displayName || currentUser.name;
                         if (currentUser.displayName !== newDisplayName) {
                             currentUser.displayName = newDisplayName;
                             localStorage.setItem('currentUser', JSON.stringify(currentUser));
                         }
-                        if (newPin !== currentUser.pin) {
+                        if (usersDict[currentUser.name].pin) {
                             alert("⚠️ لقد قمت بتغيير الرمز السري الخاص بك. سيتم تسجيل الخروج تلقائياً لتسجيل الدخول بالرمز الجديد.");
                             logout();
                             return;

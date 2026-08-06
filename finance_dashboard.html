@@ -776,7 +776,7 @@
     <script>
         // Auth check
         const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
-        const hasFinanceSession = Boolean(currentUser.name && currentUser.pin && ['Finance', 'Admin'].includes(currentUser.role));
+        const hasFinanceSession = Boolean(currentUser.name && ['Finance', 'Admin'].includes(currentUser.role));
         if (!hasFinanceSession) {
             localStorage.removeItem('currentUser');
             sessionStorage.setItem('loginNotice', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى لعرض لوحة المالية.');
@@ -1030,7 +1030,7 @@
 
             try {
                 // Dynamically resolve auth header using logged in user's Arabic/UTF-8 credentials
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const r = await fetchWithSessionAuth(`${API_BASE}/api/finance/stats?start=${start}&end=${end}`, {
                     headers: {
                         'Authorization': authHeader
@@ -1217,7 +1217,7 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري التحضير...';
 
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const r = await fetchWithSessionAuth(`${API_BASE}/api/finance/tax-report?start=${start}&end=${end}`, {
                     headers: {
                         'Authorization': authHeader
@@ -1250,7 +1250,7 @@
             const tbody = document.getElementById('financeReviewQueueBody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل جميع المراجعات...</td></tr>';
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/reviews`, {
                     headers: { 'Authorization': authHeader }
                 });
@@ -1285,7 +1285,7 @@
             const originalHtml = button.innerHTML;
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ';
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
@@ -1318,7 +1318,7 @@
             tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-1"></i> جاري تحميل الجوائز وحالات المراجعة...</td></tr>';
 
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const r = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/performance?date=${date}`, {
                     headers: { 'Authorization': authHeader }
                 });
@@ -1408,7 +1408,7 @@
         async function submitFinanceReview(storeId, salesGroup, decision) {
             const date = document.getElementById('prizesDate').value;
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/reviews`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
@@ -1431,7 +1431,7 @@
             const tbody = document.getElementById('reviewAuditBody');
             tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const response = await fetchWithSessionAuth(`${API_BASE}/api/average-bill/review-audit?start=${formatDate(startDate)}&end=${end}`, { headers: { 'Authorization': authHeader } });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'تعذر تحميل السجل');
@@ -1534,7 +1534,7 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري استرجاع البيانات وتصدير الملف...';
 
             try {
-                const authHeader = 'Basic ' + btoa(unescape(encodeURIComponent(currentUser.name + ':' + currentUser.pin)));
+                const authHeader = '';
                 const url = `${API_BASE}/api/average-bill/payouts-range?start=${start}&end=${end}`;
                 
                 const r = await fetchWithSessionAuth(url, {
