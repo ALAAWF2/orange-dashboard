@@ -6438,6 +6438,25 @@ const EMPLOYEES = [
         "addressBooks": "1501-C;1501-E"
     },
     {
+        "employeeId": "4907-شانو تشيلي",
+        "personnelNumber": "4907",
+        "name": "شانو تشيلي",
+        "startDate": "2026-03-12",
+        "manager": "اماني عسيري",
+        "showroom": "1901-21-Abha Al_Rashid Mall New",
+        "showroomDetails": [
+            {
+                "name": "1901-21-Abha Al_Rashid Mall New",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1901-C",
+                    "1901-E"
+                ]
+            }
+        ],
+        "addressBooks": "1901-C;1901-E"
+    },
+    {
         "employeeId": "4904-محمد ياشير شيتيان تو",
         "personnelNumber": "4904",
         "name": "محمد ياشير شيتيان تو",
