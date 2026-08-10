@@ -6755,18 +6755,18 @@ const EMPLOYEES = [
         "name": "عائشة الشهري",
         "startDate": "2026-05-20",
         "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New",
+        "showroom": "1906-1906-LAVANDA PARK",
         "showroomDetails": [
             {
-                "name": "1901-21-Abha Al_Rashid Mall New",
+                "name": "1906-1906-LAVANDA PARK",
                 "manager": "اماني عسيري",
                 "codes": [
-                    "1901-C",
-                    "1901-E"
+                    "1906-C",
+                    "1906-E"
                 ]
             }
         ],
-        "addressBooks": "1901-C;1901-E"
+        "addressBooks": "1906-C;1906-E"
     },
     {
         "employeeId": "4966-سلمى الحربي",
@@ -7136,25 +7136,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1004-C;1004-E"
-    },
-    {
-        "employeeId": "4989-شادن عسيري",
-        "personnelNumber": "4989",
-        "name": "شادن عسيري",
-        "startDate": "2026-07-01",
-        "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New",
-        "showroomDetails": [
-            {
-                "name": "1901-21-Abha Al_Rashid Mall New",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1901-C",
-                    "1901-E"
-                ]
-            }
-        ],
-        "addressBooks": "1901-C;1901-E"
     },
     {
         "employeeId": "4990-Wafaa Alrshidi",
