@@ -5157,7 +5157,7 @@ const EMPLOYEES = [
         "name": "اريام الاسمري",
         "startDate": "2025-11-09",
         "manager": "اماني عسيري",
-        "showroom": "1906-1906-LAVANDA PARK",
+        "showroom": "1906-1906-LAVANDA PARK و 1901-21-Abha Al_Rashid Mall New",
         "showroomDetails": [
             {
                 "name": "1906-1906-LAVANDA PARK",
@@ -5166,9 +5166,17 @@ const EMPLOYEES = [
                     "1906-C",
                     "1906-E"
                 ]
+            },
+            {
+                "name": "1901-21-Abha Al_Rashid Mall New",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1901-C",
+                    "1901-E"
+                ]
             }
         ],
-        "addressBooks": "1906-C;1906-E"
+        "addressBooks": "1906-C;1906-E;1901-C;1901-E"
     },
     {
         "employeeId": "4785-Areej Alaklbi",
