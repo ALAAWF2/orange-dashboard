@@ -4609,18 +4609,18 @@ const EMPLOYEES = [
         "name": "ايوب علي كونجو علي ك",
         "startDate": "2025-09-26",
         "manager": "محمدكلو",
-        "showroom": "1113-51-Park Avenue Riyadh",
+        "showroom": "1114-1114-Malgha Mall",
         "showroomDetails": [
             {
-                "name": "1113-51-Park Avenue Riyadh",
+                "name": "1114-1114-Malgha Mall",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1113-C",
-                    "1113-E"
+                    "1114-C",
+                    "1114-E"
                 ]
             }
         ],
-        "addressBooks": "1113-C;1113-E"
+        "addressBooks": "1114-C;1114-E"
     },
     {
         "employeeId": "4703-منى عبدالمحسن الزهرا",
