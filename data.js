@@ -5157,16 +5157,8 @@ const EMPLOYEES = [
         "name": "اريام الاسمري",
         "startDate": "2025-11-09",
         "manager": "اماني عسيري",
-        "showroom": "1906-1906-LAVANDA PARK و 1901-21-Abha Al_Rashid Mall New",
+        "showroom": "1901-21-Abha Al_Rashid Mall New و 1906-1906-LAVANDA PARK",
         "showroomDetails": [
-            {
-                "name": "1906-1906-LAVANDA PARK",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1906-C",
-                    "1906-E"
-                ]
-            },
             {
                 "name": "1901-21-Abha Al_Rashid Mall New",
                 "manager": "اماني عسيري",
@@ -5174,9 +5166,17 @@ const EMPLOYEES = [
                     "1901-C",
                     "1901-E"
                 ]
+            },
+            {
+                "name": "1906-1906-LAVANDA PARK",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1906-C",
+                    "1906-E"
+                ]
             }
         ],
-        "addressBooks": "1906-C;1906-E;1901-C;1901-E"
+        "addressBooks": "1901-C;1901-E;1906-C;1906-E"
     },
     {
         "employeeId": "4785-Areej Alaklbi",
@@ -7383,6 +7383,63 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1105-C;1105-E"
+    },
+    {
+        "employeeId": "5004-مها سالم العتيبي",
+        "personnelNumber": "5004",
+        "name": "مها سالم العتيبي",
+        "startDate": "2026-08-09",
+        "manager": "محمدكلو",
+        "showroom": "1113-51-Park Avenue Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1113-51-Park Avenue Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1113-C",
+                    "1113-E"
+                ]
+            }
+        ],
+        "addressBooks": "1113-C;1113-E"
+    },
+    {
+        "employeeId": "5005-رغد فيصل القحطاني",
+        "personnelNumber": "5005",
+        "name": "رغد فيصل القحطاني",
+        "startDate": "2026-08-09",
+        "manager": "محمدكلو",
+        "showroom": "1113-51-Park Avenue Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1113-51-Park Avenue Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1113-C",
+                    "1113-E"
+                ]
+            }
+        ],
+        "addressBooks": "1113-C;1113-E"
+    },
+    {
+        "employeeId": "5006-لجين محمد دالي",
+        "personnelNumber": "5006",
+        "name": "لجين محمد دالي",
+        "startDate": "2026-08-09",
+        "manager": "المنطقة الغربية",
+        "showroom": "1004-07-Arab Mall",
+        "showroomDetails": [
+            {
+                "name": "1004-07-Arab Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1004-C",
+                    "1004-E"
+                ]
+            }
+        ],
+        "addressBooks": "1004-C;1004-E"
     }
 ];
 
