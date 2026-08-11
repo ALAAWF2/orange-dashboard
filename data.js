@@ -6367,18 +6367,18 @@ const EMPLOYEES = [
         "name": "محمد شبيب شيكازيت فا",
         "startDate": "2026-03-12",
         "manager": "محمدكلو",
-        "showroom": "1115-1115-Alrabie Mall",
+        "showroom": "1101-12-Al_Hamra Mall",
         "showroomDetails": [
             {
-                "name": "1115-1115-Alrabie Mall",
+                "name": "1101-12-Al_Hamra Mall",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1115-C",
-                    "1115-E"
+                    "1101-C",
+                    "1101-E"
                 ]
             }
         ],
-        "addressBooks": "1115-C;1115-E"
+        "addressBooks": "1101-C;1101-E"
     },
     {
         "employeeId": "4928-محمد شهير بينكانور",
