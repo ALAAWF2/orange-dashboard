@@ -1665,7 +1665,7 @@
     <div class="modal-content" style="max-width:900px; text-align:right; direction:rtl;">
       <button class="modal-close" onclick="closeTaxInvoiceModal()" aria-label="إغلاق نافذة الفاتورة الضريبية">×</button>
       <h3 id="taxInvoiceModalTitle" style="margin:0 0 6px; color:var(--primary);">🧾 استخراج فاتورة ضريبية</h3>
-      <p style="margin:0 0 16px; color:var(--text-muted); font-size:0.9rem;">أدخل رقم الفاتورة وبيانات العميل. يتم إنشاء PDF من ملف ZATCA الأصلي المحفوظ في النظام.</p>
+      <p style="margin:0 0 16px; color:var(--text-muted); font-size:0.9rem;">أدخل رقم الفاتورة وبيانات الشركة. يتم إنشاء PDF من ملف ZATCA الأصلي المحفوظ في النظام.</p>
       <form id="taxInvoiceForm" class="tax-invoice-form" onsubmit="submitTaxInvoice(event)">
         <div class="tax-invoice-field">
           <label for="taxInvoiceNumber">رقم الفاتورة *</label>
@@ -1676,16 +1676,16 @@
           <input id="taxInvoiceMall" type="text" readonly>
         </div>
         <div class="tax-invoice-field">
-          <label for="taxInvoiceCustomerName">اسم العميل / الشركة *</label>
+          <label for="taxInvoiceCustomerName">اسم الشركة *</label>
           <input id="taxInvoiceCustomerName" type="text" maxlength="200" required autocomplete="organization">
         </div>
         <div class="tax-invoice-field">
-          <label for="taxInvoiceCustomerVat">الرقم الضريبي (اختياري)</label>
-          <input id="taxInvoiceCustomerVat" type="text" inputmode="numeric" maxlength="15" dir="ltr" placeholder="15 رقماً">
+          <label for="taxInvoiceCustomerVat">الرقم الضريبي *</label>
+          <input id="taxInvoiceCustomerVat" type="text" inputmode="numeric" maxlength="15" required dir="ltr" placeholder="15 رقماً">
         </div>
         <div class="tax-invoice-field full-width">
-          <label for="taxInvoiceNationalAddress">العنوان الوطني *</label>
-          <textarea id="taxInvoiceNationalAddress" rows="3" maxlength="500" required></textarea>
+          <label for="taxInvoiceNationalAddress">العنوان الوطني (اختياري)</label>
+          <textarea id="taxInvoiceNationalAddress" rows="3" maxlength="500"></textarea>
         </div>
         <div class="full-width" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <button id="taxInvoiceSubmitBtn" type="submit" class="btn-primary-action" style="justify-content:center; min-width:190px;">إنشاء وعرض PDF</button>
@@ -2665,12 +2665,12 @@
       const customerName = document.getElementById('taxInvoiceCustomerName').value.trim();
       const customerVat = document.getElementById('taxInvoiceCustomerVat').value.trim();
       const nationalAddress = document.getElementById('taxInvoiceNationalAddress').value.trim();
-      if (!invoiceNumber || !customerName || !nationalAddress) {
-        setTaxInvoiceStatus('أكمل رقم الفاتورة واسم العميل والعنوان الوطني.', 'error');
+      if (!invoiceNumber || !customerName || !customerVat) {
+        setTaxInvoiceStatus('أكمل رقم الفاتورة واسم الشركة والرقم الضريبي.', 'error');
         return;
       }
       const vatDigits = customerVat.replace(/\D/g, '');
-      if (customerVat && (vatDigits.length !== 15 || !vatDigits.startsWith('3') || !vatDigits.endsWith('3'))) {
+      if (vatDigits.length !== 15 || !vatDigits.startsWith('3') || !vatDigits.endsWith('3')) {
         setTaxInvoiceStatus('الرقم الضريبي يجب أن يكون 15 رقماً ويبدأ وينتهي بالرقم 3.', 'error');
         return;
       }
