@@ -1683,6 +1683,10 @@
           <label for="taxInvoiceCustomerVat">الرقم الضريبي *</label>
           <input id="taxInvoiceCustomerVat" type="text" inputmode="numeric" maxlength="15" required dir="ltr" placeholder="15 رقماً">
         </div>
+        <div class="tax-invoice-field">
+          <label for="taxInvoiceCustomerPhone">رقم الجوال (اختياري)</label>
+          <input id="taxInvoiceCustomerPhone" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" dir="ltr" placeholder="مثال: 05xxxxxxxx">
+        </div>
         <div class="tax-invoice-field full-width">
           <label for="taxInvoiceNationalAddress">العنوان الوطني (اختياري)</label>
           <textarea id="taxInvoiceNationalAddress" rows="3" maxlength="500"></textarea>
@@ -2665,6 +2669,7 @@
       const invoiceNumber = document.getElementById('taxInvoiceNumber').value.trim();
       const customerName = document.getElementById('taxInvoiceCustomerName').value.trim();
       const customerVat = document.getElementById('taxInvoiceCustomerVat').value.trim();
+      const customerPhone = document.getElementById('taxInvoiceCustomerPhone').value.trim();
       const nationalAddress = document.getElementById('taxInvoiceNationalAddress').value.trim();
       if (!invoiceNumber || !customerName || !customerVat) {
         setTaxInvoiceStatus('أكمل رقم الفاتورة واسم الشركة والرقم الضريبي.', 'error');
@@ -2673,6 +2678,11 @@
       const vatDigits = customerVat.replace(/\D/g, '');
       if (vatDigits.length !== 15 || !vatDigits.startsWith('3') || !vatDigits.endsWith('3')) {
         setTaxInvoiceStatus('الرقم الضريبي يجب أن يكون 15 رقماً ويبدأ وينتهي بالرقم 3.', 'error');
+        return;
+      }
+      const phoneDigits = customerPhone.replace(/\D/g, '');
+      if (customerPhone && (phoneDigits.length < 7 || phoneDigits.length > 15)) {
+        setTaxInvoiceStatus('رقم الجوال غير صالح. أدخل من 7 إلى 15 رقماً أو اتركه فارغاً.', 'error');
         return;
       }
 
@@ -2695,6 +2705,7 @@
             invoice_number: invoiceNumber,
             customer_name: customerName,
             customer_vat: vatDigits,
+            customer_phone: customerPhone,
             national_address: nationalAddress,
             mall: userMall
           })
