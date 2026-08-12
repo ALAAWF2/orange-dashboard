@@ -3101,25 +3101,6 @@ const EMPLOYEES = [
         "addressBooks": "1301-C;1301-E"
     },
     {
-        "employeeId": "4285-ميعاد جابر الريثى",
-        "personnelNumber": "4285",
-        "name": "ميعاد جابر الريثى",
-        "startDate": "2024-08-01",
-        "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New",
-        "showroomDetails": [
-            {
-                "name": "1901-21-Abha Al_Rashid Mall New",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1901-C",
-                    "1901-E"
-                ]
-            }
-        ],
-        "addressBooks": "1901-C;1901-E"
-    },
-    {
         "employeeId": "4306-اماني احمد عسيري",
         "personnelNumber": "4306",
         "name": "اماني احمد عسيري",
@@ -4807,16 +4788,8 @@ const EMPLOYEES = [
         "name": "رنا محمد الاسمري",
         "startDate": "2025-10-20",
         "manager": "اماني عسيري",
-        "showroom": "1901-21-Abha Al_Rashid Mall New و 1906-1906-LAVANDA PARK",
+        "showroom": "1906-1906-LAVANDA PARK",
         "showroomDetails": [
-            {
-                "name": "1901-21-Abha Al_Rashid Mall New",
-                "manager": "اماني عسيري",
-                "codes": [
-                    "1901-C",
-                    "1901-E"
-                ]
-            },
             {
                 "name": "1906-1906-LAVANDA PARK",
                 "manager": "اماني عسيري",
@@ -4826,7 +4799,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1901-C;1901-E;1906-C;1906-E"
+        "addressBooks": "1906-C;1906-E"
     },
     {
         "employeeId": "4745-اثير بندر السبيعي",
@@ -7136,6 +7109,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1004-C;1004-E"
+    },
+    {
+        "employeeId": "4989-شادن عسيري",
+        "personnelNumber": "4989",
+        "name": "شادن عسيري",
+        "startDate": "2026-07-01",
+        "manager": "اماني عسيري",
+        "showroom": "1906-1906-LAVANDA PARK",
+        "showroomDetails": [
+            {
+                "name": "1906-1906-LAVANDA PARK",
+                "manager": "اماني عسيري",
+                "codes": [
+                    "1906-C",
+                    "1906-E"
+                ]
+            }
+        ],
+        "addressBooks": "1906-C;1906-E"
     },
     {
         "employeeId": "4990-Wafaa Alrshidi",
