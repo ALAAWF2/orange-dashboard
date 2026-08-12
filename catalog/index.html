@@ -1167,6 +1167,60 @@
       font-size: 1.05rem;
     }
 
+    .tax-invoice-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      text-align: right;
+    }
+
+    .tax-invoice-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .tax-invoice-field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .tax-invoice-form > .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .tax-invoice-field label {
+      color: var(--text-main);
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+
+    .tax-invoice-field input,
+    .tax-invoice-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text-main);
+      font: inherit;
+      outline: none;
+    }
+
+    .tax-invoice-field input:focus,
+    .tax-invoice-field textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.12);
+    }
+
+    .tax-invoice-preview {
+      width: 100%;
+      height: min(62vh, 760px);
+      margin-top: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+
     @media (max-width: 768px) {
       .top-notice {
         justify-content: center;
@@ -1402,6 +1456,18 @@
         border-radius: 16px;
       }
 
+      .tax-invoice-form {
+        grid-template-columns: 1fr;
+      }
+
+      .tax-invoice-field.full-width {
+        grid-column: auto;
+      }
+
+      .tax-invoice-form > .full-width {
+        grid-column: auto;
+      }
+
       .pagination {
         margin: 25px 10px 85px;
         gap: 6px;
@@ -1464,6 +1530,7 @@
       <div class="header-actions">
         <!-- Main Direct Buttons -->
         <a id="showroomSalesHeaderBtn" href="showroom-sales.html" onclick="openShowroomSales(event)" class="btn-primary-action" style="background: linear-gradient(135deg, #fe7900, #d86600); text-decoration: none; color: white;">📊 مبيعات المعرض</a>
+        <button id="taxInvoiceBtn" onclick="openTaxInvoiceModal()" class="btn-purple-action" style="display:none; background:linear-gradient(135deg,#34495e,#1f2d3a);">🧾 فاتورة ضريبية</button>
         <button id="sendOrderBtn" onclick="openOrderModal()" class="btn-primary-action" style="display:none;"><span id="sendOrderBtnLabel">🛒 إرسال الطلبية</span></button>
         <button id="printBarcodeBtn" onclick="openPrintBarcodeModal()" class="btn-purple-action" style="display:none;">🖨️ طباعة الباركود</button>
 
@@ -1481,6 +1548,7 @@
           <div class="dropdown-content" id="toolsMenu">
             <div class="dropdown-section-header">العروض والطلبات</div>
             <a id="showroomSalesMenuBtn" href="showroom-sales.html" onclick="openShowroomSales(event)">📊 مبيعات المعرض</a>
+            <button id="taxInvoiceMenuBtn" onclick="openTaxInvoiceModal()" style="display:none;">🧾 استخراج فاتورة ضريبية</button>
             <a id="quotationBtn" href="quotation.html">📄 عمل عرض سعر</a>
             <a id="myOrdersBtn" href="outlet-orders-supabase.html" style="display:none;">📋 طلباتي السابقة</a>
             <button id="crossOutletSearchBtn" onclick="location.href='cross-outlet-search.html'" style="display:none;">🌐 بحث متعدد الفروع</button>
@@ -1589,6 +1657,44 @@
       <input id="customQtyInput" type="number" min="1" aria-label="الكمية المطلوبة من المنتج غير الموجود" placeholder="الكمية المطلوبة" style="width:90%; padding:8px; margin:8px 0; border:1px solid #ccc; border-radius:5px;"><br>
       <button onclick="submitCustomProduct()" class="btn-primary-action" style="width:90%; margin-top:10px; justify-content:center;">إضافة</button>
       <button onclick="closeCustomProductModal()" style="width:90%; margin-top:5px; background:#7f8c8d; color:white; border:none; padding:8px; border-radius:5px; cursor:pointer;">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- ZATCA Tax Invoice Modal -->
+  <div id="taxInvoiceModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="taxInvoiceModalTitle" style="z-index:10120;">
+    <div class="modal-content" style="max-width:900px; text-align:right; direction:rtl;">
+      <button class="modal-close" onclick="closeTaxInvoiceModal()" aria-label="إغلاق نافذة الفاتورة الضريبية">×</button>
+      <h3 id="taxInvoiceModalTitle" style="margin:0 0 6px; color:var(--primary);">🧾 استخراج فاتورة ضريبية</h3>
+      <p style="margin:0 0 16px; color:var(--text-muted); font-size:0.9rem;">أدخل رقم الفاتورة وبيانات العميل. يتم إنشاء PDF من ملف ZATCA الأصلي المحفوظ في النظام.</p>
+      <form id="taxInvoiceForm" class="tax-invoice-form" onsubmit="submitTaxInvoice(event)">
+        <div class="tax-invoice-field">
+          <label for="taxInvoiceNumber">رقم الفاتورة *</label>
+          <input id="taxInvoiceNumber" type="text" maxlength="100" required autocomplete="off" dir="ltr" placeholder="مثال: in1001-1-000000001">
+        </div>
+        <div class="tax-invoice-field">
+          <label for="taxInvoiceMall">المعرض</label>
+          <input id="taxInvoiceMall" type="text" readonly>
+        </div>
+        <div class="tax-invoice-field">
+          <label for="taxInvoiceCustomerName">اسم العميل / الشركة *</label>
+          <input id="taxInvoiceCustomerName" type="text" maxlength="200" required autocomplete="organization">
+        </div>
+        <div class="tax-invoice-field">
+          <label for="taxInvoiceCustomerVat">الرقم الضريبي (اختياري)</label>
+          <input id="taxInvoiceCustomerVat" type="text" inputmode="numeric" maxlength="15" dir="ltr" placeholder="15 رقماً">
+        </div>
+        <div class="tax-invoice-field full-width">
+          <label for="taxInvoiceNationalAddress">العنوان الوطني *</label>
+          <textarea id="taxInvoiceNationalAddress" rows="3" maxlength="500" required></textarea>
+        </div>
+        <div class="full-width" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <button id="taxInvoiceSubmitBtn" type="submit" class="btn-primary-action" style="justify-content:center; min-width:190px;">إنشاء وعرض PDF</button>
+          <button type="button" onclick="closeTaxInvoiceModal()" style="padding:10px 18px; border:1px solid var(--border-color); border-radius:8px; background:#fff; cursor:pointer;">إغلاق</button>
+          <a id="taxInvoiceDownloadLink" class="btn-purple-action" style="display:none; text-decoration:none;" download>تنزيل PDF 📥</a>
+        </div>
+      </form>
+      <div id="taxInvoiceStatus" role="status" aria-live="polite" style="display:none; margin-top:12px; padding:10px 12px; border-radius:8px;"></div>
+      <iframe id="taxInvoicePreview" class="tax-invoice-preview" title="معاينة الفاتورة الضريبية" style="display:none;"></iframe>
     </div>
   </div>
 
@@ -1842,6 +1948,11 @@
       const dropdown = document.getElementById('toolsDropdown');
       const open = dropdown.classList.toggle('open');
       document.getElementById('toolsMenuButton')?.setAttribute('aria-expanded', String(open));
+    }
+
+    function closeToolsDropdown() {
+      document.getElementById('toolsDropdown')?.classList.remove('open');
+      document.getElementById('toolsMenuButton')?.setAttribute('aria-expanded', 'false');
     }
 
     function toggleMobileFilters() {
@@ -2484,6 +2595,137 @@
       if (labelElement) labelElement.textContent = label;
     }
 
+    let taxInvoicePdfUrl = null;
+
+    function setTaxInvoiceStatus(message, type = 'info') {
+      const status = document.getElementById('taxInvoiceStatus');
+      if (!status) return;
+      const colors = {
+        info: ['#eef6ff', '#1d4ed8'],
+        success: ['#ecfdf3', '#157347'],
+        error: ['#fff1f2', '#b42318']
+      };
+      const selected = colors[type] || colors.info;
+      status.textContent = message;
+      status.style.display = 'block';
+      status.style.background = selected[0];
+      status.style.color = selected[1];
+    }
+
+    function clearTaxInvoicePreview() {
+      const preview = document.getElementById('taxInvoicePreview');
+      const downloadLink = document.getElementById('taxInvoiceDownloadLink');
+      if (preview) {
+        preview.removeAttribute('src');
+        preview.style.display = 'none';
+      }
+      if (downloadLink) {
+        downloadLink.removeAttribute('href');
+        downloadLink.style.display = 'none';
+      }
+      if (taxInvoicePdfUrl) {
+        URL.revokeObjectURL(taxInvoicePdfUrl);
+        taxInvoicePdfUrl = null;
+      }
+    }
+
+    function openTaxInvoiceModal() {
+      closeToolsDropdown();
+      if (!currentUser) {
+        showToast('سجّل الدخول أولاً لاستخراج الفاتورة الضريبية.', 'warning');
+        login();
+        return;
+      }
+      if (!userMall || userMall === 'إجمالي المستودعات') {
+        showToast('اختر معرضاً محدداً أولاً.', 'warning');
+        return;
+      }
+      clearTaxInvoicePreview();
+      const status = document.getElementById('taxInvoiceStatus');
+      if (status) status.style.display = 'none';
+      document.getElementById('taxInvoiceMall').value = userMall;
+      document.getElementById('taxInvoiceModal').style.display = 'flex';
+      requestAnimationFrame(() => document.getElementById('taxInvoiceNumber')?.focus());
+    }
+
+    function closeTaxInvoiceModal() {
+      const modal = document.getElementById('taxInvoiceModal');
+      if (modal) modal.style.display = 'none';
+      clearTaxInvoicePreview();
+    }
+
+    async function submitTaxInvoice(event) {
+      event.preventDefault();
+      if (!currentUser || !userMall || userMall === 'إجمالي المستودعات') {
+        setTaxInvoiceStatus('انتهت جلسة المعرض أو لم يتم تحديد معرض.', 'error');
+        return;
+      }
+      const submitButton = document.getElementById('taxInvoiceSubmitBtn');
+      const invoiceNumber = document.getElementById('taxInvoiceNumber').value.trim();
+      const customerName = document.getElementById('taxInvoiceCustomerName').value.trim();
+      const customerVat = document.getElementById('taxInvoiceCustomerVat').value.trim();
+      const nationalAddress = document.getElementById('taxInvoiceNationalAddress').value.trim();
+      if (!invoiceNumber || !customerName || !nationalAddress) {
+        setTaxInvoiceStatus('أكمل رقم الفاتورة واسم العميل والعنوان الوطني.', 'error');
+        return;
+      }
+      const vatDigits = customerVat.replace(/\D/g, '');
+      if (customerVat && (vatDigits.length !== 15 || !vatDigits.startsWith('3') || !vatDigits.endsWith('3'))) {
+        setTaxInvoiceStatus('الرقم الضريبي يجب أن يكون 15 رقماً ويبدأ وينتهي بالرقم 3.', 'error');
+        return;
+      }
+
+      clearTaxInvoicePreview();
+      submitButton.disabled = true;
+      submitButton.textContent = 'جاري إنشاء الفاتورة…';
+      setTaxInvoiceStatus('جاري البحث عن XML الأصلي وإنشاء PDF…', 'info');
+      try {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (sessionError || !accessToken) throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
+        const response = await fetch('/api/catalog/tax-invoice', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            invoice_number: invoiceNumber,
+            customer_name: customerName,
+            customer_vat: vatDigits,
+            national_address: nationalAddress,
+            mall: userMall
+          })
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || 'تعذر إنشاء الفاتورة الضريبية.');
+        }
+        const blob = await response.blob();
+        if (blob.type !== 'application/pdf' || blob.size < 500) {
+          throw new Error('استلم النظام ملفاً غير صالح. حاول مرة أخرى.');
+        }
+        taxInvoicePdfUrl = URL.createObjectURL(blob);
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+        const filename = filenameMatch?.[1] || `${invoiceNumber.replace(/[^0-9A-Za-z_-]+/g, '-')}.pdf`;
+        const preview = document.getElementById('taxInvoicePreview');
+        const downloadLink = document.getElementById('taxInvoiceDownloadLink');
+        preview.src = taxInvoicePdfUrl;
+        preview.style.display = 'block';
+        downloadLink.href = taxInvoicePdfUrl;
+        downloadLink.download = filename;
+        downloadLink.style.display = 'inline-flex';
+        setTaxInvoiceStatus('تم إنشاء الفاتورة بنجاح. يمكنك معاينتها أو تنزيلها.', 'success');
+      } catch (error) {
+        console.error('تعذر إنشاء الفاتورة الضريبية', error);
+        setTaxInvoiceStatus(error.message || 'تعذر إنشاء الفاتورة الضريبية.', 'error');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'إنشاء وعرض PDF';
+      }
+    }
+
     let _profileFetchPromises = {};
     let _authQueue = Promise.resolve();
     let logoutTimer = null;
@@ -2505,7 +2747,7 @@
             <span>يرجى مراجعة ملف المستخدم في النظام ثم إعادة تسجيل الدخول.</span>
           </div>`;
       }
-      ['sendOrderBtn', 'customProductBtn', 'checklistBtn', 'checklistReportBtn', 'exportGuestBtn']
+      ['sendOrderBtn', 'customProductBtn', 'checklistBtn', 'checklistReportBtn', 'exportGuestBtn', 'taxInvoiceBtn', 'taxInvoiceMenuBtn']
         .forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = 'none';
@@ -2526,6 +2768,8 @@
       const checklistBtn = document.getElementById('checklistBtn');
       const checklistReportBtn = document.getElementById('checklistReportBtn');
       const exportGuestBtn = document.getElementById('exportGuestBtn');
+      const taxInvoiceBtn = document.getElementById('taxInvoiceBtn');
+      const taxInvoiceMenuBtn = document.getElementById('taxInvoiceMenuBtn');
       const favOnlyLabel = document.getElementById('favOnlyLabel');
       const showroomStockOnlyLabel = document.getElementById('showroomStockOnlyLabel');
 
@@ -2539,6 +2783,8 @@
       if (checklistBtn) checklistBtn.style.display = 'none';
       if (checklistReportBtn) checklistReportBtn.style.display = 'none';
       if (exportGuestBtn) exportGuestBtn.style.display = 'none';
+      if (taxInvoiceBtn) taxInvoiceBtn.style.display = user ? 'inline-flex' : 'none';
+      if (taxInvoiceMenuBtn) taxInvoiceMenuBtn.style.display = user ? 'flex' : 'none';
       if (favOnlyLabel) favOnlyLabel.style.display = user ? 'inline-flex' : 'none';
       if (showroomStockOnlyLabel) showroomStockOnlyLabel.style.display = 'none';
 
