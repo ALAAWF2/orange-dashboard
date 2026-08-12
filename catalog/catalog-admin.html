@@ -156,6 +156,7 @@
     /* Tab View Layout */
     .tabs-bar {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       border-bottom: 2px solid var(--border-color);
       padding-bottom: 2px;
@@ -412,6 +413,44 @@
       color: #b2bec3;
       cursor: not-allowed;
     }
+
+    /* Tax invoice request ledger */
+    .tax-ledger-header {
+      background: linear-gradient(135deg, var(--secondary) 0%, #1d2b38 100%);
+      color: white;
+      border-radius: var(--radius-md);
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-right: 6px solid var(--primary);
+      box-shadow: var(--shadow-md);
+    }
+    .tax-ledger-header h3 { font-size: 1.2rem; font-weight: 900; margin-bottom: 3px; }
+    .tax-ledger-header p { color: #d9e1e7; font-size: 0.9rem; }
+    .tax-ledger-count {
+      min-width: 92px;
+      text-align: center;
+      background: var(--primary);
+      color: white;
+      border-radius: 14px;
+      padding: 0.65rem 1rem;
+      font-size: 1.35rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+    .tax-ledger-count small { display: block; font-size: 0.68rem; font-weight: 700; opacity: 0.9; }
+    .tax-invoice-number { direction: ltr; text-align: right; font-weight: 800; color: var(--secondary); white-space: nowrap; }
+    .tax-invoice-amount { direction: ltr; text-align: center; font-weight: 900; color: var(--primary); white-space: nowrap; }
+    .tax-invoice-vat, .tax-invoice-phone { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tax-ledger-empty { color: var(--text-light); font-style: italic; }
+
+    @media (max-width: 700px) {
+      .tax-ledger-header { align-items: stretch; flex-direction: column; }
+      .tax-ledger-count { width: 100%; }
+    }
   </style>
 </head>
 <body id="appBody">
@@ -481,6 +520,7 @@
       <button class="tab-btn" onclick="switchTab('tabUsers')">👥 إدارة الحسابات</button>
       <button class="tab-btn" onclick="switchTab('tabMediaLibrary')">🖼️ مكتبة الصور المرفوعة</button>
       <button class="tab-btn" onclick="switchTab('tabAuditLogs')">📋 سجل الأنشطة والأمان</button>
+      <button class="tab-btn" onclick="switchTab('tabTaxInvoices')">🧾 سجل الفواتير الضريبية</button>
       <button class="tab-btn" onclick="switchTab('tabChecklist')">✅ قائمة التفقد اليومية</button>
     </div>
 
@@ -810,6 +850,56 @@
             <tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل سجل الأنشطة...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- TAB: Tax invoice request ledger -->
+    <div id="tabTaxInvoices" class="tab-content">
+      <div class="tax-ledger-header">
+        <div>
+          <h3><i class="fa-solid fa-file-invoice-dollar"></i> سجل الفواتير الضريبية المطلوبة</h3>
+          <p>سجل محفوظ في PostgreSQL لكل فاتورة تم إنشاؤها بنجاح من المعارض.</p>
+        </div>
+        <div class="tax-ledger-count"><span id="taxInvoiceRequestsTotal">0</span><small>طلب مسجل</small></div>
+      </div>
+
+      <div class="controls-container">
+        <div class="controls-row" style="align-items:flex-end;">
+          <div class="control-group" style="flex:3;">
+            <label for="taxInvoiceRequestsSearch">بحث في السجل</label>
+            <input type="text" id="taxInvoiceRequestsSearch" placeholder="رقم الفاتورة، اسم الشركة، الرقم الضريبي، الجوال أو المعرض" oninput="queueTaxInvoiceRequestsSearch()">
+          </div>
+          <div class="control-group" style="flex:0 0 auto; min-width:auto;">
+            <button type="button" onclick="loadTaxInvoiceRequests(true)" class="btn btn-outline" style="height:44px;">
+              <i class="fa-solid fa-rotate"></i> تحديث السجل
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table style="min-width:1250px;">
+          <thead>
+            <tr>
+              <th>التاريخ والوقت</th>
+              <th>رقم الفاتورة</th>
+              <th style="text-align:center;">القيمة</th>
+              <th>اسم الشركة</th>
+              <th>الرقم الضريبي</th>
+              <th>رقم الجوال</th>
+              <th>المعرض</th>
+              <th>المستخدم</th>
+            </tr>
+          </thead>
+          <tbody id="taxInvoiceRequestsBody">
+            <tr><td colspan="8" style="text-align:center; padding:24px;">افتح التبويب لتحميل السجل.</td></tr>
+          </tbody>
+        </table>
+        <div class="pagination-controls">
+          <button type="button" id="taxInvoiceRequestsPrev" onclick="changeTaxInvoiceRequestsPage(-1)">السابق</button>
+          <span id="taxInvoiceRequestsPageInfo">الصفحة 1 من 1</span>
+          <button type="button" id="taxInvoiceRequestsNext" onclick="changeTaxInvoiceRequestsPage(1)">التالي</button>
+        </div>
       </div>
     </div>
 
@@ -1431,7 +1521,7 @@
         
         // Hide tabs that managers should not access
         if (userRole === 'manager') {
-          const adminOnlyTabs = ['tabBlocked', 'tabSync', 'tabImages', 'tabUsers', 'tabMediaLibrary', 'tabAuditLogs', 'tabPromoBarcodes'];
+          const adminOnlyTabs = ['tabBlocked', 'tabSync', 'tabImages', 'tabUsers', 'tabMediaLibrary', 'tabAuditLogs', 'tabTaxInvoices', 'tabPromoBarcodes'];
           document.querySelectorAll('.tab-btn').forEach(btn => {
             const onclickAttr = btn.getAttribute('onclick') || '';
             const match = onclickAttr.match(/'([^']+)'/);
@@ -1565,6 +1655,8 @@
          resetMediaLibraryTab();
       } else if (tabId === 'tabAuditLogs') {
          loadAuditLogs();
+      } else if (tabId === 'tabTaxInvoices') {
+         loadTaxInvoiceRequests();
       } else if (tabId === 'tabChecklist') {
          initializeChecklistTab();
       }
@@ -3438,6 +3530,106 @@
         btn.disabled = false;
         btn.textContent = 'إنشاء الحساب';
       }
+    }
+
+    // === TAB: Tax Invoice Request Ledger ===
+    let taxInvoiceRequestsPage = 1;
+    let taxInvoiceRequestsTotal = 0;
+    const taxInvoiceRequestsLimit = 50;
+    let taxInvoiceRequestsSearchTimer = null;
+
+    function queueTaxInvoiceRequestsSearch() {
+      clearTimeout(taxInvoiceRequestsSearchTimer);
+      taxInvoiceRequestsSearchTimer = setTimeout(() => {
+        taxInvoiceRequestsPage = 1;
+        loadTaxInvoiceRequests();
+      }, 350);
+    }
+
+    async function loadTaxInvoiceRequests(resetPage = false) {
+      if (resetPage) taxInvoiceRequestsPage = 1;
+      const tbody = document.getElementById('taxInvoiceRequestsBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px;">جاري تحميل سجل الفواتير الضريبية...</td></tr>';
+
+      try {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        const accessToken = sessionData?.session?.access_token || userSessionToken;
+        if (!accessToken) throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
+        userSessionToken = accessToken;
+        const search = document.getElementById('taxInvoiceRequestsSearch')?.value.trim() || '';
+        const params = new URLSearchParams({
+          page: String(taxInvoiceRequestsPage),
+          limit: String(taxInvoiceRequestsLimit),
+          search,
+        });
+        const response = await fetch(`/api/catalog/tax-invoice-requests?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+          cache: 'no-store',
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'تعذر تحميل سجل الفواتير الضريبية.');
+        taxInvoiceRequestsTotal = Number(result.total || 0);
+        renderTaxInvoiceRequests(result.requests || []);
+      } catch (error) {
+        taxInvoiceRequestsTotal = 0;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--danger);">❌ ${escapeHtmlSafe(error.message)}</td></tr>`;
+        updateTaxInvoiceRequestsPagination();
+      }
+    }
+
+    function renderTaxInvoiceRequests(requests) {
+      const tbody = document.getElementById('taxInvoiceRequestsBody');
+      if (!tbody) return;
+      if (!requests.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:var(--text-muted);">لا توجد فواتير ضريبية مطابقة.</td></tr>';
+        updateTaxInvoiceRequestsPagination();
+        return;
+      }
+
+      const moneyFormatter = new Intl.NumberFormat('ar-SA', {
+        style: 'currency', currency: 'SAR', minimumFractionDigits: 2, maximumFractionDigits: 2,
+      });
+      tbody.innerHTML = requests.map(item => {
+        const date = item.created_at ? new Date(item.created_at) : null;
+        const dateText = date && !Number.isNaN(date.getTime())
+          ? date.toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh', dateStyle: 'medium', timeStyle: 'short' })
+          : '—';
+        const amount = item.invoice_amount == null ? null : Number(item.invoice_amount);
+        const amountText = amount != null && Number.isFinite(amount) ? moneyFormatter.format(amount) : '—';
+        const company = item.customer_name || '<span class="tax-ledger-empty">غير محفوظ للطلب القديم</span>';
+        const vat = item.customer_vat || '—';
+        const phone = item.customer_phone || '—';
+        return `
+          <tr>
+            <td style="white-space:nowrap; color:var(--text-muted);">${escapeHtmlSafe(dateText)}</td>
+            <td class="tax-invoice-number">${escapeHtmlSafe(item.invoice_number || '—')}</td>
+            <td class="tax-invoice-amount">${escapeHtmlSafe(amountText)}</td>
+            <td>${item.customer_name ? escapeHtmlSafe(company) : company}</td>
+            <td class="tax-invoice-vat">${escapeHtmlSafe(vat)}</td>
+            <td class="tax-invoice-phone">${escapeHtmlSafe(phone)}</td>
+            <td>${escapeHtmlSafe(item.requested_mall || '—')}</td>
+            <td style="direction:ltr; text-align:right;">${escapeHtmlSafe(item.requested_by || '—')}</td>
+          </tr>`;
+      }).join('');
+      updateTaxInvoiceRequestsPagination();
+    }
+
+    function updateTaxInvoiceRequestsPagination() {
+      const totalPages = Math.max(1, Math.ceil(taxInvoiceRequestsTotal / taxInvoiceRequestsLimit));
+      if (taxInvoiceRequestsPage > totalPages) taxInvoiceRequestsPage = totalPages;
+      document.getElementById('taxInvoiceRequestsTotal').textContent = taxInvoiceRequestsTotal.toLocaleString('ar-SA');
+      document.getElementById('taxInvoiceRequestsPageInfo').textContent = `الصفحة ${taxInvoiceRequestsPage.toLocaleString('ar-SA')} من ${totalPages.toLocaleString('ar-SA')}`;
+      document.getElementById('taxInvoiceRequestsPrev').disabled = taxInvoiceRequestsPage <= 1;
+      document.getElementById('taxInvoiceRequestsNext').disabled = taxInvoiceRequestsPage >= totalPages;
+    }
+
+    function changeTaxInvoiceRequestsPage(direction) {
+      const totalPages = Math.max(1, Math.ceil(taxInvoiceRequestsTotal / taxInvoiceRequestsLimit));
+      const nextPage = taxInvoiceRequestsPage + direction;
+      if (nextPage < 1 || nextPage > totalPages) return;
+      taxInvoiceRequestsPage = nextPage;
+      loadTaxInvoiceRequests();
     }
 
     // === TAB 8: Audit Logs Logic ===
