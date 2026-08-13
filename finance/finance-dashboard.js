@@ -1,19 +1,10 @@
 (() => {
     'use strict';
 
-    const money = new Intl.NumberFormat('ar-SA', {
-        style: 'currency',
-        currency: 'SAR',
+    const money = new Intl.NumberFormat('en-US', {
         maximumFractionDigits: 0
     });
-    const integer = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
-    const dateTime = new Intl.DateTimeFormat('ar-SA', {
-        timeZone: 'Asia/Riyadh',
-        calendar: 'gregory',
-        dateStyle: 'medium',
-        timeStyle: 'short'
-    });
-
+    const integer = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
     let loading = false;
     let initialized = false;
 
@@ -75,9 +66,6 @@
         element('financeSetupNotice').hidden = false;
         setState('waiting', 'بانتظار تفعيل قاعدة Finance');
         resetMetrics();
-        element('financeSchemaCoverage').textContent =
-            `${payload.present_table_count || 0} / ${payload.expected_table_count || 0}`;
-        element('financeLastSync').textContent = 'لم تبدأ بعد';
         element('financeCategoryList').innerHTML =
             '<div class="finance-empty-state">ستظهر التصنيفات بعد تطبيق migration واستيراد البيانات.</div>';
         element('financeShowroomsBody').innerHTML =
@@ -110,23 +98,9 @@
         setMetric('financeVendorOpenCount', integer.format(summary.open_vendor_transactions || 0));
         setMetric('financeLeaseCount', integer.format(summary.active_leases || 0));
         setMetric('financeFixedAssetCount', integer.format(summary.fixed_assets || 0));
-        element('financeSchemaCoverage').textContent =
-            `${payload.present_table_count} / ${payload.expected_table_count}`;
         element('financePeriodLabel').textContent =
             `${payload.period?.start || '—'} — ${payload.period?.end || '—'}`;
-        renderLastSync(payload.latest_sync);
         renderCategories(payload.categories || [], summary.expense_scope_status);
-    }
-
-    function renderLastSync(sync) {
-        if (!sync?.started_at) {
-            element('financeLastSync').textContent = 'لا توجد مزامنة ناجحة';
-            return;
-        }
-        const parsed = new Date(sync.finished_at || sync.started_at);
-        element('financeLastSync').textContent = Number.isNaN(parsed.getTime())
-            ? 'مسجلة'
-            : dateTime.format(parsed);
     }
 
     function renderCategories(categories, expenseScopeStatus) {
@@ -319,12 +293,15 @@
             const branch = document.createElement('td');
             branch.dir = 'ltr';
             branch.className = 'finance-branch-link';
+            const branchContent = document.createElement('span');
+            branchContent.className = 'finance-branch-content';
             const branchCode = document.createElement('span');
             branchCode.textContent = showroom.branch_dimension || '—';
             const branchStatus = document.createElement('small');
             branchStatus.className = showroom.branch_dimension ? 'is-linked' : 'is-unlinked';
             branchStatus.textContent = showroom.branch_dimension ? 'مربوط' : 'غير مربوط';
-            branch.append(branchCode, branchStatus);
+            branchContent.append(branchCode, branchStatus);
+            branch.append(branchContent);
             const statusCell = document.createElement('td');
             const status = document.createElement('span');
             status.className = `finance-status-label${showroom.status === 'historical' ? ' is-historical' : ''}`;
