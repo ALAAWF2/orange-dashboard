@@ -400,6 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
+    <link rel="stylesheet" href="finance/finance.css">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -426,7 +427,10 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs custom-tabs mb-4 border-0" id="financeTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax-panel" type="button" role="tab" aria-controls="tax-panel" aria-selected="true"><i class="fa-solid fa-percent me-1"></i> تقرير ضريبة المبيعات</button>
+                <button class="nav-link active" id="platform-tab" data-bs-toggle="tab" data-bs-target="#platform-panel" type="button" role="tab" aria-controls="platform-panel" aria-selected="true"><i class="fa-solid fa-layer-group me-1"></i> المنصة المالية</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax-panel" type="button" role="tab" aria-controls="tax-panel" aria-selected="false"><i class="fa-solid fa-percent me-1"></i> تقرير ضريبة المبيعات</button>
             </li>
             <li class="nav-item" role="presentation" data-average-bill-prize>
                 <button class="nav-link" id="prizes-tab" data-bs-toggle="tab" data-bs-target="#prizes-panel" type="button" role="tab" aria-controls="prizes-panel" aria-selected="false" onclick="loadPrizesPerformance(); loadReviewQueue(); loadReviewAudit();"><i class="fa-solid fa-gift me-1"></i> جوائز متوسط الفاتورة اليومية</button>
@@ -434,9 +438,158 @@
         </ul>
 
         <div class="tab-content" id="financeTabsContent">
+
+            <!-- Finance platform: Dynamics references + non-sales accounting -->
+            <div class="tab-pane fade show active" id="platform-panel" role="tabpanel" aria-labelledby="platform-tab">
+                <section class="finance-command-hero" aria-labelledby="financePlatformTitle">
+                    <div class="finance-command-copy">
+                        <div class="finance-eyebrow">DYNAMICS 365 · NON-SALES FINANCE</div>
+                        <h1 id="financePlatformTitle">الصورة المالية للمعارض، بلا تكرار المبيعات</h1>
+                        <p>كل معارض RetailChannel من Dynamics محفوظة حتى المغلق منها. المصاريف والذمم والإيجارات تأتي من المسار المالي فقط، بينما تبقى المبيعات من جداول الداشبورد الحالية.</p>
+                        <div class="finance-command-actions">
+                            <span class="finance-state-chip is-loading" id="financePlatformState">
+                                <span class="finance-state-dot"></span>
+                                جارٍ فحص الجاهزية
+                            </span>
+                            <button type="button" class="btn finance-refresh-button" id="financePlatformRefresh">
+                                <i class="fa-solid fa-rotate"></i>
+                                تحديث
+                            </button>
+                        </div>
+                    </div>
+                    <div class="finance-pipeline" aria-label="مسار البيانات المالية">
+                        <div class="finance-pipeline-step is-source">
+                            <span>01</span>
+                            <strong>Dynamics</strong>
+                            <small>كل المعارض والمراجع</small>
+                        </div>
+                        <div class="finance-pipeline-step">
+                            <span>02</span>
+                            <strong>Scope Gate</strong>
+                            <small>استبعاد قيود المبيعات</small>
+                        </div>
+                        <div class="finance-pipeline-step">
+                            <span>03</span>
+                            <strong>PostgreSQL</strong>
+                            <small>بيانات مالية محمية</small>
+                        </div>
+                        <div class="finance-pipeline-step is-output">
+                            <span>04</span>
+                            <strong>Finance View</strong>
+                            <small>عرض ومطابقة</small>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="finance-setup-notice" id="financeSetupNotice" hidden>
+                    <div class="finance-setup-icon"><i class="fa-solid fa-database"></i></div>
+                    <div>
+                        <strong>الواجهة جاهزة، وقاعدة Finance لم تُفعّل بعد</strong>
+                        <p class="mb-0">سيظهر المحتوى الحقيقي هنا بعد مراجعة migration وتشغيل استيراد Dynamics المرجعي. لا تعرض هذه الشاشة أرقامًا تجريبية.</p>
+                    </div>
+                </div>
+
+                <div class="finance-period-bar">
+                    <div>
+                        <label for="financePlatformStart">من</label>
+                        <input type="date" id="financePlatformStart" class="form-control">
+                    </div>
+                    <div>
+                        <label for="financePlatformEnd">إلى</label>
+                        <input type="date" id="financePlatformEnd" class="form-control">
+                    </div>
+                    <button type="button" id="financePlatformApplyPeriod" class="btn finance-period-button">
+                        تطبيق الفترة
+                    </button>
+                    <p>الأرقام المحاسبية هنا لا تشمل أي voucher ناتج عن المبيعات.</p>
+                </div>
+
+                <div class="finance-metric-grid" aria-live="polite">
+                    <article class="finance-metric-card is-orange">
+                        <span class="finance-metric-index">A</span>
+                        <p>معارض Dynamics</p>
+                        <strong id="financeShowroomCount">—</strong>
+                        <small><span id="financeHistoricalShowroomCount">—</span> عليها حالة إغلاق صريحة؛ السجل يحفظ المغلق أيضًا</small>
+                    </article>
+                    <article class="finance-metric-card is-ink">
+                        <span class="finance-metric-index">B</span>
+                        <p>المصاريف غير البيعية</p>
+                        <strong id="financeExpenseTotal">—</strong>
+                        <small>ريال · ضمن الفترة</small>
+                    </article>
+                    <article class="finance-metric-card is-sand">
+                        <span class="finance-metric-index">C</span>
+                        <p>رصيد الموردين المفتوح</p>
+                        <strong id="financeVendorBalance">—</strong>
+                        <small><span id="financeVendorOpenCount">—</span> حركة مفتوحة</small>
+                    </article>
+                    <article class="finance-metric-card is-paper">
+                        <span class="finance-metric-index">D</span>
+                        <p>عقود الإيجار الفعالة</p>
+                        <strong id="financeLeaseCount">—</strong>
+                        <small><span id="financeFixedAssetCount">—</span> أصل ثابت</small>
+                    </article>
+                </div>
+
+                <div class="finance-detail-grid">
+                    <div>
+                        <section class="finance-ledger-panel h-100">
+                            <header>
+                                <div>
+                                    <span class="finance-section-kicker">EXPENSE LEDGER</span>
+                                    <h2>المصاريف حسب التصنيف</h2>
+                                </div>
+                                <span class="finance-period-label" id="financePeriodLabel">—</span>
+                            </header>
+                            <div class="finance-category-list" id="financeCategoryList">
+                                <div class="finance-empty-state">بانتظار بيانات التصنيف المالي.</div>
+                            </div>
+                        </section>
+                    </div>
+                    <div>
+                        <section class="finance-readiness-panel h-100">
+                            <span class="finance-section-kicker">CONTROL ROOM</span>
+                            <h2>سلامة الربط</h2>
+                            <dl>
+                                <div><dt>جداول المنصة</dt><dd id="financeSchemaCoverage">—</dd></div>
+                                <div><dt>آخر مزامنة</dt><dd id="financeLastSync">—</dd></div>
+                                <div><dt>نطاق GL</dt><dd>غير بيعي فقط</dd></div>
+                                <div><dt>مصدر المعارض</dt><dd>Dynamics RetailChannel</dd></div>
+                            </dl>
+                            <p class="finance-readiness-note"><i class="fa-solid fa-shield-halved"></i> لا تُحفظ البيانات المالية في JSON عام أو GitHub Pages.</p>
+                        </section>
+                    </div>
+                </div>
+
+                <section class="finance-ledger-panel">
+                    <header>
+                        <div>
+                            <span class="finance-section-kicker">SHOWROOM REGISTER</span>
+                            <h2>سجل معارض Dynamics</h2>
+                        </div>
+                        <span class="finance-register-note">يشمل المعرض المغلق وغير الموجود في mapping القديم</span>
+                    </header>
+                    <div class="table-responsive">
+                        <table class="table finance-register-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>رقم Dynamics</th>
+                                    <th>اسم المعرض</th>
+                                    <th>Branch dimension</th>
+                                    <th>الحالة</th>
+                                    <th class="text-end">الحركة غير البيعية</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeShowroomsBody">
+                                <tr><td colspan="5" class="finance-empty-state">جارٍ فحص جاهزية البيانات…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
             
             <!-- Tab 1: Tax Report -->
-            <div class="tab-pane fade show active" id="tax-panel" role="tabpanel" aria-labelledby="tax-tab">
+            <div class="tab-pane fade" id="tax-panel" role="tabpanel" aria-labelledby="tax-tab">
                 
                 <!-- Filters Panel -->
                 <div class="filter-card">
@@ -1620,6 +1773,8 @@
             }
         }
     </script>
+    <script src="finance/finance-api.js"></script>
+    <script src="finance/finance-dashboard.js"></script>
 
 </body>
 
