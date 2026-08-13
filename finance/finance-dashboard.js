@@ -213,7 +213,7 @@
     function renderShowroomDetail(payload) {
         const showroom = payload.showroom || {};
         const summary = payload.summary || {};
-        element('financeShowroomTitle').textContent = showroom.name || 'ملف المعرض المالي';
+        element('financeShowroomTitle').textContent = showroom.name || 'تفاصيل المعرض المالية';
         element('financeShowroomMeta').textContent =
             `Dynamics ${showroom.number || '—'} · Branch ${showroom.branch_dimension || '—'} · ${payload.period?.start || '—'} إلى ${payload.period?.end || '—'}`;
 
@@ -280,7 +280,7 @@
         const drawer = element('financeShowroomDrawer');
         drawer.hidden = false;
         document.body.classList.add('finance-drawer-open');
-        element('financeShowroomTitle').textContent = 'ملف المعرض المالي';
+        element('financeShowroomTitle').textContent = 'تفاصيل المعرض المالية';
         element('financeShowroomMeta').textContent = `Dynamics ${showroomNumber}`;
         element('financeShowroomContent').innerHTML =
             '<div class="finance-empty-state">جارٍ تحميل المصروفات والفواتير والعقود المرتبطة…</div>';
@@ -293,7 +293,7 @@
         } catch (error) {
             console.error('Finance showroom detail failed:', error);
             element('financeShowroomContent').innerHTML =
-                '<div class="finance-empty-state">تعذر تحميل ملف المعرض. تحقق من الاتصال والصلاحية.</div>';
+                '<div class="finance-empty-state">تعذر تحميل تفاصيل المعرض. تحقق من الاتصال والصلاحية.</div>';
         }
     }
 
@@ -315,7 +315,13 @@
             name.textContent = showroom.name || '—';
             const branch = document.createElement('td');
             branch.dir = 'ltr';
-            branch.textContent = showroom.branch_dimension || 'غير مربوط';
+            branch.className = 'finance-branch-link';
+            const branchCode = document.createElement('span');
+            branchCode.textContent = showroom.branch_dimension || '—';
+            const branchStatus = document.createElement('small');
+            branchStatus.className = showroom.branch_dimension ? 'is-linked' : 'is-unlinked';
+            branchStatus.textContent = showroom.branch_dimension ? 'مربوط' : 'غير مربوط';
+            branch.append(branchCode, branchStatus);
             const statusCell = document.createElement('td');
             const status = document.createElement('span');
             status.className = `finance-status-label${showroom.status === 'historical' ? ' is-historical' : ''}`;
@@ -332,7 +338,7 @@
             const action = document.createElement('button');
             action.type = 'button';
             action.className = 'finance-open-showroom';
-            action.textContent = 'فتح الملف';
+            action.textContent = 'عرض التفاصيل';
             action.addEventListener('click', event => {
                 event.stopPropagation();
                 openShowroomDetail(showroom.number);
