@@ -400,7 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
-    <link rel="stylesheet" href="finance/finance.css?v=20260813-12">
+    <link rel="stylesheet" href="finance/finance.css?v=20260813-13">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -450,6 +450,15 @@
                 </div>
 
                 <div class="finance-period-bar">
+                    <div class="finance-presets-wrapper">
+                        <span class="finance-presets-label"><i class="fa-solid fa-calendar-days me-1"></i> فترات سريعة:</span>
+                        <button type="button" class="finance-preset-btn active" data-preset="thisMonth">هذا الشهر</button>
+                        <button type="button" class="finance-preset-btn" data-preset="lastMonth">الشهر الماضي</button>
+                        <button type="button" class="finance-preset-btn" data-preset="thisQuarter">الربع الحالي</button>
+                        <button type="button" class="finance-preset-btn" data-preset="ytd">منذ بداية السنة</button>
+                        <button type="button" class="finance-preset-btn" data-preset="lastYear">السنة الماضية</button>
+                        <button type="button" class="finance-preset-btn" data-preset="last30days">آخر 30 يوماً</button>
+                    </div>
                     <div class="finance-period-status">
                         <span class="finance-state-chip is-loading" id="financePlatformState">
                             <span class="finance-state-dot"></span>
@@ -526,6 +535,21 @@
                         </div>
                         <span class="finance-register-note">كل 53 معرضًا مربوط مباشرة ببُعد Branches من Dynamics؛ لا يعتمد على mapping المبيعات القديم</span>
                     </header>
+                    <div class="finance-table-toolbar">
+                        <div class="finance-search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="financeShowroomsSearch" placeholder="البحث باسم المعرض، رقم Dynamics، أو الفرع...">
+                            <button type="button" id="financeShowroomsSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="finance-filter-group">
+                            <select id="financeShowroomsStatusFilter" class="form-select finance-filter-select">
+                                <option value="all">جميع الحالات</option>
+                                <option value="current">المعارض الحالية فقط</option>
+                                <option value="historical">المعارض المغلقة / التاريخية فقط</option>
+                            </select>
+                            <span class="finance-badge-counter" id="financeShowroomsCountBadge">53 معرضاً</span>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table finance-register-table finance-showroom-table align-middle">
                             <colgroup>
@@ -538,11 +562,11 @@
                             </colgroup>
                             <thead>
                                 <tr>
-                                    <th>رقم Dynamics</th>
-                                    <th>اسم المعرض</th>
-                                    <th>ربط Dynamics المباشر</th>
-                                    <th>الحالة</th>
-                                    <th class="text-end">مصروف Trial Balance المعتمد</th>
+                                    <th class="finance-sortable" data-table="showrooms" data-sort="number">رقم Dynamics <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable" data-table="showrooms" data-sort="name">اسم المعرض <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable" data-table="showrooms" data-sort="branch_dimension">ربط Dynamics المباشر <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable" data-table="showrooms" data-sort="status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable text-end" data-table="showrooms" data-sort="non_sales_amount">مصروف Trial Balance المعتمد <i class="fa-solid fa-sort"></i></th>
                                     <th class="text-end">تفاصيل المعرض</th>
                                 </tr>
                             </thead>
@@ -615,7 +639,16 @@
                     </header>
                     <div class="table-responsive">
                         <table class="table finance-register-table finance-compact-table align-middle">
-                            <thead><tr><th>المورد</th><th>الحساب</th><th class="text-end">الأصل</th><th class="text-end">المسدد على المفتوح</th><th class="text-end">المتبقي</th><th class="text-end">المتأخر</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th class="finance-sortable" data-table="topVendors" data-sort="vendor_name">المورد <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable" data-table="topVendors" data-sort="vendor_account">الحساب <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="original_amount">الأصل <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="paid_amount">المسدد على المفتوح <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="remaining_amount">المتبقي <i class="fa-solid fa-sort"></i></th>
+                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="overdue_amount">المتأخر <i class="fa-solid fa-sort"></i></th>
+                                </tr>
+                            </thead>
                             <tbody id="financeTopVendorsBody">
                                 <tr><td colspan="6" class="finance-empty-state">جارٍ تحميل تحليل الموردين…</td></tr>
                             </tbody>
@@ -715,6 +748,22 @@
                             </div>
                             <span class="finance-register-note">لا تظهر بيانات بنكية أو اتصال</span>
                         </header>
+                        <div class="finance-table-toolbar">
+                            <div class="finance-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="financeInvoicesSearch" placeholder="البحث برقم الفاتورة، المورد، الحساب، أمر الشراء...">
+                                <button type="button" id="financeInvoicesSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="finance-filter-group">
+                                <select id="financeInvoicesStatusFilter" class="form-select finance-filter-select">
+                                    <option value="all">جميع الفواتير</option>
+                                    <option value="overdue">الفواتير المتأخرة فقط (Overdue)</option>
+                                    <option value="not_due">فواتير غير مستحقة (سارية)</option>
+                                    <option value="has_po">تحتوي أمر شراء (PO)</option>
+                                </select>
+                                <span class="finance-badge-counter" id="financeInvoicesCountBadge">0 فاتورة</span>
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table finance-register-table finance-compact-table finance-vendor-invoice-table align-middle">
                                 <colgroup>
@@ -727,12 +776,12 @@
                                 </colgroup>
                                 <thead>
                                     <tr>
-                                        <th>الفاتورة</th>
-                                        <th>المورد</th>
-                                        <th>أمر الشراء</th>
-                                        <th>التاريخ</th>
-                                        <th>الاستحقاق</th>
-                                        <th class="text-end">المبلغ</th>
+                                        <th class="finance-sortable" data-table="invoices" data-sort="invoice_id">الفاتورة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="invoices" data-sort="vendor_name">المورد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="invoices" data-sort="purchase_order_number">أمر الشراء <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="invoices" data-sort="invoice_date">التاريخ <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="invoices" data-sort="due_date">الاستحقاق <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="invoices" data-sort="invoice_amount">المبلغ <i class="fa-solid fa-sort"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody id="financeVendorInvoicesBody">
@@ -754,11 +803,11 @@
                             <table class="table finance-register-table finance-compact-table align-middle">
                                 <thead>
                                     <tr>
-                                        <th>العقد</th>
-                                        <th>الوصف</th>
-                                        <th>الانتهاء</th>
-                                        <th>الحالة</th>
-                                        <th class="text-end">القادم</th>
+                                        <th class="finance-sortable" data-table="leases" data-sort="lease_id">العقد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="leases" data-sort="description">الوصف <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="leases" data-sort="expiration_date">الانتهاء <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="leases" data-sort="lease_status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="leases" data-sort="upcoming_payment_amount">القادم <i class="fa-solid fa-sort"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody id="financeLeasesBody">
@@ -2038,8 +2087,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260813-12"></script>
-    <script src="finance/finance-dashboard.js?v=20260813-12"></script>
+    <script src="finance/finance-api.js?v=20260813-13"></script>
+    <script src="finance/finance-dashboard.js?v=20260813-13"></script>
 
 </body>
 
