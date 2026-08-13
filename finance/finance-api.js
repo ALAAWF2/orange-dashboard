@@ -50,6 +50,10 @@
     window.FinancePlatformApi = Object.freeze({
         overview: params => request('/api/finance/overview', params),
         showrooms: params => request('/api/finance/showrooms', params),
+        showroomDetail: (number, params) => request(
+            `/api/finance/showrooms/${encodeURIComponent(number)}`,
+            params
+        ),
         vendorInvoices: params => request('/api/finance/vendor-invoices', params),
         leases: params => request('/api/finance/leases', params)
     });

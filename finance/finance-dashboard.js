@@ -81,7 +81,7 @@
         element('financeCategoryList').innerHTML =
             '<div class="finance-empty-state">ستظهر التصنيفات بعد تطبيق migration واستيراد البيانات.</div>';
         element('financeShowroomsBody').innerHTML =
-            '<tr><td colspan="5" class="finance-empty-state">سجل المعارض جاهز للربط، ولم تُكتب بيانات Dynamics إلى PostgreSQL بعد.</td></tr>';
+            '<tr><td colspan="6" class="finance-empty-state">سجل المعارض جاهز للربط، ولم تُكتب بيانات Dynamics إلى PostgreSQL بعد.</td></tr>';
         element('financeVendorInvoicesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تظهر الفواتير بعد استيراد AP.</td></tr>';
         element('financeLeasesBody').innerHTML =
@@ -159,12 +159,150 @@
         }));
     }
 
+    function closeShowroomDetail() {
+        element('financeShowroomDrawer').hidden = true;
+        document.body.classList.remove('finance-drawer-open');
+    }
+
+    function detailSection(title, columns, rows) {
+        const section = document.createElement('section');
+        section.className = 'finance-showroom-section';
+        const heading = document.createElement('h3');
+        heading.textContent = title;
+        section.append(heading);
+        if (!rows.length) {
+            const empty = document.createElement('div');
+            empty.className = 'finance-empty-state';
+            empty.textContent = 'لا توجد سجلات مرتبطة بهذا المعرض.';
+            section.append(empty);
+            return section;
+        }
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-responsive';
+        const table = document.createElement('table');
+        table.className = 'table finance-register-table align-middle';
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        columns.forEach(column => {
+            const cell = document.createElement('th');
+            cell.textContent = column.label;
+            headRow.append(cell);
+        });
+        head.append(headRow);
+        const body = document.createElement('tbody');
+        rows.forEach(item => {
+            const row = document.createElement('tr');
+            columns.forEach(column => {
+                const cell = document.createElement('td');
+                const rawValue = item[column.key];
+                cell.textContent = column.money
+                    ? money.format(Number(rawValue) || 0)
+                    : (rawValue ?? '—');
+                if (column.ltr || column.money) cell.dir = 'ltr';
+                if (column.money) cell.className = 'text-end fw-bold';
+                row.append(cell);
+            });
+            body.append(row);
+        });
+        table.append(head, body);
+        wrapper.append(table);
+        section.append(wrapper);
+        return section;
+    }
+
+    function renderShowroomDetail(payload) {
+        const showroom = payload.showroom || {};
+        const summary = payload.summary || {};
+        element('financeShowroomTitle').textContent = showroom.name || 'ملف المعرض المالي';
+        element('financeShowroomMeta').textContent =
+            `Dynamics ${showroom.number || '—'} · Branch ${showroom.branch_dimension || '—'} · ${payload.period?.start || '—'} إلى ${payload.period?.end || '—'}`;
+
+        const content = element('financeShowroomContent');
+        content.replaceChildren();
+        const cards = document.createElement('div');
+        cards.className = 'finance-showroom-summary';
+        [
+            ['مصروف Trial Balance', money.format(Number(summary.trial_balance_expense) || 0)],
+            ['فواتير المورد المرتبطة', integer.format(summary.vendor_invoice_count || 0)],
+            ['عقود الإيجار', integer.format(summary.lease_count || 0)],
+            ['الأصول المرتبطة', integer.format(summary.asset_count || 0)]
+        ].forEach(([label, value]) => {
+            const card = document.createElement('article');
+            const labelNode = document.createElement('span');
+            labelNode.textContent = label;
+            const valueNode = document.createElement('strong');
+            valueNode.textContent = value;
+            card.append(labelNode, valueNode);
+            cards.append(card);
+        });
+        content.append(cards);
+
+        content.append(detailSection('حسابات المصروف من ميزان المراجعة', [
+            { key: 'main_account_id', label: 'الحساب', ltr: true },
+            { key: 'category', label: 'الوصف' },
+            { key: 'debit_amount', label: 'مدين', money: true },
+            { key: 'credit_amount', label: 'دائن', money: true },
+            { key: 'net_amount', label: 'الصافي', money: true }
+        ], payload.expense_categories || []));
+
+        content.append(detailSection('فواتير الموردين المرتبطة ببُعد المعرض', [
+            { key: 'invoice_id', label: 'الفاتورة', ltr: true },
+            { key: 'invoice_account', label: 'المورد', ltr: true },
+            { key: 'invoice_date', label: 'التاريخ', ltr: true },
+            { key: 'due_date', label: 'الاستحقاق', ltr: true },
+            { key: 'allocated_amount', label: 'المبلغ المرتبط', money: true },
+            { key: 'allocated_tax_amount', label: 'الضريبة', money: true }
+        ], payload.vendor_invoices || []));
+
+        content.append(detailSection('عقود الإيجار والاستحقاقات', [
+            { key: 'lease_id', label: 'العقد', ltr: true },
+            { key: 'description', label: 'الوصف' },
+            { key: 'expiration_date', label: 'الانتهاء', ltr: true },
+            { key: 'remaining_balance', label: 'الرصيد', money: true },
+            { key: 'upcoming_payment_amount', label: 'القادم خلال 90 يومًا', money: true }
+        ], payload.leases || []));
+
+        content.append(detailSection('الأصول المرتبطة مباشرة', [
+            { key: 'fixed_asset_number', label: 'الأصل', ltr: true },
+            { key: 'name', label: 'الاسم' },
+            { key: 'asset_location_name', label: 'الموقع' },
+            { key: 'acquisition_date', label: 'الاقتناء', ltr: true },
+            { key: 'acquisition_price', label: 'قيمة الاقتناء', money: true }
+        ], payload.assets || []));
+
+        const coverage = document.createElement('p');
+        coverage.className = 'finance-showroom-coverage';
+        coverage.textContent = payload.coverage?.note || '';
+        content.append(coverage);
+    }
+
+    async function openShowroomDetail(showroomNumber) {
+        const drawer = element('financeShowroomDrawer');
+        drawer.hidden = false;
+        document.body.classList.add('finance-drawer-open');
+        element('financeShowroomTitle').textContent = 'ملف المعرض المالي';
+        element('financeShowroomMeta').textContent = `Dynamics ${showroomNumber}`;
+        element('financeShowroomContent').innerHTML =
+            '<div class="finance-empty-state">جارٍ تحميل المصروفات والفواتير والعقود المرتبطة…</div>';
+        try {
+            const payload = await window.FinancePlatformApi.showroomDetail(showroomNumber, {
+                ...periodParams(),
+                horizon_days: 90
+            });
+            renderShowroomDetail(payload);
+        } catch (error) {
+            console.error('Finance showroom detail failed:', error);
+            element('financeShowroomContent').innerHTML =
+                '<div class="finance-empty-state">تعذر تحميل ملف المعرض. تحقق من الاتصال والصلاحية.</div>';
+        }
+    }
+
     function renderShowrooms(payload, expenseScopeStatus) {
         if (!payload.configured) return;
         const body = element('financeShowroomsBody');
         const rows = payload.data || [];
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">لا توجد معارض مستوردة حتى الآن.</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد معارض مستوردة حتى الآن.</td></tr>';
             return;
         }
         body.replaceChildren(...rows.map(showroom => {
@@ -189,7 +327,27 @@
             amount.textContent = expenseScopeStatus === 'approved'
                 ? money.format(Number(showroom.non_sales_amount) || 0)
                 : '—';
-            row.append(number, name, branch, statusCell, amount);
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-end';
+            const action = document.createElement('button');
+            action.type = 'button';
+            action.className = 'finance-open-showroom';
+            action.textContent = 'فتح الملف';
+            action.addEventListener('click', event => {
+                event.stopPropagation();
+                openShowroomDetail(showroom.number);
+            });
+            actionCell.append(action);
+            row.dataset.showroomNumber = showroom.number || '';
+            row.tabIndex = 0;
+            row.addEventListener('click', () => openShowroomDetail(showroom.number));
+            row.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openShowroomDetail(showroom.number);
+                }
+            });
+            row.append(number, name, branch, statusCell, amount, actionCell);
             return row;
         }));
     }
@@ -258,7 +416,7 @@
         element('financeCategoryList').innerHTML =
             '<div class="finance-empty-state">تعذر قراءة البيانات. تحقق من تشغيل الخادم وصلاحية Finance.</div>';
         element('financeShowroomsBody').innerHTML =
-            '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل سجل المعارض.</td></tr>';
+            '<tr><td colspan="6" class="finance-empty-state">تعذر تحميل سجل المعارض.</td></tr>';
         element('financeVendorInvoicesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
         element('financeLeasesBody').innerHTML =
@@ -297,6 +455,13 @@
         setDefaultPeriod();
         element('financePlatformRefresh').addEventListener('click', load);
         element('financePlatformApplyPeriod').addEventListener('click', load);
+        element('financeShowroomClose').addEventListener('click', closeShowroomDetail);
+        element('financeShowroomBackdrop').addEventListener('click', closeShowroomDetail);
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !element('financeShowroomDrawer').hidden) {
+                closeShowroomDetail();
+            }
+        });
         element('platform-tab').addEventListener('shown.bs.tab', load);
         load();
     }
