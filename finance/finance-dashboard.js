@@ -82,6 +82,10 @@
             '<div class="finance-empty-state">ستظهر التصنيفات بعد تطبيق migration واستيراد البيانات.</div>';
         element('financeShowroomsBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">سجل المعارض جاهز للربط، ولم تُكتب بيانات Dynamics إلى PostgreSQL بعد.</td></tr>';
+        element('financeVendorInvoicesBody').innerHTML =
+            '<tr><td colspan="5" class="finance-empty-state">تظهر الفواتير بعد استيراد AP.</td></tr>';
+        element('financeLeasesBody').innerHTML =
+            '<tr><td colspan="5" class="finance-empty-state">تظهر العقود بعد استيراد الإيجارات.</td></tr>';
     }
 
     function renderOverview(payload) {
@@ -177,6 +181,62 @@
         }));
     }
 
+    function renderVendorInvoices(payload) {
+        const body = element('financeVendorInvoicesBody');
+        if (!payload?.configured) return;
+        const rows = payload.data || [];
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">لا توجد فواتير موردين مستوردة.</td></tr>';
+            return;
+        }
+        body.replaceChildren(...rows.map(invoice => {
+            const row = document.createElement('tr');
+            const values = [
+                invoice.invoice_id || '—',
+                invoice.invoice_account || '—',
+                invoice.invoice_date || '—',
+                invoice.due_date || '—',
+                money.format(Number(invoice.invoice_amount) || 0)
+            ];
+            values.forEach((value, index) => {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                if (index === 0 || index === 1) cell.dir = 'ltr';
+                if (index === 4) cell.className = 'text-end fw-bold';
+                row.append(cell);
+            });
+            return row;
+        }));
+    }
+
+    function renderLeases(payload) {
+        const body = element('financeLeasesBody');
+        if (!payload?.configured) return;
+        const rows = payload.data || [];
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">لا توجد عقود إيجار مستوردة.</td></tr>';
+            return;
+        }
+        body.replaceChildren(...rows.slice(0, 50).map(lease => {
+            const row = document.createElement('tr');
+            const values = [
+                lease.lease_id || '—',
+                lease.description || '—',
+                lease.expiration_date || '—',
+                lease.lease_status || '—',
+                money.format(Number(lease.upcoming_payment_amount) || 0)
+            ];
+            values.forEach((value, index) => {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                if (index === 0) cell.dir = 'ltr';
+                if (index === 4) cell.className = 'text-end fw-bold';
+                row.append(cell);
+            });
+            return row;
+        }));
+    }
+
     function renderError(error) {
         console.error('Finance platform load failed:', error);
         setState('error', 'تعذر تحميل المنصة');
@@ -186,6 +246,10 @@
             '<div class="finance-empty-state">تعذر قراءة البيانات. تحقق من تشغيل الخادم وصلاحية Finance.</div>';
         element('financeShowroomsBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل سجل المعارض.</td></tr>';
+        element('financeVendorInvoicesBody').innerHTML =
+            '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
+        element('financeLeasesBody').innerHTML =
+            '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل عقود الإيجار.</td></tr>';
     }
 
     async function load() {
@@ -196,12 +260,16 @@
         button.disabled = true;
         try {
             const params = periodParams();
-            const [overview, showrooms] = await Promise.all([
+            const [overview, showrooms, vendorInvoices, leases] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
-                window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 })
+                window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
+                window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 25 }),
+                window.FinancePlatformApi.leases({ horizon_days: 90 })
             ]);
             renderOverview(overview);
             renderShowrooms(showrooms);
+            renderVendorInvoices(vendorInvoices);
+            renderLeases(leases);
         } catch (error) {
             renderError(error);
         } finally {
