@@ -576,12 +576,15 @@
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
                 window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 25 }),
                 window.FinancePlatformApi.leases({ horizon_days: 90 }),
-                window.FinancePlatformApi.leaseInsights({}),
-                window.FinancePlatformApi.apAging({}),
-                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 25, invoice_limit: 50 }),
+                window.FinancePlatformApi.leaseInsights({})
+                    .catch(() => ({ configured: false })),
+                window.FinancePlatformApi.apAging({})
+                    .catch(() => ({ configured: false })),
+                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 25, invoice_limit: 50 })
+                    .catch(() => ({ configured: false, vendors: [], open_invoices: [] })),
                 window.FinancePlatformApi.trialBalanceTrend({
                     start: '2025-01-01', end: element('financePlatformEnd').value
-                })
+                }).catch(() => ({ state: 'unavailable', data: [] }))
             ]);
             renderOverview(overview);
             renderShowrooms(showrooms, overview.summary?.expense_scope_status);
