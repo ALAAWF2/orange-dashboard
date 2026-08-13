@@ -6956,7 +6956,7 @@ const EMPLOYEES = [
         "name": "ساره ابراهيم",
         "startDate": "2026-06-15",
         "manager": "المنطقة الغربية",
-        "showroom": "1008-48 - Jeddah Park",
+        "showroom": "1008-48 - Jeddah Park و 1002-05-Haifa Mall",
         "showroomDetails": [
             {
                 "name": "1008-48 - Jeddah Park",
@@ -6965,9 +6965,17 @@ const EMPLOYEES = [
                     "1008-C",
                     "1008-E"
                 ]
+            },
+            {
+                "name": "1002-05-Haifa Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1002-C",
+                    "1002-E"
+                ]
             }
         ],
-        "addressBooks": "1008-C;1008-E"
+        "addressBooks": "1008-C;1008-E;1002-C;1002-E"
     },
     {
         "employeeId": "4980-ريمه فقيه",
