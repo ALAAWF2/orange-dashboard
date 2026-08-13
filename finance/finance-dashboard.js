@@ -520,6 +520,81 @@
         }));
     }
 
+    function renderAdditionalAnalytics(payload) {
+        const sections = payload?.sections || {};
+        const po = sections.purchase_commitments || {};
+        const assets = sections.fixed_assets || {};
+        const ar = sections.ar_aging || {};
+        const bank = sections.bank_cashflow || {};
+        const vat = sections.purchase_vat || {};
+        const availability = sections.source_availability || {};
+
+        setMetric('financeAdditionalState', payload?.state === 'ready'
+            ? 'كل المصادر المطبقة جاهزة'
+            : 'بعض المصادر غير متاحة؛ الباقي يعمل');
+
+        setMetric('financePoCommitment', po.state === 'ready'
+            ? money.format(Number(po.summary?.open_commitment) || 0) : 'غير متوفر');
+        setMetric('financePoCommitmentMeta', po.state === 'ready'
+            ? `${integer.format(Number(po.summary?.open_line_count) || 0)} سطر مفتوح · ${money.format(Number(po.summary?.upcoming_commitment_30d) || 0)} خلال 30 يومًا`
+            : 'مصدر PO غير متاح');
+
+        setMetric('financeAssetNbv', assets.state === 'ready'
+            ? money.format(Number(assets.summary?.net_book_value) || 0) : 'غير متوفر');
+        setMetric('financeAssetNbvMeta', assets.state === 'ready'
+            ? `${integer.format(Number(assets.summary?.asset_count) || 0)} أصل · ${integer.format(Number(assets.coverage?.mapped_assets) || 0)} مربوط بمعرض معتمد`
+            : 'مصدر الأصول غير متاح');
+
+        setMetric('financeArOpen', ar.state === 'ready'
+            ? money.format(Number(ar.summary?.open_amount) || 0) : 'غير متوفر');
+        setMetric('financeArOpenMeta', ar.state === 'ready'
+            ? `${integer.format(Number(ar.summary?.open_item_count) || 0)} استحقاق مفتوح · الأعمار متطابقة مع الرصيد`
+            : 'مصدر AR غير متاح');
+        const arAging = element('financeArAging');
+        const arLabels = {
+            not_due: 'غير مستحق', days_1_30: '1–30 يومًا',
+            days_31_60: '31–60 يومًا', days_61_90: '61–90 يومًا', over_90: 'أكثر من 90 يومًا'
+        };
+        if (ar.state !== 'ready') {
+            arAging.innerHTML = '<div class="finance-empty-state">بيانات AR Aging غير متاحة.</div>';
+        } else {
+            arAging.replaceChildren(...(ar.buckets || []).map((bucket, index) => {
+                const card = document.createElement('article');
+                card.className = `finance-aging-card${index ? ' is-overdue' : ''}`;
+                const label = document.createElement('span');
+                label.textContent = arLabels[bucket.key] || bucket.key;
+                const amount = document.createElement('strong');
+                amount.textContent = money.format(Number(bucket.amount) || 0);
+                const count = document.createElement('small');
+                count.textContent = `${integer.format(Number(bucket.item_count) || 0)} استحقاق`;
+                card.append(label, amount, count);
+                return card;
+            }));
+        }
+
+        setMetric('financeBankNet', bank.state === 'ready'
+            ? money.format(Number(bank.summary?.net_cash) || 0) : 'غير متوفر');
+        setMetric('financeBankNetMeta', bank.state === 'ready'
+            ? `داخل ${money.format(Number(bank.summary?.cash_in) || 0)} · خارج ${money.format(Number(bank.summary?.cash_out) || 0)} · بلا أرقام حسابات`
+            : 'الحركة البنكية غير متاحة');
+
+        setMetric('financePurchaseVat', vat.state === 'ready'
+            ? money.format(Number(vat.summary?.tax_amount) || 0) : 'غير متوفر');
+        setMetric('financePurchaseVatMeta', vat.state === 'ready'
+            ? `${integer.format(Number(vat.summary?.transaction_count) || 0)} حركة ضريبة مورد مطابقة`
+            : 'Purchase VAT غير متاح');
+
+        const budgetSources = (availability.sources || []).filter(source =>
+            String(source.entity_name || '').toLowerCase().startsWith('budget')
+        );
+        const budgetHasData = budgetSources.some(source => Number(source.row_count) > 0);
+        const budgetIsEmpty = budgetSources.length > 0 && budgetSources.every(source => source.status === 'empty');
+        setMetric('financeBudgetState', budgetHasData ? 'متاح' : budgetIsEmpty ? 'غير مستخدم' : 'غير معروف');
+        setMetric('financeBudgetMeta', budgetIsEmpty
+            ? 'كيانات Budget في Dynamics فارغة؛ لا نعرضها كميزانية صفر'
+            : budgetHasData ? 'يمكن احتساب Budget مقابل الفعلي' : 'لم يُفحص مصدر Budget بعد');
+    }
+
     function appendShowroomPnl(payload) {
         if (payload?.state !== 'ready' || !payload.summary) return;
         const summary = payload.summary;
@@ -561,6 +636,8 @@
         });
         setMetric('financeLeaseRenewals90', '—');
         setMetric('financeLeaseOverdueReview', 'تعذر التحميل');
+        ['financePoCommitment', 'financeAssetNbv', 'financeArOpen', 'financeBankNet',
+            'financePurchaseVat', 'financeBudgetState'].forEach(id => setMetric(id, 'غير متوفر'));
     }
 
     async function load() {
@@ -571,7 +648,7 @@
         button.disabled = true;
         try {
             const params = periodParams();
-            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend] = await Promise.all([
+            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
                 window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 25 }),
@@ -584,7 +661,11 @@
                     .catch(() => ({ configured: false, vendors: [], open_invoices: [] })),
                 window.FinancePlatformApi.trialBalanceTrend({
                     start: '2025-01-01', end: element('financePlatformEnd').value
-                }).catch(() => ({ state: 'unavailable', data: [] }))
+                }).catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.additionalAnalytics({
+                    as_of: element('financePlatformEnd').value,
+                    month: element('financePlatformEnd').value.slice(0, 7)
+                }).catch(() => ({ state: 'partial', sections: {} }))
             ]);
             renderOverview(overview);
             renderShowrooms(showrooms, overview.summary?.expense_scope_status);
@@ -594,6 +675,7 @@
             renderApAging(apAging);
             renderVendorAnalytics(vendorAnalytics);
             renderTrialBalanceTrend(trend);
+            renderAdditionalAnalytics(additional);
         } catch (error) {
             renderError(error);
         } finally {
