@@ -343,25 +343,65 @@
         if (!payload?.configured) return;
         const rows = payload.data || [];
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">لا توجد فواتير موردين مستوردة.</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد فواتير موردين مستوردة.</td></tr>';
             return;
         }
         body.replaceChildren(...rows.map(invoice => {
             const row = document.createElement('tr');
-            const values = [
-                invoice.invoice_id || '—',
-                invoice.invoice_account || '—',
-                invoice.invoice_date || '—',
-                invoice.due_date || '—',
-                money.format(Number(invoice.invoice_amount) || 0)
-            ];
-            values.forEach((value, index) => {
-                const cell = document.createElement('td');
-                cell.textContent = value;
-                if (index === 0 || index === 1) cell.dir = 'ltr';
-                if (index === 4) cell.className = 'text-end fw-bold';
-                row.append(cell);
-            });
+
+            const invoiceCell = document.createElement('td');
+            invoiceCell.textContent = invoice.invoice_id || '—';
+            invoiceCell.dir = 'ltr';
+
+            const vendorCell = document.createElement('td');
+            const vendorIdentity = document.createElement('div');
+            vendorIdentity.className = 'finance-vendor-identity';
+            const vendorName = document.createElement('strong');
+            vendorName.textContent = invoice.vendor_name || invoice.invoice_account || '—';
+            const vendorMeta = document.createElement('span');
+            vendorMeta.className = 'finance-vendor-meta';
+            const vendorDetails = [invoice.invoice_account, invoice.payment_terms].filter(Boolean);
+            vendorMeta.textContent = vendorDetails.join(' · ') || '—';
+            vendorMeta.dir = 'ltr';
+            vendorIdentity.append(vendorName, vendorMeta);
+            vendorCell.append(vendorIdentity);
+
+            const purchaseOrderCell = document.createElement('td');
+            purchaseOrderCell.textContent = invoice.purchase_order_number || '—';
+            purchaseOrderCell.dir = 'ltr';
+
+            const dateCell = document.createElement('td');
+            dateCell.textContent = invoice.invoice_date || '—';
+            dateCell.dir = 'ltr';
+
+            const dueDateCell = document.createElement('td');
+            dueDateCell.textContent = invoice.due_date || '—';
+            dueDateCell.dir = 'ltr';
+
+            const amountCell = document.createElement('td');
+            amountCell.className = 'text-end';
+            const amountValue = document.createElement('strong');
+            amountValue.textContent = money.format(Number(invoice.invoice_amount) || 0);
+            const amountMeta = document.createElement('span');
+            amountMeta.className = 'finance-vendor-meta finance-invoice-amount-meta';
+            const taxAmount = Number(invoice.sales_tax_amount) || 0;
+            const amountDetails = [
+                invoice.currency_code || null,
+                taxAmount ? `ضريبة ${money.format(taxAmount)}` : null
+            ].filter(Boolean);
+            amountMeta.textContent = amountDetails.join(' · ');
+            amountMeta.dir = 'ltr';
+            amountCell.append(amountValue);
+            if (amountDetails.length) amountCell.append(amountMeta);
+
+            row.append(
+                invoiceCell,
+                vendorCell,
+                purchaseOrderCell,
+                dateCell,
+                dueDateCell,
+                amountCell
+            );
             return row;
         }));
     }
