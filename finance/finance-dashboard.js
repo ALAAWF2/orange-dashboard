@@ -285,11 +285,14 @@
         element('financeShowroomContent').innerHTML =
             '<div class="finance-empty-state">جارٍ تحميل المصروفات والفواتير والعقود المرتبطة…</div>';
         try {
-            const payload = await window.FinancePlatformApi.showroomDetail(showroomNumber, {
-                ...periodParams(),
-                horizon_days: 90
-            });
+            const params = { ...periodParams(), horizon_days: 90 };
+            const [payload, pnl] = await Promise.all([
+                window.FinancePlatformApi.showroomDetail(showroomNumber, params),
+                window.FinancePlatformApi.showroomPnl(showroomNumber, params)
+                    .catch(() => ({ state: 'unavailable' }))
+            ]);
             renderShowroomDetail(payload);
+            appendShowroomPnl(pnl);
         } catch (error) {
             console.error('Finance showroom detail failed:', error);
             element('financeShowroomContent').innerHTML =
@@ -414,6 +417,131 @@
         }));
     }
 
+    function renderLeaseInsights(payload) {
+        if (!payload?.configured) return;
+        const horizons = payload.due_horizons || {};
+        const renewals = payload.renewals || {};
+        [30, 60, 90].forEach(days => {
+            const bucket = horizons[`days_${days}`] || {};
+            setMetric(`financeLeaseDue${days}`, money.format(Number(bucket.amount) || 0));
+            setMetric(
+                `financeLeaseDue${days}Count`,
+                `${integer.format(Number(bucket.count) || 0)} دفعة مجدولة`
+            );
+        });
+        setMetric('financeLeaseRenewals90', integer.format(Number(renewals.expiring_90) || 0));
+        setMetric(
+            'financeLeaseOverdueReview',
+            `${integer.format(Number(renewals.overdue_review) || 0)} عقد متجاوز يحتاج مراجعة`
+        );
+    }
+
+    function renderApAging(payload) {
+        const container = element('financeApAging');
+        if (!payload?.configured) {
+            container.innerHTML = '<div class="finance-empty-state">بيانات AP غير متاحة.</div>';
+            return;
+        }
+        const labels = {
+            not_due: 'غير مستحق', days_1_30: '1–30 يومًا',
+            days_31_60: '31–60 يومًا', days_61_90: '61–90 يومًا',
+            over_90: 'أكثر من 90 يومًا'
+        };
+        container.replaceChildren(...Object.entries(labels).map(([key, label], index) => {
+            const bucket = payload.buckets?.[key] || {};
+            const card = document.createElement('article');
+            card.className = `finance-aging-card${index ? ' is-overdue' : ''}`;
+            const labelNode = document.createElement('span');
+            labelNode.textContent = label;
+            const amount = document.createElement('strong');
+            amount.textContent = money.format(Number(bucket.balance) || 0);
+            const count = document.createElement('small');
+            count.textContent = `${integer.format(Number(bucket.transaction_count) || 0)} حركة`;
+            card.append(labelNode, amount, count);
+            return card;
+        }));
+        element('financeApAsOf').textContent = `كما في ${payload.as_of || '—'}`;
+        element('financeApReconciliation').textContent = payload.summary?.bucket_balance_matches
+            ? 'مجموع الأعمار مطابق للرصيد المفتوح'
+            : 'يوجد فرق مصالحة يحتاج مراجعة';
+    }
+
+    function renderVendorAnalytics(payload) {
+        const body = element('financeTopVendorsBody');
+        const rows = payload?.vendors || [];
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد أرصدة موردين مفتوحة.</td></tr>';
+            return;
+        }
+        body.replaceChildren(...rows.slice(0, 25).map(vendor => {
+            const row = document.createElement('tr');
+            [vendor.vendor_name || '—', vendor.vendor_account_number || '—',
+                money.format(Number(vendor.transaction_amount) || 0),
+                money.format(Number(vendor.paid_amount) || 0),
+                money.format(Number(vendor.remaining_amount) || 0),
+                money.format(Number(vendor.overdue_remaining_amount) || 0)
+            ].forEach((value, index) => {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                if (index === 1) cell.dir = 'ltr';
+                if (index >= 2) {
+                    cell.dir = 'ltr';
+                    cell.className = 'text-end fw-bold';
+                }
+                row.append(cell);
+            });
+            return row;
+        }));
+    }
+
+    function renderTrialBalanceTrend(payload) {
+        const body = element('financeExpenseTrendBody');
+        if (payload?.state !== 'ready' || !(payload.data || []).length) {
+            body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">التاريخ المحاسبي قيد التحميل أو غير متاح.</td></tr>';
+            return;
+        }
+        body.replaceChildren(...payload.data.map(month => {
+            const row = document.createElement('tr');
+            [month.month,
+                month.revenue_available ? money.format(Number(month.revenue) || 0) : 'غير متوفر',
+                money.format(Number(month.cogs) || 0),
+                money.format(Number(month.operating_expense) || 0),
+                month.operating_result === null ? 'غير متوفر' : money.format(Number(month.operating_result) || 0)
+            ].forEach((value, index) => {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                if (index > 0) {
+                    cell.dir = 'ltr';
+                    cell.className = 'text-end fw-bold';
+                }
+                row.append(cell);
+            });
+            return row;
+        }));
+    }
+
+    function appendShowroomPnl(payload) {
+        if (payload?.state !== 'ready' || !payload.summary) return;
+        const summary = payload.summary;
+        const metrics = [
+            ['الإيراد', summary.revenue_available ? summary.revenue : null],
+            ['تكلفة البضاعة', summary.cogs],
+            ['المصاريف التشغيلية', summary.operating_expense],
+            ['مجمل الربح', summary.gross_profit],
+            ['النتيجة التشغيلية', summary.operating_result]
+        ].map(([metric, value]) => ({
+            metric,
+            display: value === null || value === undefined
+                ? 'غير متوفر — تغطية الإيراد غير مكتملة'
+                : money.format(Number(value) || 0)
+        }));
+        element('financeShowroomContent').prepend(detailSection(
+            'P&L المعرض من Trial Balance',
+            [{ key: 'metric', label: 'البند' }, { key: 'display', label: 'القيمة', ltr: true }],
+            metrics
+        ));
+    }
+
     function renderError(error) {
         console.error('Finance platform load failed:', error);
         setState('error', 'تعذر تحميل المنصة');
@@ -427,6 +555,12 @@
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
         element('financeLeasesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل عقود الإيجار.</td></tr>';
+        [30, 60, 90].forEach(days => {
+            setMetric(`financeLeaseDue${days}`, '—');
+            setMetric(`financeLeaseDue${days}Count`, 'تعذر التحميل');
+        });
+        setMetric('financeLeaseRenewals90', '—');
+        setMetric('financeLeaseOverdueReview', 'تعذر التحميل');
     }
 
     async function load() {
@@ -437,16 +571,26 @@
         button.disabled = true;
         try {
             const params = periodParams();
-            const [overview, showrooms, vendorInvoices, leases] = await Promise.all([
+            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
                 window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 25 }),
-                window.FinancePlatformApi.leases({ horizon_days: 90 })
+                window.FinancePlatformApi.leases({ horizon_days: 90 }),
+                window.FinancePlatformApi.leaseInsights({}),
+                window.FinancePlatformApi.apAging({}),
+                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 25, invoice_limit: 50 }),
+                window.FinancePlatformApi.trialBalanceTrend({
+                    start: '2025-01-01', end: element('financePlatformEnd').value
+                })
             ]);
             renderOverview(overview);
             renderShowrooms(showrooms, overview.summary?.expense_scope_status);
             renderVendorInvoices(vendorInvoices);
             renderLeases(leases);
+            renderLeaseInsights(leaseInsights);
+            renderApAging(apAging);
+            renderVendorAnalytics(vendorAnalytics);
+            renderTrialBalanceTrend(trend);
         } catch (error) {
             renderError(error);
         } finally {

@@ -55,6 +55,14 @@
             params
         ),
         vendorInvoices: params => request('/api/finance/vendor-invoices', params),
-        leases: params => request('/api/finance/leases', params)
+        leases: params => request('/api/finance/leases', params),
+        leaseInsights: params => request('/api/finance/lease-insights', params),
+        apAging: params => request('/api/finance/ap-aging', params),
+        vendorAnalytics: params => request('/api/finance/vendor-analytics', params),
+        trialBalanceTrend: params => request('/api/finance/trial-balance-trend', params),
+        showroomPnl: (number, params) => request(
+            `/api/finance/showrooms/${encodeURIComponent(number)}/pnl`,
+            params
+        )
     });
 })();
