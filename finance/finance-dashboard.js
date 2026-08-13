@@ -158,7 +158,7 @@
         element('financeShowroomsBody').innerHTML =
             '<tr><td colspan="6" class="finance-empty-state">سجل المعارض جاهز للربط، ولم تُكتب بيانات Dynamics إلى PostgreSQL بعد.</td></tr>';
         element('financeVendorInvoicesBody').innerHTML =
-            '<tr><td colspan="6" class="finance-empty-state">تظهر الفواتير بعد استيراد AP.</td></tr>';
+            '<tr><td colspan="7" class="finance-empty-state">تظهر الفواتير بعد استيراد AP.</td></tr>';
         element('financeLeasesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تظهر العقود بعد استيراد الإيجارات.</td></tr>';
     }
@@ -767,7 +767,7 @@
         updateSortHeaders('invoices');
 
         if (!filtered.length) {
-            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد فواتير مطابقة لمعايير البحث.</td></tr>';
+            body.innerHTML = '<tr><td colspan="7" class="finance-empty-state">لا توجد فواتير مطابقة لمعايير البحث.</td></tr>';
             return;
         }
 
@@ -783,9 +783,6 @@
             invoiceBadge.className = 'finance-invoice-badge';
             invoiceBadge.textContent = invoice.invoice_id || '—';
             invoiceBadge.dir = 'ltr';
-            if (invoice.description) {
-                invoiceCell.title = `البيان: ${invoice.description}`;
-            }
             invoiceCell.append(invoiceBadge);
 
             const vendorCell = document.createElement('td');
@@ -804,6 +801,20 @@
             vendorMeta.dir = 'ltr';
             vendorIdentity.append(vendorName, vendorMeta);
             vendorCell.append(vendorIdentity);
+
+            const descCell = document.createElement('td');
+            if (invoice.description) {
+                const descText = document.createElement('div');
+                descText.className = 'finance-invoice-desc';
+                descText.textContent = invoice.description;
+                descText.title = invoice.description;
+                descCell.append(descText);
+            } else {
+                const emptySpan = document.createElement('span');
+                emptySpan.className = 'text-muted small';
+                emptySpan.textContent = '—';
+                descCell.append(emptySpan);
+            }
 
             const purchaseOrderCell = document.createElement('td');
             purchaseOrderCell.textContent = invoice.purchase_order_number || '—';
@@ -857,6 +868,7 @@
             row.append(
                 invoiceCell,
                 vendorCell,
+                descCell,
                 purchaseOrderCell,
                 dateCell,
                 dueDateCell,
@@ -1173,7 +1185,7 @@
         element('financeShowroomsBody').innerHTML =
             '<tr><td colspan="6" class="finance-empty-state">تعذر تحميل سجل المعارض.</td></tr>';
         element('financeVendorInvoicesBody').innerHTML =
-            '<tr><td colspan="6" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
+            '<tr><td colspan="7" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
         element('financeLeasesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل عقود الإيجار.</td></tr>';
         [30, 60, 90].forEach(days => {
