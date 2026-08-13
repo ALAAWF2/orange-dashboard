@@ -98,7 +98,14 @@
         const summary = payload.summary || {};
         setMetric('financeShowroomCount', integer.format(summary.showrooms || 0));
         setMetric('financeHistoricalShowroomCount', integer.format(summary.historical_showrooms || 0));
-        setMetric('financeExpenseTotal', money.format(summary.non_sales_expenses || 0));
+        const expenseScopeApproved = summary.expense_scope_status === 'approved';
+        element('financeExpenseTotal').classList.toggle('is-pending', !expenseScopeApproved);
+        setMetric(
+            'financeExpenseTotal',
+            expenseScopeApproved
+                ? money.format(Number(summary.non_sales_expenses) || 0)
+                : 'بانتظار اعتماد الحسابات'
+        );
         setMetric('financeVendorBalance', money.format(summary.open_vendor_balance || 0));
         setMetric('financeVendorOpenCount', integer.format(summary.open_vendor_transactions || 0));
         setMetric('financeLeaseCount', integer.format(summary.active_leases || 0));
@@ -108,7 +115,7 @@
         element('financePeriodLabel').textContent =
             `${payload.period?.start || '—'} — ${payload.period?.end || '—'}`;
         renderLastSync(payload.latest_sync);
-        renderCategories(payload.categories || []);
+        renderCategories(payload.categories || [], summary.expense_scope_status);
     }
 
     function renderLastSync(sync) {
@@ -122,8 +129,12 @@
             : dateTime.format(parsed);
     }
 
-    function renderCategories(categories) {
+    function renderCategories(categories, expenseScopeStatus) {
         const container = element('financeCategoryList');
+        if (expenseScopeStatus !== 'approved') {
+            container.innerHTML = '<div class="finance-empty-state">بانتظار اعتماد حسابات المصروف غير البيعي من المحاسب.</div>';
+            return;
+        }
         if (!categories.length) {
             container.innerHTML = '<div class="finance-empty-state">لا توجد حركة غير بيعية ضمن الفترة المحددة.</div>';
             return;
@@ -148,7 +159,7 @@
         }));
     }
 
-    function renderShowrooms(payload) {
+    function renderShowrooms(payload, expenseScopeStatus) {
         if (!payload.configured) return;
         const body = element('financeShowroomsBody');
         const rows = payload.data || [];
@@ -175,7 +186,9 @@
             const amount = document.createElement('td');
             amount.className = 'text-end fw-bold';
             amount.dir = 'ltr';
-            amount.textContent = money.format(Number(showroom.non_sales_amount) || 0);
+            amount.textContent = expenseScopeStatus === 'approved'
+                ? money.format(Number(showroom.non_sales_amount) || 0)
+                : '—';
             row.append(number, name, branch, statusCell, amount);
             return row;
         }));
@@ -267,7 +280,7 @@
                 window.FinancePlatformApi.leases({ horizon_days: 90 })
             ]);
             renderOverview(overview);
-            renderShowrooms(showrooms);
+            renderShowrooms(showrooms, overview.summary?.expense_scope_status);
             renderVendorInvoices(vendorInvoices);
             renderLeases(leases);
         } catch (error) {
