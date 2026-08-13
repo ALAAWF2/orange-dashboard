@@ -357,10 +357,14 @@
             const vendorIdentity = document.createElement('div');
             vendorIdentity.className = 'finance-vendor-identity';
             const vendorName = document.createElement('strong');
-            vendorName.textContent = invoice.vendor_name || invoice.invoice_account || '—';
+            const vendorAccount = String(invoice.invoice_account || '').trim();
+            const resolvedVendorName = String(invoice.vendor_name || '').trim();
+            const hasVendorName = resolvedVendorName && resolvedVendorName !== vendorAccount;
+            vendorName.textContent = hasVendorName ? resolvedVendorName : 'اسم المورد غير متاح';
+            if (!hasVendorName) vendorIdentity.classList.add('is-name-missing');
             const vendorMeta = document.createElement('span');
             vendorMeta.className = 'finance-vendor-meta';
-            const vendorDetails = [invoice.invoice_account, invoice.payment_terms].filter(Boolean);
+            const vendorDetails = [vendorAccount, invoice.payment_terms].filter(Boolean);
             vendorMeta.textContent = vendorDetails.join(' · ') || '—';
             vendorMeta.dir = 'ltr';
             vendorIdentity.append(vendorName, vendorMeta);
