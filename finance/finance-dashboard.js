@@ -355,122 +355,266 @@
         }));
     }
 
-    async function openInvoiceLinesModal(sourceKey) {
+    async function openInvoiceLinesModal(sourceKey, dataAreaId) {
         const modalEl = element('financeInvoiceLinesModal');
         if (!modalEl) return;
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         const headerEl = element('financeInvoiceLinesHeader');
         const bodyEl = element('financeInvoiceLinesBody');
-        headerEl.innerHTML = 'جارٍ تحميل معلومات الفاتورة…';
-        bodyEl.innerHTML = '<tr><td colspan="5" class="text-center text-muted">جارٍ تحميل أسطر الفاتورة…</td></tr>';
+        headerEl.textContent = 'جارٍ تحميل معلومات الفاتورة…';
+        tableMessage(bodyEl, 5, 'جارٍ تحميل أسطر الفاتورة…');
         modal.show();
         try {
-            const payload = await window.FinancePlatformApi.vendorInvoiceLines(sourceKey);
-            if (payload.state === 'not_found' || !payload.header) {
-                headerEl.innerHTML = '<div class="alert alert-warning mb-0">لم يتم العثور على الفاتورة.</div>';
-                bodyEl.innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد أسطر متاحة.</td></tr>';
+            const payload = await window.FinancePlatformApi.vendorInvoiceLines(sourceKey, {
+                data_area_id: dataAreaId
+            });
+            if (payload.state !== 'ready' || !payload.header) {
+                headerEl.replaceChildren(textElement(
+                    'div',
+                    payload.state === 'ambiguous_company'
+                        ? 'رقم الفاتورة موجود في أكثر من شركة؛ يجب تحديد الشركة.'
+                        : 'لم يتم العثور على الفاتورة.',
+                    'alert alert-warning mb-0'
+                ));
+                tableMessage(bodyEl, 5, 'لا توجد أسطر متاحة.');
                 return;
             }
+
             const h = payload.header;
-            headerEl.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <strong class="fs-6">فاتورة: ${h.invoice_id || sourceKey}</strong>
-                        <div class="text-muted small">المورد: ${h.vendor_name || h.invoice_account} (${h.invoice_account})</div>
-                    </div>
-                    <div class="text-end">
-                        <div class="fw-bold text-primary">المبلغ الإجمالي: ${money.format(h.invoice_amount)} ${h.currency_code || 'SAR'}</div>
-                        <div class="text-muted small">التاريخ: ${h.invoice_date || '—'} | الاستحقاق: ${h.due_date || '—'}</div>
-                    </div>
-                </div>
-            `;
+            const reconciliation = payload.reconciliation || {};
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex justify-content-between align-items-start flex-wrap gap-2';
+            const identity = document.createElement('div');
+            identity.append(
+                textElement('strong', `فاتورة: ${h.invoice_id || sourceKey}`, 'fs-6'),
+                textElement(
+                    'div',
+                    `المورد: ${h.vendor_name || h.invoice_account} (${h.invoice_account || '—'})`,
+                    'text-muted small'
+                ),
+                textElement('div', `الشركة: ${h.data_area_id || '—'}`, 'text-muted small')
+            );
+            const totals = document.createElement('div');
+            totals.className = 'text-end';
+            totals.append(
+                textElement(
+                    'div',
+                    `الإجمالي: ${money.format(Number(h.invoice_amount) || 0)} ${h.currency_code || ''}`.trim(),
+                    'fw-bold text-primary'
+                ),
+                textElement(
+                    'div',
+                    `مجموع الأسطر: ${money.format(Number(reconciliation.line_subtotal) || 0)} · ضريبة الفاتورة: ${money.format(Number(reconciliation.header_tax_total) || 0)}`,
+                    'text-muted small'
+                ),
+                textElement(
+                    'div',
+                    `التاريخ: ${h.invoice_date || '—'} | الاستحقاق: ${h.due_date || '—'}`,
+                    'text-muted small'
+                )
+            );
+            wrapper.append(identity, totals);
+            headerEl.replaceChildren(wrapper);
+            if (!reconciliation.line_tax_matches_header) {
+                headerEl.append(textElement(
+                    'div',
+                    'ضريبة رأس الفاتورة هي القيمة المعتمدة؛ توزيع الضريبة على الأسطر غير مكتمل في مصدر Dynamics.',
+                    'alert alert-info py-2 px-3 mt-2 mb-0 small'
+                ));
+            }
+
             const lines = payload.data || [];
             if (!lines.length) {
-                bodyEl.innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد أسطر مسجلة في هذه الفاتورة.</td></tr>';
+                tableMessage(bodyEl, 5, 'لا توجد أسطر مسجلة في هذه الفاتورة.');
                 return;
             }
             bodyEl.replaceChildren(...lines.map((line, idx) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${idx + 1}</td>
-                    <td>
-                        <div class="fw-bold">${line.description || line.item_number || '—'}</div>
-                        ${line.item_number ? `<small class="text-muted" dir="ltr">رمز الصنف: ${line.item_number}</small>` : ''}
-                    </td>
-                    <td>${line.procurement_category || '—'}</td>
-                    <td class="text-end fw-bold" dir="ltr">${money.format(line.line_amount)}</td>
-                    <td class="text-end text-muted" dir="ltr">${line.sales_tax_amount ? money.format(line.sales_tax_amount) : '—'}</td>
-                `;
-                return tr;
+                const row = document.createElement('tr');
+                const indexCell = textElement('td', integer.format(idx + 1));
+                const itemCell = document.createElement('td');
+                itemCell.append(textElement(
+                    'div',
+                    line.description || line.item_number || '—',
+                    'fw-bold'
+                ));
+                if (line.item_number) {
+                    const itemNumber = textElement(
+                        'small',
+                        `رمز الصنف: ${line.item_number}`,
+                        'text-muted'
+                    );
+                    itemNumber.dir = 'ltr';
+                    itemCell.append(itemNumber);
+                }
+                const categoryCell = textElement('td', line.procurement_category || '—');
+                const amountCell = textElement('td', money.format(Number(line.line_amount) || 0), 'text-end fw-bold');
+                amountCell.dir = 'ltr';
+                const taxCell = textElement(
+                    'td',
+                    Number(line.sales_tax_amount) ? money.format(Number(line.sales_tax_amount)) : '—',
+                    'text-end text-muted'
+                );
+                taxCell.dir = 'ltr';
+                row.append(indexCell, itemCell, categoryCell, amountCell, taxCell);
+                return row;
             }));
         } catch (err) {
             console.error('Failed to load invoice lines:', err);
-            headerEl.innerHTML = '<div class="alert alert-danger mb-0">تعذر تحميل تفاصيل الفاتورة.</div>';
-            bodyEl.innerHTML = '<tr><td colspan="5" class="text-center text-danger">حدث خطأ أثناء جلب البيانات.</td></tr>';
+            headerEl.replaceChildren(textElement('div', 'تعذر تحميل تفاصيل الفاتورة.', 'alert alert-danger mb-0'));
+            tableMessage(bodyEl, 5, 'حدث خطأ أثناء جلب البيانات.', 'text-center text-danger');
         }
     }
 
-    async function openVendorPaymentsModal(vendorAccount) {
+    async function loadCompleteVendorActivity(vendorAccount, dataAreaId) {
+        const transactions = [];
+        const settlements = [];
+        let page = 1;
+        let pages = 1;
+        let firstPayload = null;
+        do {
+            const payload = await window.FinancePlatformApi.vendorPayments(vendorAccount, {
+                data_area_id: dataAreaId,
+                page,
+                page_size: 200
+            });
+            if (payload.state !== 'ready') return payload;
+            if (!firstPayload) firstPayload = payload;
+            transactions.push(...(payload.transactions || []));
+            settlements.push(...(payload.settlements || []));
+            pages = Number(payload.pagination?.pages) || 1;
+            page += 1;
+        } while (page <= pages);
+
+        return {
+            ...firstPayload,
+            transactions,
+            settlements,
+            pagination: {
+                ...(firstPayload?.pagination || {}),
+                page: pages,
+                pages,
+                returned: transactions.length
+            },
+            coverage: {
+                ...(firstPayload?.coverage || {}),
+                transactions_returned: transactions.length,
+                settlements_returned: settlements.length,
+                complete: transactions.length === Number(firstPayload?.pagination?.total || 0)
+                    && settlements.length === Number(firstPayload?.coverage?.settlement_total || 0)
+            }
+        };
+    }
+
+    async function openVendorPaymentsModal(vendorAccount, dataAreaId) {
         const modalEl = element('financeVendorPaymentsModal');
         if (!modalEl) return;
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         const headerEl = element('financeVendorPaymentsHeader');
         const bodyEl = element('financeVendorPaymentsBody');
         const settlementsBodyEl = element('financeVendorSettlementsBody');
-        headerEl.innerHTML = 'جارٍ تحميل معلومات المورد…';
-        bodyEl.innerHTML = '<tr><td colspan="8" class="text-center text-muted">جارٍ تحميل الحركات…</td></tr>';
-        settlementsBodyEl.innerHTML = '<tr><td colspan="3" class="text-center text-muted">جارٍ تحميل التسويات…</td></tr>';
+        headerEl.textContent = 'جارٍ تحميل كامل حركات المورد…';
+        tableMessage(bodyEl, 8, 'جارٍ تحميل الحركات…');
+        tableMessage(settlementsBodyEl, 3, 'جارٍ تحميل التسويات المحاسبية…');
         modal.show();
         try {
-            const payload = await window.FinancePlatformApi.vendorPayments(vendorAccount);
-            const v = payload.vendor || {};
-            headerEl.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <strong class="fs-6">${v.vendor_name || vendorAccount}</strong>
-                        <div class="text-muted small" dir="ltr">رقم الحساب: ${v.vendor_account_number || vendorAccount} ${v.payment_terms ? `| شروط الدفع: ${v.payment_terms}` : ''}</div>
-                    </div>
-                </div>
-            `;
-            const txs = payload.transactions || [];
-            if (!txs.length) {
-                bodyEl.innerHTML = '<tr><td colspan="8" class="text-center text-muted">لا توجد حركات مسجلة لهذا المورد.</td></tr>';
+            const payload = await loadCompleteVendorActivity(vendorAccount, dataAreaId);
+            if (payload.state !== 'ready') {
+                headerEl.replaceChildren(textElement(
+                    'div',
+                    payload.state === 'ambiguous_company'
+                        ? 'حساب المورد موجود في أكثر من شركة؛ يجب تحديد الشركة.'
+                        : 'لم يتم العثور على حساب المورد.',
+                    'alert alert-warning mb-0'
+                ));
+                tableMessage(bodyEl, 8, 'لا توجد حركات متاحة.');
+                tableMessage(settlementsBodyEl, 3, 'لا توجد تسويات محاسبية متاحة.');
+                return;
+            }
+
+            const vendor = payload.vendor || {};
+            const coverage = payload.coverage || {};
+            const header = document.createElement('div');
+            header.append(
+                textElement('strong', vendor.vendor_name || vendorAccount, 'fs-6 d-block'),
+                textElement(
+                    'div',
+                    `رقم الحساب: ${vendor.vendor_account_number || vendorAccount}${vendor.payment_terms ? ` | شروط الدفع: ${vendor.payment_terms}` : ''}`,
+                    'text-muted small'
+                ),
+                textElement('div', `الشركة: ${vendor.data_area_id || dataAreaId || '—'}`, 'text-muted small'),
+                textElement(
+                    'div',
+                    `تم تحميل ${integer.format(coverage.transactions_returned || 0)} من ${integer.format(coverage.transaction_total || 0)} حركة و${integer.format(coverage.settlements_returned || 0)} من ${integer.format(coverage.settlement_total || 0)} تسوية محاسبية.`,
+                    coverage.complete ? 'text-success small mt-1' : 'text-danger small mt-1'
+                )
+            );
+            headerEl.replaceChildren(header);
+
+            const transactions = payload.transactions || [];
+            if (!transactions.length) {
+                tableMessage(bodyEl, 8, 'لا توجد حركات مسجلة لهذا المورد.');
             } else {
-                bodyEl.replaceChildren(...txs.map(tx => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td dir="ltr" class="fw-bold">${tx.voucher || '—'}</td>
-                        <td dir="ltr">${tx.invoice_id || '—'}</td>
-                        <td dir="ltr">${tx.transaction_date || '—'}</td>
-                        <td dir="ltr">${tx.due_date || '—'}</td>
-                        <td class="text-end fw-bold" dir="ltr">${money.format(tx.transaction_amount)}</td>
-                        <td class="text-end text-success" dir="ltr">${money.format(tx.settled_amount)}</td>
-                        <td class="text-end text-danger" dir="ltr">${money.format(tx.remaining_amount)}</td>
-                        <td><span class="badge ${tx.is_closed ? 'bg-secondary' : 'bg-warning text-dark'}">${tx.is_closed ? 'مغلقة' : 'مفتوحة'}</span></td>
-                    `;
-                    return tr;
+                bodyEl.replaceChildren(...transactions.map(transaction => {
+                    const row = document.createElement('tr');
+                    const values = [
+                        transaction.voucher || '—',
+                        transaction.invoice_id || '—',
+                        transaction.transaction_date || '—',
+                        transaction.due_date || '—',
+                        money.format(Number(transaction.transaction_amount) || 0),
+                        money.format(Number(transaction.settled_amount) || 0),
+                        money.format(Number(transaction.remaining_amount) || 0)
+                    ];
+                    values.forEach((value, index) => {
+                        const classNames = index === 0
+                            ? 'fw-bold'
+                            : index === 4
+                                ? 'text-end fw-bold'
+                                : index === 5
+                                    ? 'text-end text-success'
+                                    : index === 6
+                                        ? 'text-end text-danger'
+                                        : '';
+                        const cell = textElement('td', value, classNames);
+                        cell.dir = 'ltr';
+                        row.append(cell);
+                    });
+                    const statusCell = document.createElement('td');
+                    statusCell.append(textElement(
+                        'span',
+                        transaction.is_closed ? 'مغلقة' : 'مفتوحة',
+                        `badge ${transaction.is_closed ? 'bg-secondary' : 'bg-warning text-dark'}`
+                    ));
+                    row.append(statusCell);
+                    return row;
                 }));
             }
 
             const settlements = payload.settlements || [];
             if (!settlements.length) {
-                settlementsBodyEl.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد تسويات مسجلة لهذا المورد.</td></tr>';
+                tableMessage(settlementsBodyEl, 3, 'لا توجد تسويات محاسبية مسجلة لهذا المورد.');
             } else {
-                settlementsBodyEl.replaceChildren(...settlements.map(s => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td dir="ltr" class="fw-bold">${s.settlement_voucher || '—'}</td>
-                        <td dir="ltr">${s.settlement_date || '—'}</td>
-                        <td class="text-end fw-bold text-success" dir="ltr">${money.format(s.settlement_amount)}</td>
-                    `;
-                    return tr;
+                settlementsBodyEl.replaceChildren(...settlements.map(settlement => {
+                    const row = document.createElement('tr');
+                    const voucher = textElement('td', settlement.settlement_voucher || '—', 'fw-bold');
+                    const date = textElement('td', settlement.settlement_date || '—');
+                    const amount = textElement(
+                        'td',
+                        money.format(Number(settlement.settlement_amount) || 0),
+                        'text-end fw-bold text-success'
+                    );
+                    voucher.dir = 'ltr';
+                    date.dir = 'ltr';
+                    amount.dir = 'ltr';
+                    row.append(voucher, date, amount);
+                    return row;
                 }));
             }
         } catch (err) {
-            console.error('Failed to load vendor payments:', err);
-            headerEl.innerHTML = '<div class="alert alert-danger mb-0">تعذر تحميل تفاصيل حركات المورد.</div>';
-            bodyEl.innerHTML = '<tr><td colspan="8" class="text-center text-danger">حدث خطأ أثناء جلب البيانات.</td></tr>';
-            settlementsBodyEl.innerHTML = '<tr><td colspan="3" class="text-center text-danger">حدث خطأ.</td></tr>';
+            console.error('Failed to load vendor activity:', err);
+            headerEl.replaceChildren(textElement('div', 'تعذر تحميل تفاصيل حركات المورد.', 'alert alert-danger mb-0'));
+            tableMessage(bodyEl, 8, 'حدث خطأ أثناء جلب البيانات.', 'text-center text-danger');
+            tableMessage(settlementsBodyEl, 3, 'حدث خطأ.', 'text-center text-danger');
         }
     }
 
@@ -544,7 +688,10 @@
                 dueDateCell,
                 amountCell
             );
-            row.addEventListener('click', () => openInvoiceLinesModal(invoice.source_key || invoice.invoice_id));
+            row.addEventListener('click', () => openInvoiceLinesModal(
+                invoice.source_key,
+                invoice.data_area_id
+            ));
             return row;
         }));
     }
@@ -636,7 +783,7 @@
         body.replaceChildren(...rows.slice(0, 25).map(vendor => {
             const row = document.createElement('tr');
             row.style.cursor = 'pointer';
-            row.title = 'انقر لعرض سجل الدفعات والتسويات البنكية للمورد';
+            row.title = 'انقر لعرض كامل حركات المورد والتسويات المحاسبية';
             [vendor.vendor_name || '—', vendor.vendor_account_number || '—',
                 money.format(Number(vendor.transaction_amount) || 0),
                 money.format(Number(vendor.paid_amount) || 0),
@@ -652,7 +799,10 @@
                 }
                 row.append(cell);
             });
-            row.addEventListener('click', () => openVendorPaymentsModal(vendor.vendor_account_number));
+            row.addEventListener('click', () => openVendorPaymentsModal(
+                vendor.vendor_account_number,
+                vendor.data_area_id
+            ));
             return row;
         }));
     }
