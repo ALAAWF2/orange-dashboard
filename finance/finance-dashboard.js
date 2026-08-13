@@ -8,6 +8,24 @@
     let loading = false;
     let initialized = false;
 
+    let currentShowrooms = [];
+    let currentInvoices = [];
+    let currentTopVendors = [];
+    let currentLeases = [];
+    let currentExpenseScopeStatus = 'approved';
+
+    const sortState = {
+        showrooms: { key: 'name', dir: 'asc' },
+        invoices: { key: 'invoice_date', dir: 'desc' },
+        topVendors: { key: 'remaining_amount', dir: 'desc' },
+        leases: { key: 'expiration_date', dir: 'asc' }
+    };
+
+    const filters = {
+        showrooms: { search: '', status: 'all' },
+        invoices: { search: '', status: 'all' }
+    };
+
     function element(id) {
         return document.getElementById(id);
     }
@@ -56,6 +74,7 @@
 
     function setState(kind, label) {
         const state = element('financePlatformState');
+        if (!state) return;
         state.className = `finance-state-chip is-${kind}`;
         state.replaceChildren();
         const dot = document.createElement('span');
@@ -64,7 +83,8 @@
     }
 
     function setMetric(id, value) {
-        element(id).textContent = value;
+        const el = element(id);
+        if (el) el.textContent = value;
     }
 
     function resetMetrics() {
@@ -79,6 +99,56 @@
         ].forEach(id => setMetric(id, '—'));
     }
 
+    function compareValues(a, b, key, dir) {
+        let valA = a[key];
+        let valB = b[key];
+        if (valA === null || valA === undefined) valA = '';
+        if (valB === null || valB === undefined) valB = '';
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return dir === 'asc' ? valA - valB : valB - valA;
+        }
+
+        const numA = Number(valA);
+        const numB = Number(valB);
+        const isNumA = typeof valA === 'number' || (typeof valA === 'string' && valA.trim() !== '' && !isNaN(numA) && !valA.includes('-'));
+        const isNumB = typeof valB === 'number' || (typeof valB === 'string' && valB.trim() !== '' && !isNaN(numB) && !valB.includes('-'));
+        if (isNumA && isNumB) {
+            return dir === 'asc' ? numA - numB : numB - numA;
+        }
+
+        if (typeof valA === 'string' && /^\d{4}-\d{2}-\d{2}/.test(valA) && typeof valB === 'string' && /^\d{4}-\d{2}-\d{2}/.test(valB)) {
+            return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+
+        const strA = String(valA).toLowerCase();
+        const strB = String(valB).toLowerCase();
+        const res = strA.localeCompare(strB, 'ar', { numeric: true });
+        return dir === 'asc' ? res : -res;
+    }
+
+    function updateSortHeaders(table) {
+        const headers = document.querySelectorAll(`th.finance-sortable[data-table="${table}"]`);
+        const state = sortState[table];
+        headers.forEach(th => {
+            const key = th.dataset.sort;
+            const icon = th.querySelector('i');
+            th.classList.remove('is-sorted-asc', 'is-sorted-desc');
+            if (icon) {
+                icon.className = 'fa-solid fa-sort';
+            }
+            if (state && state.key === key) {
+                if (state.dir === 'asc') {
+                    th.classList.add('is-sorted-asc');
+                    if (icon) icon.className = 'fa-solid fa-sort-up';
+                } else {
+                    th.classList.add('is-sorted-desc');
+                    if (icon) icon.className = 'fa-solid fa-sort-down';
+                }
+            }
+        });
+    }
+
     function renderSetupState(payload) {
         element('financeSetupNotice').hidden = false;
         setState('waiting', 'بانتظار تفعيل قاعدة Finance');
@@ -88,7 +158,7 @@
         element('financeShowroomsBody').innerHTML =
             '<tr><td colspan="6" class="finance-empty-state">سجل المعارض جاهز للربط، ولم تُكتب بيانات Dynamics إلى PostgreSQL بعد.</td></tr>';
         element('financeVendorInvoicesBody').innerHTML =
-            '<tr><td colspan="5" class="finance-empty-state">تظهر الفواتير بعد استيراد AP.</td></tr>';
+            '<tr><td colspan="6" class="finance-empty-state">تظهر الفواتير بعد استيراد AP.</td></tr>';
         element('financeLeasesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تظهر العقود بعد استيراد الإيجارات.</td></tr>';
     }
@@ -291,15 +361,46 @@
         }
     }
 
-    function renderShowrooms(payload, expenseScopeStatus) {
-        if (!payload.configured) return;
+    function filterAndRenderShowrooms() {
         const body = element('financeShowroomsBody');
-        const rows = payload.data || [];
-        if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد معارض مستوردة حتى الآن.</td></tr>';
+        const badge = element('financeShowroomsCountBadge');
+        if (!body) return;
+
+        let filtered = [...currentShowrooms];
+        const search = (filters.showrooms.search || '').trim().toLowerCase();
+        const status = filters.showrooms.status || 'all';
+
+        if (status === 'current') {
+            filtered = filtered.filter(s => s.status !== 'historical');
+        } else if (status === 'historical') {
+            filtered = filtered.filter(s => s.status === 'historical');
+        }
+
+        if (search) {
+            filtered = filtered.filter(s => {
+                const num = String(s.number || '').toLowerCase();
+                const name = String(s.name || '').toLowerCase();
+                const branch = String(s.branch_dimension || '').toLowerCase();
+                return num.includes(search) || name.includes(search) || branch.includes(search);
+            });
+        }
+
+        const state = sortState.showrooms;
+        if (state) {
+            filtered.sort((a, b) => compareValues(a, b, state.key, state.dir));
+        }
+
+        if (badge) {
+            badge.textContent = `عرض ${integer.format(filtered.length)} من ${integer.format(currentShowrooms.length)} معرضاً`;
+        }
+        updateSortHeaders('showrooms');
+
+        if (!filtered.length) {
+            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد معارض مطابقة لمعايير البحث.</td></tr>';
             return;
         }
-        body.replaceChildren(...rows.map(showroom => {
+
+        body.replaceChildren(...filtered.map(showroom => {
             const row = document.createElement('tr');
             const number = document.createElement('td');
             number.dir = 'ltr';
@@ -320,14 +421,14 @@
             branchContent.append(branchCode, branchStatus);
             branch.append(branchContent);
             const statusCell = document.createElement('td');
-            const status = document.createElement('span');
-            status.className = `finance-status-label${showroom.status === 'historical' ? ' is-historical' : ''}`;
-            status.textContent = showroom.status === 'historical' ? 'تاريخي / مغلق' : 'حالي';
-            statusCell.append(status);
+            const statusLabel = document.createElement('span');
+            statusLabel.className = `finance-status-label${showroom.status === 'historical' ? ' is-historical' : ''}`;
+            statusLabel.textContent = showroom.status === 'historical' ? 'تاريخي / مغلق' : 'حالي';
+            statusCell.append(statusLabel);
             const amount = document.createElement('td');
             amount.className = 'text-end fw-bold';
             amount.dir = 'ltr';
-            amount.textContent = expenseScopeStatus === 'approved'
+            amount.textContent = currentExpenseScopeStatus === 'approved'
                 ? money.format(Number(showroom.non_sales_amount) || 0)
                 : '—';
             const actionCell = document.createElement('td');
@@ -353,6 +454,13 @@
             row.append(number, name, branch, statusCell, amount, actionCell);
             return row;
         }));
+    }
+
+    function renderShowrooms(payload, expenseScopeStatus) {
+        if (!payload || !payload.configured) return;
+        currentShowrooms = payload.data || [];
+        if (expenseScopeStatus) currentExpenseScopeStatus = expenseScopeStatus;
+        filterAndRenderShowrooms();
     }
 
     async function openInvoiceLinesModal(sourceKey, dataAreaId) {
@@ -618,22 +726,67 @@
         }
     }
 
-    function renderVendorInvoices(payload) {
+    function filterAndRenderInvoices() {
         const body = element('financeVendorInvoicesBody');
-        if (!payload?.configured) return;
-        const rows = payload.data || [];
-        if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد فواتير موردين مستوردة.</td></tr>';
+        const badge = element('financeInvoicesCountBadge');
+        if (!body) return;
+
+        let filtered = [...currentInvoices];
+        const search = (filters.invoices.search || '').trim().toLowerCase();
+        const status = filters.invoices.status || 'all';
+        const todayStr = isoDate(new Date());
+
+        if (status === 'overdue') {
+            filtered = filtered.filter(inv => inv.due_date && inv.due_date < todayStr);
+        } else if (status === 'not_due') {
+            filtered = filtered.filter(inv => !inv.due_date || inv.due_date >= todayStr);
+        } else if (status === 'has_po') {
+            filtered = filtered.filter(inv => inv.purchase_order_number && String(inv.purchase_order_number).trim() !== '');
+        }
+
+        if (search) {
+            filtered = filtered.filter(inv => {
+                const id = String(inv.invoice_id || '').toLowerCase();
+                const vName = String(inv.vendor_name || '').toLowerCase();
+                const vAcc = String(inv.invoice_account || '').toLowerCase();
+                const po = String(inv.purchase_order_number || '').toLowerCase();
+                const desc = String(inv.description || '').toLowerCase();
+                return id.includes(search) || vName.includes(search) || vAcc.includes(search) || po.includes(search) || desc.includes(search);
+            });
+        }
+
+        const state = sortState.invoices;
+        if (state) {
+            filtered.sort((a, b) => compareValues(a, b, state.key, state.dir));
+        }
+
+        const totalAmount = filtered.reduce((acc, inv) => acc + (Number(inv.invoice_amount) || 0), 0);
+        if (badge) {
+            badge.textContent = `عرض ${integer.format(filtered.length)} فاتورة · ${money.format(totalAmount)} SAR`;
+        }
+        updateSortHeaders('invoices');
+
+        if (!filtered.length) {
+            body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد فواتير مطابقة لمعايير البحث.</td></tr>';
             return;
         }
-        body.replaceChildren(...rows.map(invoice => {
+
+        body.replaceChildren(...filtered.map(invoice => {
             const row = document.createElement('tr');
             row.style.cursor = 'pointer';
-            row.title = 'انقر لعرض أسطر الفاتورة التفصيلية';
+            row.title = invoice.description
+                ? `فاتورة ${invoice.invoice_id}: ${invoice.description} (انقر للتفاصيل)`
+                : 'انقر لعرض أسطر الفاتورة التفصيلية';
 
             const invoiceCell = document.createElement('td');
-            invoiceCell.textContent = invoice.invoice_id || '—';
-            invoiceCell.dir = 'ltr';
+            const invoiceBadge = document.createElement('span');
+            invoiceBadge.className = 'finance-invoice-badge';
+            invoiceBadge.textContent = invoice.invoice_id || '—';
+            invoiceBadge.dir = 'ltr';
+            if (invoice.description) {
+                invoiceCell.title = `البيان: ${invoice.description}`;
+            }
+            invoiceCell.append(invoiceBadge);
 
             const vendorCell = document.createElement('td');
             const vendorIdentity = document.createElement('div');
@@ -661,8 +814,29 @@
             dateCell.dir = 'ltr';
 
             const dueDateCell = document.createElement('td');
-            dueDateCell.textContent = invoice.due_date || '—';
-            dueDateCell.dir = 'ltr';
+            const dueDateText = document.createElement('span');
+            dueDateText.textContent = invoice.due_date || '—';
+            dueDateText.dir = 'ltr';
+            dueDateCell.append(dueDateText);
+
+            if (invoice.due_date) {
+                const dueDate = new Date(invoice.due_date);
+                const today = new Date(todayStr);
+                const diffDays = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+                const badge = document.createElement('span');
+                badge.className = 'finance-due-badge';
+                if (diffDays < 0) {
+                    badge.classList.add('is-overdue');
+                    badge.textContent = `متأخرة ${Math.abs(diffDays)} يوماً`;
+                } else if (diffDays === 0) {
+                    badge.classList.add('is-today');
+                    badge.textContent = 'تستحق اليوم';
+                } else {
+                    badge.classList.add('is-ok');
+                    badge.textContent = `متبقي ${diffDays} يوماً`;
+                }
+                dueDateCell.append(document.createElement('br'), badge);
+            }
 
             const amountCell = document.createElement('td');
             amountCell.className = 'text-end';
@@ -696,32 +870,71 @@
         }));
     }
 
-    function renderLeases(payload) {
-        const body = element('financeLeasesBody');
+    function renderVendorInvoices(payload) {
         if (!payload?.configured) return;
-        const rows = payload.data || [];
-        if (!rows.length) {
+        currentInvoices = payload.data || [];
+        filterAndRenderInvoices();
+    }
+
+    function sortAndRenderLeases() {
+        const body = element('financeLeasesBody');
+        if (!body) return;
+        let list = [...currentLeases];
+        const state = sortState.leases;
+        if (state) {
+            list.sort((a, b) => compareValues(a, b, state.key, state.dir));
+        }
+        updateSortHeaders('leases');
+
+        if (!list.length) {
             body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">لا توجد عقود إيجار مستوردة.</td></tr>';
             return;
         }
-        body.replaceChildren(...rows.slice(0, 50).map(lease => {
+
+        const today = new Date();
+        const in90Days = new Date();
+        in90Days.setDate(today.getDate() + 90);
+        const todayStr = isoDate(today);
+        const in90DaysStr = isoDate(in90Days);
+
+        body.replaceChildren(...list.slice(0, 50).map(lease => {
             const row = document.createElement('tr');
-            const values = [
-                lease.lease_id || '—',
-                lease.description || '—',
-                lease.expiration_date || '—',
-                lease.lease_status || '—',
-                money.format(Number(lease.upcoming_payment_amount) || 0)
-            ];
-            values.forEach((value, index) => {
-                const cell = document.createElement('td');
-                cell.textContent = value;
-                if (index === 0) cell.dir = 'ltr';
-                if (index === 4) cell.className = 'text-end fw-bold';
-                row.append(cell);
-            });
+            
+            const idCell = document.createElement('td');
+            idCell.dir = 'ltr';
+            idCell.textContent = lease.lease_id || '—';
+
+            const descCell = document.createElement('td');
+            descCell.textContent = lease.description || '—';
+
+            const expCell = document.createElement('td');
+            const expDateText = document.createElement('span');
+            expDateText.textContent = lease.expiration_date || '—';
+            expDateText.dir = 'ltr';
+            expCell.append(expDateText);
+            if (lease.expiration_date && lease.expiration_date >= todayStr && lease.expiration_date <= in90DaysStr) {
+                const badge = document.createElement('span');
+                badge.className = 'finance-lease-badge is-expiring ms-2';
+                badge.textContent = 'ينتهي قريباً';
+                expCell.append(badge);
+            }
+
+            const statusCell = document.createElement('td');
+            statusCell.textContent = lease.lease_status || '—';
+
+            const upcomingCell = document.createElement('td');
+            upcomingCell.className = 'text-end fw-bold';
+            upcomingCell.textContent = money.format(Number(lease.upcoming_payment_amount) || 0);
+
+            row.append(idCell, descCell, expCell, statusCell, upcomingCell);
             return row;
         }));
+    }
+
+    function renderLeases(payload) {
+        if (!payload?.configured) return;
+        currentLeases = payload.data || [];
+        sortAndRenderLeases();
     }
 
     function renderLeaseInsights(payload) {
@@ -773,14 +986,22 @@
             : 'يوجد فرق مصالحة يحتاج مراجعة';
     }
 
-    function renderVendorAnalytics(payload) {
+    function sortAndRenderTopVendors() {
         const body = element('financeTopVendorsBody');
-        const rows = payload?.vendors || [];
-        if (!rows.length) {
+        if (!body) return;
+        let list = [...currentTopVendors];
+        const state = sortState.topVendors;
+        if (state) {
+            list.sort((a, b) => compareValues(a, b, state.key, state.dir));
+        }
+        updateSortHeaders('topVendors');
+
+        if (!list.length) {
             body.innerHTML = '<tr><td colspan="6" class="finance-empty-state">لا توجد أرصدة موردين مفتوحة.</td></tr>';
             return;
         }
-        body.replaceChildren(...rows.slice(0, 25).map(vendor => {
+
+        body.replaceChildren(...list.slice(0, 25).map(vendor => {
             const row = document.createElement('tr');
             row.style.cursor = 'pointer';
             row.title = 'انقر لعرض كامل حركات المورد والتسويات المحاسبية';
@@ -797,6 +1018,9 @@
                     cell.dir = 'ltr';
                     cell.className = 'text-end fw-bold';
                 }
+                if (index === 5 && Number(vendor.overdue_remaining_amount) > 0) {
+                    cell.classList.add('text-danger');
+                }
                 row.append(cell);
             });
             row.addEventListener('click', () => openVendorPaymentsModal(
@@ -805,6 +1029,14 @@
             ));
             return row;
         }));
+    }
+
+    function renderVendorAnalytics(payload) {
+        element('financeApReconciliation').textContent = payload.summary?.bucket_balance_matches
+            ? 'مجموع الأعمار مطابق للرصيد المفتوح'
+            : 'يوجد فرق مصالحة يحتاج مراجعة';
+        currentTopVendors = payload?.vendors || [];
+        sortAndRenderTopVendors();
     }
 
     function renderTrialBalanceTrend(payload) {
@@ -819,13 +1051,14 @@
                 month.revenue_available ? money.format(Number(month.revenue) || 0) : 'غير متوفر',
                 money.format(Number(month.cogs) || 0),
                 money.format(Number(month.operating_expense) || 0),
-                month.operating_result === null ? 'غير متوفر' : money.format(Number(month.operating_result) || 0)
+                month.revenue_available ? money.format(Number(month.operating_result) || 0) : 'غير متوفر'
             ].forEach((value, index) => {
                 const cell = document.createElement('td');
                 cell.textContent = value;
-                if (index > 0) {
-                    cell.dir = 'ltr';
-                    cell.className = 'text-end fw-bold';
+                if (index > 0) cell.dir = 'ltr';
+                if (index >= 1) cell.className = 'text-end';
+                if (index === 4 && month.revenue_available) {
+                    cell.className += Number(month.operating_result) >= 0 ? ' text-success fw-bold' : ' text-danger fw-bold';
                 }
                 row.append(cell);
             });
@@ -940,7 +1173,7 @@
         element('financeShowroomsBody').innerHTML =
             '<tr><td colspan="6" class="finance-empty-state">تعذر تحميل سجل المعارض.</td></tr>';
         element('financeVendorInvoicesBody').innerHTML =
-            '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
+            '<tr><td colspan="6" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
         element('financeLeasesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل عقود الإيجار.</td></tr>';
         [30, 60, 90].forEach(days => {
@@ -964,13 +1197,13 @@
             const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
-                window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 25 }),
+                window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 100 }),
                 window.FinancePlatformApi.leases({ horizon_days: 90 }),
                 window.FinancePlatformApi.leaseInsights({})
                     .catch(() => ({ configured: false })),
                 window.FinancePlatformApi.apAging({})
                     .catch(() => ({ configured: false })),
-                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 25, invoice_limit: 50 })
+                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 50, invoice_limit: 50 })
                     .catch(() => ({ configured: false, vendors: [], open_invoices: [] })),
                 window.FinancePlatformApi.trialBalanceTrend({
                     start: '2025-01-01', end: element('financePlatformEnd').value
@@ -997,12 +1230,127 @@
         }
     }
 
+    function applyPreset(presetName) {
+        const today = new Date();
+        let start, end;
+
+        if (presetName === 'thisMonth') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = today;
+        } else if (presetName === 'lastMonth') {
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+        } else if (presetName === 'thisQuarter') {
+            const currentQuarter = Math.floor(today.getMonth() / 3);
+            start = new Date(today.getFullYear(), currentQuarter * 3, 1);
+            end = today;
+        } else if (presetName === 'ytd') {
+            start = new Date(today.getFullYear(), 0, 1);
+            end = today;
+        } else if (presetName === 'lastYear') {
+            start = new Date(today.getFullYear() - 1, 0, 1);
+            end = new Date(today.getFullYear() - 1, 11, 31);
+        } else if (presetName === 'last30days') {
+            start = new Date();
+            start.setDate(today.getDate() - 30);
+            end = today;
+        }
+
+        if (start && end) {
+            element('financePlatformStart').value = isoDate(start);
+            element('financePlatformEnd').value = isoDate(end);
+
+            document.querySelectorAll('.finance-preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.preset === presetName);
+            });
+
+            load();
+        }
+    }
+
     function initialize() {
         if (initialized) return;
         initialized = true;
         setDefaultPeriod();
+
+        document.querySelectorAll('.finance-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+        });
+
+        const showroomsSearch = element('financeShowroomsSearch');
+        const showroomsSearchClear = element('financeShowroomsSearchClear');
+        const showroomsStatus = element('financeShowroomsStatusFilter');
+
+        if (showroomsSearch) {
+            showroomsSearch.addEventListener('input', () => {
+                filters.showrooms.search = showroomsSearch.value;
+                if (showroomsSearchClear) showroomsSearchClear.hidden = !showroomsSearch.value;
+                filterAndRenderShowrooms();
+            });
+        }
+        if (showroomsSearchClear) {
+            showroomsSearchClear.addEventListener('click', () => {
+                if (showroomsSearch) showroomsSearch.value = '';
+                filters.showrooms.search = '';
+                showroomsSearchClear.hidden = true;
+                filterAndRenderShowrooms();
+            });
+        }
+        if (showroomsStatus) {
+            showroomsStatus.addEventListener('change', () => {
+                filters.showrooms.status = showroomsStatus.value;
+                filterAndRenderShowrooms();
+            });
+        }
+
+        const invoicesSearch = element('financeInvoicesSearch');
+        const invoicesSearchClear = element('financeInvoicesSearchClear');
+        const invoicesStatus = element('financeInvoicesStatusFilter');
+
+        if (invoicesSearch) {
+            invoicesSearch.addEventListener('input', () => {
+                filters.invoices.search = invoicesSearch.value;
+                if (invoicesSearchClear) invoicesSearchClear.hidden = !invoicesSearch.value;
+                filterAndRenderInvoices();
+            });
+        }
+        if (invoicesSearchClear) {
+            invoicesSearchClear.addEventListener('click', () => {
+                if (invoicesSearch) invoicesSearch.value = '';
+                filters.invoices.search = '';
+                invoicesSearchClear.hidden = true;
+                filterAndRenderInvoices();
+            });
+        }
+        if (invoicesStatus) {
+            invoicesStatus.addEventListener('change', () => {
+                filters.invoices.status = invoicesStatus.value;
+                filterAndRenderInvoices();
+            });
+        }
+
+        document.querySelectorAll('th.finance-sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const table = th.dataset.table;
+                const key = th.dataset.sort;
+                if (!table || !key) return;
+                if (sortState[table]?.key === key) {
+                    sortState[table].dir = sortState[table].dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortState[table] = { key, dir: 'asc' };
+                }
+                if (table === 'showrooms') filterAndRenderShowrooms();
+                else if (table === 'invoices') filterAndRenderInvoices();
+                else if (table === 'topVendors') sortAndRenderTopVendors();
+                else if (table === 'leases') sortAndRenderLeases();
+            });
+        });
+
         element('financePlatformRefresh').addEventListener('click', load);
-        element('financePlatformApplyPeriod').addEventListener('click', load);
+        element('financePlatformApplyPeriod').addEventListener('click', () => {
+            document.querySelectorAll('.finance-preset-btn').forEach(btn => btn.classList.remove('active'));
+            load();
+        });
         element('financeShowroomClose').addEventListener('click', closeShowroomDetail);
         element('financeShowroomBackdrop').addEventListener('click', closeShowroomDetail);
         document.addEventListener('keydown', event => {

@@ -3416,7 +3416,7 @@
         return `
           <div class="product">
             <div class="product-image-container" onclick="showProductDetails('${d.code}')">
-              <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', parseFloat('${d.price}'||0))" title="طباعة الباركود">🖨️</button>
+              <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', ${effectivePromoPrice !== null ? effectivePromoPrice : parseFloat(d.price || 0)})" title="طباعة الباركود">🖨️</button>
               ${isNewArrival(d.code) ? '<div class="badge-new">✨ جديد</div>' : ''}
               ${getStockBadge(d)}
               <button class="fav-btn ${favorites.has(String(d.code)) ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${d.code}')" title="أضف للمفضلة">${favorites.has(String(d.code)) ? '★' : '☆'}</button>
@@ -3643,10 +3643,25 @@
         }
       };
 
+      const modalPromoPrice = getPromoPrice(product.code, product.alias);
+      const modalDynOffer = getDynamicsOffer(product.code);
+      const modalDynDealPrice = getDynamicsDealPrice(product.code);
+      const modalDynOriginalPrice = getDynamicsOriginalPrice(product.code);
+      const modalEffectivePromo = (modalPromoPrice !== null) ? modalPromoPrice : modalDynDealPrice;
+      const modalEffectiveOriginal = (modalPromoPrice !== null)
+        ? Number(product.price)
+        : (modalDynOriginalPrice !== null ? modalDynOriginalPrice : Number(product.price));
+
+      const modalPriceHtml = (modalEffectivePromo !== null)
+        ? `<span style="color:var(--danger); font-weight:800; font-size:1.1em;">${modalEffectivePromo} ر.س</span>` +
+          (Number(modalEffectivePromo) < Number(modalEffectiveOriginal) ? ` <span style="text-decoration:line-through; color:var(--text-muted); font-size:0.9em; margin-right:6px;">${modalEffectiveOriginal} ر.س</span>` : '') +
+          ` <span style="background:var(--danger); color:#fff; border-radius:4px; padding:2px 6px; font-size:0.8em; font-weight:bold;">عرض ترويجي</span>`
+        : `<span>${product.price} ر.س</span>`;
+
       modalDetails.innerHTML = `
         <p><strong>الكود:</strong> ${product.code}</p>
         <p><strong>Alias:</strong> ${product.alias || '—'}</p>
-        <p><strong>السعر:</strong> ${product.price} ر.س</p>
+        <p><strong>السعر:</strong> ${modalPriceHtml}</p>
         <p><strong>المتوفر بالمعرض:</strong> ${getQtyInMall(product)}</p>
         <p><strong>إجمالي المستودعات:</strong> ${product.stock || 0}</p>
         
@@ -3893,7 +3908,17 @@
     }
 
     function printItemBarcode(code, name, alias, price) {
-      addManualBarcodeItem(code, name, alias, price, 1);
+      const product = (window.data || []).find(p => String(p.code).toLowerCase() === String(code).toLowerCase() || (p.alias && String(p.alias).toLowerCase() === String(code).toLowerCase()));
+      const resolvedCode = product ? product.code : code;
+      const resolvedAlias = product ? (product.alias || "") : (alias || "");
+      const promoPrice = getPromoPrice(resolvedCode, resolvedAlias);
+      const dynDeal = getDynamicsDealPrice(resolvedCode);
+      const effectivePromo = (promoPrice !== null) ? promoPrice : dynDeal;
+      const finalPrice = (effectivePromo !== null && effectivePromo !== undefined)
+        ? effectivePromo
+        : (price !== undefined && price !== null && !isNaN(parseFloat(price)) && parseFloat(price) > 0 ? parseFloat(price) : (product ? (product.price || 0) : 0));
+
+      addManualBarcodeItem(code, name, alias, finalPrice, 1);
       showSuccessModal('تمت إضافة المنتج إلى قائمة الطباعة');
     }
 
@@ -3905,11 +3930,26 @@
       let resolvedCode = product ? product.code : code;
       let resolvedName = product ? product.name : (name || "منتج غير معروف");
       let resolvedAlias = product ? (product.alias || "") : (alias || "");
-      let resolvedPrice = product ? (product.price || 0) : (price || 0);
+      
+      const promoPrice = getPromoPrice(resolvedCode, resolvedAlias);
+      const dynDeal = getDynamicsDealPrice(resolvedCode);
+      const effectivePromo = (promoPrice !== null) ? promoPrice : dynDeal;
+
+      let resolvedPrice;
+      if (effectivePromo !== null && effectivePromo !== undefined) {
+        resolvedPrice = effectivePromo;
+      } else if (price !== undefined && price !== null && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+        resolvedPrice = parseFloat(price);
+      } else if (product && product.price !== undefined) {
+        resolvedPrice = product.price || 0;
+      } else {
+        resolvedPrice = 0;
+      }
 
       const existing = batchPrintItems.find(item => String(item.code).toLowerCase() === String(resolvedCode).toLowerCase());
       if (existing) {
         existing.qty += qty;
+        existing.price = resolvedPrice;
       } else {
         batchPrintItems.push({
           code: resolvedCode,
@@ -3935,6 +3975,7 @@
           <div style="text-align: right; flex: 1; min-width: 0;">
             <div style="font-weight: bold; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.name}">${item.name}</div>
             <div style="font-size: 0.8em; color: var(--text-muted);" dir="ltr">Code: ${item.code} | Alias: ${item.alias || '-'}</div>
+            <div style="font-size: 0.85em; color: var(--primary); font-weight: bold;">${Number(item.price).toFixed(2)} ريال</div>
           </div>
           <div style="display:flex; align-items:center; gap: 10px;">
             <input type="number" min="1" value="${item.qty}" style="width: 60px; padding: 5px; text-align: center; border: 1px solid var(--border-color); border-radius: 5px;" onchange="updateBatchItemQty(${index}, this.value)">
