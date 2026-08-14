@@ -7385,25 +7385,6 @@ const EMPLOYEES = [
         "addressBooks": "1105-C;1105-E"
     },
     {
-        "employeeId": "5004-مها سالم العتيبي",
-        "personnelNumber": "5004",
-        "name": "مها سالم العتيبي",
-        "startDate": "2026-08-09",
-        "manager": "محمدكلو",
-        "showroom": "1113-51-Park Avenue Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1113-51-Park Avenue Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1113-C",
-                    "1113-E"
-                ]
-            }
-        ],
-        "addressBooks": "1113-C;1113-E"
-    },
-    {
         "employeeId": "5005-رغد فيصل القحطاني",
         "personnelNumber": "5005",
         "name": "رغد فيصل القحطاني",
