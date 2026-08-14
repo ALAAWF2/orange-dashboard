@@ -942,6 +942,10 @@
                         <i class="fa-solid fa-paper-plane"></i>
                         <span class="nav-text">إرسال تقارير الفروع</span>
                     </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance-content" type="button" role="tab">
+                        <i class="fa-solid fa-fingerprint text-warning"></i>
+                        <span class="nav-text">سجل البصمات والدوام 🕒 <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.68rem; padding: 2px 6px;">مباشر</span></span>
+                    </button>
                     
                     <span class="sidebar-section-header">── إدارة البيانات ──</span>
                     
@@ -1230,6 +1234,195 @@
                                         </table>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: سجل البصمات والدوام الحي (BioTime 8.5) -->
+                    <div class="tab-pane fade" id="attendance-content" role="tabpanel">
+                        <!-- Top Header & Controls Bar -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                            <div>
+                                <h2 class="h3 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-fingerprint text-orange"></i>
+                                    <span>مركز البصمات والدوام الحي</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fs-6 px-3 py-1 fw-normal">
+                                        <i class="fa-solid fa-circle-dot fa-fade me-1"></i> متصل بالسيرفر (BioTime 8.5)
+                                    </span>
+                                </h2>
+                                <p class="text-muted small mb-0">مراقبة حضور وانصراف موظفي الفروع لحظياً ومطابقتها التلقائية مع قاعدة البيانات</p>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="openAttendanceMatchingModal()">
+                                    <i class="fa-solid fa-user-check text-primary"></i>
+                                    <span>تقرير المطابقة</span>
+                                </button>
+                                <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportAttendanceToExcel()">
+                                    <i class="fa-solid fa-file-excel text-success"></i>
+                                    <span>تصدير Excel</span>
+                                </button>
+                                <button class="btn btn-orange-premium btn-sm d-flex align-items-center gap-2 shadow-sm px-3" id="btnSyncAttendance" onclick="syncAttendanceNow()">
+                                    <i class="fa-solid fa-arrows-rotate" id="attSyncIcon"></i>
+                                    <span id="attSyncText">مزامنة لحظية من السيرفر</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Top KPI Row -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="glass-card p-3 h-100 border-start border-4 border-success">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="kpi-title text-muted">الحاضرون اليوم</span>
+                                        <div class="kpi-icon-pill bg-success-subtle text-success p-2 rounded-circle">
+                                            <i class="fa-solid fa-user-clock fs-5"></i>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <span class="kpi-value fs-2 fw-bold text-dark" id="attKpiPresent">--</span>
+                                        <span class="text-muted small">موظف بالمعارض</span>
+                                    </div>
+                                    <div class="mt-2 text-success small d-flex align-items-center gap-1" id="attKpiPresentSub">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                        <span>بصمات مسجلة بنجاح اليوم</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="glass-card p-3 h-100 border-start border-4 border-warning">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="kpi-title text-muted">إجمالي البصمات المسجلة</span>
+                                        <div class="kpi-icon-pill bg-warning-subtle text-warning p-2 rounded-circle">
+                                            <i class="fa-solid fa-fingerprint fs-5"></i>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <span class="kpi-value fs-2 fw-bold text-dark" id="attKpiTotalPunches">--</span>
+                                        <span class="text-muted small">حركة بصمة</span>
+                                    </div>
+                                    <div class="mt-2 small text-muted d-flex align-items-center justify-content-between" id="attKpiPunchesBreakdown">
+                                        <span class="text-success"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>دخول: <b id="attKpiInCount">0</b></span>
+                                        <span class="text-danger"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>خروج: <b id="attKpiOutCount">0</b></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="glass-card p-3 h-100 border-start border-4 border-info">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="kpi-title text-muted">الفروع النشطة</span>
+                                        <div class="kpi-icon-pill bg-info-subtle text-info p-2 rounded-circle">
+                                            <i class="fa-solid fa-store fs-5"></i>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <span class="kpi-value fs-2 fw-bold text-dark" id="attKpiActiveBranches">--</span>
+                                        <span class="text-muted small" id="attKpiTotalBranches">فرع نشط</span>
+                                    </div>
+                                    <div class="mt-2 text-info small d-flex align-items-center gap-1" id="attKpiBranchesSub">
+                                        <i class="fa-solid fa-signal"></i>
+                                        <span>فروع تم تسجيل حضور بها اليوم</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="glass-card p-3 h-100 border-start border-4 border-primary">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="kpi-title text-muted">دقة المطابقة مع النظام</span>
+                                        <div class="kpi-icon-pill bg-primary-subtle text-primary p-2 rounded-circle">
+                                            <i class="fa-solid fa-circle-nodes fs-5"></i>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <span class="kpi-value fs-2 fw-bold text-dark" id="attKpiMatchPercent">--%</span>
+                                        <span class="text-muted small" id="attKpiMatchedRatio">-- / --</span>
+                                    </div>
+                                    <div class="mt-2 text-primary small d-flex align-items-center gap-1">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                        <span>مطابقة برمجية تلقائية دون تعديل الجداول</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters & View Mode Navigation -->
+                        <div class="glass-card p-3 mb-4 shadow-sm">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa-regular fa-calendar me-1"></i> التاريخ:</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="date" class="form-control" id="attDateFilter" onchange="loadAttendanceData(true)">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="setAttDateToday()" title="اليوم">اليوم</button>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="setAttDateYesterday()" title="أمس">أمس</button>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-shop me-1"></i> الفرع / المعرض:</label>
+                                    <select class="form-select form-select-sm" id="attAreaFilter" onchange="onAttendanceFilterChange()">
+                                        <option value="">جميع الفروع والمعارض</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-magnifying-glass me-1"></i> بحث سريع:</label>
+                                    <input type="text" class="form-control form-control-sm" id="attSearchInput" placeholder="اسم الموظف، الرقم الوظيفي..." oninput="debounceAttSearch()">
+                                </div>
+                                <div class="col-12 col-md-3 text-md-end pt-md-4">
+                                    <div class="btn-group btn-group-sm w-100 shadow-sm" role="group" id="attViewSwitcher">
+                                        <button type="button" class="btn btn-outline-dark active" id="btnViewPunches" onclick="switchAttendanceView('punches')">
+                                            <i class="fa-solid fa-list-check me-1"></i> سجل البصمات
+                                        </button>
+                                        <button type="button" class="btn btn-outline-dark" id="btnViewShowrooms" onclick="switchAttendanceView('showrooms')">
+                                            <i class="fa-solid fa-table-cells-large me-1"></i> بطاقات الفروع
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- View 1: Live Punch Log Feed -->
+                        <div id="attViewPunchesContainer" class="glass-card mb-4 overflow-hidden">
+                            <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light bg-opacity-50">
+                                <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-wave-square text-orange"></i>
+                                    <span>البصمات المسجلة لحظياً</span>
+                                    <span class="badge bg-secondary rounded-pill" id="attLogsCountBadge">0 حركة</span>
+                                </div>
+                                <div class="small text-muted" id="attLastRefreshedText">آخر تحديث: --</div>
+                            </div>
+                            <div class="table-responsive" style="max-height: 600px;">
+                                <table class="table table-hover align-middle mb-0 text-center custom-admin-table" id="attendanceLogsTable">
+                                    <thead class="table-light sticky-top" style="z-index: 2;">
+                                        <tr>
+                                            <th style="width: 130px;">الوقت</th>
+                                            <th class="text-start">اسم الموظف</th>
+                                            <th>الرقم الوظيفي</th>
+                                            <th>الفرع / المنطقة</th>
+                                            <th>نوع البصمة</th>
+                                            <th>وسيلة التحقق</th>
+                                            <th>جهاز البصمة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attendanceLogsBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-5 text-muted">
+                                                <div class="spinner-border spinner-border-sm text-orange me-2" role="status"></div>
+                                                جاري تحميل سجل البصمات...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-2 border-top bg-light text-center small text-muted d-flex justify-content-between align-items-center px-3" id="attTableFooter">
+                                <span id="attShowingRecords">عرض البصمات</span>
+                                <button class="btn btn-link btn-sm text-orange text-decoration-none p-0" id="btnLoadMorePunches" onclick="loadMoreAttendanceLogs()">
+                                    <i class="fa-solid fa-angles-down me-1"></i> تحميل المزيد من الحركات
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- View 2: Showrooms Attendance Grid -->
+                        <div id="attViewShowroomsContainer" class="mb-4" style="display: none;">
+                            <div class="row g-3" id="attendanceShowroomsGrid">
+                                <!-- Populated dynamically -->
                             </div>
                         </div>
                     </div>
@@ -2738,6 +2931,9 @@
             
             // Map tab content panels to their load functions
             switch (tabId) {
+                case '#attendance-content':
+                    await loadAttendanceData(forceRefresh);
+                    break;
                 case '#sales-content':
                     await ensureMgmtDataLoaded();
                     loadShowroomPerformance();
@@ -7681,7 +7877,547 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+    
+        // ==========================================
+        // BIOMETRIC ATTENDANCE HUB (BioTime 8.5)
+        // ==========================================
+        let attCurrentDate = new Date().toISOString().slice(0, 10);
+        let attLogsCache = [];
+        let attSummaryCache = null;
+        let attMatchingCache = null;
+        let attLogsLimit = 150;
+        let attLogsOffset = 0;
+        let attSearchDebounceTimer = null;
+        let attCurrentFilterTab = 'all';
+
+        function setAttDateToday() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            document.getElementById('attDateFilter').value = todayStr;
+            loadAttendanceData(true);
+        }
+
+        function setAttDateYesterday() {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            document.getElementById('attDateFilter').value = d.toISOString().slice(0, 10);
+            loadAttendanceData(true);
+        }
+
+        function switchAttendanceView(viewMode) {
+            const punchesContainer = document.getElementById('attViewPunchesContainer');
+            const showroomsContainer = document.getElementById('attViewShowroomsContainer');
+            const btnPunches = document.getElementById('btnViewPunches');
+            const btnShowrooms = document.getElementById('btnViewShowrooms');
+
+            if (viewMode === 'punches') {
+                punchesContainer.style.display = 'block';
+                showroomsContainer.style.display = 'none';
+                btnPunches.classList.add('active');
+                btnShowrooms.classList.remove('active');
+            } else {
+                punchesContainer.style.display = 'none';
+                showroomsContainer.style.display = 'block';
+                btnPunches.classList.remove('active');
+                btnShowrooms.classList.add('active');
+            }
+        }
+
+        function debounceAttSearch() {
+            clearTimeout(attSearchDebounceTimer);
+            attSearchDebounceTimer = setTimeout(() => {
+                attLogsOffset = 0;
+                loadAttendanceLogs();
+            }, 300);
+        }
+
+        function onAttendanceFilterChange() {
+            attLogsOffset = 0;
+            loadAttendanceLogs();
+        }
+
+        async function loadAttendanceData(forceRefresh = false) {
+            let dateInput = document.getElementById('attDateFilter');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().slice(0, 10);
+            }
+            const selectedDate = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
+            attCurrentDate = selectedDate;
+
+            // 1. Fetch Summary KPIs
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/summary?date=${selectedDate}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    attSummaryCache = data;
+                    renderAttendanceSummary(data);
+                }
+            } catch (e) {
+                console.error("Failed to load attendance summary:", e);
+            }
+
+            // 2. Fetch Logs
+            attLogsOffset = 0;
+            await loadAttendanceLogs();
+            loadedTabs['#attendance-content'] = true;
+        }
+
+        function renderAttendanceSummary(data) {
+            const kpis = data.kpis || {};
+            document.getElementById('attKpiPresent').textContent = kpis.present_employees || 0;
+            document.getElementById('attKpiTotalPunches').textContent = kpis.total_punches || 0;
+            document.getElementById('attKpiInCount').textContent = kpis.check_in_count || 0;
+            document.getElementById('attKpiOutCount').textContent = kpis.check_out_count || 0;
+            document.getElementById('attKpiActiveBranches').textContent = kpis.active_showrooms || 0;
+            
+            const matchRatio = (kpis.total_retail_matched && kpis.total_retail_matched > 0)
+                ? Math.round((kpis.present_employees / kpis.total_retail_matched) * 100)
+                : (kpis.matched_punches && kpis.total_punches ? Math.round((kpis.matched_punches / kpis.total_punches) * 100) : 0);
+            
+            document.getElementById('attKpiMatchPercent').textContent = `${Math.min(matchRatio, 100)}%`;
+            document.getElementById('attKpiMatchedRatio').textContent = `${kpis.present_employees} من ${kpis.total_retail_matched || 382} موظف`;
+
+            // Populate Area Filter Dropdown if needed
+            const areaSelect = document.getElementById('attAreaFilter');
+            const currentVal = areaSelect.value;
+            if (data.areas && Array.isArray(data.areas)) {
+                areaSelect.innerHTML = '<option value="">جميع الفروع والمعارض (' + data.areas.length + ')</option>';
+                data.areas.forEach(area => {
+                    const opt = document.createElement('option');
+                    opt.value = area;
+                    opt.textContent = area;
+                    if (area === currentVal) opt.selected = true;
+                    areaSelect.appendChild(opt);
+                });
+            }
+
+            // Render Showrooms Grid
+            renderAttendanceShowroomsGrid(data.showrooms || []);
+        }
+
+        function renderAttendanceShowroomsGrid(showrooms) {
+            const grid = document.getElementById('attendanceShowroomsGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            if (showrooms.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center py-5 text-muted glass-card">لا توجد بيانات بصمات مسجلة للفروع في هذا التاريخ.</div>';
+                return;
+            }
+
+            showrooms.forEach(sh => {
+                const col = document.createElement('div');
+                col.className = 'col-12 col-sm-6 col-md-4 col-xl-3';
+                
+                const isOnline = sh.present_count > 0;
+                const statusBadge = isOnline
+                    ? '<span class="badge bg-success rounded-pill px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>نشط</span>'
+                    : '<span class="badge bg-secondary rounded-pill px-2 py-1">لا توجد بصمات</span>';
+
+                const firstPunchFormatted = sh.first_punch ? new Date(sh.first_punch).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+
+                col.innerHTML = `
+                    <div class="glass-card p-3 h-100 shadow-sm border ${isOnline ? 'border-success-subtle' : ''}" style="cursor: pointer; transition: transform 0.2s;" onclick="filterPunchesByShowroom('${escapeHtml(sh.area_name)}')">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="fw-bold text-dark mb-0 text-truncate" style="max-width: 160px;" title="${escapeHtml(sh.area_name)}">${escapeHtml(sh.area_name)}</h6>
+                            ${statusBadge}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline my-3">
+                            <span class="text-muted small">الموظفون الحاضرون:</span>
+                            <span class="fs-4 fw-bold ${isOnline ? 'text-success' : 'text-muted'}">${sh.present_count}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center small text-muted border-top pt-2">
+                            <span><i class="fa-regular fa-clock me-1"></i>أول بصمة:</span>
+                            <span class="fw-bold text-dark">${firstPunchFormatted}</span>
+                        </div>
+                        <div class="mt-2 text-center">
+                            <span class="text-orange small fw-bold" style="font-size: 0.78rem;">عرض سجل الحركات <i class="fa-solid fa-arrow-left"></i></span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            });
+        }
+
+        function filterPunchesByShowroom(areaName) {
+            const areaSelect = document.getElementById('attAreaFilter');
+            if (areaSelect) {
+                areaSelect.value = areaName;
+            }
+            switchAttendanceView('punches');
+            onAttendanceFilterChange();
+        }
+
+        async function loadAttendanceLogs() {
+            const tbody = document.getElementById('attendanceLogsBody');
+            const areaSelect = document.getElementById('attAreaFilter');
+            const searchInput = document.getElementById('attSearchInput');
+            const dateInput = document.getElementById('attDateFilter');
+
+            const area = areaSelect ? areaSelect.value : '';
+            const q = searchInput ? searchInput.value.trim() : '';
+            const date = dateInput ? dateInput.value : attCurrentDate;
+
+            if (attLogsOffset === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-orange me-2"></div>جاري تحميل الحركات...</td></tr>';
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    date: date,
+                    area: area,
+                    q: q,
+                    limit: attLogsLimit,
+                    offset: attLogsOffset
+                });
+
+                const res = await fetch(`${API_BASE}/api/attendance/logs?${params.toString()}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const logs = data.logs || [];
+                    const total = data.total || 0;
+
+                    document.getElementById('attLogsCountBadge').textContent = `${total} حركة`;
+                    document.getElementById('attLastRefreshedText').textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-SA')}`;
+
+                    if (attLogsOffset === 0) {
+                        tbody.innerHTML = '';
+                    }
+
+                    if (logs.length === 0 && attLogsOffset === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted"><i class="fa-solid fa-inbox fs-3 d-block mb-2 text-muted opacity-50"></i>لا توجد بصمات مسجلة مطابقة للبحث المحدد.</td></tr>';
+                        document.getElementById('btnLoadMorePunches').style.display = 'none';
+                        return;
+                    }
+
+                    logs.forEach(log => {
+                        const tr = document.createElement('tr');
+                        const timeStr = log.punch_time ? new Date(log.punch_time).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
+                        
+                        let punchBadge = '<span class="badge bg-secondary">بصمة</span>';
+                        if (log.punch_state_display === 'دخول' || log.punch_state === '0') {
+                            punchBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>دخول</span>';
+                        } else if (log.punch_state_display === 'خروج' || log.punch_state === '1') {
+                            punchBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>خروج</span>';
+                        }
+
+                        let matchIcon = log.is_matched
+                            ? '<i class="fa-solid fa-circle-check text-success ms-1" title="موظف مطابق في النظام"></i>'
+                            : '<i class="fa-solid fa-circle-question text-muted ms-1" title="غير مسجل في كادر المعارض"></i>';
+
+                        let verifyBadge = '<span class="badge bg-light text-dark border">' + escapeHtml(log.verify_type_display || 'بصمة') + '</span>';
+
+                        tr.innerHTML = `
+                            <td class="fw-bold text-dark dir-ltr">${timeStr}</td>
+                            <td class="text-start">
+                                <div class="fw-bold text-dark d-flex align-items-center">${escapeHtml(log.employee_name)}${matchIcon}</div>
+                                <small class="text-muted" style="font-size: 0.72rem;">${escapeHtml(log.department || 'المعارض')}</small>
+                            </td>
+                            <td><span class="badge bg-dark-subtle text-dark font-monospace">${escapeHtml(log.emp_code)}</span></td>
+                            <td class="fw-semibold text-secondary">${escapeHtml(log.area_alias || '--')}</td>
+                            <td>${punchBadge}</td>
+                            <td>${verifyBadge}</td>
+                            <td><small class="text-muted font-monospace">${escapeHtml(log.terminal_alias || log.terminal_sn || '--')}</small></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    // Manage Load More button
+                    const loadedCount = (attLogsOffset + logs.length);
+                    document.getElementById('attShowingRecords').textContent = `عرض ${loadedCount} من ${total} حركة`;
+                    if (loadedCount < total) {
+                        document.getElementById('btnLoadMorePunches').style.display = 'inline-block';
+                    } else {
+                        document.getElementById('btnLoadMorePunches').style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load attendance logs:", e);
+                if (attLogsOffset === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-danger py-4">حدث خطأ أثناء جلب السجلات: ${e.message}</td></tr>`;
+                }
+            }
+        }
+
+        function loadMoreAttendanceLogs() {
+            attLogsOffset += attLogsLimit;
+            loadAttendanceLogs();
+        }
+
+        async function syncAttendanceNow() {
+            const btn = document.getElementById('btnSyncAttendance');
+            const icon = document.getElementById('attSyncIcon');
+            const text = document.getElementById('attSyncText');
+
+            btn.disabled = true;
+            icon.classList.add('fa-spin');
+            text.textContent = 'جاري المزامنة من السيرفر...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/sync`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ days: 2 })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showAdminToast(`تمت المزامنة بنجاح! تم استيراد وتحديث ${data.inserted_or_updated || 0} حركة بصمة.`, 'success', 'fa-circle-check');
+                    await loadAttendanceData(true);
+                } else {
+                    const err = await res.json();
+                    showAdminToast(`فشلت المزامنة: ${err.error || 'خطأ غير معروف'}`, 'danger', 'fa-triangle-exclamation');
+                }
+            } catch (e) {
+                showAdminToast(`خطأ في الاتصال بسيرفر البصمات: ${e.message}`, 'danger', 'fa-triangle-exclamation');
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('fa-spin');
+                text.textContent = 'مزامنة لحظية من السيرفر';
+            }
+        }
+
+        async function openAttendanceMatchingModal() {
+            const modalEl = document.getElementById('attendanceMatchingModal');
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            const tbody = document.getElementById('modalEmpTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-orange me-2"></div>جاري تحميل تقرير المطابقة...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/matching`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    attMatchingCache = data;
+
+                    document.getElementById('modalTotalBiotimeEmp').textContent = data.total_biotime_employees || 0;
+                    document.getElementById('modalMatchedEmp').textContent = data.matched_count || 0;
+                    document.getElementById('modalUnmatchedEmp').textContent = (data.total_biotime_employees - data.matched_count) || 0;
+                    
+                    const ratio = data.total_retail_in_db ? Math.round((data.matched_count / data.total_retail_in_db) * 100) : 100;
+                    document.getElementById('modalCoveragePercent').textContent = `${ratio}%`;
+
+                    renderMatchingModalTable(data.employees || []);
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-danger py-4">فشل تحميل التقرير: ${e.message}</td></tr>`;
+            }
+        }
+
+        function filterModalEmpTab(tabType) {
+            attCurrentFilterTab = tabType;
+            ['AllMatched', 'OnlyMatched', 'OnlyUnmatched'].forEach(id => {
+                const b = document.getElementById(`btnFilter${id}`);
+                if (b) b.classList.remove('active');
+            });
+
+            if (tabType === 'all') document.getElementById('btnFilterAllMatched').classList.add('active');
+            if (tabType === 'matched') document.getElementById('btnFilterOnlyMatched').classList.add('active');
+            if (tabType === 'unmatched') document.getElementById('btnFilterOnlyUnmatched').classList.add('active');
+
+            filterMatchingModalTable();
+        }
+
+        function filterMatchingModalTable() {
+            if (!attMatchingCache || !attMatchingCache.employees) return;
+            const searchVal = (document.getElementById('modalEmpSearch').value || '').trim().toLowerCase();
+            
+            let filtered = attMatchingCache.employees.filter(emp => {
+                if (attCurrentFilterTab === 'matched' && !emp.is_matched) return false;
+                if (attCurrentFilterTab === 'unmatched' && emp.is_matched) return false;
+                if (!searchVal) return true;
+
+                return (
+                    (emp.emp_code && emp.emp_code.toLowerCase().includes(searchVal)) ||
+                    (emp.name && emp.name.toLowerCase().includes(searchVal)) ||
+                    (emp.matched_name && emp.matched_name.toLowerCase().includes(searchVal)) ||
+                    (emp.department && emp.department.toLowerCase().includes(searchVal))
+                );
+            });
+
+            renderMatchingModalTable(filtered);
+        }
+
+        function renderMatchingModalTable(employees) {
+            const tbody = document.getElementById('modalEmpTableBody');
+            tbody.innerHTML = '';
+
+            if (employees.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">لا توجد نتائج مطابقة.</td></tr>';
+                return;
+            }
+
+            employees.slice(0, 300).forEach(emp => {
+                const tr = document.createElement('tr');
+                const badge = emp.is_matched
+                    ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-check me-1"></i>مطابق بنجاح</span>'
+                    : '<span class="badge bg-secondary-subtle text-secondary px-2 py-1">إدارة / أخرى</span>';
+
+                tr.innerHTML = `
+                    <td><span class="font-monospace fw-bold">${escapeHtml(emp.emp_code)}</span></td>
+                    <td class="text-start fw-bold text-dark">${escapeHtml(emp.name)}</td>
+                    <td><span class="badge bg-light text-dark border">${escapeHtml(emp.department || '--')}</span></td>
+                    <td>${badge}</td>
+                    <td class="text-start ${emp.is_matched ? 'text-success fw-bold' : 'text-muted'}">${escapeHtml(emp.matched_name || '--')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportAttendanceToExcel() {
+            const tbody = document.getElementById('attendanceLogsBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            if (rows.length === 0 || rows[0].cells.length < 5) {
+                alert("لا توجد حركات بصمة لتصديرها حالياً!");
+                return;
+            }
+
+            try {
+                const excelData = [];
+                rows.forEach(tr => {
+                    if (tr.cells.length < 7) return;
+                    excelData.push({
+                        "وقت البصمة": tr.cells[0].textContent.trim(),
+                        "اسم الموظف": tr.cells[1].querySelector('.fw-bold') ? tr.cells[1].querySelector('.fw-bold').textContent.trim() : tr.cells[1].textContent.trim(),
+                        "القسم / الإدارة": tr.cells[1].querySelector('small') ? tr.cells[1].querySelector('small').textContent.trim() : "",
+                        "الرقم الوظيفي": tr.cells[2].textContent.trim(),
+                        "الفرع / المنطقة": tr.cells[3].textContent.trim(),
+                        "نوع الحركة": tr.cells[4].textContent.trim(),
+                        "طريقة التحقق": tr.cells[5].textContent.trim(),
+                        "جهاز البصمة": tr.cells[6].textContent.trim(),
+                    });
+                });
+
+                if (excelData.length === 0) {
+                    alert("لا توجد بيانات جاهزة للتصدير.");
+                    return;
+                }
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                if (!ws['!views']) ws['!views'] = [];
+                ws['!views'].push({ RTL: true });
+
+                ws['!cols'] = [
+                    { wch: 16 }, // Punch Time
+                    { wch: 26 }, // Emp Name
+                    { wch: 20 }, // Dept
+                    { wch: 16 }, // Emp Code
+                    { wch: 22 }, // Branch
+                    { wch: 14 }, // Punch State
+                    { wch: 16 }, // Verify Type
+                    { wch: 20 }  // Device SN
+                ];
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `سجل البصمات ${attCurrentDate}`);
+                XLSX.writeFile(wb, `سجل_بصمات_الموظفين_${attCurrentDate}.xlsx`);
+            } catch (err) {
+                console.error("Export Excel error:", err);
+                alert("حدث خطأ أثناء تصدير ملف الإكسل: " + err.message);
+            }
+        }
+
     </script>
+
+    <!-- Modal: تقرير مطابقة الموظفين بين سيرفر البصمات وقاعدة البيانات -->
+    <div class="modal fade" id="attendanceMatchingModal" tabindex="-1" aria-labelledby="attMatchingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white border-0 px-4 py-3" style="border-radius: 16px 16px 0 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-fingerprint text-warning fs-5"></i>
+                        <h5 class="modal-title fw-bold" id="attMatchingModalLabel">تقرير مطابقة موظفي البصمات مع النظام</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <!-- Modal Stats Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border text-center">
+                                <small class="text-muted d-block mb-1">إجمالي موظفي سيرفر البصمة</small>
+                                <h3 class="fw-bold text-dark mb-0" id="modalTotalBiotimeEmp">--</h3>
+                                <small class="text-muted" style="font-size: 0.72rem;">(معارض + إدارة + مستودعات)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border text-center">
+                                <small class="text-muted d-block mb-1">موظفو النظام المتطابقون</small>
+                                <h3 class="fw-bold text-success mb-0" id="modalMatchedEmp">--</h3>
+                                <small class="text-success" style="font-size: 0.72rem;">مطابق 100% بالرقم الوظيفي</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border text-center">
+                                <small class="text-muted d-block mb-1">موظفو الإدارة والمستودع</small>
+                                <h3 class="fw-bold text-secondary mb-0" id="modalUnmatchedEmp">--</h3>
+                                <small class="text-muted" style="font-size: 0.72rem;">خارج كادر المعارض بالتجزئة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border text-center">
+                                <small class="text-muted d-block mb-1">نسبة التغطية بالمعارض</small>
+                                <h3 class="fw-bold text-primary mb-0" id="modalCoveragePercent">--%</h3>
+                                <small class="text-primary" style="font-size: 0.72rem;">جاهزية الربط اللحظي</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search within modal -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="input-group input-group-sm w-50">
+                            <span class="input-group-text bg-white"><i class="fa-solid fa-search text-muted"></i></span>
+                            <input type="text" class="form-control" id="modalEmpSearch" placeholder="بحث في قائمة الموظفين..." oninput="filterMatchingModalTable()">
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-dark active" id="btnFilterAllMatched" onclick="filterModalEmpTab('all')">الكل</button>
+                            <button type="button" class="btn btn-outline-success" id="btnFilterOnlyMatched" onclick="filterModalEmpTab('matched')">المتطابقون فقط</button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnFilterOnlyUnmatched" onclick="filterModalEmpTab('unmatched')">الإدارة / أخرى</button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Table -->
+                    <div class="bg-white rounded-3 shadow-sm border overflow-hidden">
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-hover align-middle mb-0 text-center" id="modalEmpTable">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>كود البصمة</th>
+                                        <th class="text-start">اسم الموظف (سيرفر البصمة)</th>
+                                        <th>القسم / الإدارة</th>
+                                        <th>حالة المطابقة</th>
+                                        <th class="text-start">الاسم المطابق في النظام</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalEmpTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">جاري تحميل بيانات المطابقة...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-0 px-4 py-3">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
