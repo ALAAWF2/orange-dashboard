@@ -2160,9 +2160,9 @@
       const weeklySales = Number(p.sales) || 0;
       const mallSales = typeof getSalesInMall === 'function' ? getSalesInMall(p.code) : 0;
       if (typeof userMall !== 'undefined' && userMall && userMall !== 'إجمالي المستودعات') {
-        return mallSales >= 5 || weeklySales >= 20;
+        return mallSales >= 4 || (mallSales >= 1 && weeklySales >= 20);
       }
-      return weeklySales >= 15;
+      return weeklySales >= 20;
     }
 
     function isLowCentralStock(p) {
@@ -2344,12 +2344,26 @@
       } catch (e) { window.SALES_BY_OUTLET = {}; }
     }
 
+    function cleanMallKey(v) {
+      if (!v) return '';
+      const str = String(v).toLowerCase().trim();
+      const nums = str.match(/\d+/g) || [];
+      const normNums = nums.map(n => parseInt(n, 10)).join(' ');
+      const textPart = str.replace(/\d+/g, '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+      return (textPart + ' ' + normNums).trim();
+    }
+
+    function normalizeKey(v) {
+      return cleanMallKey(v);
+    }
+
     function getStockShowrooms(product) {
       const list = [];
       if (!product || !product.branches) return list;
+      const currentTargetKey = cleanMallKey(userMall);
       for (const [branchName, qty] of Object.entries(product.branches)) {
         const bLower = branchName.toLowerCase();
-        if (branchName !== userMall &&
+        if (cleanMallKey(branchName) !== currentTargetKey &&
             qty > 0 &&
             bLower !== 'warehouse' &&
             !bLower.includes('riyadh') &&
@@ -2363,10 +2377,6 @@
       return list;
     }
 
-    function normalizeKey(v) {
-      return String(v ?? "").toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-    }
-
     let salesLookupContext = {
       mallKey: null,
       dataRef: null,
@@ -2375,7 +2385,7 @@
     };
 
     function rebuildSalesLookupIfNeeded() {
-      const mallKey = normalizeKey(userMall);
+      const mallKey = cleanMallKey(userMall);
       const dataRef = Array.isArray(window.data)
         ? window.data
         : (Array.isArray(window.products) ? window.products : null);
@@ -2398,7 +2408,7 @@
         Object.entries(salesByOutletRef).forEach(([code, outlets]) => {
           if (!outlets || typeof outlets !== 'object') return;
           for (const [mallName, value] of Object.entries(outlets)) {
-            if (normalizeKey(mallName) === mallKey) {
+            if (cleanMallKey(mallName) === mallKey) {
               values.set(String(code), Number(value) || 0);
               break;
             }
@@ -2421,19 +2431,25 @@
     }
 
     function getQtyInMall(d) {
+      if (!d || !d.branches) return 0;
       if (userMall === 'إجمالي المستودعات') {
         let total = 0;
-        if (d.branches) {
-          for (let k in d.branches) {
-            const kLower = k.toLowerCase();
-            if (kLower !== 'warehouse' && !kLower.includes('riyadh') && !kLower.includes('مستودع')) {
-              total += Number(d.branches[k]) || 0;
-            }
+        for (let k in d.branches) {
+          const kLower = k.toLowerCase();
+          if (kLower !== 'warehouse' && !kLower.includes('riyadh') && !kLower.includes('مستودع') && k !== '00-GIFTS' && k !== 'PLATFORMS' && k !== 'Transit') {
+            total += Number(d.branches[k]) || 0;
           }
         }
         return total;
       }
-      return d.branches?.[userMall] ?? 0;
+      if (d.branches[userMall] !== undefined) return Number(d.branches[userMall]) || 0;
+      const targetKey = cleanMallKey(userMall);
+      for (let k in d.branches) {
+        if (cleanMallKey(k) === targetKey) {
+          return Number(d.branches[k]) || 0;
+        }
+      }
+      return 0;
     }
 
     function mergeKitData() {
@@ -3222,10 +3238,14 @@
       } catch (err) {}
 
       rebuildDataForWarehouse(userWarehouse);
+      salesLookupContext.mallKey = null;
+      rebuildSalesLookupIfNeeded();
       const exportButton = document.getElementById('exportGuestBtn');
       const checklistButton = document.getElementById('checklistBtn');
       if (exportButton) exportButton.style.display = userWarehouse === 'TOTAL_WAREHOUSES' ? 'flex' : 'none';
       if (checklistButton) checklistButton.style.display = userMall !== 'إجمالي المستودعات' ? 'flex' : 'none';
+      renderCategoryPills();
+      updateActiveFiltersSummary();
       renderProducts();
     };
 
