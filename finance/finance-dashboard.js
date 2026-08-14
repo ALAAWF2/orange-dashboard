@@ -449,8 +449,9 @@
             { key: 'fixed_asset_number', label: 'الأصل', ltr: true },
             { key: 'name', label: 'الاسم' },
             { key: 'asset_location_name', label: 'الموقع' },
-            { key: 'acquisition_date', label: 'الاقتناء', ltr: true },
-            { key: 'acquisition_price', label: 'قيمة الاقتناء', money: true }
+            { key: 'acquisition_date', label: 'تاريخ الاقتناء', ltr: true },
+            { key: 'acquisition_price', label: 'قيمة الاقتناء', money: true },
+            { key: 'net_book_value', label: 'الصافي الدفتري (NBV)', money: true }
         ], payload.assets || []);
         secAssets.id = 'secDetailAssets';
         secAssets.hidden = true;
