@@ -2356,7 +2356,7 @@
             let values = [];
 
             if (categories.length) {
-                labels = categories.slice(0, 7).map(c => c.category_name || c.main_account_id);
+                labels = categories.slice(0, 7).map(c => c.name || c.main_account_id || 'مصروف تشغيلي');
                 values = categories.slice(0, 7).map(c => Math.abs(Number(c.amount) || 0));
             } else {
                 labels = ['مصاريف تشغيلية'];
@@ -2407,7 +2407,8 @@
                 chartInstances.ebitdaBar.destroy();
             }
 
-            const shList = (showrooms?.showrooms || []).filter(s => Number(s.non_sales_amount) > 0 || Number(s.sales_revenue) > 0);
+            const rawShowrooms = Array.isArray(showrooms?.data) ? showrooms.data : (Array.isArray(showrooms?.showrooms) ? showrooms.showrooms : (Array.isArray(showrooms) ? showrooms : []));
+            const shList = rawShowrooms.filter(s => Number(s.non_sales_amount) > 0);
             const sorted = [...shList].sort((a, b) => (Number(b.non_sales_amount) || 0) - (Number(a.non_sales_amount) || 0));
             const top5 = sorted.slice(0, 5);
             const bottom5 = sorted.slice(-5).reverse();
@@ -2533,75 +2534,76 @@
 
         // Sheet 1: Showroom P&L
         const pnlRows = [
-            { "البند المالي": "اسم المعرض", "القيمة / البيان": sh.name, "ملاحظات": `كود الفرع: ${sh.branch_dimension || sh.number}` },
-            { "البند المالي": "الفترة المالية", "القيمة / البيان": `${payload.period?.start || ''} إلى ${payload.period?.end || ''}`, "ملاحظات": "تاريخ الحركة" },
-            { "البند المالي": "إيرادات مبيعات المعرض (Revenue)", "القيمة / البيان": hasPnl ? Number(pnlSum.revenue || 0) : "غير متوفر", "ملاحظات": "إجمالي المبيعات المعتمدة" },
-            { "البند المالي": "تكلفة البضاعة المباعة (COGS)", "القيمة / البيان": hasPnl ? Number(pnlSum.cogs || 0) : "غير متوفر", "ملاحظات": "تكلفة المخزون المباع" },
-            { "البند المالي": "مجمل الربح (Gross Profit)", "القيمة / البيان": hasPnl ? Number(pnlSum.gross_profit || 0) : "غير متوفر", "ملاحظات": `هامش مجمل الربح: ${pnlSum.gross_margin_pct || 0}%` },
-            { "البند المالي": "مصروف الإيجار الشهري المستهلك", "القيمة / البيان": Number(pnlSum.lease_amortization || payload.summary?.monthly_lease_expense || 0), "ملاحظات": "إيجار الفرع" },
-            { "البند المالي": "رواتب ومستحقات الموظفين", "القيمة / البيان": Number(pnlSum.salaries_expense || 0), "ملاحظات": "رواتب كادر المعرض" },
-            { "البند المالي": "مصاريف الصيانة والخدمات", "القيمة / البيان": Number(pnlSum.maintenance_expense || 0), "ملاحظات": "صيانة وتشغيل" },
-            { "البند المالي": "إهلاك الأصول الثابتة والديكور", "القيمة / البيان": Number(pnlSum.depreciation_expense || 0), "ملاحظات": "إهلاك دفتري" },
-            { "البند المالي": "مصاريف تشغيلية أخرى", "القيمة / البيان": Number(pnlSum.other_opex || 0), "ملاحظات": "كهرباء، ضيافة، عُدد" },
-            { "البند المالي": "إجمالي المصاريف التشغيلية (Total OPEX)", "القيمة / البيان": Number(pnlSum.total_expense || payload.summary?.trial_balance_expense || 0), "ملاحظات": "مجموع مصاريف المعرض" },
-            { "البند المالي": "صافي الربح التشغيلي للمعرض (EBITDA)", "القيمة / البيان": hasPnl ? Number(pnlSum.operating_result || 0) : "—", "ملاحظات": `هامش EBITDA: ${pnlSum.ebitda_margin_pct || 0}%` }
+            { "البند المالي": "اسم المعرض", "القيمة بالريال": sh.name, "ملاحظات": `كود الفرع: ${sh.branch_dimension || sh.number}` },
+            { "البند المالي": "الفترة المالية", "القيمة بالريال": `${payload.period?.start || ''} إلى ${payload.period?.end || ''}`, "ملاحظات": "تاريخ الحركة" },
+            { "البند المالي": "إيرادات مبيعات المعرض (Revenue)", "القيمة بالريال": hasPnl ? Number(pnlSum.revenue || 0) : "غير متوفر", "ملاحظات": "إجمالي المبيعات المعتمدة" },
+            { "البند المالي": "تكلفة البضاعة المباعة (COGS)", "القيمة بالريال": hasPnl ? Number(pnlSum.cogs || 0) : "غير متوفر", "ملاحظات": "تكلفة المخزون المباع" },
+            { "البند المالي": "مجمل الربح التشغيلي (Gross Profit)", "القيمة بالريال": hasPnl ? Number(pnlSum.gross_profit || 0) : "غير متوفر", "ملاحظات": hasPnl ? `الهامش: ${pnlSum.gross_margin_pct || 0}%` : "—" },
+            { "البند المالي": "مصروف الإيجار الشهري المستهلك", "القيمة بالريال": Number(pnlSum.lease_amortization || payload.summary?.upcoming_lease_amount || 0), "ملاحظات": "إيجار الفرع" },
+            { "البند المالي": "رواتب ومستحقات الموظفين", "القيمة بالريال": Number(pnlSum.salaries_expense || 0), "ملاحظات": "رواتب كادر المعرض" },
+            { "البند المالي": "مصاريف الصيانة والخدمات", "القيمة بالريال": Number(pnlSum.maintenance_expense || 0), "ملاحظات": "صيانة وتشغيل" },
+            { "البند المالي": "إهلاك الأصول الثابتة والديكور", "القيمة بالريال": Number(pnlSum.depreciation_expense || 0), "ملاحظات": "إهلاك دفتري" },
+            { "البند المالي": "مصاريف تشغيلية أخرى", "القيمة بالريال": Number(pnlSum.other_opex || 0), "ملاحظات": "كهرباء، ضيافة، عُدد" },
+            { "البند المالي": "إجمالي المصاريف التشغيلية (Total OPEX)", "القيمة بالريال": Number(pnlSum.total_expense || payload.summary?.trial_balance_expense || 0), "ملاحظات": "مصروف Trial Balance" },
+            { "البند المالي": "صافي الربح التشغيلي للمعرض (EBITDA)", "القيمة بالريال": hasPnl ? Number(pnlSum.operating_result || 0) : "—", "ملاحظات": hasPnl ? `هامش EBITDA: ${pnlSum.ebitda_margin_pct || 0}%` : "—" }
         ];
         const wsPnl = XLSX.utils.json_to_sheet(pnlRows);
         XLSX.utils.book_append_sheet(wb, wsPnl, "قائمة الدخل والربحية");
 
-        // Sheet 2: Leases
+        // Sheet 2: Expense Categories (Trial Balance breakdown for this showroom)
+        const expRows = (payload.expense_categories || []).map(cat => ({
+            "رقم الحساب المحاسبي": cat.main_account_id,
+            "التصنيف المالي": cat.category,
+            "مدين": Number(cat.debit_amount || 0),
+            "دائن": Number(cat.credit_amount || 0),
+            "صافي المصروف": Number(cat.net_amount || 0)
+        }));
+        const wsExp = XLSX.utils.json_to_sheet(expRows.length ? expRows : [{ "ملاحظة": "لا توجد مصاريف Trial Balance مسجلة لهذا المعرض في الفترة" }]);
+        XLSX.utils.book_append_sheet(wb, wsExp, "تفاصيل المصاريف Trial Balance");
+
+        // Sheet 3: Leases
         const leaseRows = (payload.leases || []).map(l => ({
             "رقم العقد": l.lease_id,
-            "المؤجر": l.landlord_name || '—',
-            "المبلغ السنوي": Number(l.annual_amount || 0),
-            "المبلغ الشهري المستهلك": Number(l.monthly_amount || 0),
-            "تاريخ الاستحقاق القادم": l.next_due_date || '—',
-            "تاريخ البداية": l.start_date || '—',
-            "تاريخ النهاية": l.end_date || '—',
-            "إجمالي قيمة العقد": Number(l.total_lease_amount || 0)
+            "الوصف": l.description || '—',
+            "كود المؤجر / الحساب": l.vendor_account_number || '—',
+            "الدفعة الشهرية المستهلكة": Number(l.payment_amount || 0),
+            "الرصيد المتبقي من العقد": Number(l.remaining_balance || 0),
+            "تاريخ البداية": l.commencement_date || '—',
+            "تاريخ النهاية": l.expiration_date || '—',
+            "حالة العقد": l.lease_status || 'Open',
+            "دفعات مستحقة قادمة": Number(l.upcoming_payment_amount || 0)
         }));
         const wsLeases = XLSX.utils.json_to_sheet(leaseRows.length ? leaseRows : [{ "ملاحظة": "لا توجد عقود إيجار مسجلة لهذا المعرض" }]);
         XLSX.utils.book_append_sheet(wb, wsLeases, "عقد الإيجار");
 
-        // Sheet 3: Fixed Assets
-        const assetRows = (payload.fixed_assets || []).map(a => ({
-            "رقم الأصل": a.asset_number,
-            "اسم الأصل": a.name,
-            "مجموعة الأصول": a.asset_group || '—',
-            "الموقع / الفرع": a.location || sh.branch_dimension,
+        // Sheet 4: Fixed Assets
+        const assetRows = (payload.assets || []).map(a => ({
+            "رقم الأصل": a.fixed_asset_number,
+            "اسم ووصف الأصل": a.name,
+            "مجموعة الأصول": a.fixed_asset_group_id || '—',
+            "الموقع / المعرض": a.asset_location_name || a.asset_location_id || sh.branch_dimension,
             "تاريخ الاقتناء": a.acquisition_date || '—',
-            "تكلفة الاقتناء": Number(a.acquisition_cost || 0),
-            "مجمع الإهلاك": Number(a.depreciation || 0),
+            "تكلفة الاقتناء": Number(a.acquisition_price || 0),
             "صافي القيمة الدفترية": Number(a.net_book_value || 0)
         }));
         const wsAssets = XLSX.utils.json_to_sheet(assetRows.length ? assetRows : [{ "ملاحظة": "لا توجد أصول ثابتة مرتبطة بهذا المعرض" }]);
         XLSX.utils.book_append_sheet(wb, wsAssets, "الأصول الثابتة");
 
-        // Sheet 4: Maintenance & Invoices
-        const invRows = (payload.invoices || []).map(inv => ({
+        // Sheet 5: Vendor Invoices
+        const invRows = (payload.vendor_invoices || []).map(inv => ({
             "رقم الفاتورة": inv.invoice_id,
-            "المورد / المقاول": inv.vendor_name || inv.invoice_account,
+            "كود المورد": inv.invoice_account,
+            "اسم المورد / المقاول": inv.vendor_name,
             "تاريخ الفاتورة": inv.invoice_date,
-            "الحساب المحاسبي": inv.account_name || inv.main_account,
-            "رقم الحساب": inv.main_account,
+            "تاريخ الاستحقاق": inv.due_date || '—',
+            "أمر الشراء": inv.purchase_order_number || '—',
             "البيان / الوصف": inv.description || '—',
-            "المبلغ": Number(inv.line_amount || 0),
-            "الضريبة": Number(inv.sales_tax_amount || 0),
-            "الإجمالي شامل الضريبة": Number(inv.line_amount || 0) + Number(inv.sales_tax_amount || 0)
+            "المبلغ الموزع على المعرض": Number(inv.allocated_amount || 0),
+            "الضريبة الموزعة": Number(inv.allocated_tax_amount || 0),
+            "الإجمالي شامل الضريبة": Number(inv.allocated_amount || 0) + Number(inv.allocated_tax_amount || 0)
         }));
-        const wsInvs = XLSX.utils.json_to_sheet(invRows.length ? invRows : [{ "ملاحظة": "لا توجد فواتير صيانة منسوبة لهذا المعرض" }]);
-        XLSX.utils.book_append_sheet(wb, wsInvs, "فواتير الصيانة والمقاولين");
-
-        // Sheet 5: Employee Advances
-        const advRows = (payload.employee_advances || []).map(adv => ({
-            "الرقم الوظيفي": adv.worker_id,
-            "اسم الموظف": adv.worker_name,
-            "المعرض / الفرع": adv.branch_code || sh.branch_dimension,
-            "رصيد السلفة المفتوح": Number(adv.open_balance || 0),
-            "الحالة": adv.status === 'open' ? 'قائمة / نشطة' : adv.status
-        }));
-        const wsAdv = XLSX.utils.json_to_sheet(advRows.length ? advRows : [{ "ملاحظة": "لا توجد سلف معلقة لموظفي هذا المعرض" }]);
-        XLSX.utils.book_append_sheet(wb, wsAdv, "سلف الموظفين");
+        const wsInvs = XLSX.utils.json_to_sheet(invRows.length ? invRows : [{ "ملاحظة": "لا توجد فواتير موردين موزعة على هذا المعرض في الفترة" }]);
+        XLSX.utils.book_append_sheet(wb, wsInvs, "فواتير الموردين والمقاولين");
 
         const dateStr = new Date().toISOString().slice(0, 10);
         const fileName = `Orange_Showroom_360_${sh.branch_dimension || sh.number}_${dateStr}.xlsx`;
@@ -2661,4 +2663,432 @@
             "البيان / الوصف": inv.description || '—',
             "المبلغ": Number(inv.line_amount || 0),
             "الضريبة": Number(inv.sales_tax_amount || 0),
-            "الإجمالي شامل الضريبة": Number(inv.line_amount || 0) + Number(inv.sales_tax_amount || 
+            "الإجمالي شامل الضريبة": Number(inv.line_amount || 0) + Number(inv.sales_tax_amount || 0)
+        }));
+        const wsInv = XLSX.utils.json_to_sheet(invRows);
+        XLSX.utils.book_append_sheet(wb, wsInv, "سجل الفواتير التفصيلي");
+
+        // Sheet 4: Monthly Trend
+        const trendRows = (currentMaintenance.monthly_trend || []).map(t => ({
+            "الشهر": t.period_month,
+            "عدد الفواتير": Number(t.invoice_count || 0),
+            "المعارض النشطة": Number(t.active_showrooms || 0),
+            "إجمالي تكلفة الصيانة": Number(t.total_amount || 0)
+        }));
+        const wsTrend = XLSX.utils.json_to_sheet(trendRows);
+        XLSX.utils.book_append_sheet(wb, wsTrend, "التطور الشهري");
+
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `Orange_Maintenance_Executive_Report_${dateStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    async function load() {
+        if (loading || !window.FinancePlatformApi) return;
+        loading = true;
+        setState('loading', 'جارٍ تحديث البيانات');
+        const button = element('financePlatformRefresh');
+        button.disabled = true;
+        try {
+            const params = periodParams();
+            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional, fixedAssets, advances, purchases, inventory, treasury, taxHub, maintData] = await Promise.all([
+                window.FinancePlatformApi.overview(params),
+                window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
+                window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 100 }),
+                window.FinancePlatformApi.leases({ horizon_days: 90 }),
+                window.FinancePlatformApi.leaseInsights({})
+                    .catch(() => ({ configured: false })),
+                window.FinancePlatformApi.apAging({})
+                    .catch(() => ({ configured: false })),
+                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 50, invoice_limit: 50 })
+                    .catch(() => ({ configured: false, vendors: [], open_invoices: [] })),
+                window.FinancePlatformApi.trialBalanceTrend({
+                    start: '2025-01-01', end: element('financePlatformEnd').value
+                }).catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.additionalAnalytics({
+                    as_of: element('financePlatformEnd').value,
+                    month: element('financePlatformEnd').value.slice(0, 7)
+                }).catch(() => ({ state: 'partial', sections: {} })),
+                window.FinancePlatformApi.fixedAssets()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.employeeAdvances()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.purchaseOrders()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.inventoryValuation()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.cashAndGateways()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.vatHub()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.maintenanceAnalytics(params)
+                    .catch(() => ({ state: 'unavailable', showrooms: [], contractors: [], monthly_trend: [], recent_invoices: [], summary: {} }))
+            ]);
+            renderOverview(overview);
+            renderOverviewCharts(overview, showrooms, additional, maintData);
+            renderShowrooms(showrooms, overview.summary?.expense_scope_status);
+            renderVendorInvoices(vendorInvoices);
+            renderLeases(leases);
+            renderLeaseInsights(leaseInsights);
+            renderApAging(apAging);
+            renderVendorAnalytics(vendorAnalytics);
+            renderTrialBalanceTrend(trend);
+            renderAdditionalAnalytics(additional);
+            renderFixedAssets(fixedAssets);
+            renderEmployeeAdvances(advances);
+            renderPurchaseOrders(purchases);
+            renderInventoryValuation(inventory);
+            renderCashAndGateways(treasury);
+            renderVatHub(taxHub);
+            renderMaintenance(maintData);
+        } catch (error) {
+            renderError(error);
+        } finally {
+            loading = false;
+            button.disabled = false;
+        }
+    }
+
+    function switchSubtab(tabName) {
+        const validTabs = ['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'];
+        if (!validTabs.includes(tabName)) tabName = 'overview';
+
+        document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.subtab === tabName);
+        });
+
+        document.querySelectorAll('.finance-tab-pane').forEach(pane => {
+            pane.hidden = (pane.dataset.pane !== tabName);
+        });
+
+        if (window.location.hash !== `#${tabName}`) {
+            history.replaceState(null, '', `#${tabName}`);
+        }
+    }
+
+    function initSubnav() {
+        document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchSubtab(btn.dataset.subtab);
+            });
+        });
+
+        document.querySelectorAll('[data-goto-tab]').forEach(el => {
+            el.addEventListener('click', () => {
+                const targetTab = el.dataset.gotoTab;
+                if (targetTab) {
+                    switchSubtab(targetTab);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        });
+
+        const initialHash = (window.location.hash || '').replace('#', '');
+        if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(initialHash)) {
+            switchSubtab(initialHash);
+        } else {
+            switchSubtab('overview');
+        }
+
+        window.addEventListener('hashchange', () => {
+            const currentHash = (window.location.hash || '').replace('#', '');
+            if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(currentHash)) {
+                switchSubtab(currentHash);
+            }
+        });
+    }
+
+    function applyPreset(presetName) {
+        const today = new Date();
+        let start, end;
+
+        if (presetName === 'thisMonth') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = today;
+        } else if (presetName === 'lastMonth') {
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+        } else if (presetName === 'thisQuarter') {
+            const currentQuarter = Math.floor(today.getMonth() / 3);
+            start = new Date(today.getFullYear(), currentQuarter * 3, 1);
+            end = today;
+        } else if (presetName === 'ytd') {
+            start = new Date(today.getFullYear(), 0, 1);
+            end = today;
+        } else if (presetName === 'lastYear') {
+            start = new Date(today.getFullYear() - 1, 0, 1);
+            end = new Date(today.getFullYear() - 1, 11, 31);
+        } else if (presetName === 'last30days') {
+            start = new Date();
+            start.setDate(today.getDate() - 30);
+            end = today;
+        }
+
+        if (start && end) {
+            element('financePlatformStart').value = isoDate(start);
+            element('financePlatformEnd').value = isoDate(end);
+
+            document.querySelectorAll('.finance-preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.preset === presetName);
+            });
+
+            load();
+        }
+    }
+
+    function initialize() {
+        if (initialized) return;
+        initialized = true;
+        setDefaultPeriod();
+        initSubnav();
+
+        document.querySelectorAll('.finance-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+        });
+
+        const showroomsSearch = element('financeShowroomsSearch');
+        const showroomsSearchClear = element('financeShowroomsSearchClear');
+        const showroomsStatus = element('financeShowroomsStatusFilter');
+
+        if (showroomsSearch) {
+            showroomsSearch.addEventListener('input', () => {
+                filters.showrooms.search = showroomsSearch.value;
+                if (showroomsSearchClear) showroomsSearchClear.hidden = !showroomsSearch.value;
+                filterAndRenderShowrooms();
+            });
+        }
+        if (showroomsSearchClear) {
+            showroomsSearchClear.addEventListener('click', () => {
+                if (showroomsSearch) showroomsSearch.value = '';
+                filters.showrooms.search = '';
+                showroomsSearchClear.hidden = true;
+                filterAndRenderShowrooms();
+            });
+        }
+        if (showroomsStatus) {
+            showroomsStatus.addEventListener('change', () => {
+                filters.showrooms.status = showroomsStatus.value;
+                filterAndRenderShowrooms();
+            });
+        }
+
+        const invoicesSearch = element('financeInvoicesSearch');
+        const invoicesSearchClear = element('financeInvoicesSearchClear');
+        const invoicesStatus = element('financeInvoicesStatusFilter');
+
+        if (invoicesSearch) {
+            invoicesSearch.addEventListener('input', () => {
+                filters.invoices.search = invoicesSearch.value;
+                if (invoicesSearchClear) invoicesSearchClear.hidden = !invoicesSearch.value;
+                filterAndRenderInvoices();
+            });
+        }
+        if (invoicesSearchClear) {
+            invoicesSearchClear.addEventListener('click', () => {
+                if (invoicesSearch) invoicesSearch.value = '';
+                filters.invoices.search = '';
+                invoicesSearchClear.hidden = true;
+                filterAndRenderInvoices();
+            });
+        }
+        if (invoicesStatus) {
+            invoicesStatus.addEventListener('change', () => {
+                filters.invoices.status = invoicesStatus.value;
+                filterAndRenderInvoices();
+            });
+        }
+
+        const assetsSearch = element('financeAssetsSearch');
+        const assetsSearchClear = element('financeAssetsSearchClear');
+        const assetsGroup = element('financeAssetsGroupFilter');
+        const assetsScope = element('financeAssetsScopeFilter');
+
+        if (assetsSearch) {
+            assetsSearch.addEventListener('input', () => {
+                filters.assets.search = assetsSearch.value;
+                if (assetsSearchClear) assetsSearchClear.hidden = !assetsSearch.value;
+                filterAndRenderAssets();
+            });
+        }
+        if (assetsSearchClear) {
+            assetsSearchClear.addEventListener('click', () => {
+                if (assetsSearch) assetsSearch.value = '';
+                filters.assets.search = '';
+                assetsSearchClear.hidden = true;
+                filterAndRenderAssets();
+            });
+        }
+        if (assetsGroup) {
+            assetsGroup.addEventListener('change', () => {
+                filters.assets.group = assetsGroup.value;
+                filterAndRenderAssets();
+            });
+        }
+        if (assetsScope) {
+            assetsScope.addEventListener('change', () => {
+                filters.assets.scope = assetsScope.value;
+                filterAndRenderAssets();
+            });
+        }
+
+
+        const advancesSearch = element('financeAdvancesSearch');
+        const advancesSearchClear = element('financeAdvancesSearchClear');
+        const advancesAccount = element('financeAdvancesAccountFilter');
+        const advancesStatus = element('financeAdvancesStatusFilter');
+
+        if (advancesSearch) {
+            advancesSearch.addEventListener('input', () => {
+                filters.advances.search = advancesSearch.value;
+                if (advancesSearchClear) advancesSearchClear.hidden = !advancesSearch.value;
+                filterAndRenderAdvances();
+            });
+        }
+        if (advancesSearchClear) {
+            advancesSearchClear.addEventListener('click', () => {
+                if (advancesSearch) advancesSearch.value = '';
+                filters.advances.search = '';
+                advancesSearchClear.hidden = true;
+                filterAndRenderAdvances();
+            });
+        }
+        if (advancesAccount) {
+            advancesAccount.addEventListener('change', () => {
+                filters.advances.account = advancesAccount.value;
+                filterAndRenderAdvances();
+            });
+        }
+        if (advancesStatus) {
+            advancesStatus.addEventListener('change', () => {
+                filters.advances.status = advancesStatus.value;
+                filterAndRenderAdvances();
+            });
+        }
+
+        const purchasesSearch = element('financePurchasesSearch');
+        const purchasesSearchClear = element('financePurchasesSearchClear');
+        const purchasesStatus = element('financePurchasesStatusFilter');
+
+        if (purchasesSearch) {
+            purchasesSearch.addEventListener('input', () => {
+                filters.purchases.search = purchasesSearch.value;
+                if (purchasesSearchClear) purchasesSearchClear.hidden = !purchasesSearch.value;
+                filterAndRenderPurchases();
+            });
+        }
+        if (purchasesSearchClear) {
+            purchasesSearchClear.addEventListener('click', () => {
+                if (purchasesSearch) purchasesSearch.value = '';
+                filters.purchases.search = '';
+                purchasesSearchClear.hidden = true;
+                filterAndRenderPurchases();
+            });
+        }
+        if (purchasesStatus) {
+            purchasesStatus.addEventListener('change', () => {
+                filters.purchases.status = purchasesStatus.value;
+                filterAndRenderPurchases();
+            });
+        }
+
+        const inventorySearch = element('financeInventorySearch');
+        const inventorySearchClear = element('financeInventorySearchClear');
+
+        if (inventorySearch) {
+            inventorySearch.addEventListener('input', () => {
+                filters.inventory.search = inventorySearch.value;
+                if (inventorySearchClear) inventorySearchClear.hidden = !inventorySearch.value;
+                filterAndRenderInventory();
+            });
+        }
+        if (inventorySearchClear) {
+            inventorySearchClear.addEventListener('click', () => {
+                if (inventorySearch) inventorySearch.value = '';
+                filters.inventory.search = '';
+                inventorySearchClear.hidden = true;
+                filterAndRenderInventory();
+            });
+        }
+
+        const maintSearch = element('financeMaintSearch');
+        const maintSearchClear = element('financeMaintSearchClear');
+
+        if (maintSearch) {
+            maintSearch.addEventListener('input', () => {
+                filters.maintenance.search = maintSearch.value;
+                if (maintSearchClear) maintSearchClear.hidden = !maintSearch.value;
+                filterAndRenderMaintenanceShowrooms();
+            });
+        }
+        if (maintSearchClear) {
+            maintSearchClear.addEventListener('click', () => {
+                if (maintSearch) maintSearch.value = '';
+                filters.maintenance.search = '';
+                maintSearchClear.hidden = true;
+                filterAndRenderMaintenanceShowrooms();
+            });
+        }
+
+        document.querySelectorAll('th.finance-sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const table = th.dataset.table;
+                const key = th.dataset.sort;
+                if (!table || !key) return;
+                if (sortState[table]?.key === key) {
+                    sortState[table].dir = sortState[table].dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortState[table] = { key, dir: 'asc' };
+                }
+                if (table === 'showrooms') filterAndRenderShowrooms();
+                else if (table === 'invoices') filterAndRenderInvoices();
+                else if (table === 'topVendors') sortAndRenderTopVendors();
+                else if (table === 'leases') sortAndRenderLeases();
+                else if (table === 'assets') filterAndRenderAssets();
+                else if (table === 'advances') filterAndRenderAdvances();
+                else if (table === 'purchases') filterAndRenderPurchases();
+                else if (table === 'inventory') filterAndRenderInventory();
+                else if (table === 'maintenance') filterAndRenderMaintenanceShowrooms();
+            });
+        });
+
+        element('financePlatformRefresh').addEventListener('click', load);
+        element('financePlatformApplyPeriod').addEventListener('click', () => {
+            document.querySelectorAll('.finance-preset-btn').forEach(btn => btn.classList.remove('active'));
+            load();
+        });
+        element('financeShowroomClose').addEventListener('click', closeShowroomDetail);
+        element('financeShowroomBackdrop').addEventListener('click', closeShowroomDetail);
+
+        const showroomExportBtn = element('financeShowroomExportPackBtn');
+        if (showroomExportBtn) {
+            showroomExportBtn.addEventListener('click', () => {
+                if (currentShowroomPayload) {
+                    exportShowroom360Pack(currentShowroomPayload, currentShowroomPnl);
+                } else {
+                    alert('يرجى فتح تفاصيل أحد المعارض أولاً لتصدير ملفه.');
+                }
+            });
+        }
+
+        const maintExportBtn = element('financeMaintExportReportBtn');
+        if (maintExportBtn) {
+            maintExportBtn.addEventListener('click', () => {
+                exportMaintenanceExecutiveReport();
+            });
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !element('financeShowroomDrawer').hidden) {
+                closeShowroomDetail();
+            }
+        });
+        element('platform-tab').addEventListener('shown.bs.tab', load);
+        load();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    } else {
+        initialize();
+    }
+})();
