@@ -58,12 +58,19 @@ async function initNavbar() {
     }
 
     // 3. Check roles & permissions
-    const name = currentUser ? currentUser.name : '';
-    const role = currentUser ? currentUser.role : 'guest';
-    const isAlaa = (name === 'علاء');
+    const rawName = currentUser ? (currentUser.name || '') : '';
+    const rawRole = currentUser ? (currentUser.role || 'guest') : 'guest';
+    const name = rawName;
+    const role = rawRole;
+    const nameLower = rawName.trim().toLowerCase();
+    const roleLower = rawRole.trim().toLowerCase();
+
+    const isAlaa = (rawName === 'علاء' || nameLower === 'alaa' || nameLower === 'alaa-orange');
+    const isSalesManager = (nameLower === 'sales manager' || roleLower === 'sales manager' || roleLower === 'sales_manager');
+    const isFinanceUser = (isAlaa || isSalesManager);
     const isCrmOnly = (role === 'CRM');
-    const isManager = (role === 'Manager' || role === 'Admin' || name === 'Sales Manager' || isAlaa);
-    const isCrmUser = (isCrmOnly || name === 'Sales Manager' || isAlaa);
+    const isManager = (role === 'Manager' || role === 'Admin' || isSalesManager || isAlaa);
+    const isCrmUser = (isCrmOnly || isSalesManager || isAlaa);
 
     if (isCrmOnly && !path.includes('crm.html')) {
         window.location.replace('crm.html');
@@ -127,6 +134,12 @@ async function initNavbar() {
                 <!-- Navigation Dropdowns & Links -->
                 <a href="index.html" class="btn btn-outline-secondary btn-sm fw-bold">🏠 الرئيسية</a>
 
+                ${isFinanceUser ? `
+                <a href="finance_dashboard.html" class="btn btn-sm fw-bold d-inline-flex align-items-center gap-1 text-white shadow-sm" style="background: linear-gradient(135deg, #fe7900 0%, #d86600 100%); border: 1px solid #c25900;" title="لوحة التحكم والتحليلات المالية للمعارض">
+                    💼 <span>داشبورد المالية</span>
+                </a>
+                ` : ''}
+
                 ${isCrmUser ? `
                 <a href="crm.html" class="btn btn-outline-primary btn-sm fw-bold">◎ CRM العملاء</a>
                 ` : ''}
@@ -139,6 +152,9 @@ async function initNavbar() {
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="widget.html">📱 شاشة متابعة مبيعات اليوم</a></li>
                         <li><a class="dropdown-item" href="a3_comparison.html">🖨️ تقرير مقارنة A3</a></li>
+                        ${isFinanceUser ? `
+                        <li><a class="dropdown-item fw-bold text-primary" href="finance_dashboard.html">💼 لوحة التحكم والتحليلات المالية</a></li>
+                        ` : ''}
                         ${isManager ? `
                         <li><a class="dropdown-item" href="yoy_report.html">📊 مقارنة السنوات والزوار (YoY)</a></li>
                         <li><a class="dropdown-item" href="booff_report.html">📈 مقارنة الأعوام والنسب (BooFF)</a></li>
