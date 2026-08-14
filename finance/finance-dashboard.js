@@ -1151,6 +1151,9 @@
         setMetric('financeBudgetMeta', budgetIsEmpty
             ? 'كيانات Budget في Dynamics فارغة؛ لا نعرضها كميزانية صفر'
             : budgetHasData ? 'يمكن احتساب Budget مقابل الفعلي' : 'لم يُفحص مصدر Budget بعد');
+
+        setMetric('financeAssetsTotalNbv', assets.state === 'ready'
+            ? money.format(Number(assets.summary?.net_book_value) || 0) : '—');
     }
 
     function appendShowroomPnl(payload) {
@@ -1242,6 +1245,55 @@
         }
     }
 
+    function switchSubtab(tabName) {
+        const validTabs = ['overview', 'showrooms', 'ap', 'leases', 'assets'];
+        if (!validTabs.includes(tabName)) tabName = 'overview';
+
+        document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.subtab === tabName);
+        });
+
+        document.querySelectorAll('.finance-tab-pane').forEach(pane => {
+            pane.hidden = (pane.dataset.pane !== tabName);
+        });
+
+        if (window.location.hash !== `#${tabName}`) {
+            history.replaceState(null, '', `#${tabName}`);
+        }
+    }
+
+    function initSubnav() {
+        document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchSubtab(btn.dataset.subtab);
+            });
+        });
+
+        document.querySelectorAll('[data-goto-tab]').forEach(el => {
+            el.addEventListener('click', () => {
+                const targetTab = el.dataset.gotoTab;
+                if (targetTab) {
+                    switchSubtab(targetTab);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        });
+
+        const initialHash = (window.location.hash || '').replace('#', '');
+        if (['overview', 'showrooms', 'ap', 'leases', 'assets'].includes(initialHash)) {
+            switchSubtab(initialHash);
+        } else {
+            switchSubtab('overview');
+        }
+
+        window.addEventListener('hashchange', () => {
+            const currentHash = (window.location.hash || '').replace('#', '');
+            if (['overview', 'showrooms', 'ap', 'leases', 'assets'].includes(currentHash)) {
+                switchSubtab(currentHash);
+            }
+        });
+    }
+
     function applyPreset(presetName) {
         const today = new Date();
         let start, end;
@@ -1284,6 +1336,7 @@
         if (initialized) return;
         initialized = true;
         setDefaultPeriod();
+        initSubnav();
 
         document.querySelectorAll('.finance-preset-btn').forEach(btn => {
             btn.addEventListener('click', () => applyPreset(btn.dataset.preset));

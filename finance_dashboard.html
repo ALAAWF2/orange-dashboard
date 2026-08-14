@@ -400,7 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
-    <link rel="stylesheet" href="finance/finance.css?v=20260813-15">
+    <link rel="stylesheet" href="finance/finance.css?v=20260814-1">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -483,226 +483,71 @@
                     <p>رصيد AP منفصل عن المصروفات؛ الأرقام أدناه من Trial Balance للفترة وبُعد المعرض المحددين.</p>
                 </div>
 
-                <div class="finance-metric-grid" aria-live="polite">
-                    <article class="finance-metric-card is-orange">
-                        <span class="finance-metric-index">A</span>
-                        <p>معارض Dynamics</p>
-                        <strong id="financeShowroomCount">—</strong>
-                        <small><span id="financeHistoricalShowroomCount">—</span> عليها حالة إغلاق صريحة؛ السجل يحفظ المغلق أيضًا</small>
-                    </article>
-                    <article class="finance-metric-card is-ink">
-                        <span class="finance-metric-index">B</span>
-                        <p>مصروفات Trial Balance المعتمدة</p>
-                        <strong id="financeExpenseTotal">—</strong>
-                        <small>ضمن الفترة · حسابات Expense النشطة</small>
-                    </article>
-                    <article class="finance-metric-card is-sand">
-                        <span class="finance-metric-index">C</span>
-                        <p>رصيد الذمم الدائنة (AP)</p>
-                        <strong id="financeVendorBalance">—</strong>
-                        <small>ليس مصروفًا · <span id="financeVendorOpenCount">—</span> حركة مفتوحة</small>
-                    </article>
-                    <article class="finance-metric-card is-paper">
-                        <span class="finance-metric-index">D</span>
-                        <p>عقود الإيجار الفعالة</p>
-                        <strong id="financeLeaseCount">—</strong>
-                        <small><span id="financeFixedAssetCount">—</span> أصل ثابت</small>
-                    </article>
-                </div>
-
-                <div class="finance-detail-grid">
-                    <div>
-                        <section class="finance-ledger-panel">
-                            <header>
-                                <div>
-                                    <span class="finance-section-kicker">EXPENSE LEDGER</span>
-                                    <h2>مصروفات Trial Balance حسب التصنيف</h2>
-                                </div>
-                                <span class="finance-period-label" id="financePeriodLabel">—</span>
-                            </header>
-                            <div class="finance-category-list" id="financeCategoryList">
-                                <div class="finance-empty-state">بانتظار بيانات التصنيف المالي.</div>
-                            </div>
-                        </section>
+                <div class="finance-subnav-container">
+                    <div class="finance-subnav-bar" id="financeSubnavBar" role="tablist">
+                        <button type="button" class="finance-subnav-btn active" data-subtab="overview" role="tab">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>نظرة عامة وقائمة الدخل</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="showrooms" role="tab">
+                            <i class="fa-solid fa-store"></i>
+                            <span>أداء المعارض</span>
+                            <span class="finance-subnav-badge" id="financeSubnavShowroomsBadge">53</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="ap" role="tab">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                            <span>الذمم وفواتير الموردين</span>
+                            <span class="finance-subnav-badge" id="financeSubnavInvoicesBadge">AP</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="leases" role="tab">
+                            <i class="fa-solid fa-file-contract"></i>
+                            <span>عقود الإيجار</span>
+                            <span class="finance-subnav-badge" id="financeSubnavLeasesBadge">104</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="assets" role="tab">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                            <span>الأصول الثابتة والضمانات</span>
+                            <span class="finance-subnav-badge" id="financeSubnavAssetsBadge">315</span>
+                        </button>
                     </div>
                 </div>
 
-                <section class="finance-ledger-panel">
-                    <header>
-                        <div>
-                            <span class="finance-section-kicker">SHOWROOM REGISTER</span>
-                            <h2>سجل معارض Dynamics</h2>
-                        </div>
-                        <span class="finance-register-note">كل 53 معرضًا مربوط مباشرة ببُعد Branches من Dynamics؛ لا يعتمد على mapping المبيعات القديم</span>
-                    </header>
-                    <div class="finance-table-toolbar">
-                        <div class="finance-search-box">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="financeShowroomsSearch" placeholder="البحث باسم المعرض، رقم Dynamics، أو الفرع...">
-                            <button type="button" id="financeShowroomsSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <div class="finance-filter-group">
-                            <select id="financeShowroomsStatusFilter" class="form-select finance-filter-select">
-                                <option value="all">جميع الحالات</option>
-                                <option value="current">المعارض الحالية فقط</option>
-                                <option value="historical">المعارض المغلقة / التاريخية فقط</option>
-                            </select>
-                            <span class="finance-badge-counter" id="financeShowroomsCountBadge">53 معرضاً</span>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table finance-register-table finance-showroom-table align-middle">
-                            <colgroup>
-                                <col class="finance-col-number">
-                                <col class="finance-col-name">
-                                <col class="finance-col-branch">
-                                <col class="finance-col-status">
-                                <col class="finance-col-amount">
-                                <col class="finance-col-action">
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th class="finance-sortable" data-table="showrooms" data-sort="number">رقم Dynamics <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable" data-table="showrooms" data-sort="name">اسم المعرض <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable" data-table="showrooms" data-sort="branch_dimension">ربط Dynamics المباشر <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable" data-table="showrooms" data-sort="status">الحالة <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable text-end" data-table="showrooms" data-sort="non_sales_amount">مصروف Trial Balance المعتمد <i class="fa-solid fa-sort"></i></th>
-                                    <th class="text-end">تفاصيل المعرض</th>
-                                </tr>
-                            </thead>
-                            <tbody id="financeShowroomsBody">
-                                <tr><td colspan="6" class="finance-empty-state">جارٍ فحص جاهزية البيانات…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <div class="finance-showroom-drawer" id="financeShowroomDrawer" hidden>
-                    <button type="button" class="finance-drawer-backdrop" id="financeShowroomBackdrop" aria-label="إغلاق تفاصيل المعرض"></button>
-                    <aside class="finance-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="financeShowroomTitle">
-                        <header class="finance-drawer-header">
-                            <div>
-                                <span class="finance-section-kicker">SHOWROOM FINANCE FILE</span>
-                                <h2 id="financeShowroomTitle">تفاصيل المعرض المالية</h2>
-                                <p id="financeShowroomMeta">جارٍ تحميل البيانات المرتبطة من Dynamics…</p>
-                            </div>
-                            <button type="button" class="finance-drawer-close" id="financeShowroomClose" aria-label="إغلاق">
-                                <span aria-hidden="true">×</span>
-                            </button>
-                        </header>
-                        <div class="finance-drawer-content" id="financeShowroomContent">
-                            <div class="finance-empty-state">جارٍ تحميل تفاصيل المعرض…</div>
-                        </div>
-                    </aside>
-                </div>
-
-                <div class="finance-analytics-grid">
-                    <section class="finance-ledger-panel">
-                        <header>
-                            <div>
-                                <span class="finance-section-kicker">AP AGING</span>
-                                <h2>أعمار رصيد الموردين المفتوح</h2>
-                            </div>
-                            <span class="finance-register-note" id="financeApAsOf">—</span>
-                        </header>
-                        <div class="finance-aging-grid" id="financeApAging">
-                            <div class="finance-empty-state">جارٍ حساب أعمار الرصيد…</div>
-                        </div>
-                    </section>
-
-                    <section class="finance-ledger-panel">
-                        <header>
-                            <div>
-                                <span class="finance-section-kicker">EXPENSE TREND / P&amp;L</span>
-                                <h2>تكلفة البضاعة والمصاريف التشغيلية</h2>
-                            </div>
-                            <span class="finance-register-note">الإيراد يظهر فقط عند اكتمال تغطيته</span>
-                        </header>
-                        <div class="table-responsive">
-                            <table class="table finance-register-table finance-compact-table align-middle">
-                                <thead><tr><th>الشهر</th><th class="text-end">الإيراد</th><th class="text-end">تكلفة البضاعة</th><th class="text-end">تشغيلي</th><th class="text-end">النتيجة</th></tr></thead>
-                                <tbody id="financeExpenseTrendBody">
-                                    <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل التاريخ المحاسبي…</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-                <section class="finance-ledger-panel">
-                    <header>
-                        <div>
-                            <span class="finance-section-kicker">VENDOR ANALYTICS</span>
-                            <h2>أكبر الموردين حسب الرصيد المفتوح</h2>
-                        </div>
-                        <span class="finance-register-note" id="financeApReconciliation">—</span>
-                    </header>
-                    <div class="table-responsive">
-                        <table class="table finance-register-table finance-compact-table align-middle">
-                            <thead>
-                                <tr>
-                                    <th class="finance-sortable" data-table="topVendors" data-sort="vendor_name">المورد <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable" data-table="topVendors" data-sort="vendor_account">الحساب <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="original_amount">الأصل <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="paid_amount">المسدد على المفتوح <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="remaining_amount">المتبقي <i class="fa-solid fa-sort"></i></th>
-                                    <th class="finance-sortable text-end" data-table="topVendors" data-sort="overdue_amount">المتأخر <i class="fa-solid fa-sort"></i></th>
-                                </tr>
-                            </thead>
-                            <tbody id="financeTopVendorsBody">
-                                <tr><td colspan="6" class="finance-empty-state">جارٍ تحميل تحليل الموردين…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section class="finance-horizon-panel" aria-labelledby="financeLeaseHorizonTitle">
-                    <header>
-                        <div>
-                            <span class="finance-section-kicker">LEASE PAYMENT HORIZON</span>
-                            <h2 id="financeLeaseHorizonTitle">استحقاقات الإيجار والتجديدات</h2>
-                        </div>
-                        <span class="finance-register-note">التاريخ الفعلي: Payment date ثم Schedule date</span>
-                    </header>
-                    <div class="finance-horizon-grid">
-                        <article>
-                            <span>خلال 30 يومًا</span>
-                            <strong id="financeLeaseDue30">—</strong>
-                            <small id="financeLeaseDue30Count">—</small>
+                <!-- Pane 1: Overview & P&L -->
+                <div class="finance-tab-pane" id="financePaneOverview" data-pane="overview">
+                    <div class="finance-metric-grid" aria-live="polite">
+                        <article class="finance-metric-card is-orange is-clickable" data-goto-tab="showrooms" title="انقر للانتقال لسجل المعارض">
+                            <span class="finance-metric-index">A</span>
+                            <p>معارض Dynamics</p>
+                            <strong id="financeShowroomCount">—</strong>
+                            <small><span id="financeHistoricalShowroomCount">—</span> عليها حالة إغلاق صريحة؛ السجل يحفظ المغلق أيضًا</small>
                         </article>
-                        <article>
-                            <span>خلال 60 يومًا</span>
-                            <strong id="financeLeaseDue60">—</strong>
-                            <small id="financeLeaseDue60Count">—</small>
+                        <article class="finance-metric-card is-ink">
+                            <span class="finance-metric-index">B</span>
+                            <p>مصروفات Trial Balance المعتمدة</p>
+                            <strong id="financeExpenseTotal">—</strong>
+                            <small>ضمن الفترة · حسابات Expense النشطة</small>
                         </article>
-                        <article>
-                            <span>خلال 90 يومًا</span>
-                            <strong id="financeLeaseDue90">—</strong>
-                            <small id="financeLeaseDue90Count">—</small>
+                        <article class="finance-metric-card is-sand is-clickable" data-goto-tab="ap" title="انقر للانتقال لقسم الذمم وفواتير الموردين">
+                            <span class="finance-metric-index">C</span>
+                            <p>رصيد الذمم الدائنة (AP)</p>
+                            <strong id="financeVendorBalance">—</strong>
+                            <small>ليس مصروفًا · <span id="financeVendorOpenCount">—</span> حركة مفتوحة</small>
                         </article>
-                        <article class="is-renewal">
-                            <span>عقود تنتهي خلال 90 يومًا</span>
-                            <strong id="financeLeaseRenewals90">—</strong>
-                            <small id="financeLeaseOverdueReview">—</small>
+                        <article class="finance-metric-card is-paper is-clickable" data-goto-tab="leases" title="انقر للانتقال لعقود الإيجار">
+                            <span class="finance-metric-index">D</span>
+                            <p>عقود الإيجار الفعالة</p>
+                            <strong id="financeLeaseCount">—</strong>
+                            <small><span id="financeFixedAssetCount">—</span> أصل ثابت</small>
                         </article>
                     </div>
-                </section>
 
-                <section class="finance-horizon-panel" aria-labelledby="financeAdditionalTitle">
-                    <header>
-                        <div>
-                            <span class="finance-section-kicker">ADDITIONAL FINANCE SOURCES</span>
-                            <h2 id="financeAdditionalTitle">الالتزامات والأصول والعملاء والسيولة والضريبة</h2>
-                        </div>
-                        <span class="finance-register-note" id="financeAdditionalState">مصادر Dynamics محدودة وآمنة</span>
-                    </header>
-                    <div class="finance-source-grid">
+                    <div class="finance-source-grid mb-4">
                         <article>
                             <span>التزام أوامر الشراء المفتوح</span>
                             <strong id="financePoCommitment">—</strong>
                             <small id="financePoCommitmentMeta">—</small>
                         </article>
-                        <article>
+                        <article class="is-clickable" data-goto-tab="assets" title="انقر للانتقال لقسم الأصول الثابتة">
                             <span>صافي القيمة الدفترية للأصول</span>
                             <strong id="financeAssetNbv">—</strong>
                             <small id="financeAssetNbvMeta">—</small>
@@ -728,30 +573,165 @@
                             <small id="financeBudgetMeta">لا يتحول المصدر الفارغ إلى صفر مالي</small>
                         </article>
                     </div>
-                    <div class="finance-source-subsection">
-                        <div>
-                            <span class="finance-section-kicker">AR AGING</span>
-                            <h3>أعمار رصيد العملاء المفتوح</h3>
+
+                    <div class="finance-analytics-grid">
+                        <section class="finance-ledger-panel">
+                            <header>
+                                <div>
+                                    <span class="finance-section-kicker">EXPENSE TREND / P&amp;L</span>
+                                    <h2>تكلفة البضاعة والمصاريف التشغيلية (الترند الشهري)</h2>
+                                </div>
+                                <span class="finance-register-note">الإيراد يظهر فقط عند اكتمال تغطيته</span>
+                            </header>
+                            <div class="table-responsive">
+                                <table class="table finance-register-table finance-compact-table align-middle">
+                                    <thead><tr><th>الشهر</th><th class="text-end">الإيراد</th><th class="text-end">تكلفة البضاعة</th><th class="text-end">تشغيلي</th><th class="text-end">النتيجة</th></tr></thead>
+                                    <tbody id="financeExpenseTrendBody">
+                                        <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل التاريخ المحاسبي…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section class="finance-ledger-panel">
+                            <header>
+                                <div>
+                                    <span class="finance-section-kicker">EXPENSE LEDGER</span>
+                                    <h2>مصروفات Trial Balance حسب التصنيف</h2>
+                                </div>
+                                <span class="finance-period-label" id="financePeriodLabel">—</span>
+                            </header>
+                            <div class="finance-category-list" id="financeCategoryList">
+                                <div class="finance-empty-state">بانتظار بيانات التصنيف المالي.</div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- Pane 2: Showrooms Hub -->
+                <div class="finance-tab-pane" id="financePaneShowrooms" data-pane="showrooms" hidden>
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">SHOWROOM REGISTER</span>
+                                <h2>سجل معارض Dynamics (53 معرضاً)</h2>
+                            </div>
+                            <span class="finance-register-note">كل 53 معرضًا مربوط مباشرة ببُعد Branches من Dynamics؛ انقر على أي معرض لعرض ملفه المالي والأصول المرتبطة</span>
+                        </header>
+                        <div class="finance-table-toolbar">
+                            <div class="finance-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="financeShowroomsSearch" placeholder="البحث باسم المعرض، رقم Dynamics، أو الفرع...">
+                                <button type="button" id="financeShowroomsSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="finance-filter-group">
+                                <select id="financeShowroomsStatusFilter" class="form-select finance-filter-select">
+                                    <option value="all">جميع الحالات</option>
+                                    <option value="current">المعارض الحالية فقط</option>
+                                    <option value="historical">المعارض المغلقة / التاريخية فقط</option>
+                                </select>
+                                <span class="finance-badge-counter" id="financeShowroomsCountBadge">53 معرضاً</span>
+                            </div>
                         </div>
-                        <div class="finance-aging-grid" id="financeArAging">
-                            <div class="finance-empty-state">جارٍ حساب أعمار رصيد العملاء…</div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-showroom-table align-middle">
+                                <colgroup>
+                                    <col class="finance-col-number">
+                                    <col class="finance-col-name">
+                                    <col class="finance-col-branch">
+                                    <col class="finance-col-status">
+                                    <col class="finance-col-amount">
+                                    <col class="finance-col-action">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th class="finance-sortable" data-table="showrooms" data-sort="number">رقم Dynamics <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="showrooms" data-sort="name">اسم المعرض <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="showrooms" data-sort="branch_dimension">ربط Dynamics المباشر <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="showrooms" data-sort="status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="showrooms" data-sort="non_sales_amount">مصروف Trial Balance المعتمد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-end">تفاصيل المعرض</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeShowroomsBody">
+                                    <tr><td colspan="6" class="finance-empty-state">جارٍ فحص جاهزية البيانات…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Pane 3: Accounts Payable & Invoices -->
+                <div class="finance-tab-pane" id="financePaneAp" data-pane="ap" hidden>
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-6">
+                            <section class="finance-ledger-panel h-100">
+                                <header>
+                                    <div>
+                                        <span class="finance-section-kicker">AP AGING</span>
+                                        <h2>أعمار رصيد الموردين المفتوح</h2>
+                                    </div>
+                                    <span class="finance-register-note" id="financeApAsOf">—</span>
+                                </header>
+                                <div class="finance-aging-grid" id="financeApAging">
+                                    <div class="finance-empty-state">جارٍ حساب أعمار الرصيد…</div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="col-lg-6">
+                            <section class="finance-ledger-panel h-100">
+                                <header>
+                                    <div>
+                                        <span class="finance-section-kicker">AR AGING</span>
+                                        <h2>أعمار رصيد العملاء المفتوح</h2>
+                                    </div>
+                                </header>
+                                <div class="finance-aging-grid" id="financeArAging">
+                                    <div class="finance-empty-state">جارٍ حساب أعمار رصيد العملاء…</div>
+                                </div>
+                            </section>
                         </div>
                     </div>
-                </section>
 
-                <div class="finance-detail-grid finance-secondary-grid">
+                    <section class="finance-ledger-panel mb-4">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">VENDOR ANALYTICS</span>
+                                <h2>أكبر الموردين حسب الرصيد المفتوح (Top 25)</h2>
+                            </div>
+                            <span class="finance-register-note" id="financeApReconciliation">—</span>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-compact-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="finance-sortable" data-table="topVendors" data-sort="vendor_name">المورد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="topVendors" data-sort="vendor_account">الحساب <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="topVendors" data-sort="original_amount">الأصل <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="topVendors" data-sort="paid_amount">المسدد على المفتوح <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="topVendors" data-sort="remaining_amount">المتبقي <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="topVendors" data-sort="overdue_amount">المتأخر <i class="fa-solid fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeTopVendorsBody">
+                                    <tr><td colspan="6" class="finance-empty-state">جارٍ تحميل تحليل الموردين…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
                     <section class="finance-ledger-panel">
                         <header>
                             <div>
                                 <span class="finance-section-kicker">ACCOUNTS PAYABLE</span>
-                                <h2>أحدث فواتير الموردين المرحلة</h2>
+                                <h2>سجل فواتير الموردين المرحلة</h2>
                             </div>
                             <span class="finance-register-note">لا تظهر بيانات بنكية أو اتصال</span>
                         </header>
                         <div class="finance-table-toolbar">
                             <div class="finance-search-box">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="text" id="financeInvoicesSearch" placeholder="البحث برقم الفاتورة، المورد، الحساب، أمر الشراء...">
+                                <input type="text" id="financeInvoicesSearch" placeholder="البحث برقم الفاتورة، المورد، الحساب، البيان، أمر الشراء...">
                                 <button type="button" id="financeInvoicesSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
                             </div>
                             <div class="finance-filter-group">
@@ -792,6 +772,41 @@
                             </table>
                         </div>
                     </section>
+                </div>
+
+                <!-- Pane 4: Leases & Schedules -->
+                <div class="finance-tab-pane" id="financePaneLeases" data-pane="leases" hidden>
+                    <section class="finance-horizon-panel mb-4" aria-labelledby="financeLeaseHorizonTitle">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">LEASE PAYMENT HORIZON</span>
+                                <h2 id="financeLeaseHorizonTitle">استحقاقات الإيجار والتجديدات القادمة</h2>
+                            </div>
+                            <span class="finance-register-note">التاريخ الفعلي: Payment date ثم Schedule date</span>
+                        </header>
+                        <div class="finance-horizon-grid">
+                            <article>
+                                <span>خلال 30 يومًا</span>
+                                <strong id="financeLeaseDue30">—</strong>
+                                <small id="financeLeaseDue30Count">—</small>
+                            </article>
+                            <article>
+                                <span>خلال 60 يومًا</span>
+                                <strong id="financeLeaseDue60">—</strong>
+                                <small id="financeLeaseDue60Count">—</small>
+                            </article>
+                            <article>
+                                <span>خلال 90 يومًا</span>
+                                <strong id="financeLeaseDue90">—</strong>
+                                <small id="financeLeaseDue90Count">—</small>
+                            </article>
+                            <article class="is-renewal">
+                                <span>عقود تنتهي خلال 90 يومًا</span>
+                                <strong id="financeLeaseRenewals90">—</strong>
+                                <small id="financeLeaseOverdueReview">—</small>
+                            </article>
+                        </div>
+                    </section>
 
                     <section class="finance-ledger-panel">
                         <header>
@@ -818,6 +833,88 @@
                             </table>
                         </div>
                     </section>
+                </div>
+
+                <!-- Pane 5: Fixed Assets -->
+                <div class="finance-tab-pane" id="financePaneAssets" data-pane="assets" hidden>
+                    <div class="finance-assets-grid">
+                        <article class="finance-asset-stat-card">
+                            <span>إجمالي الأصول الثابتة</span>
+                            <strong id="financeAssetsTotalCount">315</strong>
+                            <small>مسجلة بالكامل ومستوردة من Dynamics 365</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>صافي القيمة الدفترية (NBV)</span>
+                            <strong id="financeAssetsTotalNbv">—</strong>
+                            <small>بعد خصم مجمع الاستهلاك</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>الأصول المربوطة بالمعارض</span>
+                            <strong id="financeAssetsLinkedCount">249 أصل</strong>
+                            <small>موزعة ومطابقة على 52 معرضاً</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>أصول الإدارة والمستودعات المركزية</span>
+                            <strong id="financeAssetsGeneralCount">66 أصل</strong>
+                            <small>المستودع الرئيسي والمكتب ومستودع الرياض</small>
+                        </article>
+                    </div>
+
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">FIXED ASSETS OVERVIEW</span>
+                                <h2>ملخص تصنيفات الأصول الثابتة</h2>
+                            </div>
+                            <span class="finance-register-note">انقر على أي معرض في تبويب «أداء المعارض» لرؤية تفاصيل أصوله المباشرة</span>
+                        </header>
+                        <div class="row g-4 p-3">
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <strong class="d-block text-primary fs-5 mb-1">I&amp;B (117)</strong>
+                                    <span class="text-muted small">تحسينات على مباني مؤجرة</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <strong class="d-block text-success fs-5 mb-1">D&amp;F (96)</strong>
+                                    <span class="text-muted small">ديكور وأثاث ومفروشات</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <strong class="d-block text-warning fs-5 mb-1">C&amp;E (85)</strong>
+                                    <span class="text-muted small">كمبيوتر وأجهزة كهربائية وبصمة</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <strong class="d-block text-info fs-5 mb-1">VH / OTH (17)</strong>
+                                    <span class="text-muted small">سيارات ومعدات ومستودعات</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Showroom Drawer (Available across all tabs) -->
+                <div class="finance-showroom-drawer" id="financeShowroomDrawer" hidden>
+                    <button type="button" class="finance-drawer-backdrop" id="financeShowroomBackdrop" aria-label="إغلاق تفاصيل المعرض"></button>
+                    <aside class="finance-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="financeShowroomTitle">
+                        <header class="finance-drawer-header">
+                            <div>
+                                <span class="finance-section-kicker">SHOWROOM FINANCE FILE</span>
+                                <h2 id="financeShowroomTitle">تفاصيل المعرض المالية</h2>
+                                <p id="financeShowroomMeta">جارٍ تحميل البيانات المرتبطة من Dynamics…</p>
+                            </div>
+                            <button type="button" class="finance-drawer-close" id="financeShowroomClose" aria-label="إغلاق">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </header>
+                        <div class="finance-drawer-content" id="financeShowroomContent">
+                            <div class="finance-empty-state">جارٍ تحميل تفاصيل المعرض…</div>
+                        </div>
+                    </aside>
                 </div>
             </div>
             
@@ -2089,8 +2186,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260813-15"></script>
-    <script src="finance/finance-dashboard.js?v=20260813-15"></script>
+    <script src="finance/finance-api.js?v=20260814-1"></script>
+    <script src="finance/finance-dashboard.js?v=20260814-1"></script>
 
 </body>
 
