@@ -1698,6 +1698,16 @@
         <span>✨ عرض الجديد فقط</span>
       </label>
 
+      <label class="styled-checkbox-label">
+        <input type="checkbox" id="topMoversOnly" onchange="resetFiltersAndRender()">
+        <span>الأكثر طلباً</span>
+      </label>
+
+      <label class="styled-checkbox-label">
+        <input type="checkbox" id="lowStockOnly" onchange="resetFiltersAndRender()">
+        <span>نفاد وشيك</span>
+      </label>
+
       <label class="styled-checkbox-label" id="promoOnlyLabel">
         <input type="checkbox" id="promoOnly" onchange="resetFiltersAndRender()">
         <span>🏷️ العروض فقط</span>
@@ -2144,6 +2154,32 @@
       const diffDays = diffMs / (1000 * 60 * 60 * 24);
       return diffDays >= 0 && diffDays <= NEW_WINDOW_DAYS;
     }
+
+    function isTopMover(p) {
+      if (!p) return false;
+      const weeklySales = Number(p.sales) || 0;
+      const mallSales = typeof getSalesInMall === 'function' ? getSalesInMall(p.code) : 0;
+      if (typeof userMall !== 'undefined' && userMall && userMall !== 'إجمالي المستودعات') {
+        return mallSales >= 5 || weeklySales >= 20;
+      }
+      return weeklySales >= 15;
+    }
+
+    function isLowCentralStock(p) {
+      if (!p) return false;
+      const s = isGuestMode
+        ? (Number(p.branches?.['Warehouse']) || 0) + (Number(p.branches?.['warehouse riyadh']) || 0)
+        : (Number(p.stock) || 0);
+      return s > 0 && s <= 15;
+    }
+
+    function isActiveDeal(p) {
+      if (!p) return false;
+      const promoPrice = typeof getPromoPrice === 'function' ? getPromoPrice(p.code, p.alias) : null;
+      const dynOffer = typeof getDynamicsOffer === 'function' ? getDynamicsOffer(p.code) : null;
+      const dynDealPrice = typeof getDynamicsDealPrice === 'function' ? getDynamicsDealPrice(p.code) : null;
+      return promoPrice !== null || dynOffer !== null || dynDealPrice !== null;
+    }
   </script>
 
   <script>
@@ -2531,12 +2567,18 @@
       
       const currentCat = document.getElementById('categoryFilter')?.value || '';
       const newOnly = document.getElementById('newOnly')?.checked;
+      const topMoversOnly = document.getElementById('topMoversOnly')?.checked;
+      const lowStockOnly = document.getElementById('lowStockOnly')?.checked;
       const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
+      const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
       
-      let html = `<button type="button" class="pill-btn ${(!currentCat && !newOnly && !promoOnly && !favOnly) ? 'active' : ''}" onclick="selectCategoryPill('')">عرض الكل</button>`;
+      const isAllActive = !currentCat && !newOnly && !topMoversOnly && !lowStockOnly && !promoOnly && !favOnly && !showroomStockOnly;
+      let html = `<button type="button" class="pill-btn ${isAllActive ? 'active' : ''}" onclick="selectCategoryPill('')">عرض الكل</button>`;
       
       html += `<button type="button" class="pill-btn ${newOnly ? 'active' : ''}" onclick="togglePillCheckbox('newOnly')">✨ الجديد</button>`;
+      html += `<button type="button" class="pill-btn ${topMoversOnly ? 'active' : ''}" onclick="togglePillCheckbox('topMoversOnly')">الأكثر طلباً</button>`;
+      html += `<button type="button" class="pill-btn ${lowStockOnly ? 'active' : ''}" onclick="togglePillCheckbox('lowStockOnly')">نفاد وشيك</button>`;
       html += `<button type="button" class="pill-btn ${promoOnly ? 'active' : ''}" onclick="togglePillCheckbox('promoOnly')">🏷️ العروض</button>`;
       if (!isGuestMode) {
         html += `<button type="button" class="pill-btn ${favOnly ? 'active' : ''}" onclick="togglePillCheckbox('favOnly')">⭐ المفضلة</button>`;
@@ -2570,7 +2612,7 @@
       const cat = document.getElementById('categoryFilter'); if (cat) cat.value = '';
       const price = document.getElementById('priceFilter'); if (price) price.value = '';
       const sort = document.getElementById('sortFilter'); if (sort) sort.value = 'sales-desc';
-      ['newOnly', 'promoOnly', 'favOnly', 'showroomStockOnly'].forEach(id => {
+      ['newOnly', 'topMoversOnly', 'lowStockOnly', 'promoOnly', 'favOnly', 'showroomStockOnly'].forEach(id => {
         const cb = document.getElementById(id); if (cb) cb.checked = false;
       });
       handleSearchInput(false);
@@ -2594,6 +2636,8 @@
       const cat = document.getElementById('categoryFilter')?.value || '';
       const price = document.getElementById('priceFilter')?.value || '';
       const newOnly = document.getElementById('newOnly')?.checked;
+      const topMoversOnly = document.getElementById('topMoversOnly')?.checked;
+      const lowStockOnly = document.getElementById('lowStockOnly')?.checked;
       const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
       const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
@@ -2603,6 +2647,8 @@
       if (cat) activeTags.push(`قسم: "${cat}"`);
       if (price) activeTags.push(`سعر: "${price}"`);
       if (newOnly) activeTags.push(`✨ جديد`);
+      if (topMoversOnly) activeTags.push(`أكثر طلباً`);
+      if (lowStockOnly) activeTags.push(`نفاد وشيك`);
       if (promoOnly) activeTags.push(`🏷️ عروض`);
       if (favOnly) activeTags.push(`⭐ مفضلة`);
       if (showroomStockOnly) activeTags.push(`📦 متوفر بالمعرض`);
@@ -3377,6 +3423,8 @@
       const sortBy = document.getElementById('sortFilter')?.value || 'sales-desc';
       const searchVal = (document.getElementById('searchBar')?.value || '').trim().toLowerCase();
       const newOnly = document.getElementById('newOnly')?.checked;
+      const topMoversOnly = document.getElementById('topMoversOnly')?.checked;
+      const lowStockOnly = document.getElementById('lowStockOnly')?.checked;
       const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
       const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
@@ -3389,7 +3437,9 @@
 
       if (category) list = list.filter(p => p.category === category);
       if (newOnly) list = list.filter(p => isNewArrival(p.code));
-      if (promoOnly) list = list.filter(p => getPromoPrice(p.code, p.alias) !== null || getDynamicsOffer(p.code) !== null);
+      if (topMoversOnly) list = list.filter(p => isTopMover(p));
+      if (lowStockOnly) list = list.filter(p => isLowCentralStock(p));
+      if (promoOnly) list = list.filter(p => isActiveDeal(p));
       if (favOnly) list = list.filter(p => favorites.has(String(p.code)));
       if (showroomStockOnly) list = list.filter(p => getQtyInMall(p) > 0);
 
@@ -3480,11 +3530,26 @@
           ? `if(this.dataset.fallback !== 'true'){this.dataset.fallback='true';this.src='${fallbackSrc}';}else{this.src='noimage.png';this.onerror=null;this.classList.add('error');}`
           : `this.src='noimage.png';this.onerror=null;this.classList.add('error');`;
 
+        const isNew = isNewArrival(d.code);
+        const isTop = isTopMover(d);
+        const isLow = isLowCentralStock(d);
+        const isDeal = (effectivePromoPrice !== null) || (dynOffer !== null);
+
+        let badgesHtml = '';
+        if (isNew) badgesHtml += '<span class="velocity-badge badge-new" title="وصل حديثاً خلال آخر 14 يوماً">✨ جديد</span>';
+        if (isTop) badgesHtml += '<span class="velocity-badge badge-top-mover" title="الأكثر طلباً ومبيعاً هذا الأسبوع">الأكثر طلباً</span>';
+        if (isLow) badgesHtml += '<span class="velocity-badge badge-low-stock" title="المخزون المتبقي قليل بالمستودع">نفاد وشيك</span>';
+        if (isDeal) badgesHtml += `<span class="velocity-badge badge-deal" title="${safeOffer || 'عرض ترويجي نشط'}">🏷️ عرض خاص</span>`;
+
         return `
           <div class="product">
             <div class="product-image-container" onclick="showProductDetails('${d.code}')">
               <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', ${effectivePromoPrice !== null ? effectivePromoPrice : parseFloat(d.price || 0)})" title="طباعة الباركود">🖨️</button>
-              ${isNewArrival(d.code) ? '<div class="badge-new">✨ جديد</div>' : ''}
+              
+              <div class="product-badges-stack">
+                ${badgesHtml}
+              </div>
+
               ${getStockBadge(d)}
               <button class="fav-btn ${favorites.has(String(d.code)) ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${d.code}')" title="أضف للمفضلة">${favorites.has(String(d.code)) ? '★' : '☆'}</button>
               <img loading="lazy" src="${imgSrc}" alt="${safeName}" width="500" height="500" onerror="${imgOnError}">
@@ -3624,6 +3689,17 @@
         const cartQty = cart[d.code]?.qty || '';
         const safeName = String(d.name || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
 
+        const isNew = isNewArrival(d.code);
+        const isTop = isTopMover(d);
+        const isLow = isLowCentralStock(d);
+        const isDeal = (getPromoPrice(d.code, d.alias) !== null) || (getDynamicsOffer(d.code) !== null) || (getDynamicsDealPrice(d.code) !== null);
+
+        let tableBadgesHtml = '';
+        if (isNew) tableBadgesHtml += '<span class="table-badge badge-new" title="وصل حديثاً خلال 14 يوماً">✨ جديد</span>';
+        if (isTop) tableBadgesHtml += '<span class="table-badge badge-top-mover" title="الأكثر طلباً ومبيعاً هذا الأسبوع">الأكثر طلباً</span>';
+        if (isLow) tableBadgesHtml += '<span class="table-badge badge-low-stock" title="نفاد وشيك بالمستودع">نفاد وشيك</span>';
+        if (isDeal) tableBadgesHtml += '<span class="table-badge badge-deal" title="عرض ترويجي نشط">🏷️ عرض</span>';
+
         const imgSrc = d.image_path
           ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + d.image_path
           : 'https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/' + ((d.alias && String(d.alias).trim() !== '') ? d.alias : d.code) + '.jpg';
@@ -3634,7 +3710,10 @@
               <img src="${imgSrc}" alt="${safeName}" width="44" height="44" loading="lazy" style="width:44px; height:44px; object-fit:contain; border-radius:6px;" onerror="this.src='noimage.png'; this.onerror=null;">
             </td>
             <td>
-              <div style="font-weight:700; color:var(--text-main);">${d.name}</div>
+              <div style="font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                <span>${d.name}</span>
+                ${tableBadgesHtml}
+              </div>
               <div style="font-size:0.8em; color:var(--text-muted);">Alias: ${d.alias || '—'} | Code: ${d.code}</div>
             </td>
             <td style="font-weight:800; color:var(--primary);">${d.price} ر.س</td>
@@ -3719,6 +3798,17 @@
         ? Number(product.price)
         : (modalDynOriginalPrice !== null ? modalDynOriginalPrice : Number(product.price));
 
+      const isNew = isNewArrival(product.code);
+      const isTop = isTopMover(product);
+      const isLow = isLowCentralStock(product);
+      const isDeal = (modalEffectivePromo !== null) || (modalDynOffer !== null);
+
+      let modalBadgesHtml = '';
+      if (isNew) modalBadgesHtml += '<span class="velocity-badge badge-new" style="margin-left:4px;">✨ جديد</span>';
+      if (isTop) modalBadgesHtml += '<span class="velocity-badge badge-top-mover" style="margin-left:4px;">الأكثر طلباً هذا الأسبوع</span>';
+      if (isLow) modalBadgesHtml += '<span class="velocity-badge badge-low-stock" style="margin-left:4px;">نفاد وشيك بالمستودع</span>';
+      if (isDeal) modalBadgesHtml += '<span class="velocity-badge badge-deal" style="margin-left:4px;">🏷️ عرض ترويجي نشط</span>';
+
       const modalPriceHtml = (modalEffectivePromo !== null)
         ? `<span style="color:#e74c3c; font-weight:800; font-size:1.1em;">${modalEffectivePromo} ر.س</span>` +
           (Number(modalEffectivePromo) < Number(modalEffectiveOriginal) ? ` <span style="text-decoration:line-through; color:#95a5a6; font-size:0.9em; margin-right:6px;">${modalEffectiveOriginal} ر.س</span>` : '') +
@@ -3726,6 +3816,7 @@
         : `<span>${product.price} ر.س</span>`;
 
       modalDetails.innerHTML = `
+        ${modalBadgesHtml ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">${modalBadgesHtml}</div>` : ''}
         <p><strong>الكود:</strong> ${product.code}</p>
         <p><strong>Alias:</strong> ${product.alias || '—'}</p>
         <p><strong>السعر:</strong> ${modalPriceHtml}</p>
