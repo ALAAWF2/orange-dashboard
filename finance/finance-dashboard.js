@@ -285,69 +285,194 @@
         return section;
     }
 
-    function renderShowroomDetail(payload) {
+    function renderShowroomDetail(payload, pnl) {
         const showroom = payload.showroom || {};
         const summary = payload.summary || {};
+        const pnlSummary = pnl?.summary || {};
+        const hasPnl = pnl?.state === 'ready' && pnlSummary.revenue_available;
+
         element('financeShowroomTitle').textContent = showroom.name || 'تفاصيل المعرض المالية';
         element('financeShowroomMeta').textContent =
             `Dynamics ${showroom.number || '—'} · Branch ${showroom.branch_dimension || '—'} · ${payload.period?.start || '—'} إلى ${payload.period?.end || '—'}`;
 
         const content = element('financeShowroomContent');
         content.replaceChildren();
+
+        // 1. Executive 360 KPI Grid (Revenue, Gross Profit, OPEX, EBITDA)
         const cards = document.createElement('div');
         cards.className = 'finance-showroom-summary';
-        [
-            ['مصروف Trial Balance', money.format(Number(summary.trial_balance_expense) || 0)],
-            ['فواتير المورد المرتبطة', integer.format(summary.vendor_invoice_count || 0)],
-            ['عقود الإيجار', integer.format(summary.lease_count || 0)],
-            ['الأصول المرتبطة', integer.format(summary.asset_count || 0)]
-        ].forEach(([label, value]) => {
-            const card = document.createElement('article');
-            const labelNode = document.createElement('span');
-            labelNode.textContent = label;
-            const valueNode = document.createElement('strong');
-            valueNode.textContent = value;
-            card.append(labelNode, valueNode);
-            cards.append(card);
-        });
+
+        const revVal = hasPnl ? Number(pnlSummary.revenue || 0) : null;
+        const grossVal = hasPnl ? Number(pnlSummary.gross_profit || 0) : null;
+        const grossPct = hasPnl ? (pnlSummary.gross_margin_pct || 0) : null;
+        const opexVal = Number(pnlSummary.total_expense || summary.trial_balance_expense || 0);
+        const ebitdaVal = hasPnl ? Number(pnlSummary.operating_result || 0) : null;
+        const ebitdaPct = hasPnl ? (pnlSummary.ebitda_margin_pct || 0) : null;
+
+        // Card 1: Revenue
+        const cardRev = document.createElement('article');
+        cardRev.className = 'is-kpi-revenue';
+        cardRev.innerHTML = `
+            <span>إيرادات مبيعات المعرض</span>
+            <strong>${revVal !== null ? money.format(revVal) : 'غير متوفر'}</strong>
+            <small class="finance-kpi-badge is-positive">${revVal !== null ? 'إيراد فعلي معتمد' : 'بانتظار اكتمال التغطية'}</small>
+        `;
+
+        // Card 2: Gross Profit
+        const cardGross = document.createElement('article');
+        cardGross.className = 'is-kpi-gross';
+        cardGross.innerHTML = `
+            <span>مجمل الربح التشغيلي</span>
+            <strong>${grossVal !== null ? money.format(grossVal) : '—'}</strong>
+            <small class="finance-kpi-badge is-positive">${grossPct !== null ? 'الهامش ' + grossPct + '%' : '—'}</small>
+        `;
+
+        // Card 3: OPEX
+        const cardOpex = document.createElement('article');
+        cardOpex.className = 'is-kpi-opex';
+        cardOpex.innerHTML = `
+            <span>مصروف Trial Balance والتشغيل</span>
+            <strong>${money.format(opexVal)}</strong>
+            <small class="finance-kpi-badge is-negative">تشمل الإيجار والرواتب</small>
+        `;
+
+        // Card 4: EBITDA
+        const cardEbitda = document.createElement('article');
+        cardEbitda.className = 'is-kpi-ebitda';
+        const isPos = (ebitdaVal || 0) >= 0;
+        cardEbitda.innerHTML = `
+            <span>صافي الربح التشغيلي (EBITDA)</span>
+            <strong>${ebitdaVal !== null ? money.format(ebitdaVal) : '—'}</strong>
+            <small class="finance-kpi-badge ${isPos ? 'is-positive' : 'is-negative'}">${ebitdaPct !== null ? 'هامش ' + ebitdaPct + '%' : '—'}</small>
+        `;
+
+        cards.append(cardRev, cardGross, cardOpex, cardEbitda);
         content.append(cards);
 
-        content.append(detailSection('حسابات المصروف من ميزان المراجعة', [
+        // 2. Showroom P&L Waterfall Table (if P&L available)
+        if (hasPnl) {
+            const pnlSection = document.createElement('section');
+            pnlSection.className = 'finance-showroom-section mb-4';
+            pnlSection.innerHTML = `
+                <h3>
+                    <span><i class="fa-solid fa-chart-pie text-warning me-2"></i> قائمة الدخل التشغيلية للمعرض (Showroom P&L 360°)</span>
+                    <span class="badge bg-light text-dark fw-normal border">Trial Balance</span>
+                </h3>
+                <div class="table-responsive">
+                    <table class="finance-pnl-waterfall">
+                        <tbody>
+                            <tr class="is-header-row">
+                                <td><span class="finance-pnl-badge-sign is-add">+</span> إيرادات مبيعات المعرض (Sales Revenue)</td>
+                                <td class="text-end fw-bold" dir="ltr">${money.format(pnlSummary.revenue || 0)}</td>
+                                <td class="text-muted text-end small" style="width: 120px;">100.0%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> تكلفة البضاعة المباعة (Cost of Goods Sold - COGS)</td>
+                                <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.cogs || 0)}</td>
+                                <td class="text-muted text-end small">${revVal ? ((pnlSummary.cogs / revVal) * 100).toFixed(1) + '%' : '—'}</td>
+                            </tr>
+                            <tr class="is-total-row">
+                                <td><span class="finance-pnl-badge-sign is-eq">=</span> مجمل الربح التشغيلي (Gross Profit)</td>
+                                <td class="text-end fw-bold text-primary" dir="ltr">${money.format(pnlSummary.gross_profit || 0)}</td>
+                                <td class="text-end fw-bold text-primary small">${grossPct ? grossPct + '%' : '—'}</td>
+                            </tr>
+                            <tr>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> استهلاك وإيجار المعرض (Rent & Lease Amortization)</td>
+                                <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.rent_expense || 0)}</td>
+                                <td class="text-muted text-end small">${revVal ? ((pnlSummary.rent_expense / revVal) * 100).toFixed(1) + '%' : '—'}</td>
+                            </tr>
+                            <tr>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> رواتب ومصاريف الكادر (Payroll & Staff Allowances)</td>
+                                <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.payroll_expense || 0)}</td>
+                                <td class="text-muted text-end small">${revVal ? ((pnlSummary.payroll_expense / revVal) * 100).toFixed(1) + '%' : '—'}</td>
+                            </tr>
+                            <tr>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> مصاريف تشغيلية وصيانة وفواتير موردين (Other OPEX)</td>
+                                <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.other_opex || 0)}</td>
+                                <td class="text-muted text-end small">${revVal ? ((pnlSummary.other_opex / revVal) * 100).toFixed(1) + '%' : '—'}</td>
+                            </tr>
+                            <tr class="is-ebitda-row">
+                                <td><span class="finance-pnl-badge-sign is-eq">=</span> صافي الربح التشغيلي للمعرض (Showroom EBITDA)</td>
+                                <td class="text-end fw-bold" dir="ltr">${money.format(pnlSummary.operating_result || 0)}</td>
+                                <td class="text-end fw-bold small">${ebitdaPct ? ebitdaPct + '%' : '—'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            content.append(pnlSection);
+        }
+
+        // 3. Sub-tabs navigation for detailed breakdown
+        const tabsNav = document.createElement('div');
+        tabsNav.className = 'finance-showroom-tabs mt-4';
+        tabsNav.innerHTML = `
+            <button type="button" class="finance-showroom-tab-btn is-active" data-detail-tab="accounts"><i class="fa-solid fa-list-check me-1"></i> حسابات المصروف (${payload.expense_categories?.length || 0})</button>
+            <button type="button" class="finance-showroom-tab-btn" data-detail-tab="leases"><i class="fa-solid fa-file-contract me-1"></i> عقود الإيجار (${payload.leases?.length || 0})</button>
+            <button type="button" class="finance-showroom-tab-btn" data-detail-tab="invoices"><i class="fa-solid fa-receipt me-1"></i> فواتير الموردين (${payload.vendor_invoices?.length || 0})</button>
+            <button type="button" class="finance-showroom-tab-btn" data-detail-tab="assets"><i class="fa-solid fa-boxes-stacked me-1"></i> الأصول الثابتة (${payload.assets?.length || 0})</button>
+        `;
+        content.append(tabsNav);
+
+        // Sections containers
+        const secAccounts = detailSection('حسابات المصروف من ميزان المراجعة', [
             { key: 'main_account_id', label: 'الحساب', ltr: true },
             { key: 'category', label: 'الوصف' },
             { key: 'debit_amount', label: 'مدين', money: true },
             { key: 'credit_amount', label: 'دائن', money: true },
             { key: 'net_amount', label: 'الصافي', money: true }
-        ], payload.expense_categories || []));
+        ], payload.expense_categories || []);
+        secAccounts.id = 'secDetailAccounts';
 
-        content.append(detailSection('فواتير الموردين المرتبطة ببُعد المعرض', [
+        const secInvoices = detailSection('فواتير الموردين المرتبطة ببُعد المعرض', [
             { key: 'invoice_id', label: 'الفاتورة', ltr: true },
             { key: 'invoice_account', label: 'المورد', ltr: true },
             { key: 'invoice_date', label: 'التاريخ', ltr: true },
             { key: 'due_date', label: 'الاستحقاق', ltr: true },
             { key: 'allocated_amount', label: 'المبلغ المرتبط', money: true },
             { key: 'allocated_tax_amount', label: 'الضريبة', money: true }
-        ], payload.vendor_invoices || []));
+        ], payload.vendor_invoices || []);
+        secInvoices.id = 'secDetailInvoices';
+        secInvoices.hidden = true;
 
-        content.append(detailSection('عقود الإيجار والاستحقاقات', [
+        const secLeases = detailSection('عقود الإيجار والاستحقاقات', [
             { key: 'lease_id', label: 'العقد', ltr: true },
             { key: 'description', label: 'الوصف' },
             { key: 'expiration_date', label: 'الانتهاء', ltr: true },
             { key: 'remaining_balance', label: 'الرصيد', money: true },
             { key: 'upcoming_payment_amount', label: 'القادم خلال 90 يومًا', money: true }
-        ], payload.leases || []));
+        ], payload.leases || []);
+        secLeases.id = 'secDetailLeases';
+        secLeases.hidden = true;
 
-        content.append(detailSection('الأصول المرتبطة مباشرة', [
+        const secAssets = detailSection('الأصول المرتبطة مباشرة بالمعرض', [
             { key: 'fixed_asset_number', label: 'الأصل', ltr: true },
             { key: 'name', label: 'الاسم' },
             { key: 'asset_location_name', label: 'الموقع' },
             { key: 'acquisition_date', label: 'الاقتناء', ltr: true },
             { key: 'acquisition_price', label: 'قيمة الاقتناء', money: true }
-        ], payload.assets || []));
+        ], payload.assets || []);
+        secAssets.id = 'secDetailAssets';
+        secAssets.hidden = true;
+
+        content.append(secAccounts, secLeases, secInvoices, secAssets);
+
+        // Tab switching logic
+        tabsNav.querySelectorAll('.finance-showroom-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabsNav.querySelectorAll('.finance-showroom-tab-btn').forEach(b => b.classList.remove('is-active'));
+                btn.classList.add('is-active');
+                const target = btn.dataset.detailTab;
+                secAccounts.hidden = target !== 'accounts';
+                secLeases.hidden = target !== 'leases';
+                secInvoices.hidden = target !== 'invoices';
+                secAssets.hidden = target !== 'assets';
+            });
+        });
 
         const coverage = document.createElement('p');
         coverage.className = 'finance-showroom-coverage';
-        coverage.textContent = payload.coverage?.note || '';
+        coverage.textContent = payload.coverage?.note || 'تظهر فقط السجلات التي تحمل بُعد المعرض صراحة في Dynamics.';
         content.append(coverage);
     }
 
@@ -358,7 +483,7 @@
         element('financeShowroomTitle').textContent = 'تفاصيل المعرض المالية';
         element('financeShowroomMeta').textContent = `Dynamics ${showroomNumber}`;
         element('financeShowroomContent').innerHTML =
-            '<div class="finance-empty-state">جارٍ تحميل المصروفات والفواتير والعقود المرتبطة…</div>';
+            '<div class="finance-empty-state">جارٍ تحميل بطاقة الأداء المالي وقائمة الدخل ومصروفات المعرض…</div>';
         try {
             const params = { ...periodParams(), horizon_days: 90 };
             const [payload, pnl] = await Promise.all([
@@ -366,8 +491,7 @@
                 window.FinancePlatformApi.showroomPnl(showroomNumber, params)
                     .catch(() => ({ state: 'unavailable' }))
             ]);
-            renderShowroomDetail(payload);
-            appendShowroomPnl(pnl);
+            renderShowroomDetail(payload, pnl);
         } catch (error) {
             console.error('Finance showroom detail failed:', error);
             element('financeShowroomContent').innerHTML =
