@@ -1939,6 +1939,11 @@
                             <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-id-card me-2"></i> بوابة إدارة موظفي الفروع (D365 Mappings)</h4>
                             <p class="text-muted small mb-0">ربط ونقل الموظفين بين المعارض وإدارة فهارس العناوين (Address Books) في قاعدة بيانات Microsoft Dynamics 365 فورياً.</p>
                         </div>
+                        <div>
+                            <button class="btn btn-orange-premium fw-bold px-3 py-2 shadow-sm" onclick="openD365AddEmployeeModal()">
+                                <i class="fa-solid fa-user-plus me-1"></i> إضافة موظف إلى Dynamics 365 (Sandbox) 🚀
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Filter Options Panel -->
@@ -2792,6 +2797,90 @@
                 </div>
                 <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px;">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Microsoft Dynamics 365 Worker Onboarding Modal -->
+    <div class="modal fade" id="d365AddEmployeeModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); z-index: 1085; direction: rtl;">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-white border shadow-lg" style="border-radius: 16px; border: 2px solid var(--orange) !important;">
+                <div class="modal-header border-bottom bg-light">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-orange fs-4"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">إضافة وتعيين موظف في Dynamics 365</h5>
+                            <small class="text-muted"><span class="badge bg-warning text-dark me-1">Sandbox</span> أتمتة إنشاء الموظف وضبط الصلاحيات والعمولات آلياً</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Informative Banner -->
+                    <div class="alert alert-warning border-warning-subtle py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                        <i class="fa-solid fa-robot text-orange fs-5"></i>
+                        <div>
+                            سيقوم الخادم بتشغيل الأتمتة لإنشاء الموظف، واختيار دفاتر العناوين، وضبط صلاحيات الـ POS، وإنشاء مجموعة العمولات، وإسناد المنصب تلقائياً.
+                        </div>
+                    </div>
+
+                    <form id="d365AddEmployeeForm" onsubmit="submitD365AddEmployee(event)">
+                        <div class="row g-3">
+                            <!-- First Name (English) -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">الاسم بالإنجليزية (First Name) <span class="text-danger">*</span></label>
+                                <input type="text" id="d365FirstName" class="form-control form-control-dark" placeholder="مثال: Ahmed" required>
+                                <div class="form-text small text-muted">الاسم الأول كما يظهر في نظام D365 وتقرير المبيعات.</div>
+                            </div>
+
+                            <!-- Arabic / Search Name -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">الاسم بالعربي (Search Name / الاسم المستعار)</label>
+                                <input type="text" id="d365SearchName" class="form-control form-control-dark" placeholder="مثال: أحمد العتيبي">
+                                <div class="form-text small text-muted">يُحفظ في حقل Search name للبحث العربي وربط الداشبورد.</div>
+                            </div>
+
+                            <!-- Personnel Number -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">الرقم الوظيفي (Personnel Number) <span class="text-danger">*</span></label>
+                                <input type="text" id="d365PersonnelNumber" class="form-control form-control-dark" placeholder="مثال: 1055" required pattern="[A-Za-z0-9_-]+" title="أرقام أو حروف إنجليزية">
+                                <div class="form-text small text-muted">كود الموظف الفريد في D365 ومجموعة العمولات.</div>
+                            </div>
+
+                            <!-- Branch / Showroom -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">المعرض المخصص (Branch) <span class="text-danger">*</span></label>
+                                <select id="d365BranchSelect" class="form-select form-select-dark" required>
+                                    <option value="">جاري تحميل المعارض...</option>
+                                </select>
+                                <div class="form-text small text-muted">سيتم تحديد دفاتر العناوين (-C و -E) تلقائياً للمعرض.</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress & Console Section (Hidden by default, shown when running) -->
+                        <div id="d365JobProgressSection" class="mt-4 pt-3 border-top" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark small" id="d365JobStatusTitle"><i class="fa-solid fa-spinner fa-spin text-orange me-1"></i> جاري تنفيذ الأتمتة في D365...</span>
+                                <span class="badge bg-orange text-white" id="d365JobProgressBadge">0%</span>
+                            </div>
+                            <div class="progress mb-3" style="height: 10px; border-radius: 5px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-orange" id="d365JobProgressBar" role="progressbar" style="width: 0%"></div>
+                            </div>
+
+                            <div class="terminal-container p-3" id="d365JobConsole" style="max-height: 200px; font-size: 0.78rem; background: #0f172a; color: #38bdf8; border-radius: 8px; overflow-y: auto;">
+                                [System] بانتظار بدء المهمة...
+                            </div>
+                        </div>
+
+                        <div class="modal-footer border-top px-0 pb-0 mt-4 justify-content-between">
+                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إغلاق</button>
+                            <button type="submit" id="btnSubmitD365Add" class="btn btn-orange-premium px-4 fw-bold">
+                                <i class="fa-solid fa-play me-1"></i> بدء التعيين الآلي في D365 🚀
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -4141,6 +4230,204 @@
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = origText;
             }
+        }
+
+        // =============================================================
+        // Microsoft Dynamics 365 Worker Onboarding Modal & Automation
+        // =============================================================
+        let d365PollingTimer = null;
+        let cachedD365Showrooms = [];
+
+        async function loadD365Showrooms() {
+            const select = document.getElementById('d365BranchSelect');
+            if (!select) return;
+            if (cachedD365Showrooms && cachedD365Showrooms.length > 0) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/d365/showrooms_list`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) throw new Error("Failed to fetch D365 showrooms");
+                const data = await res.json();
+                cachedD365Showrooms = data.showrooms || [];
+                
+                select.innerHTML = '<option value="">-- اختر المعرض المخصص --</option>';
+                cachedD365Showrooms.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.code;
+                    opt.textContent = `${s.code} - ${s.name} (${s.c_book} / ${s.e_book})`;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.warn("Error loading showrooms from API, falling back to local list:", err);
+                const fallbackStores = [
+                    ["1001", "1001-Andalos Mall"], ["1002", "1002-Haifa Mall"], ["1003", "1003-Red Sea Mall"],
+                    ["1004", "1004-Arab Mall"], ["1005", "1005-Al-Salam Mall"], ["1006", "1006-Al-Yasmin Mall"],
+                    ["1007", "1007-Al_Khayyat Center"], ["1008", "1008-Jeddah Park"], ["1009", "1009-Al Basateen Mall"],
+                    ["1010", "1010-THE VILLAGE"], ["1011", "1011- Aziz Mall"], ["1012", "1012-Sauq7"],
+                    ["1013", "1013-PLATFORMS"], ["1014", "1014-GIFTS"], ["1101", "1101-Al_Hamra Mall"],
+                    ["1102", "1102-Riyadh Othaim Mall"], ["1103", "1103-Rabwa Othaim Mall"], ["1104", "1104-Al Nakheel Mall Riyadh"],
+                    ["1105", "1105-Tala Mall Riyadh"], ["1106", "1106-Atyaf Mall Riyadh"], ["1107", "1107-Al_Riyadh Park"],
+                    ["1108", "1108-Salam Mall Riyadh"], ["1109", "1109-Hayat Mall Riyad"], ["1110", "1110- Riyadh Gallery Mall"],
+                    ["1111", "1111-Khaleej Mall Riyadh"], ["1112", "1112-Meem Plaza Riyadh"], ["1113", "1113-Park Avenue Riyadh"],
+                    ["1114", "1114-Malgha Mall"], ["1115", "1115-Alrabie Mall"], ["1201", "1201-Makkah Mall"],
+                    ["1202", "1202-Sitten Street Makkah"], ["1203", "1203- Jabl Omar"], ["1301", "1301-Jouri Mall"],
+                    ["1302", "1302-Al Kamal Mall"], ["1401", "1401-Alia Mall Madinah"], ["1402", "1402-AlNoor Mall Madinah"],
+                    ["1501", "1501-Yanbu Dana Mall"], ["1601", "1601-Ehsa Othaim Mall"], ["1602", "1602-AlAhsa Mall"],
+                    ["1701", "1701-Arar Othaim Mall"], ["1801", "1801-Hail Othaim Mall"], ["1901", "1901-Al_Rashid Mall Abha"],
+                    ["1902", "1902-Khamis Avenue"], ["1903", "1903-Mujan Park"], ["1904", "1904-Al_Baha Mall"],
+                    ["1906", "1906-LAVANDA PARK"], ["2001", "2001-Tabuk Park"], ["2101", "2101-Dhahran Mall khobar"],
+                    ["2102", "2102-Al Nakheel Mall Dammam"], ["2103", "2103-Dareen Mall Dammam"], ["2201", "2201-Al jubail Mall"],
+                    ["2301", "2301-Al-Jouf Center"], ["2401", "2401-Al-Nakheel Plaza"]
+                ];
+                select.innerHTML = '<option value="">-- اختر المعرض المخصص --</option>';
+                fallbackStores.forEach(([code, name]) => {
+                    const opt = document.createElement('option');
+                    opt.value = code;
+                    opt.textContent = `${code} - ${name}`;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        function openD365AddEmployeeModal() {
+            loadD365Showrooms();
+            // Reset form if no active job is running
+            const progressSec = document.getElementById('d365JobProgressSection');
+            if (progressSec && (!d365PollingTimer)) {
+                progressSec.style.display = 'none';
+                document.getElementById('d365JobConsole').innerHTML = '[System] بانتظار بدء المهمة...';
+                document.getElementById('d365JobProgressBar').style.width = '0%';
+                document.getElementById('d365JobProgressBadge').textContent = '0%';
+                const submitBtn = document.getElementById('btnSubmitD365Add');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-play me-1"></i> بدء التعيين الآلي في D365 🚀';
+                }
+            }
+            const modal = new bootstrap.Modal(document.getElementById('d365AddEmployeeModal'));
+            modal.show();
+        }
+
+        async function submitD365AddEmployee(event) {
+            event.preventDefault();
+            const fName = document.getElementById('d365FirstName').value.trim();
+            const sName = document.getElementById('d365SearchName').value.trim();
+            const pNum = document.getElementById('d365PersonnelNumber').value.trim();
+            const branch = document.getElementById('d365BranchSelect').value;
+
+            if (!fName || !pNum || !branch) {
+                showToast("يرجى ملء جميع الحقول الإلزامية (الاسم، الرقم الوظيفي، المعرض)", "warning");
+                return;
+            }
+
+            const submitBtn = document.getElementById('btnSubmitD365Add');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جاري بدء الأتمتة...';
+
+            const progressSec = document.getElementById('d365JobProgressSection');
+            progressSec.style.display = 'block';
+            const consoleEl = document.getElementById('d365JobConsole');
+            consoleEl.innerHTML = `[System] 🚀 جاري إرسال طلب التعيين للموظف ${fName} (${pNum}) إلى السيرفر...<br>`;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/d365/add_worker`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        first_name: fName,
+                        search_name: sName,
+                        personnel_number: pNum,
+                        branch: branch
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || "تعذر بدء العملية");
+                }
+
+                showToast(data.message || "تم بدء أتمتة الموظف بنجاح", "info");
+                consoleEl.innerHTML += `[Server] ✅ ${data.message}<br>`;
+                startD365JobPolling(data.job_id);
+
+            } catch (err) {
+                console.error(err);
+                showToast("خطأ: " + err.message, "danger");
+                consoleEl.innerHTML += `<span class="text-danger">[Error] ❌ ${err.message}</span><br>`;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-play me-1"></i> إعادة المحاولة 🚀';
+            }
+        }
+
+        function startD365JobPolling(jobId) {
+            if (d365PollingTimer) clearInterval(d365PollingTimer);
+
+            d365PollingTimer = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/admin/d365/worker_job_status/${jobId}`, {
+                        headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                    });
+                    if (!res.ok) return;
+
+                    const job = await res.json();
+                    const progress = job.progress || 0;
+                    const pBar = document.getElementById('d365JobProgressBar');
+                    const pBadge = document.getElementById('d365JobProgressBadge');
+                    const consoleEl = document.getElementById('d365JobConsole');
+                    const titleEl = document.getElementById('d365JobStatusTitle');
+                    const submitBtn = document.getElementById('btnSubmitD365Add');
+
+                    if (pBar) pBar.style.width = `${progress}%`;
+                    if (pBadge) pBadge.textContent = `${progress}%`;
+
+                    if (consoleEl && job.logs) {
+                        consoleEl.innerHTML = job.logs.map(l => {
+                            if (l.includes('❌') || l.includes('Error')) return `<span class="text-danger">${l}</span>`;
+                            if (l.includes('✅') || l.includes('🎉') || l.includes('✔️')) return `<span class="text-success">${l}</span>`;
+                            if (l.includes('⚠️')) return `<span class="text-warning">${l}</span>`;
+                            return l;
+                        }).join('<br>');
+                        consoleEl.scrollTop = consoleEl.scrollHeight;
+                    }
+
+                    if (job.status === 'success') {
+                        clearInterval(d365PollingTimer);
+                        d365PollingTimer = null;
+                        if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> تم إكمال تعيين الموظف بنجاح 100%! 🎉';
+                        if (pBar) {
+                            pBar.className = 'progress-bar bg-success';
+                            pBar.style.width = '100%';
+                        }
+                        if (pBadge) {
+                            pBadge.className = 'badge bg-success text-white';
+                            pBadge.textContent = '100%';
+                        }
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i> مكتمل بنجاح';
+                        }
+                        showToast(`🎉 تم تعيين الموظف ${job.first_name} (${job.personnel_number}) في D365 بنجاح!`, "success");
+                    } else if (job.status === 'failed') {
+                        clearInterval(d365PollingTimer);
+                        d365PollingTimer = null;
+                        if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-circle-xmark text-danger me-1"></i> فشلت الأتمتة: ${job.error || 'خطأ غير معروف'}`;
+                        if (pBar) pBar.className = 'progress-bar bg-danger';
+                        if (pBadge) pBadge.className = 'badge bg-danger text-white';
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right me-1"></i> إعادة المحاولة 🚀';
+                        }
+                        showToast(`❌ فشل تعيين الموظف: ${job.error || 'راجع السجلات'}`, "danger");
+                    }
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }, 2000);
         }
 
         function exportEmployeesToExcel() {
