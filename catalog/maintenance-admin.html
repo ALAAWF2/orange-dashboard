@@ -2,20 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>إدارة طلبات الصيانة</title>
+  <title>لوحة القيادة وإدارة الصيانة والمشاريع والتكييف | أورانج</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-app: #f1f5f9;
+      --bg-app: #f8fafc;
       --bg-surface: #ffffff;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --primary-soft: #eff6ff;
+      --primary: #fe7900;
+      --primary-hover: #e06900;
+      --primary-soft: #fff7ed;
       --secondary: #0f172a;
-      --accent: #f97316;
+      --accent: #3b82f6;
+      --accent-soft: #eff6ff;
       
       --text-main: #0f172a;
       --text-muted: #64748b;
@@ -27,15 +28,17 @@
       --warning: #f59e0b;
       --yellow: #eab308;
       --success: #10b981;      
+      --purple: #8b5cf6;
+      --cyan: #06b6d4;
 
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-      --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12);
       --radius-sm: 8px;
-      --radius-md: 16px;
-      --radius-lg: 24px;
-      --font-family: 'Tajawal', system-ui, sans-serif;
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,13 +49,14 @@
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
       line-height: 1.5;
+      min-height: 100vh;
     }
 
     /* Top Navbar */
     .navbar {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-color);
-      padding: 1rem 2rem;
+      padding: 0.85rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -67,59 +71,82 @@
       gap: 12px;
     }
     .nav-brand .logo-icon {
-      background: var(--secondary);
+      background: linear-gradient(135deg, #fe7900, #ff9433);
       color: white;
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
-      transform: rotate(-5deg);
+      font-size: 1.3rem;
+      box-shadow: 0 4px 10px rgba(254, 121, 0, 0.3);
       transition: var(--transition);
     }
-    .nav-brand:hover .logo-icon { transform: rotate(0deg) scale(1.05); }
+    .nav-brand:hover .logo-icon { transform: scale(1.05) rotate(-5deg); }
     .nav-brand h1 {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: var(--secondary);
     }
+    .nav-brand .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
     
     .btn {
       font-family: var(--font-family);
       border: none;
-      padding: 0.6rem 1.2rem;
+      padding: 0.55rem 1.1rem;
       border-radius: var(--radius-sm);
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       transition: var(--transition);
       text-decoration: none;
+      white-space: nowrap;
     }
     .btn-outline {
       background: transparent;
       border: 1.5px solid var(--border-color);
       color: var(--text-main);
     }
-    .btn-outline:hover { border-color: var(--text-muted); background: #f8fafc; }
-    .btn-primary, .info-btn { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
-    .btn-primary:hover, .info-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4); }
+    .btn-outline:hover { border-color: var(--text-muted); background: #f1f5f9; }
+    .btn-primary, .info-btn { 
+      background: var(--primary); 
+      color: white; 
+      box-shadow: 0 4px 10px rgba(254, 121, 0, 0.25); 
+    }
+    .btn-primary:hover, .info-btn:hover { 
+      background: var(--primary-hover); 
+      transform: translateY(-1px); 
+      box-shadow: 0 6px 14px rgba(254, 121, 0, 0.35); 
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
+    }
+    .btn-accent:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
     
     .danger-btn { background: var(--danger); color: white; }
-    .danger-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    .danger-btn:hover { opacity: 0.9; transform: translateY(-1px); }
     
     .success-btn { background: var(--success); color: white; }
-    .success-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    .success-btn:hover { opacity: 0.9; transform: translateY(-1px); }
     
     .secondary {
       background: var(--bg-surface);
@@ -128,85 +155,183 @@
     }
     .secondary:hover { background: #f8fafc; border-color: var(--text-muted); }
 
+    /* Navigation Tabs Bar */
+    .tabs-bar-wrapper {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 65px;
+      z-index: 90;
+      box-shadow: var(--shadow-sm);
+    }
+    .tabs-bar {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 1rem 1.25rem;
+      font-family: var(--font-family);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 3px solid transparent;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: var(--primary-soft);
+      font-weight: 800;
+    }
+    .tab-badge {
+      background: #e2e8f0;
+      color: var(--secondary);
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .tab-btn.active .tab-badge {
+      background: var(--primary);
+      color: white;
+    }
+
     /* Main App Layout */
     .app-main {
       max-width: 1400px;
-      margin: 2rem auto;
+      margin: 1.5rem auto 3rem;
       padding: 0 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 1.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+    .tab-pane.active {
+      display: flex;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
     .dashboard-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 1.25rem 1.5rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
     }
-    .dashboard-greeting h2 { font-size: 1.8rem; font-weight: 800; }
-    .dashboard-greeting p { color: var(--text-muted); font-size: 1rem; margin-top: 4px; }
+    .dashboard-greeting h2 { font-size: 1.5rem; font-weight: 800; color: var(--secondary); }
+    .dashboard-greeting p { color: var(--text-muted); font-size: 0.95rem; margin-top: 2px; }
 
     /* Stats Grid */
     .stats-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 1rem;
     }
     .stat-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
-      padding: 1.5rem;
+      padding: 1.25rem;
       display: flex;
       flex-direction: column;
       box-shadow: var(--shadow-sm);
       transition: var(--transition);
+      position: relative;
+      overflow: hidden;
     }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary);
+      opacity: 0.7;
+    }
+    .stat-card.stat-success::after { background: var(--success); }
+    .stat-card.stat-accent::after { background: var(--accent); }
+    .stat-card.stat-warning::after { background: var(--warning); }
+    .stat-card.stat-danger::after { background: var(--danger); }
+    .stat-card.stat-purple::after { background: var(--purple); }
+
     .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .stat-value { font-size: 2rem; font-weight: 900; color: var(--secondary); line-height: 1; margin-bottom: 0.5rem; }
-    .stat-title { font-size: 0.9rem; color: var(--text-muted); font-weight: 700; }
+    .stat-value { font-size: 1.75rem; font-weight: 900; color: var(--secondary); line-height: 1.2; margin-bottom: 0.35rem; }
+    .stat-title { font-size: 0.85rem; color: var(--text-muted); font-weight: 700; }
+    .stat-sub { font-size: 0.75rem; color: var(--text-light); margin-top: 4px; }
     
+    .stat-value.primary-color { color: var(--primary); }
     .stat-value.new-color { color: var(--warning); }
-    .stat-value.waiting-color { color: var(--accent); }
-    .stat-value.progress-color { color: var(--primary); }
+    .stat-value.waiting-color { color: #ea580c; }
+    .stat-value.progress-color { color: var(--accent); }
     .stat-value.resolved-color { color: var(--success); }
+    .stat-value.purple-color { color: var(--purple); }
 
     /* Filters Container */
     .filters-container {
       background: var(--bg-surface);
-      padding: 1.5rem;
+      padding: 1.25rem;
       border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--border-color);
     }
     .filters-row {
       display: flex;
-      gap: 1rem;
+      gap: 0.85rem;
       flex-wrap: wrap;
+      align-items: flex-end;
     }
     .filter-group {
       flex: 1;
-      min-width: 180px;
+      min-width: 170px;
     }
     .filter-group label {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       color: var(--secondary);
       font-weight: 700;
-      font-size: 0.9em;
+      font-size: 0.85rem;
     }
-    select, input[type="date"], input[type="text"] {
+    select, input[type="date"], input[type="text"], input[type="number"], textarea {
       width: 100%;
-      padding: 0.6rem 1rem;
+      padding: 0.55rem 0.85rem;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-family: inherit;
       transition: var(--transition);
       background: #f8fafc;
+      color: var(--text-main);
     }
-    select:focus, input[type="date"]:focus, input[type="text"]:focus {
+    select:focus, input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
       border-color: var(--primary);
       outline: none;
       background: white;
@@ -216,8 +341,9 @@
     /* Actions */
     .actions-container {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     /* Table Container */
@@ -231,13 +357,13 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1000px;
+      min-width: 950px;
     }
     th, td {
-      padding: 1rem 1.2rem;
+      padding: 0.85rem 1rem;
       text-align: right;
       border-bottom: 1px solid var(--border-color);
-      font-size: 0.95em;
+      font-size: 0.9rem;
     }
     th {
       background: #f8fafc;
@@ -245,36 +371,36 @@
       font-weight: 800;
       white-space: nowrap;
       text-transform: uppercase;
-      font-size: 0.85em;
-      letter-spacing: 0.5px;
+      font-size: 0.8rem;
+      letter-spacing: 0.3px;
     }
     tr:last-child td { border-bottom: none; }
     tr:hover { background: #f8fafc; }
 
     /* Status Badges */
     .status-badge {
-      padding: 0.4rem 0.8rem;
+      padding: 0.3rem 0.65rem;
       border-radius: 99px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 800;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       white-space: nowrap;
     }
-    .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; opacity: 0.8; }
+    .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; opacity: 0.85; }
     
     .status-new { background: #fffbeb; color: #b45309; }
     .status-new::before { background: var(--warning); }
     
-    .status-in-progress { background: var(--primary-soft); color: var(--primary-hover); }
-    .status-in-progress::before { background: var(--primary); }
+    .status-in-progress { background: var(--accent-soft); color: var(--accent); }
+    .status-in-progress::before { background: var(--accent); }
     
-    .status-resolved { background: #ecfdf5; color: #065f46; }
-    .status-resolved::before { background: var(--success); }
+    .status-resolved, .status-completed { background: #ecfdf5; color: #065f46; }
+    .status-resolved::before, .status-completed::before { background: var(--success); }
     
     .status-waiting { background: #fff7ed; color: #c2410c; }
-    .status-waiting::before { background: var(--accent); }
+    .status-waiting::before { background: #ea580c; }
     
     .status-approved { background: #f0fdf4; color: #166534; }
     .status-approved::before { background: #22c55e; }
@@ -282,27 +408,41 @@
     .status-rejected { background: #fef2f2; color: #991b1b; }
     .status-rejected::before { background: var(--danger); }
 
-    /* Status Select within table */
+    .category-badge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      display: inline-block;
+    }
+    .cat-maintenance { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .cat-renovation { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .cat-closure { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .cat-construction { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+
+    .collected-badge { background: #ecfdf5; color: #047857; font-weight: 800; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+    .pending-badge { background: #fffbeb; color: #b45309; font-weight: 800; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+
     .status-select {
-      padding: 0.4rem 0.8rem;
+      padding: 0.35rem 0.65rem;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-color);
       font-family: inherit;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 700;
       cursor: pointer;
       background: var(--bg-surface);
-      min-width: 140px;
+      min-width: 130px;
     }
 
     /* Thumbnails */
     .thumb-row {
       display: flex;
-      gap: 6px;
+      gap: 5px;
     }
     .thumb-row img {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       object-fit: cover;
       border-radius: 6px;
       cursor: pointer;
@@ -320,16 +460,146 @@
       gap: 12px;
       padding: 1rem;
     }
-    .page-info { font-size: 0.95rem; color: var(--secondary); font-weight: 700; }
+    .page-info { font-size: 0.9rem; color: var(--secondary); font-weight: 700; }
 
-    /* Modal / Auth / Same as maintenance-alaa */
+    /* Sub-tabs / Segments */
+    .segmented-control {
+      display: inline-flex;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      gap: 4px;
+    }
+    .segmented-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: var(--font-family);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .segmented-btn.active {
+      background: white;
+      color: var(--secondary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Contractor Cards Grid */
+    .contractors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+    .contractor-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: var(--transition);
+    }
+    .contractor-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      border-color: var(--primary);
+    }
+    .contractor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .contractor-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--secondary);
+    }
+    .contractor-spec {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .contractor-info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .contractor-info-row strong { color: var(--secondary); }
+    .contractor-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    /* Analytics Chart Bars */
+    .chart-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--secondary);
+      margin-bottom: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .progress-bar-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .progress-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .progress-track {
+      background: #f1f5f9;
+      height: 10px;
+      border-radius: 99px;
+      overflow: hidden;
+      display: flex;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+
+    /* Modal */
     .modal-overlay, .modal-backdrop {
       display: none;
       position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
       z-index: 1000; align-items: center; justify-content: center;
     }
     .modal-content {
-      background: white; padding: 2.5rem; border-radius: var(--radius-md);
+      background: white; padding: 2rem; border-radius: var(--radius-md);
       width: 90%; max-width: 750px; max-height: 90vh; display: flex; flex-direction: column;
       box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease;
     }
@@ -337,61 +607,61 @@
 
     .modal-header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);
+      margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
     }
-    .modal-header h3 { color: var(--secondary); margin: 0; font-size: 1.3em; font-weight: 800; }
+    .modal-header h3 { color: var(--secondary); margin: 0; font-size: 1.25rem; font-weight: 800; }
     .modal-close {
-      background: var(--bg-app); border: none; width: 36px; height: 36px; border-radius: 50%;
-      font-size: 20px; color: var(--text-muted); cursor: pointer; display: flex;
+      background: var(--bg-app); border: none; width: 32px; height: 32px; border-radius: 50%;
+      font-size: 18px; color: var(--text-muted); cursor: pointer; display: flex;
       align-items: center; justify-content: center; transition: var(--transition);
     }
     .modal-close:hover { background: #fee2e2; color: var(--danger); }
 
-    .modal-body { flex: 1; overflow-y: auto; padding-right: 10px; }
+    .modal-body { flex: 1; overflow-y: auto; padding-right: 6px; }
     
     .detail-row {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 0; border-bottom: 1px dashed var(--border-color);
+      padding: 10px 0; border-bottom: 1px dashed var(--border-color);
     }
-    .detail-label { color: var(--text-muted); font-weight: 700; font-size: 0.95em; }
+    .detail-label { color: var(--text-muted); font-weight: 700; font-size: 0.9rem; }
     .detail-value { color: var(--secondary); font-weight: 700; }
     .detail-desc {
-      background: var(--bg-app); padding: 1.2rem; border-radius: var(--radius-sm);
-      margin: 15px 0; line-height: 1.6; color: var(--text-main); white-space: pre-wrap; font-size: 0.95em;
+      background: var(--bg-app); padding: 1rem; border-radius: var(--radius-sm);
+      margin: 12px 0; line-height: 1.6; color: var(--text-main); white-space: pre-wrap; font-size: 0.9rem;
     }
-    .detail-images { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+    .detail-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .detail-images img {
-      width: 100px; height: 100px; object-fit: cover; border-radius: var(--radius-sm);
+      width: 90px; height: 90px; object-fit: cover; border-radius: var(--radius-sm);
       cursor: pointer; transition: var(--transition); border: 1px solid var(--border-color);
     }
     .detail-images img:hover { transform: scale(1.05); box-shadow: var(--shadow-md); }
 
     .modal-footer {
-      margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);
+      margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);
       display: flex; gap: 10px; justify-content: flex-end;
     }
 
-    /* Auth Screens from previous */
+    /* Auth Screens */
     .auth-overlay {
       position: fixed; inset: 0; background: var(--bg-app); display: flex;
       flex-direction: column; align-items: center; justify-content: center; z-index: 200;
     }
     .auth-card {
-      background: white; padding: 3rem; border-radius: var(--radius-md);
-      box-shadow: var(--shadow-lg); text-align: center; max-width: 400px; width: 90%;
+      background: white; padding: 2.5rem; border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); text-align: center; max-width: 420px; width: 90%;
       border: 1px solid var(--border-color);
     }
     .auth-card .logo {
-      width: 60px; height: 60px; background: var(--secondary); color: white; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem;
+      width: 55px; height: 55px; background: linear-gradient(135deg, #fe7900, #ff9433); color: white; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 1.25rem;
     }
-    .auth-card h2 { font-size: 1.8rem; font-weight: 900; margin-bottom: 0.5rem; }
-    .auth-card p { color: var(--text-muted); margin-bottom: 2rem; }
+    .auth-card h2 { font-size: 1.5rem; font-weight: 900; margin-bottom: 0.5rem; }
+    .auth-card p { color: var(--text-muted); margin-bottom: 1.75rem; font-size: 0.95rem; }
 
     .toast {
       position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
-      background: var(--secondary); color: white; padding: 1rem 2rem; border-radius: 99px;
-      font-weight: 700; box-shadow: var(--shadow-lg); z-index: 9999;
+      background: var(--secondary); color: white; padding: 0.85rem 1.75rem; border-radius: 99px;
+      font-weight: 700; box-shadow: var(--shadow-lg); z-index: 9999; font-size: 0.9rem;
       transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
@@ -404,146 +674,682 @@
     }
     .image-viewer img { max-width: 90%; max-height: 90%; border-radius: 12px; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
 
-    /* Hide initial visibility */
     #appBody { visibility: hidden; }
 
     @media (max-width: 768px) {
-      .navbar { padding: 1rem; flex-direction: column; gap: 1rem; }
-      .app-main { margin: 1rem auto; padding: 0 1rem; }
+      .navbar { padding: 0.75rem 1rem; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+      .nav-actions { width: 100%; justify-content: space-between; overflow-x: auto; }
+      .app-main { margin: 1rem auto; padding: 0 0.85rem; }
       .stats-container { grid-template-columns: 1fr 1fr; }
-      .modal-content { padding: 1.5rem; }
+      .modal-content { padding: 1.25rem; }
       .actions-container { justify-content: flex-start; }
     }
   </style>
 </head>
 <body id="appBody">
 
-  <!-- App Header -->
+  <!-- Top Navigation Header -->
   <header class="navbar">
     <div class="nav-brand">
-      <div class="logo-icon">👑</div>
-      <h1>لوحة التحكم والإدارة</h1>
+      <div class="logo-icon">🏢</div>
+      <div>
+        <h1>إدارة الصيانة والمشاريع والتكييف</h1>
+        <div class="subtitle">ORANGE BED & BATH | Facility, AC & Projects Control Center (Supabase Live)</div>
+      </div>
     </div>
     <div class="nav-actions">
-      <a href="index.html" class="btn btn-outline" title="العودة للمخزون">📦 العودة للبضاعة</a>
-      <a href="maintenance.html" class="btn btn-outline" title="بوابة الصيانة">🔧 بوابة الصيانة</a>
+      <a href="index.html" class="btn btn-outline" title="العودة لكتالوج البضاعة">📦 البضاعة</a>
+      <a href="maintenance.html" class="btn btn-outline" title="بوابة تسجيل طلبات المعارض">🔧 بوابة الصيانة</a>
       <button class="btn btn-primary" onclick="localStorage.removeItem('savedEmail'); supabaseClient.auth.signOut().then(()=>location.reload())" style="background:var(--danger)">تسجيل الخروج</button>
     </div>
   </header>
 
+  <!-- Navigation Tabs -->
+  <div class="tabs-bar-wrapper">
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('requests')">
+        📋 طلبات الصيانة الميدانية
+        <span class="tab-badge" id="requestsBadge">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('ac')">
+        ❄️ صيانة وأصول المكيفات
+        <span class="tab-badge" id="acBadge">0 مكيف</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('expenses')">
+        💰 تكاليف الصيانة والمشاريع
+        <span class="tab-badge" id="expensesBadge">0 ر.س</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('contractors')">
+        🏢 دليل الشركات والمقاولين
+        <span class="tab-badge" id="contractorsBadge">0 شركات</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('analytics')">
+        📊 مؤشرات وتحليلات التكاليف
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Container -->
   <main class="app-main">
-    <div class="dashboard-header">
-      <div class="dashboard-greeting">
-        <h2>نظرة عامة</h2>
-        <p>متابعة وتحديث كافة طلبات صيانة المعارض</p>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: FIELD REQUESTS (SUPABASE LIVE)     -->
+    <!-- ========================================== -->
+    <div id="pane-requests" class="tab-pane active">
+      <div class="dashboard-header">
+        <div class="dashboard-greeting">
+          <h2>طلبات صيانة المعارض والمستودعات</h2>
+          <p>متابعة وتحديث البلاغات المرفوعة لحظياً واعتماد التكاليف والفواتير</p>
+        </div>
+        <div class="actions-container">
+          <button onclick="exportAllRequests()" class="btn btn-primary">📥 تصدير الكل (Excel)</button>
+          <button onclick="exportFilteredRequests()" class="btn btn-accent">📥 تصدير المفلتر</button>
+          <button onclick="toggleSortRequests()" class="btn secondary">🔤 الترتيب: <span id="sortLabel">التاريخ</span></button>
+        </div>
       </div>
-      <div class="actions-container">
-        <button onclick="exportAll()" class="btn btn-primary">📥 تصدير الكل (Excel)</button>
-        <button onclick="exportFiltered()" class="btn info-btn">📥 تصدير المفلتر</button>
-        <button onclick="toggleSort()" class="btn secondary">🔤 الترتيب بواسطة <span id="sortLabel">التاريخ</span></button>
+
+      <!-- Live Requests Stats -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-value" id="reqTotalCount">0</div>
+          <div class="stat-title">إجمالي البلاغات</div>
+          <div class="stat-sub">كافة الفروع</div>
+        </div>
+        <div class="stat-card stat-warning">
+          <div class="stat-value new-color" id="reqNewCount">0</div>
+          <div class="stat-title">بلاغات جديدة</div>
+          <div class="stat-sub">تحتاج معاينة وتوجيه</div>
+        </div>
+        <div class="stat-card stat-accent">
+          <div class="stat-value waiting-color" id="reqWaitingCount">0</div>
+          <div class="stat-title">بانتظار موافقة المدير</div>
+          <div class="stat-sub">تم إرفاق عرض السعر</div>
+        </div>
+        <div class="stat-card stat-purple">
+          <div class="stat-value progress-color" id="reqProgressCount">0</div>
+          <div class="stat-title">قيد المعالجة</div>
+          <div class="stat-sub">جاري التنفيذ الميداني</div>
+        </div>
+        <div class="stat-card stat-success">
+          <div class="stat-value resolved-color" id="reqResolvedCount">0</div>
+          <div class="stat-title">طلبات منجزة</div>
+          <div class="stat-sub">تم الحل والإغلاق</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-container">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>المعرض / الفرع</label>
+            <select id="reqMallFilter" onchange="loadRequests()">
+              <option value="all">كافة المعارض والمستودعات</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>حالة الطلب</label>
+            <select id="reqStatusFilter" onchange="loadRequests()">
+              <option value="all">كافة الحالات</option>
+              <option value="جديد">🟠 جديد</option>
+              <option value="بانتظار موافقة المدير">⏳ بانتظار موافقة المدير</option>
+              <option value="موافق عليه">👍 موافق عليه</option>
+              <option value="قيد المعالجة">🔵 قيد المعالجة</option>
+              <option value="تم الحل">🟢 تم الحل</option>
+              <option value="مرفوض">❌ مرفوض</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>من تاريخ</label>
+            <input type="date" id="reqStartDate" onchange="loadRequests()">
+          </div>
+          <div class="filter-group">
+            <label>إلى تاريخ</label>
+            <input type="date" id="reqEndDate" onchange="loadRequests()">
+          </div>
+          <div class="filter-group">
+            <label>بحث ذكي</label>
+            <input type="text" id="reqSearchInput" placeholder="بحث بعنوان المشكلة..." oninput="loadRequests()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="table-responsive">
+        <table id="requestsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>تاريخ البلاغ</th>
+              <th>فرع المعرض</th>
+              <th>عنوان البلاغ</th>
+              <th>مرفقات</th>
+              <th>الأولوية</th>
+              <th>التكلفة</th>
+              <th>حالة الطلب</th>
+              <th>تحديث الحالة</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTableBody"></tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination-container">
+          <button onclick="changeRequestsPage(-1)" class="btn secondary">السابق</button>
+          <span class="page-info">صفحة <span id="reqCurrentPage">1</span> من <span id="reqTotalPages">1</span></span>
+          <button onclick="changeRequestsPage(1)" class="btn secondary">التالي</button>
+        </div>
       </div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-container">
-      <div class="stat-card">
-        <div class="stat-value" id="totalCount">0</div>
-        <div class="stat-title">إجمالي الطلبات</div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: AC MAINTENANCE & ASSETS             -->
+    <!-- ========================================== -->
+    <div id="pane-ac" class="tab-pane">
+      <div class="dashboard-header">
+        <div class="dashboard-greeting">
+          <h2>إدارة وصيانة أصول المكيفات</h2>
+          <p>سجل أصول المكيفات، جدول دورات الصيانة، الزيارات المنفذة وقطع الغيار (Supabase Live)</p>
+        </div>
+        <div class="actions-container">
+          <div class="segmented-control">
+            <button id="acSubBtn-assets" class="segmented-btn active" onclick="switchAcSubTab('assets')">❄️ سجل أصول المكيفات</button>
+            <button id="acSubBtn-visits" class="segmented-btn" onclick="switchAcSubTab('visits')">🛠️ الزيارات والأعمال الفنية</button>
+          </div>
+          <button onclick="openAddAcModal()" class="btn success-btn">➕ إضافة مكيف جديد</button>
+          <button onclick="openAddAcVisitModal()" class="btn btn-accent">➕ تسجيل زيارة صيانة</button>
+          <button onclick="exportAcData()" class="btn btn-primary">📥 تصدير (Excel)</button>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value new-color" id="newCount">0</div>
-        <div class="stat-title">جديد</div>
+
+      <!-- AC KPIs -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-value primary-color" id="acTotalUnits">0</div>
+          <div class="stat-title">إجمالي المكيفات المسجلة</div>
+          <div class="stat-sub" id="acMallsCount">0 مواقع ومعارض</div>
+        </div>
+        <div class="stat-card stat-success">
+          <div class="stat-value resolved-color" id="acTotalSpend">0 <small style="font-size:1rem;">ر.س</small></div>
+          <div class="stat-title">إجمالي مصروفات التكييف (Supabase)</div>
+          <div class="stat-sub">صيانة دورية وغسيل وقطع</div>
+        </div>
+        <div class="stat-card stat-accent">
+          <div class="stat-value progress-color" id="acVisitsCount">0</div>
+          <div class="stat-title">زيارات صيانة دورية</div>
+          <div class="stat-sub">تم التنفيذ بالكامل</div>
+        </div>
+        <div class="stat-card stat-warning">
+          <div class="stat-value" id="acDueCount" style="color:var(--success);">0</div>
+          <div class="stat-title">مكيفات مستحقة للصيانة</div>
+          <div class="stat-sub" id="acDueSub">الجدول الزمني منتظم</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value waiting-color" id="waitingCount" style="color: var(--accent);">0</div>
-        <div class="stat-title">بانتظار موافقة مدير المبيعات</div>
+
+      <!-- AC Filters -->
+      <div class="filters-container">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>المعرض / الموقع</label>
+            <select id="acMallFilter" onchange="renderAcTables()">
+              <option value="all">جميع المعارض</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>نوع المكيف</label>
+            <select id="acTypeFilter" onchange="renderAcTables()">
+              <option value="all">جميع الأنواع</option>
+              <option value="سبليت دكت">سبليت دكت</option>
+              <option value="تشيلر">تشيلر</option>
+              <option value="سبليت جداري">سبليت جداري</option>
+              <option value="باكج">باكج</option>
+              <option value="كاسيت">كاسيت</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>بحث سريع</label>
+            <input type="text" id="acSearchInput" placeholder="بحث بكود المكيف، الغاز، الماركة..." oninput="renderAcTables()">
+          </div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value progress-color" id="progressCount">0</div>
-        <div class="stat-title">قيد المعالجة</div>
+
+      <!-- AC View 1: Assets & Upcoming Maintenance -->
+      <div id="ac-assets-view" class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>كود المكيف</th>
+              <th>المعرض / الموقع</th>
+              <th>النوع والموديل</th>
+              <th>السعة ونوع الغاز</th>
+              <th>الموقع داخل المعرض</th>
+              <th>آخر صيانة</th>
+              <th>الصيانة القادمة</th>
+              <th>الأيام المتبقية</th>
+              <th>الحالة الفنية</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="acAssetsTableBody"></tbody>
+        </table>
       </div>
-      <div class="stat-card">
-        <div class="stat-value resolved-color" id="resolvedCount">0</div>
-        <div class="stat-title">طلبات منجزة</div>
+
+      <!-- AC View 2: Visits & Technical Service Breakdown -->
+      <div id="ac-visits-view" class="table-responsive" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>رقم الزيارة</th>
+              <th>تاريخ الزيارة</th>
+              <th>المعرض</th>
+              <th>شركة الصيانة</th>
+              <th>نوع الزيارة</th>
+              <th>كود المكيف المخدوم</th>
+              <th>العمل المنجز والقطع</th>
+              <th>تكلفة القطعة</th>
+              <th>تكلفة العمل</th>
+              <th>الملاحظات الفنية</th>
+            </tr>
+          </thead>
+          <tbody id="acVisitsTableBody"></tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Filters Container -->
-    <div class="filters-container">
-      <div class="filters-row">
-        <div class="filter-group">
-          <label>المعرض</label>
-          <select id="mallFilter" onchange="loadRequests()">
-            <option value="all">الكل</option>
-          </select>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: MAINTENANCE & PROJECTS EXPENSES    -->
+    <!-- ========================================== -->
+    <div id="pane-expenses" class="tab-pane">
+      <div class="dashboard-header">
+        <div class="dashboard-greeting">
+          <h2>إدارة تكاليف الصيانة والمشاريع والتطوير</h2>
+          <p>سجل المصروفات المعتمدة، الفواتير، المقاولين ومشاريع التطوير (Supabase Live)</p>
         </div>
-        <div class="filter-group">
-          <label>الحالة</label>
-          <select id="statusFilter" onchange="loadRequests()">
-            <option value="all">الكل</option>
-            <option value="جديد">🟠 جديد</option>
-            <option value="بانتظار موافقة المدير">⏳ بانتظار موافقة المدير</option>
-            <option value="موافق عليه">👍 موافق عليه</option>
-            <option value="قيد المعالجة">🔵 قيد المعالجة</option>
-            <option value="تم الحل">🟢 تم الحل</option>
-            <option value="مرفوض">❌ مرفوض</option>
-          </select>
+        <div class="actions-container">
+          <div class="segmented-control">
+            <button id="expSubBtn-ledger" class="segmented-btn active" onclick="switchExpSubTab('ledger')">📑 سجل المصروفات والفواتير</button>
+            <button id="expSubBtn-projects" class="segmented-btn" onclick="switchExpSubTab('projects')">🏗️ مشاريع الصيانة والتطوير</button>
+          </div>
+          <button onclick="openAddExpenseModal()" class="btn success-btn">➕ إضافة فاتورة / مصروف جديد</button>
+          <button onclick="exportExpensesData()" class="btn btn-primary">📥 تصدير المصروفات (Excel)</button>
         </div>
-        <div class="filter-group">
-          <label>من تاريخ</label>
-          <input type="date" id="startDate" onchange="loadRequests()">
+      </div>
+
+      <!-- Expenses KPIs -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-value primary-color" id="expTotalAmount">0 <small style="font-size:0.95rem;">ر.س</small></div>
+          <div class="stat-title">إجمالي المصروفات</div>
+          <div class="stat-sub" id="expTotalCount">0 عملية معتمدة</div>
         </div>
-        <div class="filter-group">
-          <label>إلى تاريخ</label>
-          <input type="date" id="endDate" onchange="loadRequests()">
+        <div class="stat-card stat-accent">
+          <div class="stat-value" id="expMaintenanceAmount" style="color:#2563eb;">0 <small style="font-size:0.95rem;">ر.س</small></div>
+          <div class="stat-title">أعمال الصيانة الدورية والطارئة</div>
+          <div class="stat-sub" id="expMaintenanceCount">0 عملية صيانة</div>
         </div>
-        <div class="filter-group">
-          <label>بحث ذكي</label>
-          <input type="text" id="searchInput" placeholder="بحث بعنوان المشكلة..." oninput="loadRequests()">
+        <div class="stat-card stat-warning">
+          <div class="stat-value waiting-color" id="expRenovationAmount">0 <small style="font-size:0.95rem;">ر.س</small></div>
+          <div class="stat-title">أعمال التطوير والتحسين</div>
+          <div class="stat-sub" id="expRenovationCount">0 مشاريع تطويرية</div>
         </div>
+        <div class="stat-card stat-danger">
+          <div class="stat-value" id="expClosureAmount" style="color:var(--danger)">0 <small style="font-size:0.95rem;">ر.س</small></div>
+          <div class="stat-title">أعمال الإغلاق</div>
+          <div class="stat-sub" id="expClosureCount">فك وإغلاق معارض</div>
+        </div>
+        <div class="stat-card stat-success">
+          <div class="stat-value resolved-color" id="expCollectedAmount">0 <small style="font-size:0.95rem;">ر.س</small></div>
+          <div class="stat-title">فواتير محصلة</div>
+          <div class="stat-sub" id="expPendingAmount">غير محصلة: 0 ر.س</div>
+        </div>
+      </div>
+
+      <!-- Expenses Filters -->
+      <div class="filters-container">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>التصنيف</label>
+            <select id="expCategoryFilter" onchange="renderExpensesTable()">
+              <option value="all">كافة التصنيفات</option>
+              <option value="صيانة">صيانة</option>
+              <option value="تطوير">تطوير</option>
+              <option value="اغلاق">إغلاق</option>
+              <option value="إنشاء">إنشاء</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>الشركة / المقاول</label>
+            <select id="expCompanyFilter" onchange="renderExpensesTable()">
+              <option value="all">كافة المقاولين والشركات</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>المعرض / الفرع</label>
+            <select id="expMallFilter" onchange="renderExpensesTable()">
+              <option value="all">كافة المعارض</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>حالة التحصيل</label>
+            <select id="expStatusFilter" onchange="renderExpensesTable()">
+              <option value="all">الكل</option>
+              <option value="محصلة">محصلة</option>
+              <option value="غير محصلة">غير محصلة</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>بحث بالبيان / الفاتورة</label>
+            <input type="text" id="expSearchInput" placeholder="بحث في وصف العمل أو رقم الفاتورة..." oninput="renderExpensesTable()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Ledger Table -->
+      <div id="expenses-ledger-view" class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>التاريخ</th>
+              <th>المعرض / الموقع</th>
+              <th>التصنيف</th>
+              <th>الشركة / المقاول</th>
+              <th>بيان العمل المنفذ</th>
+              <th>رقم الفاتورة</th>
+              <th>المبلغ (ر.س)</th>
+              <th>حالة الدفع</th>
+              <th>حالة الفاتورة</th>
+              <th>ملاحظات</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="expensesTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Projects View -->
+      <div id="expenses-projects-view" class="table-responsive" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>كود المشروع</th>
+              <th>المعرض</th>
+              <th>النوع</th>
+              <th>المصروف الفعلي (ر.س)</th>
+              <th>المتبقي من الميزانية</th>
+              <th>عدد الفواتير</th>
+              <th>نسبة الصرف</th>
+              <th>حالة المشروع</th>
+            </tr>
+          </thead>
+          <tbody id="projectsTableBody"></tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Table Container -->
-    <div class="table-responsive">
-      <table id="requestsTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>تاريخ البلاغ</th>
-            <th>فرع المعرض</th>
-            <th>عنوان البلاغ</th>
-            <th>مرفقات</th>
-            <th>الأولوية</th>
-            <th>التكلفة</th>
-            <th>حالة الطلب</th>
-            <th>عمليات الإدارة</th>
-            <th>خيارات</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
 
-      <!-- Pagination -->
-      <div class="pagination-container">
-        <button onclick="changePage(-1)" class="btn secondary">السابق</button>
-        <span class="page-info">صفحة <span id="currentPage">1</span> من <span id="totalPages">1</span></span>
-        <button onclick="changePage(1)" class="btn secondary">التالي</button>
+    <!-- ========================================== -->
+    <!-- TAB 4: CONTRACTORS & SUPPLIERS DIRECTORY   -->
+    <!-- ========================================== -->
+    <div id="pane-contractors" class="tab-pane">
+      <div class="dashboard-header">
+        <div class="dashboard-greeting">
+          <h2>دليل الشركات والمقاولين المعتمدين</h2>
+          <p>أرقام التواصل المباشرة، التخصصات، ومسؤولي المقاولات المعتمدين لدى أورانج (Supabase Live)</p>
+        </div>
+        <div class="actions-container">
+          <input type="text" id="contractorSearch" placeholder="بحث باسم الشركة أو التخصص أو المدينة..." oninput="renderContractors()" style="width:260px;">
+          <button onclick="openAddContractorModal()" class="btn success-btn">➕ إضافة مقاول / شركة</button>
+        </div>
+      </div>
+
+      <div class="contractors-grid" id="contractorsGrid"></div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 5: ANALYTICS & DISTRIBUTION           -->
+    <!-- ========================================== -->
+    <div id="pane-analytics" class="tab-pane">
+      <div class="dashboard-header">
+        <div class="dashboard-greeting">
+          <h2>لوحة التحليلات والمؤشرات البيانية</h2>
+          <p>توزيع المصروفات حسب التصنيف، الشركات المنفذة، وأعلى المعارض استهلاكاً للميزانيات</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap:1.5rem;">
+        
+        <!-- Category Breakdown -->
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>📊 توزيع التكاليف حسب نوع العمل</span>
+            <span id="analyticsCategoryTotal" style="font-size:0.85rem; color:var(--text-muted);">إجمالي: 0 ر.س</span>
+          </div>
+          <div class="progress-bar-container" id="categoryBars"></div>
+        </div>
+
+        <!-- Vendor Breakdown -->
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>🏢 حجم التعاملات حسب الشركة / المقاول</span>
+            <span style="font-size:0.85rem; color:var(--text-muted);">أعلى المقاولين تنفيذاً</span>
+          </div>
+          <div class="progress-bar-container" id="vendorBars"></div>
+        </div>
+
+        <!-- Top Outlets Expenses -->
+        <div class="chart-card" style="grid-column: 1 / -1;">
+          <div class="chart-title">
+            <span>🏪 توزيع تكاليف الصيانة والتطوير حسب المعارض (أعلى المواقع)</span>
+          </div>
+          <div class="progress-bar-container" id="outletBars"></div>
+        </div>
+
       </div>
     </div>
+
   </main>
 
-  <!-- Detail Modal -->
+  <!-- ========================================== -->
+  <!-- MODALS & POPUPS                            -->
+  <!-- ========================================== -->
+
+  <!-- 1. Request Detail Modal -->
   <div class="modal-overlay" id="detailModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>📋 تفاصيل طلب الصيانة</h3>
+        <h3>📋 تفاصيل طلب الصيانة الميداني</h3>
         <button class="modal-close" onclick="closeDetailModal()">×</button>
       </div>
       <div class="modal-body" id="detailBody"></div>
       <div class="modal-footer">
-        <button onclick="exportSingleRequest()" class="btn info-btn">📥 تصدير</button>
+        <button onclick="exportSingleRequest()" class="btn info-btn">📥 تصدير الطلب</button>
         <button onclick="closeDetailModal()" class="btn secondary">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Add Expense Modal -->
+  <div class="modal-overlay" id="addExpenseModal">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>💰 إضافة مصروف / فاتورة صيانة جديدة</h3>
+        <button class="modal-close" onclick="closeModal('addExpenseModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الفرع *</label>
+              <input type="text" id="newExpMall" placeholder="مثال: 05-Haifa Mall" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التاريخ *</label>
+              <input type="date" id="newExpDate" required>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التصنيف *</label>
+              <select id="newExpCategory">
+                <option value="صيانة">صيانة</option>
+                <option value="تطوير">تطوير</option>
+                <option value="اغلاق">إغلاق</option>
+                <option value="إنشاء">إنشاء</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المقاول / الشركة *</label>
+              <input type="text" id="newExpCompany" placeholder="مثال: الإنتاج الدائم" required>
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">بيان العمل المنفذ *</label>
+            <textarea id="newExpDesc" placeholder="تفاصيل الأعمال المنفذة..." style="min-height:70px;" required></textarea>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المبلغ (ر.س) *</label>
+              <input type="number" step="0.01" id="newExpAmount" placeholder="0.00" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">رقم الفاتورة</label>
+              <input type="text" id="newExpInvoiceNo" placeholder="اختياري">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">حالة الفاتورة</label>
+              <select id="newExpInvoiceStatus">
+                <option value="محصلة">محصلة</option>
+                <option value="غير محصلة">غير محصلة</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات</label>
+              <input type="text" id="newExpNotes" placeholder="ملاحظات إضافية...">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveNewExpense()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ الفاتورة في Supabase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Add AC Asset Modal -->
+  <div class="modal-overlay" id="addAcModal">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>❄️ إضافة أصل مكيف جديد</h3>
+        <button class="modal-close" onclick="closeModal('addAcModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">كود المكيف *</label>
+              <input type="text" id="newAcCode" placeholder="مثال: OR-HAIFA-07" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الموقع *</label>
+              <input type="text" id="newAcMall" placeholder="مثال: 05-Haifa Mall" required>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">نوع المكيف *</label>
+              <select id="newAcType">
+                <option value="سبليت دكت">سبليت دكت</option>
+                <option value="تشيلر">تشيلر</option>
+                <option value="سبليت جداري">سبليت جداري</option>
+                <option value="باكج">باكج</option>
+                <option value="كاسيت">كاسيت</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">الشركة المصنعة</label>
+              <input type="text" id="newAcBrand" placeholder="Carrier, Gree, York...">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">السعة (طن)</label>
+              <input type="text" id="newAcCapacity" placeholder="مثال: 5 طن">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">نوع الغاز</label>
+              <input type="text" id="newAcGas" placeholder="R410A, R22, R32...">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">تاريخ آخر صيانة</label>
+              <input type="date" id="newAcLastMaint">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">تاريخ الصيانة القادمة</label>
+              <input type="date" id="newAcNextMaint">
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">الموقع داخل المعرض</label>
+            <input type="text" id="newAcLoc" placeholder="مثال: الواجهة الرئيسية، قسم غرف النوم...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveNewAcAsset()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ في Supabase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Add Contractor Modal -->
+  <div class="modal-overlay" id="addContractorModal">
+    <div class="modal-content" style="max-width:550px;">
+      <div class="modal-header">
+        <h3>🏢 إضافة مقاول / شركة جديدة</h3>
+        <button class="modal-close" onclick="closeModal('addContractorModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">اسم الشركة / المقاول *</label>
+            <input type="text" id="newContrName" placeholder="مثال: شركة الإنتاج الدائم" required>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التخصص *</label>
+              <input type="text" id="newContrSpec" placeholder="مقاولات عامة، تكييف، كاميرات..." required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المدينة</label>
+              <input type="text" id="newContrCity" placeholder="جدة، الرياض، الدمام...">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">اسم المسؤول</label>
+              <input type="text" id="newContrPerson" placeholder="الاسم...">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">رقم الجوال</label>
+              <input type="text" id="newContrPhone" placeholder="05xxxxxxxx">
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات ونطاق العمل</label>
+            <textarea id="newContrNotes" placeholder="أعمال تم تنفيذها مسبقاً أو شروط التعاقد..." style="min-height:70px;"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveNewContractor()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ المقاول في Supabase</button>
       </div>
     </div>
   </div>
@@ -556,25 +1362,35 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
+  <!-- Scripts -->
   <script src="../users.js"></script>
-<script>
-    // === Supabase ===
+  <script>
+    // === Supabase Configuration ===
     const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
     });
 
-    let allData = [];
-    let currentPageNum = 1;
-    const perPage = 30;
-    let totalPagesNum = 1;
-    let sortField = 'created_at';
-    let sortAsc = false;
+    // In-memory state synchronized with Supabase
+    let allRequestsData = [];
+    let dbAcAssets = [];
+    let dbAcVisits = [];
+    let dbAcWorks = [];
+    let dbExpenses = [];
+    let dbContractors = [];
+
+    let reqCurrentPageNum = 1;
+    const reqPerPage = 30;
+    let reqTotalPagesNum = 1;
+    let reqSortField = 'created_at';
+    let reqSortAsc = false;
     let currentDetailRequest = null;
     let mallsList = [];
 
-    // === Init ===
+    // ==========================================
+    // INITIALIZATION & AUTH
+    // ==========================================
     (async () => {
       const dashboardUserStr = localStorage.getItem('currentUser');
       let { data: { session } } = await supabaseClient.auth.getSession();
@@ -591,10 +1407,10 @@
         document.body.innerHTML = `
           <div class="auth-overlay">
             <div class="auth-card">
-              <div class="logo" style="background:${isError ? 'var(--danger)' : 'var(--secondary)'}">🔒</div>
+              <div class="logo" style="background:${isError ? 'var(--danger)' : 'linear-gradient(135deg, #fe7900, #ff9433)'}">🔒</div>
               <h2 style="color:${isError ? 'var(--danger)' : 'var(--secondary)'}">${title}</h2>
               <p>${subTitle}</p>
-              <button class="btn btn-primary" onclick="doLogin()" style="width:100%; font-size:1.1rem; padding:12px; background:${isError ? 'var(--danger)' : 'var(--primary)'}">🔑 تسجيل الدخول بصلاحيات الإدارة</button>
+              <button class="btn btn-primary" onclick="doLogin()" style="width:100%; font-size:1.05rem; padding:12px; background:${isError ? 'var(--danger)' : 'var(--primary)'}">🔑 تسجيل الدخول بصلاحيات الإدارة</button>
               
               <div id="loginBox" style="display:none; margin-top:20px; text-align:right;">
                 <label style="display:block; margin-bottom:4px; font-weight:700; font-size:0.9em; color:var(--text-muted)">البريد الإلكتروني للإدارة</label>
@@ -611,11 +1427,10 @@
       };
 
       if (!session?.user) {
-        showAuthScreen('🔒 يرجى تسجيل الدخول', 'هذه الصفحة تتطلب تسجيل الدخول للوصول');
+        showAuthScreen('🔒 يرجى تسجيل الدخول', 'هذه الصفحة تتطلب صلاحيات إدارة الصيانة والمشاريع للوصول');
         return;
       }
 
-      // Check Profile Role
       let userRole = 'user';
       let userManagedOutlets = [];
       try {
@@ -626,36 +1441,38 @@
         }
       } catch (err) {}
 
-      // Fallback fallback rule just in case profile isn't fetched
       if (session.user.email) {
         const email_lower = session.user.email.toLowerCase();
-        if (email_lower === 'belal@orangebedbath.com') {
+        if (email_lower === 'belal@orangebedbath.com' || email_lower === 'alaa.wafae@orangebedbath.com') {
           userRole = 'maintenance_admin';
-        } else if (email_lower === 'alaa.wafae@orangebedbath.com') {
-          userRole = 'admin';
         }
       }
 
       if (['manager', 'maintenance_admin', 'admin'].includes(userRole)) {
         window.currentUserRole = userRole;
         window.userManagedOutlets = userManagedOutlets;
-        // Authorized!
         document.body.style.visibility = 'visible';
-        await loadMalls();
-        await loadRequests();
+        
+        // Load all data from Supabase live tables
+        await loadAllSupabaseData();
       } else {
-        // Sign out the non-admin user so they can sign in with admin
         await supabaseClient.auth.signOut();
-        showAuthScreen('⛔ غير مصرح لك بالدخول', 'هذه الصفحة مخصصة للمدراء ومسؤولي الصيانة فقط.', true);
+        showAuthScreen('⛔ غير مصرح لك بالدخول', 'هذه الصفحة مخصصة لمدراء الصيانة والمشاريع فقط.', true);
       }
     })();
 
+    async function loadAllSupabaseData() {
+      await loadMalls();
+      await loadRequests();
+      await fetchAcDataFromSupabase();
+      await fetchExpensesFromSupabase();
+      await fetchContractorsFromSupabase();
+      renderAnalytics();
+    }
+
     function doLogin() {
       const box = document.getElementById('loginBox');
-      if (box) {
-        box.style.display = 'block';
-        if (se) document.getElementById('emailInput').value = se;
-      }
+      if (box) box.style.display = 'block';
     }
 
     async function confirmLogin() {
@@ -668,30 +1485,61 @@
       else { location.reload(); }
     }
 
-    // === Load Malls for filter ===
+    // ==========================================
+    // TAB SWITCHING LOGIC
+    // ==========================================
+    function switchTab(tabKey) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+      const targetPane = document.getElementById('pane-' + tabKey);
+      if (targetPane) targetPane.classList.add('active');
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabKey));
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    function switchAcSubTab(subTab) {
+      document.getElementById('acSubBtn-assets').classList.toggle('active', subTab === 'assets');
+      document.getElementById('acSubBtn-visits').classList.toggle('active', subTab === 'visits');
+      document.getElementById('ac-assets-view').style.display = subTab === 'assets' ? 'block' : 'none';
+      document.getElementById('ac-visits-view').style.display = subTab === 'visits' ? 'block' : 'none';
+    }
+
+    function switchExpSubTab(subTab) {
+      document.getElementById('expSubBtn-ledger').classList.toggle('active', subTab === 'ledger');
+      document.getElementById('expSubBtn-projects').classList.toggle('active', subTab === 'projects');
+      document.getElementById('expenses-ledger-view').style.display = subTab === 'ledger' ? 'block' : 'none';
+      document.getElementById('expenses-projects-view').style.display = subTab === 'projects' ? 'block' : 'none';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // ==========================================
+    // TAB 1: FIELD REQUESTS (SUPABASE LIVE)
+    // ==========================================
     async function loadMalls() {
       let query = supabaseClient.from('maintenance_requests').select('mall');
-      
       if (window.currentUserRole === 'manager' && window.userManagedOutlets && window.userManagedOutlets.length > 0) {
         query = query.in('mall', window.userManagedOutlets);
       }
 
       const { data } = await query;
-
-      const sel = document.getElementById('mallFilter');
-      sel.innerHTML = '<option value="all">الكل</option>'; // Reset options first
+      const sel = document.getElementById('reqMallFilter');
+      sel.innerHTML = '<option value="all">كافة المعارض والمستودعات</option>';
 
       let unique = [];
       if (data) {
         unique = [...new Set(data.map(r => r.mall).filter(Boolean))].sort();
       }
 
-      // If manager, maybe they have outlets with no requests yet. Ensure all managed outlets are in the filter.
       if (window.currentUserRole === 'manager' && window.userManagedOutlets) {
-         window.userManagedOutlets.forEach(m => {
-            if (!unique.includes(m)) unique.push(m);
-         });
-         unique.sort();
+        window.userManagedOutlets.forEach(m => {
+          if (!unique.includes(m)) unique.push(m);
+        });
+        unique.sort();
       }
 
       mallsList = unique;
@@ -703,30 +1551,20 @@
       });
     }
 
-    // === Load Requests ===
     async function loadRequests() {
-      const mall = document.getElementById('mallFilter').value;
-      const status = document.getElementById('statusFilter').value;
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
-      const search = document.getElementById('searchInput').value.trim();
+      const mall = document.getElementById('reqMallFilter').value;
+      const status = document.getElementById('reqStatusFilter').value;
+      const startDate = document.getElementById('reqStartDate').value;
+      const endDate = document.getElementById('reqEndDate').value;
+      const search = document.getElementById('reqSearchInput').value.trim();
 
-      let query = supabaseClient
-        .from('maintenance_requests')
-        .select('*', { count: 'exact' });
+      let query = supabaseClient.from('maintenance_requests').select('*', { count: 'exact' });
 
-      // If user is manager, restrict query to their managed outlets
       if (window.currentUserRole === 'manager' && window.userManagedOutlets && window.userManagedOutlets.length > 0) {
-        if (mall === 'all') {
-           query = query.in('mall', window.userManagedOutlets);
-        } else {
-           // Ensure the selected mall is actually one they manage
-           if (window.userManagedOutlets.includes(mall)) {
-              query = query.eq('mall', mall);
-           } else {
-              // Forced empty result if they try to hack
-              query = query.eq('mall', 'NOT_ALLOWED_HACK');
-           }
+        if (mall === 'all') query = query.in('mall', window.userManagedOutlets);
+        else {
+          if (window.userManagedOutlets.includes(mall)) query = query.eq('mall', mall);
+          else query = query.eq('mall', 'NOT_ALLOWED_HACK');
         }
       } else {
         if (mall !== 'all') query = query.eq('mall', mall);
@@ -736,51 +1574,43 @@
       if (endDate) query = query.lte('created_at', new Date(`${endDate}T23:59:59.999`).toISOString());
       if (search) query = query.ilike('title', `%${search}%`);
 
-      const from = (currentPageNum - 1) * perPage;
-      const to = from + perPage - 1;
+      const from = (reqCurrentPageNum - 1) * reqPerPage;
+      const to = from + reqPerPage - 1;
 
       const { data, error, count } = await query
-        .order(sortField, { ascending: sortAsc })
+        .order(reqSortField, { ascending: reqSortAsc })
         .range(from, to);
 
       if (error) {
         console.error(error);
-        showToast('خطأ في تحميل البيانات', 'error');
+        showToast('خطأ في تحميل بيانات الطلبات', 'error');
         return;
       }
 
-      allData = data || [];
+      allRequestsData = data || [];
       const total = count || 0;
-      totalPagesNum = Math.max(1, Math.ceil(total / perPage));
+      reqTotalPagesNum = Math.max(1, Math.ceil(total / reqPerPage));
 
-      document.getElementById('currentPage').textContent = currentPageNum;
-      document.getElementById('totalPages').textContent = totalPagesNum;
+      document.getElementById('reqCurrentPage').textContent = reqCurrentPageNum;
+      document.getElementById('reqTotalPages').textContent = reqTotalPagesNum;
+      document.getElementById('requestsBadge').textContent = total;
 
-      // Stats
-      await updateStats(mall, startDate, endDate, search, total);
-      renderTable();
+      await updateRequestStats(mall, startDate, endDate, search, total);
+      renderRequestsTable();
     }
 
-    async function updateStats(mall, startDate, endDate, search, totalFiltered) {
-      // Count by status
+    async function updateRequestStats(mall, startDate, endDate, search, totalFiltered) {
       const statuses = ['جديد', 'بانتظار موافقة المدير', 'قيد المعالجة', 'تم الحل'];
       const counts = {};
 
       for (const s of statuses) {
         let q = supabaseClient.from('maintenance_requests').select('*', { count: 'exact', head: true }).eq('status', s);
-        
-        // Ensure manager's counts are also restricted
         if (window.currentUserRole === 'manager' && window.userManagedOutlets && window.userManagedOutlets.length > 0) {
-          if (mall === 'all') {
-             q = q.in('mall', window.userManagedOutlets);
-          } else {
-             if (window.userManagedOutlets.includes(mall)) q = q.eq('mall', mall);
-             else q = q.eq('mall', 'NOT_ALLOWED_HACK');
-          }
+          if (mall === 'all') q = q.in('mall', window.userManagedOutlets);
+          else q = q.eq('mall', window.userManagedOutlets.includes(mall) ? mall : 'NOT_ALLOWED_HACK');
         } else {
           if (mall !== 'all') q = q.eq('mall', mall);
         }
-        
         if (startDate) q = q.gte('created_at', new Date(`${startDate}T00:00:00`).toISOString());
         if (endDate) q = q.lte('created_at', new Date(`${endDate}T23:59:59.999`).toISOString());
         if (search) q = q.ilike('title', `%${search}%`);
@@ -788,30 +1618,23 @@
         counts[s] = count || 0;
       }
 
-      const statusFilter = document.getElementById('statusFilter').value;
-      let totalDisplay = totalFiltered;
-      if (statusFilter === 'all') {
-        // already have total
-      }
-
-      document.getElementById('totalCount').textContent = totalFiltered;
-      document.getElementById('newCount').textContent = counts['جديد'];
-      document.getElementById('waitingCount').textContent = counts['بانتظار موافقة المدير'];
-      document.getElementById('progressCount').textContent = counts['قيد المعالجة'];
-      document.getElementById('resolvedCount').textContent = counts['تم الحل'];
+      document.getElementById('reqTotalCount').textContent = totalFiltered;
+      document.getElementById('reqNewCount').textContent = counts['جديد'];
+      document.getElementById('reqWaitingCount').textContent = counts['بانتظار موافقة المدير'];
+      document.getElementById('reqProgressCount').textContent = counts['قيد المعالجة'];
+      document.getElementById('reqResolvedCount').textContent = counts['تم الحل'];
     }
 
-    // === Render Table ===
-    function renderTable() {
-      const tbody = document.getElementById('tableBody');
+    function renderRequestsTable() {
+      const tbody = document.getElementById('requestsTableBody');
       tbody.innerHTML = '';
 
-      if (allData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px; color:#aaa; font-size:1.1em;">لا توجد طلبات صيانة</td></tr>';
+      if (allRequestsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px; color:#aaa; font-size:1.05em;">لا توجد طلبات صيانة مطابقة للفلتر</td></tr>';
         return;
       }
 
-      allData.forEach((req, idx) => {
+      allRequestsData.forEach((req, idx) => {
         const date = new Date(req.created_at).toLocaleDateString('ar-SA', {
           year: 'numeric', month: 'short', day: 'numeric',
           hour: '2-digit', minute: '2-digit'
@@ -826,10 +1649,10 @@
         const thumbs = (req.images && req.images.length > 0)
           ? `<div class="thumb-row">${req.images.slice(0, 3).map(url =>
               `<img src="${url}" onclick="viewImage('${url}')" alt="صورة">`
-            ).join('')}${req.images.length > 3 ? `<span style="color:#999; font-size:12px; align-self:center;">+${req.images.length - 3}</span>` : ''}</div>`
+            ).join('')}${req.images.length > 3 ? `<span style="color:#999; font-size:11px; align-self:center;">+${req.images.length - 3}</span>` : ''}</div>`
           : '<span style="color:#ccc;">—</span>';
 
-        const rowNum = (currentPageNum - 1) * perPage + idx + 1;
+        const rowNum = (reqCurrentPageNum - 1) * reqPerPage + idx + 1;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -839,10 +1662,10 @@
           <td>${escapeHtml(req.title)}</td>
           <td>${thumbs}</td>
           <td><span style="color: ${req.priority === 'عالية جداً' ? 'var(--danger)' : req.priority === 'عالية' ? '#e67e22' : req.priority === 'متوسطة' ? '#f39c12' : 'var(--success)'}; font-weight: bold;">${req.priority || 'عادية'}</span></td>
-          <td style="font-weight:bold; color:var(--danger);">${req.repair_cost ? req.repair_cost + ' ريال' : '—'}</td>
+          <td style="font-weight:bold; color:var(--primary);">${req.repair_cost ? Number(req.repair_cost).toLocaleString() + ' ر.س' : '—'}</td>
           <td><span class="status-badge ${statusClass}">${req.status}</span></td>
           <td>
-            <select class="status-select" onchange="changeStatus('${req.id}', this.value)">
+            <select class="status-select" onchange="changeRequestStatus('${req.id}', this.value)">
               <option value="جديد" ${req.status === 'جديد' ? 'selected' : ''}>🟠 جديد</option>
               <option value="بانتظار موافقة المدير" ${req.status === 'بانتظار موافقة المدير' ? 'selected' : ''}>⏳ بانتظار موافقة المدير</option>
               ${(window.currentUserRole === 'manager' || req.status === 'موافق عليه') ? `<option value="موافق عليه" ${req.status === 'موافق عليه' ? 'selected' : ''}>👍 موافق عليه</option>` : ''}
@@ -853,8 +1676,8 @@
           </td>
           <td>
             <div style="display:flex; gap:5px;">
-              <button onclick="showDetail('${req.id}')" class="info-btn" style="font-size:12px; padding:6px 14px;">عرض</button>
-              ${window.currentUserRole === 'manager' ? `<button onclick="deleteRequest('${req.id}')" class="danger-btn" style="font-size:12px; padding:6px 14px;">حذف</button>` : ''}
+              <button onclick="showRequestDetail('${req.id}')" class="btn btn-accent" style="font-size:12px; padding:5px 12px;">معاينة وتكلفة</button>
+              ${window.currentUserRole === 'manager' ? `<button onclick="deleteRequest('${req.id}')" class="danger-btn" style="font-size:12px; padding:5px 10px; border-radius:6px;">حذف</button>` : ''}
             </div>
           </td>
         `;
@@ -862,8 +1685,7 @@
       });
     }
 
-    // === Change Status ===
-    async function changeStatus(id, newStatus) {
+    async function changeRequestStatus(id, newStatus) {
       if ((newStatus === 'موافق عليه' || newStatus === 'مرفوض') && window.currentUserRole !== 'manager') {
         showToast('ليس لديك صلاحية للموافقة أو الرفض. يرجى توجيهها بانتظار موافقة المدير.', 'error');
         await loadRequests();
@@ -880,31 +1702,20 @@
         return;
       }
 
-      showToast('تم تحديث الحالة ✅', 'success');
+      showToast('تم تحديث الحالة بنجاح ✅', 'success');
       await loadRequests();
     }
 
-    // === Delete Request ===
     async function deleteRequest(id) {
-      if (!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) return;
-      
-      const { error } = await supabaseClient
-        .from('maintenance_requests')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        showToast('فشل الحذف: ' + error.message, 'error');
-        return;
-      }
-
+      if (!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً من Supabase؟')) return;
+      const { error } = await supabaseClient.from('maintenance_requests').delete().eq('id', id);
+      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
       showToast('تم حذف الطلب بنجاح 🗑️', 'success');
       await loadRequests();
     }
 
-    // === Show Detail Modal ===
-    function showDetail(id) {
-      const req = allData.find(r => r.id === id);
+    function showRequestDetail(id) {
+      const req = allRequestsData.find(r => r.id === id);
       if (!req) return;
       currentDetailRequest = req;
 
@@ -921,15 +1732,15 @@
 
       let html = `
         <div class="detail-row">
-          <span class="detail-label">المعرض</span>
+          <span class="detail-label">المعرض / الفرع</span>
           <span class="detail-value">${escapeHtml(req.mall)}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">البريد</span>
+          <span class="detail-label">مقدم الطلب</span>
           <span class="detail-value">${escapeHtml(req.user_email)}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">التاريخ</span>
+          <span class="detail-label">تاريخ البلاغ</span>
           <span class="detail-value">${date}</span>
         </div>
         <div class="detail-row">
@@ -938,8 +1749,8 @@
         </div>
         ${req.repair_cost ? `
         <div class="detail-row">
-          <span class="detail-label">تكلفة الإصلاح</span>
-          <span style="color:var(--danger); font-weight:bold;">${req.repair_cost} ريال</span>
+          <span class="detail-label">تكلفة الإصلاح المعتمدة</span>
+          <span style="color:var(--primary); font-weight:bold; font-size:1.1em;">${Number(req.repair_cost).toLocaleString()} ر.س</span>
         </div>
         ` : ''}
         <div class="detail-row">
@@ -954,75 +1765,62 @@
 
       if (req.description) {
         html += `
-          <h4 style="margin-top:20px; color:var(--text-main);">📝 الوصف:</h4>
+          <h4 style="margin-top:15px; color:var(--text-main);">📝 تفاصيل البلاغ:</h4>
           <div class="detail-desc">${escapeHtml(req.description)}</div>
         `;
       }
 
       if (req.images && req.images.length > 0) {
         html += `
-          <h4 style="margin-top:20px; color:var(--text-main);">📸 الصور المرفقة (${req.images.length}):</h4>
+          <h4 style="margin-top:15px; color:var(--text-main);">📸 الصور المرفقة من الفرع (${req.images.length}):</h4>
           <div class="detail-images">
             ${req.images.map(url => `<img src="${url}" onclick="viewImage('${url}')" alt="صورة">`).join('')}
           </div>
         `;
       }
 
-      if (req.updated_at && req.updated_at !== req.created_at) {
-        const updDate = new Date(req.updated_at).toLocaleDateString('ar-SA', {
-          year: 'numeric', month: 'long', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        });
-        html += `
-          <div class="detail-row" style="margin-top:15px; border-top:2px solid #eee; padding-top:10px;">
-            <span class="detail-label">آخر تحديث</span>
-            <span style="color:#aaa;">${updDate}</span>
-          </div>
-        `;
-      }
-
-      adminSelectedFiles = []; // Reset files on open
+      adminSelectedFiles = [];
       adminSelectedInvoice = null;
       adminSelectedQuote = null;
 
       const isCostLocked = window.currentUserRole !== 'manager' && (req.status === 'موافق عليه' || req.status === 'تم الحل' || req.status === 'مرفوض');
 
       html += `
-        <div style="margin-top:25px; border-top:2px solid #eee; padding-top:20px;">
-          <h4 style="color:var(--primary); margin-bottom:15px;">👨‍🔧 إضافة/تعديل رد الإدارة والتكاليف</h4>
+        <div style="margin-top:20px; border-top:2px solid #eee; padding-top:15px;">
+          <h4 style="color:var(--primary); margin-bottom:12px;">👨‍🔧 رد الإدارة، التكلفة، والفواتير</h4>
           
-          <textarea id="adminReplyText" style="width:100%; min-height:100px; padding:12px; border:1px solid #ddd; border-radius:10px; font-family:var(--font-family); resize:vertical; margin-bottom:15px;" placeholder="اكتب ردك أو تعليماتك هنا...">${req.admin_reply ? escapeHtml(req.admin_reply) : ''}</textarea>
+          <textarea id="adminReplyText" style="width:100%; min-height:90px; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:var(--font-family); resize:vertical; margin-bottom:12px;" placeholder="اكتب ردك أو التعليمات الفنية هنا...">${req.admin_reply ? escapeHtml(req.admin_reply) : ''}</textarea>
           
-          <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:180px;">
-              <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">تكلفة الإصلاح (اختياري)</label>
-              <input type="number" step="0.01" id="adminCostInput" value="${req.repair_cost || ''}" placeholder="0.00" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:var(--font-family);" ${isCostLocked ? 'disabled' : ''}>
+          <div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:170px;">
+              <label style="display:block; margin-bottom:6px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">تكلفة الإصلاح (ر.س)</label>
+              <input type="number" step="0.01" id="adminCostInput" value="${req.repair_cost || ''}" placeholder="0.00" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:var(--font-family);" ${isCostLocked ? 'disabled' : ''}>
             </div>
-            <div style="flex:1; min-width:180px;">
-              <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">صورة الفاتورة (النهائية)</label>
+            <div style="flex:1; min-width:170px;">
+              <label style="display:block; margin-bottom:6px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">صورة الفاتورة النهائية</label>
               <input type="file" id="adminInvoiceInput" accept="image/*" style="display:none" onchange="handleInvoiceFile(this.files[0])">
-              <button onclick="document.getElementById('adminInvoiceInput').click()" class="secondary" style="padding:10px; width:100%; text-align:center; display:block;">🧾 إرفاق الفاتورة</button>
-              <div id="invoiceFileName" style="font-size:12px; color:#666; margin-top:5px; text-align:center;">${req.invoice_image ? 'موجودة مسبقاً (سيتم استبدالها)' : ''}</div>
+              <button onclick="document.getElementById('adminInvoiceInput').click()" class="btn secondary" style="width:100%; text-align:center; display:block;">🧾 إرفاق الفاتورة</button>
+              <div id="invoiceFileName" style="font-size:11px; color:#666; margin-top:4px; text-align:center;">${req.invoice_image ? 'موجودة مسبقاً' : ''}</div>
             </div>
-            <div style="flex:1; min-width:180px;">
-              <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">عرض السعر (المبدئي)</label>
+            <div style="flex:1; min-width:170px;">
+              <label style="display:block; margin-bottom:6px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">عرض السعر المبدئي</label>
               <input type="file" id="adminQuoteInput" accept="image/*" style="display:none" onchange="handleQuoteFile(this.files[0])" ${isCostLocked ? 'disabled' : ''}>
-              <button onclick="if(!${isCostLocked}) document.getElementById('adminQuoteInput').click()" class="${isCostLocked ? 'secondary' : 'info-btn'}" style="padding:10px; width:100%; text-align:center; display:block; ${isCostLocked ? 'opacity:0.5; cursor:not-allowed;' : ''}">📄 إرفاق عرض السعر</button>
-              <div id="quoteFileName" style="font-size:12px; color:#666; margin-top:5px; text-align:center;">${req.quote_image ? 'موجود مسبقاً' : ''}</div>
+              <button onclick="if(!${isCostLocked}) document.getElementById('adminQuoteInput').click()" class="btn ${isCostLocked ? 'secondary' : 'btn-accent'}" style="width:100%; text-align:center; display:block; ${isCostLocked ? 'opacity:0.5; cursor:not-allowed;' : ''}">📄 إرفاق عرض السعر</button>
+              <div id="quoteFileName" style="font-size:11px; color:#666; margin-top:4px; text-align:center;">${req.quote_image ? 'موجود مسبقاً' : ''}</div>
             </div>
           </div>
 
-          <div style="margin-bottom:15px;">
-            <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">إرفاق صور المعاينة/الإصلاح (اختياري)</label>
+          <div style="margin-bottom:12px;">
+            <label style="display:block; margin-bottom:6px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">صور المعاينة / الإنجاز من الإدارة:</label>
             <input type="file" id="adminFileInput" accept="image/*" multiple style="display:none" onchange="handleAdminFiles(this.files)">
-            <button onclick="document.getElementById('adminFileInput').click()" class="secondary" style="margin-bottom:10px;">📸 اختيار صور</button>
-            <div id="adminImagePreviews" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+            <button onclick="document.getElementById('adminFileInput').click()" class="btn secondary" style="margin-bottom:8px;">📸 اختيار صور</button>
+            <div id="adminImagePreviews" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
           </div>
           
-          <div style="display:flex; gap:15px; flex-wrap:wrap;">
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
             ${(req.admin_images && req.admin_images.length > 0) ? `
-              <div style="margin-bottom:15px; flex:1;">
-                <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">الصور المرفقة مسبقاً:</label>
+              <div style="margin-bottom:10px; flex:1;">
+                <label style="display:block; margin-bottom:4px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">صور الإدارة المرفقة:</label>
                 <div class="detail-images">
                   ${req.admin_images.map(url => `<img src="${url}" onclick="viewImage('${url}')" alt="صورة الإدارة">`).join('')}
                 </div>
@@ -1030,35 +1828,35 @@
             ` : ''}
 
             ${req.invoice_image ? `
-              <div style="margin-bottom:15px; flex:1;">
-                <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">الفاتورة السابقة:</label>
-                <img src="${req.invoice_image}" onclick="viewImage('${req.invoice_image}')" style="width:100px; height:100px; object-fit:cover; border-radius:10px; cursor:pointer;" alt="الفاتورة">
+              <div style="margin-bottom:10px;">
+                <label style="display:block; margin-bottom:4px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">الفاتورة السابقة:</label>
+                <img src="${req.invoice_image}" onclick="viewImage('${req.invoice_image}')" style="width:80px; height:80px; object-fit:cover; border-radius:8px; cursor:pointer;" alt="الفاتورة">
               </div>
             ` : ''}
             
             ${req.quote_image ? `
-              <div style="margin-bottom:15px; flex:1;">
-                <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--text-muted);">عرض السعر:</label>
-                <img src="${req.quote_image}" onclick="viewImage('${req.quote_image}')" style="width:100px; height:100px; object-fit:cover; border-radius:10px; cursor:pointer;" alt="عرض السعر">
+              <div style="margin-bottom:10px;">
+                <label style="display:block; margin-bottom:4px; font-weight:bold; font-size:0.85em; color:var(--text-muted);">عرض السعر:</label>
+                <img src="${req.quote_image}" onclick="viewImage('${req.quote_image}')" style="width:80px; height:80px; object-fit:cover; border-radius:8px; cursor:pointer;" alt="عرض السعر">
               </div>
             ` : ''}
           </div>
 
           ${(window.currentUserRole === 'manager' || req.manager_reply) ? `
-            <div style="margin-bottom:15px; border-top:1px dashed #ddd; padding-top:15px;">
-              <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--primary);">تعليق / موافقة المدير:</label>
-              <textarea id="managerReplyText" style="width:100%; min-height:80px; padding:12px; border:1px solid #ddd; border-radius:10px; font-family:var(--font-family); resize:vertical;" ${window.currentUserRole !== 'manager' ? 'disabled' : ''} placeholder="${window.currentUserRole === 'manager' ? 'اكتب ردك وموافقتك هنا...' : ''}">${req.manager_reply ? escapeHtml(req.manager_reply) : ''}</textarea>
+            <div style="margin-bottom:15px; border-top:1px dashed #ddd; padding-top:12px;">
+              <label style="display:block; margin-bottom:6px; font-weight:bold; color:var(--primary);">موافقة / تعليق المدير العام:</label>
+              <textarea id="managerReplyText" style="width:100%; min-height:70px; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:var(--font-family); resize:vertical;" ${window.currentUserRole !== 'manager' ? 'disabled' : ''} placeholder="${window.currentUserRole === 'manager' ? 'اكتب ردك وموافقتك هنا...' : ''}">${req.manager_reply ? escapeHtml(req.manager_reply) : ''}</textarea>
               
               ${window.currentUserRole === 'manager' ? `
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                  <button onclick="saveAdminReply('${req.id}', 'موافق عليه')" class="success-btn" style="flex:1; justify-content:center;">✅ موافقة وحفظ</button>
-                  <button onclick="saveAdminReply('${req.id}', 'مرفوض')" class="danger-btn" style="flex:1; justify-content:center;">❌ رفض وحفظ</button>
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                  <button onclick="saveAdminReply('${req.id}', 'موافق عليه')" class="btn success-btn" style="flex:1; justify-content:center;">✅ موافقة وحفظ</button>
+                  <button onclick="saveAdminReply('${req.id}', 'مرفوض')" class="btn danger-btn" style="flex:1; justify-content:center;">❌ رفض وحفظ</button>
                 </div>
               ` : ''}
             </div>
           ` : ''}
 
-          ${window.currentUserRole !== 'manager' ? `<button id="saveReplyBtn" onclick="saveAdminReply('${req.id}')" class="success-btn" style="width:100%; justify-content:center; padding:12px; font-size:1.1em; margin-top:10px;">💾 حفظ الرد والتكلفة</button>` : `<button id="saveReplyBtn" onclick="saveAdminReply('${req.id}')" class="secondary" style="width:100%; justify-content:center; padding:12px; margin-top:10px;">💾 حفظ التعليقات دون تغيير الحالة</button>`}
+          ${window.currentUserRole !== 'manager' ? `<button id="saveReplyBtn" onclick="saveAdminReply('${req.id}')" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px; font-size:1rem; margin-top:8px;">💾 حفظ الرد والتكلفة</button>` : `<button id="saveReplyBtn" onclick="saveAdminReply('${req.id}')" class="btn secondary" style="width:100%; justify-content:center; padding:10px; margin-top:8px;">💾 حفظ التعليقات دون تغيير الحالة</button>`}
         </div>
       `;
 
@@ -1070,106 +1868,26 @@
       document.getElementById('detailModal').style.display = 'none';
     }
 
-    // === Image Viewer ===
-    function viewImage(url) {
-      document.getElementById('viewerImage').src = url;
-      document.getElementById('imageViewer').style.display = 'flex';
-    }
-
-    // === Pagination ===
-    function changePage(delta) {
-      const newPage = currentPageNum + delta;
-      if (newPage < 1 || newPage > totalPagesNum) return;
-      currentPageNum = newPage;
+    function changeRequestsPage(delta) {
+      const newPage = reqCurrentPageNum + delta;
+      if (newPage < 1 || newPage > reqTotalPagesNum) return;
+      reqCurrentPageNum = newPage;
       loadRequests();
     }
 
-    // === Sort ===
-    function toggleSort() {
-      if (sortField === 'created_at') {
-        sortField = 'mall';
-        sortAsc = true;
-      } else if (sortField === 'mall') {
-        sortField = 'priority';
-        sortAsc = true;
+    function toggleSortRequests() {
+      if (reqSortField === 'created_at') {
+        reqSortField = 'mall';
+        reqSortAsc = true;
+      } else if (reqSortField === 'mall') {
+        reqSortField = 'priority';
+        reqSortAsc = true;
       } else {
-        sortField = 'created_at';
-        sortAsc = false;
+        reqSortField = 'created_at';
+        reqSortAsc = false;
       }
-      currentPageNum = 1;
+      reqCurrentPageNum = 1;
       loadRequests();
-    }
-
-    // === Export ===
-    function buildExportData(data) {
-      return [
-        ['المعرض', 'البريد', 'عنوان المشكلة', 'الأولوية', 'الوصف', 'الحالة', 'التكلفة', 'التاريخ', 'آخر تحديث', 'رد الإدارة', 'رابط الفاتورة', 'عدد الصور', 'روابط الصور'],
-        ...data.map(r => [
-          r.mall,
-          r.user_email,
-          r.title,
-          r.priority || 'عادية',
-          r.description || '',
-          r.status,
-          r.repair_cost || '',
-          new Date(r.created_at).toLocaleString('en-GB', { hour12: false }),
-          r.updated_at ? new Date(r.updated_at).toLocaleString('en-GB', { hour12: false }) : '',
-          r.admin_reply || '',
-          r.invoice_image || '',
-          (r.images || []).length,
-          (r.images || []).join('\n')
-        ])
-      ];
-    }
-
-    function exportFiltered() {
-      if (allData.length === 0) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(buildExportData(allData));
-      ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 30 }, { wch: 50 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 60 }];
-      XLSX.utils.book_append_sheet(wb, ws, 'طلبات الصيانة');
-      XLSX.writeFile(wb, 'maintenance_requests_filtered.xlsx');
-      showToast('تم التصدير ✅', 'success');
-    }
-
-    async function exportAll() {
-      showToast('جاري تحميل كل البيانات...', '');
-
-      let allExport = [];
-      let page = 0;
-      const batchSize = 1000;
-
-      while (true) {
-        const { data, error } = await supabaseClient
-          .from('maintenance_requests')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(page * batchSize, (page + 1) * batchSize - 1);
-
-        if (error || !data || data.length === 0) break;
-        allExport = allExport.concat(data);
-        if (data.length < batchSize) break;
-        page++;
-      }
-
-      if (allExport.length === 0) { showToast('لا توجد بيانات', 'error'); return; }
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(buildExportData(allExport));
-      ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 30 }, { wch: 50 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 60 }];
-      XLSX.utils.book_append_sheet(wb, ws, 'طلبات الصيانة');
-      XLSX.writeFile(wb, 'all_maintenance_requests.xlsx');
-      showToast(`تم تصدير ${allExport.length} طلب ✅`, 'success');
-    }
-
-    function exportSingleRequest() {
-      if (!currentDetailRequest) return;
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(buildExportData([currentDetailRequest]));
-      ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 30 }, { wch: 50 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 60 }];
-      XLSX.utils.book_append_sheet(wb, ws, 'طلب صيانة');
-      XLSX.writeFile(wb, `maintenance_${currentDetailRequest.mall}_${currentDetailRequest.id.substring(0, 8)}.xlsx`);
-      showToast('تم التصدير ✅', 'success');
     }
 
     let adminSelectedFiles = [];
@@ -1207,9 +1925,9 @@
       container.innerHTML = adminSelectedFiles.map((file, idx) => {
         const url = URL.createObjectURL(file);
         return `
-          <div style="position:relative; width:70px; height:70px; border-radius:8px; overflow:hidden;">
+          <div style="position:relative; width:65px; height:65px; border-radius:6px; overflow:hidden;">
             <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
-            <button onclick="removeAdminImage(${idx})" style="position:absolute; top:2px; left:2px; background:var(--danger); color:white; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;">✕</button>
+            <button onclick="removeAdminImage(${idx})" style="position:absolute; top:2px; left:2px; background:var(--danger); color:white; border:none; border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center; font-size:9px; cursor:pointer;">✕</button>
           </div>
         `;
       }).join('');
@@ -1237,7 +1955,7 @@
               const ctx = canvas.getContext('2d');
               ctx.drawImage(img, 0, 0);
               canvas.toBlob((blob) => {
-                if (!blob) reject(new Error('Canvas is empty'));
+                if (!blob) reject(new Error('Canvas empty'));
                 resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' }));
               }, 'image/webp', 0.8);
             };
@@ -1259,7 +1977,7 @@
           } catch(e) { console.error(e); }
         }
 
-        const req = allData.find(r => r.id === id);
+        const req = allRequestsData.find(r => r.id === id);
         let finalImages = req.admin_images || [];
         if(newImageUrls.length > 0) finalImages = [...finalImages, ...newImageUrls];
 
@@ -1291,8 +2009,6 @@
 
         const costVal = document.getElementById('adminCostInput').value.trim();
         const finalCost = costVal ? parseFloat(costVal) : null;
-
-        // Fetch optional manager reply if the text area is present
         const managerReplyEl = document.getElementById('managerReplyText');
         const managerReplyVal = managerReplyEl ? managerReplyEl.value.trim() : req.manager_reply;
 
@@ -1301,26 +2017,21 @@
           admin_images: finalImages, 
           repair_cost: finalCost, 
           invoice_image: invoiceUrl, 
-          quote_image: quoteUrl,
+          quote_image: quoteUrl, 
           updated_at: new Date().toISOString() 
         };
         
         if (window.currentUserRole === 'manager' && managerReplyEl) {
           updateData.manager_reply = managerReplyVal;
         }
-
         if (statusOverride) {
           updateData.status = statusOverride;
         }
 
-        const { error } = await supabaseClient
-          .from('maintenance_requests')
-          .update(updateData)
-          .eq('id', id);
-
+        const { error } = await supabaseClient.from('maintenance_requests').update(updateData).eq('id', id);
         if (error) throw error;
         
-        showToast('تم الحفظ بنجاح ✅', 'success');
+        showToast('تم حفظ الرد والتكلفة بنجاح ✅', 'success');
         closeDetailModal();
         loadRequests();
       } catch(e) {
@@ -1330,7 +2041,752 @@
       }
     }
 
-    // === Utils ===
+
+    // ==========================================
+    // TAB 2: AC MAINTENANCE & ASSETS (SUPABASE)
+    // ==========================================
+    async function fetchAcDataFromSupabase() {
+      try {
+        const { data: assets, error: errA } = await supabaseClient.from('ac_assets').select('*').order('code');
+        const { data: visits, error: errV } = await supabaseClient.from('ac_visits').select('*').order('date', { ascending: false });
+        const { data: works, error: errW } = await supabaseClient.from('ac_works').select('*').order('visit_no');
+
+        if (!errA && assets) dbAcAssets = assets;
+        if (!errV && visits) dbAcVisits = visits;
+        if (!errW && works) dbAcWorks = works;
+
+        // Update AC Malls filter
+        const acMallSel = document.getElementById('acMallFilter');
+        acMallSel.innerHTML = '<option value="all">جميع المعارض</option>';
+        const uniqueMalls = [...new Set(dbAcAssets.map(a => a.mall).filter(Boolean))].sort();
+        uniqueMalls.forEach(m => {
+          const count = dbAcAssets.filter(a => a.mall === m).length;
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = `${m} (${count} مكيف)`;
+          acMallSel.appendChild(opt);
+        });
+
+        // Update AC Badge & KPIs
+        document.getElementById('acBadge').textContent = `${dbAcAssets.length} مكيف`;
+        document.getElementById('acTotalUnits').textContent = dbAcAssets.length;
+        document.getElementById('acMallsCount').textContent = `${uniqueMalls.length} مواقع ومعارض`;
+        
+        const totalAcSpend = dbAcVisits.reduce((sum, v) => sum + (parseFloat(v.invoice_amount) || 0), 0);
+        document.getElementById('acTotalSpend').innerHTML = `${totalAcSpend.toLocaleString()} <small style="font-size:1rem;">ر.س</small>`;
+        document.getElementById('acVisitsCount').textContent = dbAcVisits.length;
+
+        // Count due
+        let dueCount = 0;
+        const today = new Date();
+        dbAcAssets.forEach(a => {
+          if (a.next_maintenance) {
+            const diffDays = Math.ceil((new Date(a.next_maintenance) - today) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 30) dueCount++;
+          }
+        });
+        document.getElementById('acDueCount').textContent = dueCount;
+        document.getElementById('acDueCount').style.color = dueCount > 0 ? 'var(--warning)' : 'var(--success)';
+
+        renderAcTables();
+      } catch(e) {
+        console.error("Error fetching AC data from Supabase:", e);
+      }
+    }
+
+    function renderAcTables() {
+      const mallFilter = document.getElementById('acMallFilter').value;
+      const typeFilter = document.getElementById('acTypeFilter').value;
+      const search = document.getElementById('acSearchInput').value.trim().toLowerCase();
+
+      // Filter Assets
+      const filteredAssets = dbAcAssets.filter(a => {
+        if (mallFilter !== 'all' && a.mall !== mallFilter) return false;
+        if (typeFilter !== 'all' && a.type !== typeFilter) return false;
+        if (search) {
+          const match = (a.code || '').toLowerCase().includes(search) ||
+                        (a.mall || '').toLowerCase().includes(search) ||
+                        (a.brand || '').toLowerCase().includes(search) ||
+                        (a.gas || '').toLowerCase().includes(search) ||
+                        (a.location || '').toLowerCase().includes(search);
+          if (!match) return false;
+        }
+        return true;
+      });
+
+      const tbodyAssets = document.getElementById('acAssetsTableBody');
+      tbodyAssets.innerHTML = '';
+
+      if (filteredAssets.length === 0) {
+        tbodyAssets.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px; color:#aaa;">لا توجد وحدات مكيفات مطابقة للفلتر</td></tr>';
+      } else {
+        filteredAssets.forEach((item, idx) => {
+          let daysBadge = `<span style="color:var(--text-light); font-weight:700;">غير محدد</span>`;
+          if (item.next_maintenance) {
+            const nextDate = new Date(item.next_maintenance);
+            const today = new Date();
+            const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+            if (diffDays > 30) {
+              daysBadge = `<span style="color:var(--success); font-weight:800;">${diffDays} يوم</span>`;
+            } else if (diffDays > 0) {
+              daysBadge = `<span style="color:var(--warning); font-weight:800;">${diffDays} يوم (قريباً)</span>`;
+            } else {
+              daysBadge = `<span style="color:var(--danger); font-weight:800;">مستحقة / متأخرة</span>`;
+            }
+          }
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${idx + 1}</td>
+            <td><strong style="color:var(--secondary);">${escapeHtml(item.code)}</strong></td>
+            <td><strong>${escapeHtml(item.mall)}</strong></td>
+            <td><span class="category-badge cat-maintenance">${escapeHtml(item.type || 'سبليت')}</span> ${item.brand ? `(${item.brand})` : ''}</td>
+            <td>${escapeHtml(item.capacity || '—')} | <span style="font-weight:700; color:var(--text-muted);">${escapeHtml(item.gas || '—')}</span></td>
+            <td>${escapeHtml(item.location || '—')}</td>
+            <td>${escapeHtml(item.last_maintenance || '—')}</td>
+            <td style="font-weight:700;">${escapeHtml(item.next_maintenance || '—')}</td>
+            <td>${daysBadge}</td>
+            <td><span class="status-badge status-resolved">${escapeHtml(item.status || 'يعمل')}</span></td>
+            <td>
+              <button onclick="deleteAcAsset('${item.id}', '${item.code}')" class="danger-btn" style="padding:4px 8px; font-size:11px; border-radius:6px;">حذف</button>
+            </td>
+          `;
+          tbodyAssets.appendChild(tr);
+        });
+      }
+
+      // Filter Visits
+      const tbodyVisits = document.getElementById('acVisitsTableBody');
+      tbodyVisits.innerHTML = '';
+      if (dbAcWorks.length === 0) {
+        tbodyVisits.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:#aaa;">لا توجد سجلات زيارات فنية مسجلة</td></tr>';
+      } else {
+        dbAcWorks.forEach((w) => {
+          const visitParent = dbAcVisits.find(v => v.visit_no === w.visit_no) || {};
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>#${w.visit_no}</strong></td>
+            <td>${escapeHtml(w.visit_date || visitParent.date || '—')}</td>
+            <td><strong>${escapeHtml(visitParent.mall || '—')}</strong></td>
+            <td><span style="color:var(--primary); font-weight:700;">${escapeHtml(visitParent.company || '—')}</span></td>
+            <td><span class="status-badge status-approved">${escapeHtml(w.work_type || 'صيانة دورية')}</span></td>
+            <td><code>${escapeHtml(w.ac_code || '—')}</code></td>
+            <td>${escapeHtml(w.replaced_part && w.replaced_part !== 'لايوجد' ? `استبدال: ${w.replaced_part}` : 'تنظيف وغسيل فلاتر')}</td>
+            <td style="color:var(--danger); font-weight:bold;">${w.part_cost > 0 ? Number(w.part_cost).toLocaleString() + ' ر.س' : '—'}</td>
+            <td style="font-weight:bold; color:var(--primary);">${Number(w.work_cost || 0).toLocaleString()} ر.س</td>
+            <td style="font-size:0.85em; color:var(--text-muted);">${escapeHtml(w.notes || '—')}</td>
+          `;
+          tbodyVisits.appendChild(tr);
+        });
+      }
+    }
+
+    function openAddAcModal() {
+      document.getElementById('newAcCode').value = '';
+      document.getElementById('newAcMall').value = '';
+      document.getElementById('newAcBrand').value = '';
+      document.getElementById('newAcCapacity').value = '';
+      document.getElementById('newAcGas').value = 'R410A';
+      document.getElementById('newAcLoc').value = '';
+      document.getElementById('addAcModal').style.display = 'flex';
+    }
+
+    async function saveNewAcAsset() {
+      const code = document.getElementById('newAcCode').value.trim();
+      const mall = document.getElementById('newAcMall').value.trim();
+      const type = document.getElementById('newAcType').value;
+      const brand = document.getElementById('newAcBrand').value.trim();
+      const capacity = document.getElementById('newAcCapacity').value.trim();
+      const gas = document.getElementById('newAcGas').value.trim();
+      const location = document.getElementById('newAcLoc').value.trim();
+      const last_maintenance = document.getElementById('newAcLastMaint').value || null;
+      const next_maintenance = document.getElementById('newAcNextMaint').value || null;
+
+      if (!code || !mall) {
+        showToast('يرجى كتابة كود المكيف واسم المعرض', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('ac_assets').insert([{
+        code, mall, type, brand, capacity, gas, location, last_maintenance, next_maintenance
+      }]);
+
+      if (error) {
+        showToast('فشل الحفظ: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('تمت إضافة المكيف بنجاح في Supabase ✅', 'success');
+      closeModal('addAcModal');
+      await fetchAcDataFromSupabase();
+    }
+
+    async function deleteAcAsset(id, code) {
+      if (!confirm(`هل أنت متأكد من حذف المكيف (${code}) نهائياً من Supabase؟`)) return;
+      const { error } = await supabaseClient.from('ac_assets').delete().eq('id', id);
+      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+      showToast('تم حذف المكيف بنجاح 🗑️', 'success');
+      await fetchAcDataFromSupabase();
+    }
+
+    function openAddAcVisitModal() {
+      const vNo = prompt('رقم الزيارة:');
+      if (!vNo) return;
+      const mall = prompt('اسم المعرض:');
+      if (!mall) return;
+      const comp = prompt('شركة الصيانة (درة المباني / حسن...):', 'درة المباني');
+      const amt = prompt('قيمة الفاتورة (ر.س):', '0');
+      const notes = prompt('الملاحظات والقطع المستبدلة:');
+
+      supabaseClient.from('ac_visits').insert([{
+        visit_no: vNo,
+        date: new Date().toISOString().split('T')[0],
+        mall: mall,
+        company: comp,
+        invoice_amount: parseFloat(amt) || 0,
+        notes: notes
+      }]).then(({ error }) => {
+        if (error) showToast('فشل التسجيل: ' + error.message, 'error');
+        else {
+          showToast('تم تسجيل زيارة الصيانة في Supabase ✅', 'success');
+          fetchAcDataFromSupabase();
+        }
+      });
+    }
+
+
+    // ==========================================
+    // TAB 3: EXPENSES & PROJECTS (SUPABASE LIVE)
+    // ==========================================
+    async function fetchExpensesFromSupabase() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('maintenance_expenses')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (!error && data) {
+          dbExpenses = data;
+          populateExpensesDropdowns();
+          updateExpensesKPIs();
+          renderExpensesTable();
+        }
+      } catch(e) {
+        console.error("Error fetching expenses from Supabase:", e);
+      }
+    }
+
+    function populateExpensesDropdowns() {
+      const compSel = document.getElementById('expCompanyFilter');
+      compSel.innerHTML = '<option value="all">كافة المقاولين والشركات</option>';
+      const companies = [...new Set(dbExpenses.map(e => e.company).filter(Boolean))].sort();
+      companies.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        compSel.appendChild(opt);
+      });
+
+      const mallSel = document.getElementById('expMallFilter');
+      mallSel.innerHTML = '<option value="all">كافة المعارض</option>';
+      const malls = [...new Set(dbExpenses.map(e => e.mall).filter(Boolean))].sort();
+      malls.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        mallSel.appendChild(opt);
+      });
+    }
+
+    function updateExpensesKPIs() {
+      const totalAmt = dbExpenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      const maintAmt = dbExpenses.filter(e => e.category === 'صيانة').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      const renoAmt = dbExpenses.filter(e => e.category === 'تطوير').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      const closeAmt = dbExpenses.filter(e => e.category === 'اغلاق' || e.category === 'إغلاق').reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      
+      const collAmt = dbExpenses.filter(e => (e.invoice_status || '').includes('محصلة') && !(e.invoice_status || '').includes('غير')).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      const pendAmt = totalAmt - collAmt;
+
+      document.getElementById('expensesBadge').textContent = `${(totalAmt / 1000).toFixed(1)}K ر.س`;
+      document.getElementById('expTotalAmount').innerHTML = `${totalAmt.toLocaleString(undefined, {minimumFractionDigits:2})} <small style="font-size:0.95rem;">ر.س</small>`;
+      document.getElementById('expTotalCount').textContent = `${dbExpenses.length} عملية معتمدة`;
+
+      document.getElementById('expMaintenanceAmount').innerHTML = `${maintAmt.toLocaleString()} <small style="font-size:0.95rem;">ر.س</small>`;
+      document.getElementById('expMaintenanceCount').textContent = `${dbExpenses.filter(e => e.category === 'صيانة').length} عملية صيانة`;
+
+      document.getElementById('expRenovationAmount').innerHTML = `${renoAmt.toLocaleString()} <small style="font-size:0.95rem;">ر.س</small>`;
+      document.getElementById('expRenovationCount').textContent = `${dbExpenses.filter(e => e.category === 'تطوير').length} مشاريع تطويرية`;
+
+      document.getElementById('expClosureAmount').innerHTML = `${closeAmt.toLocaleString()} <small style="font-size:0.95rem;">ر.س</small>`;
+      
+      document.getElementById('expCollectedAmount').innerHTML = `${collAmt.toLocaleString()} <small style="font-size:0.95rem;">ر.س</small>`;
+      document.getElementById('expPendingAmount').textContent = `غير محصلة: ${pendAmt.toLocaleString()} ر.س`;
+    }
+
+    function renderExpensesTable() {
+      const cat = document.getElementById('expCategoryFilter').value;
+      const comp = document.getElementById('expCompanyFilter').value;
+      const mall = document.getElementById('expMallFilter').value;
+      const stat = document.getElementById('expStatusFilter').value;
+      const search = document.getElementById('expSearchInput').value.trim().toLowerCase();
+
+      const filtered = dbExpenses.filter(e => {
+        if (cat !== 'all' && e.category !== cat) return false;
+        if (comp !== 'all' && e.company !== comp) return false;
+        if (mall !== 'all' && e.mall !== mall) return false;
+        if (stat !== 'all' && !(e.invoice_status || '').includes(stat)) return false;
+        if (search) {
+          const match = (e.description || '').toLowerCase().includes(search) ||
+                        (e.mall || '').toLowerCase().includes(search) ||
+                        (e.company || '').toLowerCase().includes(search) ||
+                        (e.invoice_no && String(e.invoice_no).toLowerCase().includes(search)) ||
+                        (e.notes && String(e.notes).toLowerCase().includes(search));
+          if (!match) return false;
+        }
+        return true;
+      });
+
+      const tbody = document.getElementById('expensesTableBody');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:30px; color:#aaa;">لا توجد مصروفات مطابقة للفلتر</td></tr>';
+      } else {
+        filtered.forEach(item => {
+          const catClass = item.category === 'صيانة' ? 'cat-maintenance' :
+                           item.category === 'تطوير' ? 'cat-renovation' :
+                           item.category === 'اغلاق' ? 'cat-closure' : 'cat-construction';
+
+          const invStatusBadge = (item.invoice_status || '').includes('محصلة') && !(item.invoice_status || '').includes('غير') ?
+                                 `<span class="collected-badge">محصلة ✅</span>` :
+                                 `<span class="pending-badge">غير محصلة ⏳</span>`;
+
+          const amt = parseFloat(item.amount) || 0;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.id}</td>
+            <td style="white-space:nowrap; font-size:0.85em;">${item.date || '—'}</td>
+            <td><strong>${escapeHtml(item.mall)}</strong></td>
+            <td><span class="category-badge ${catClass}">${escapeHtml(item.category)}</span></td>
+            <td><strong style="color:var(--secondary);">${escapeHtml(item.company)}</strong></td>
+            <td>${escapeHtml(item.description)}</td>
+            <td><code>${escapeHtml(item.invoice_no || '—')}</code></td>
+            <td style="font-weight:900; color:var(--primary); font-size:1em;">${amt.toLocaleString(undefined, {minimumFractionDigits:2})} ر.س</td>
+            <td><span class="status-badge status-resolved">${escapeHtml(item.payment_status || 'تم الدفع')}</span></td>
+            <td>${invStatusBadge}</td>
+            <td style="font-size:0.85em; color:var(--text-muted);">${escapeHtml(item.notes || '—')}</td>
+            <td>
+              <button onclick="deleteExpenseRow(${item.id})" class="danger-btn" style="padding:4px 8px; font-size:11px; border-radius:6px;">حذف</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Render Projects View
+      const tbodyProjects = document.getElementById('projectsTableBody');
+      tbodyProjects.innerHTML = '';
+      dbExpenses.forEach((item) => {
+        const catClass = item.category === 'صيانة' ? 'cat-maintenance' :
+                         item.category === 'تطوير' ? 'cat-renovation' : 'cat-closure';
+        const amt = parseFloat(item.amount) || 0;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>PRJ-${item.id}</strong></td>
+          <td><strong>${escapeHtml(item.mall)}</strong></td>
+          <td><span class="category-badge ${catClass}">${escapeHtml(item.category)}</span></td>
+          <td style="font-weight:bold; color:var(--primary);">${amt.toLocaleString()} ر.س</td>
+          <td>0.00 ر.س</td>
+          <td>1</td>
+          <td><strong style="color:var(--success);">100%</strong></td>
+          <td><span class="status-badge status-completed">مكتمل</span></td>
+        `;
+        tbodyProjects.appendChild(tr);
+      });
+    }
+
+    function openAddExpenseModal() {
+      document.getElementById('newExpMall').value = '';
+      document.getElementById('newExpDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('newExpCompany').value = '';
+      document.getElementById('newExpDesc').value = '';
+      document.getElementById('newExpAmount').value = '';
+      document.getElementById('newExpInvoiceNo').value = '';
+      document.getElementById('newExpNotes').value = '';
+      document.getElementById('addExpenseModal').style.display = 'flex';
+    }
+
+    async function saveNewExpense() {
+      const mall = document.getElementById('newExpMall').value.trim();
+      const date = document.getElementById('newExpDate').value;
+      const category = document.getElementById('newExpCategory').value;
+      const company = document.getElementById('newExpCompany').value.trim();
+      const description = document.getElementById('newExpDesc').value.trim();
+      const amount = parseFloat(document.getElementById('newExpAmount').value);
+      const invoice_no = document.getElementById('newExpInvoiceNo').value.trim();
+      const invoice_status = document.getElementById('newExpInvoiceStatus').value;
+      const notes = document.getElementById('newExpNotes').value.trim();
+
+      if (!mall || !description || isNaN(amount) || amount <= 0 || !company) {
+        showToast('يرجى تعبئة كافة الحقول المطلوبة والمبلغ بشكل صحيح', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('maintenance_expenses').insert([{
+        mall, date, category, company, description, amount, invoice_no, invoice_status, notes, payment_status: 'تم الدفع'
+      }]);
+
+      if (error) {
+        showToast('فشل حفظ المصروف: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('تم حفظ الفاتورة بنجاح في Supabase ✅', 'success');
+      closeModal('addExpenseModal');
+      await fetchExpensesFromSupabase();
+      renderAnalytics();
+    }
+
+    async function deleteExpenseRow(id) {
+      if (!confirm(`هل أنت متأكد من حذف الفاتورة رقم #${id} نهائياً من Supabase؟`)) return;
+      const { error } = await supabaseClient.from('maintenance_expenses').delete().eq('id', id);
+      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+      showToast('تم حذف الفاتورة بنجاح 🗑️', 'success');
+      await fetchExpensesFromSupabase();
+      renderAnalytics();
+    }
+
+
+    // ==========================================
+    // TAB 4: CONTRACTORS (SUPABASE LIVE)
+    // ==========================================
+    async function fetchContractorsFromSupabase() {
+      try {
+        const { data, error } = await supabaseClient.from('maintenance_contractors').select('*').order('name');
+        if (!error && data) {
+          dbContractors = data;
+          document.getElementById('contractorsBadge').textContent = `${dbContractors.length} شركات`;
+          renderContractors();
+        }
+      } catch(e) {
+        console.error("Error fetching contractors from Supabase:", e);
+      }
+    }
+
+    function renderContractors() {
+      const search = document.getElementById('contractorSearch').value.trim().toLowerCase();
+      const container = document.getElementById('contractorsGrid');
+      container.innerHTML = '';
+
+      const filtered = dbContractors.filter(c => {
+        if (!search) return true;
+        return (c.name || '').toLowerCase().includes(search) ||
+               (c.specialty || '').toLowerCase().includes(search) ||
+               (c.contact_person || '').toLowerCase().includes(search) ||
+               (c.city || '').toLowerCase().includes(search);
+      });
+
+      filtered.forEach(c => {
+        const hasPhone = c.phone && c.phone !== '-';
+        const cleanPhone = hasPhone ? c.phone.replace(/[^0-9]/g, '') : '';
+        const waLink = hasPhone ? `https://wa.me/966${cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone}` : '#';
+
+        // Compute total spend with this contractor from live dbExpenses
+        const matchedExpenses = dbExpenses.filter(e => (e.company || '').trim() === (c.name || '').trim());
+        const totalSpent = matchedExpenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        const opsCount = matchedExpenses.length;
+
+        const card = document.createElement('div');
+        card.className = 'contractor-card';
+        card.innerHTML = `
+          <div class="contractor-header">
+            <div>
+              <div class="contractor-name">${escapeHtml(c.name)}</div>
+              <span class="contractor-spec">${escapeHtml(c.specialty || 'مقاولات عامة')}</span>
+            </div>
+            <span style="background:#f1f5f9; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:800; color:var(--text-muted);">📍 ${escapeHtml(c.city || 'جدة')}</span>
+          </div>
+
+          <div class="contractor-info-row">
+            <span>👤 المسؤول:</span>
+            <strong>${escapeHtml(c.contact_person || 'إدارة العمليات')}</strong>
+          </div>
+
+          <div class="contractor-info-row">
+            <span>📞 الجوال:</span>
+            <strong>${hasPhone ? `<a href="tel:${c.phone}" style="color:var(--primary); text-decoration:none;">${c.phone}</a>` : '<span style="color:#aaa;">غير مسجل</span>'}</strong>
+          </div>
+
+          <div class="contractor-info-row">
+            <span>💰 حجم الأعمال:</span>
+            <strong style="color:var(--primary);">${totalSpent > 0 ? totalSpent.toLocaleString() + ' ر.س' : '—'}</strong>
+            ${opsCount > 0 ? `<span style="font-size:0.8em; color:var(--text-light);">(${opsCount} عملية)</span>` : ''}
+          </div>
+
+          ${c.notes ? `<div style="background:#f8fafc; padding:8px; border-radius:6px; font-size:0.82rem; color:var(--text-muted); line-height:1.4;">📝 ${escapeHtml(c.notes)}</div>` : ''}
+
+          <div class="contractor-actions">
+            ${hasPhone ? `
+              <a href="tel:${c.phone}" class="btn btn-outline" style="flex:1; justify-content:center; font-size:0.85rem; padding:6px;">📞 اتصال</a>
+              <a href="${waLink}" target="_blank" class="btn success-btn" style="flex:1; justify-content:center; font-size:0.85rem; padding:6px;">💬 واتساب</a>
+            ` : `<span style="color:#aaa; font-size:0.85rem; margin:auto;">للتواصل عبر الإدارة</span>`}
+            <button onclick="deleteContractor('${c.id}', '${c.name}')" class="danger-btn" style="padding:6px 10px; font-size:0.8rem; border-radius:6px;">حذف</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openAddContractorModal() {
+      document.getElementById('newContrName').value = '';
+      document.getElementById('newContrSpec').value = '';
+      document.getElementById('newContrCity').value = 'جدة';
+      document.getElementById('newContrPerson').value = '';
+      document.getElementById('newContrPhone').value = '';
+      document.getElementById('newContrNotes').value = '';
+      document.getElementById('addContractorModal').style.display = 'flex';
+    }
+
+    async function saveNewContractor() {
+      const name = document.getElementById('newContrName').value.trim();
+      const specialty = document.getElementById('newContrSpec').value.trim();
+      const city = document.getElementById('newContrCity').value.trim();
+      const contact_person = document.getElementById('newContrPerson').value.trim();
+      const phone = document.getElementById('newContrPhone').value.trim();
+      const notes = document.getElementById('newContrNotes').value.trim();
+
+      if (!name) {
+        showToast('يرجى كتابة اسم الشركة أو المقاول', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('maintenance_contractors').insert([{
+        name, specialty, city, contact_person, phone, notes
+      }]);
+
+      if (error) {
+        showToast('فشل الحفظ: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('تمت إضافة المقاول بنجاح في Supabase ✅', 'success');
+      closeModal('addContractorModal');
+      await fetchContractorsFromSupabase();
+    }
+
+    async function deleteContractor(id, name) {
+      if (!confirm(`هل أنت متأكد من حذف المقاول (${name}) نهائياً من Supabase؟`)) return;
+      const { error } = await supabaseClient.from('maintenance_contractors').delete().eq('id', id);
+      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+      showToast('تم حذف المقاول بنجاح 🗑️', 'success');
+      await fetchContractorsFromSupabase();
+    }
+
+
+    // ==========================================
+    // TAB 5: ANALYTICS (SUPABASE LIVE DATA)
+    // ==========================================
+    function renderAnalytics() {
+      const expenses = dbExpenses;
+      const total = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      document.getElementById('analyticsCategoryTotal').textContent = `إجمالي: ${total.toLocaleString()} ر.س`;
+
+      // 1. By Category
+      const byCat = {};
+      expenses.forEach(e => { 
+        const amt = parseFloat(e.amount) || 0;
+        byCat[e.category] = (byCat[e.category] || 0) + amt; 
+      });
+      const catContainer = document.getElementById('categoryBars');
+      catContainer.innerHTML = '';
+      
+      const catColors = { 'تطوير': '#fe7900', 'صيانة': '#3b82f6', 'اغلاق': '#ef4444', 'إغلاق': '#ef4444' };
+
+      Object.keys(byCat).sort((a,b) => byCat[b] - byCat[a]).forEach(k => {
+        const amt = byCat[k];
+        const pct = total > 0 ? ((amt / total) * 100).toFixed(1) : 0;
+        catContainer.innerHTML += `
+          <div class="progress-item">
+            <div class="progress-header">
+              <span>${k}</span>
+              <span>${amt.toLocaleString()} ر.س (${pct}%)</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${pct}%; background:${catColors[k] || '#8b5cf6'};"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      // 2. By Vendor
+      const byVendor = {};
+      expenses.forEach(e => { 
+        const amt = parseFloat(e.amount) || 0;
+        byVendor[e.company] = (byVendor[e.company] || 0) + amt; 
+      });
+      const vendorContainer = document.getElementById('vendorBars');
+      vendorContainer.innerHTML = '';
+
+      Object.keys(byVendor).sort((a,b) => byVendor[b] - byVendor[a]).slice(0, 5).forEach(k => {
+        const amt = byVendor[k];
+        const pct = total > 0 ? ((amt / total) * 100).toFixed(1) : 0;
+        vendorContainer.innerHTML += `
+          <div class="progress-item">
+            <div class="progress-header">
+              <span>${k}</span>
+              <span>${amt.toLocaleString()} ر.س (${pct}%)</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${pct}%; background:linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      // 3. By Outlet
+      const byOutlet = {};
+      expenses.forEach(e => { 
+        const amt = parseFloat(e.amount) || 0;
+        byOutlet[e.mall] = (byOutlet[e.mall] || 0) + amt; 
+      });
+      const outletContainer = document.getElementById('outletBars');
+      outletContainer.innerHTML = '';
+
+      Object.keys(byOutlet).sort((a,b) => byOutlet[b] - byOutlet[a]).slice(0, 7).forEach(k => {
+        const amt = byOutlet[k];
+        const pct = total > 0 ? ((amt / total) * 100).toFixed(1) : 0;
+        outletContainer.innerHTML += `
+          <div class="progress-item">
+            <div class="progress-header">
+              <span>${k}</span>
+              <span>${amt.toLocaleString()} ر.س (${pct}%)</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${pct}%; background:linear-gradient(90deg, #10b981, #34d399);"></div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // ==========================================
+    // EXPORT FUNCTIONS (EXCEL)
+    // ==========================================
+    function buildExportData(data) {
+      return [
+        ['المعرض', 'البريد', 'عنوان المشكلة', 'الأولوية', 'الوصف', 'الحالة', 'التكلفة', 'التاريخ', 'آخر تحديث', 'رد الإدارة', 'رابط الفاتورة', 'عدد الصور', 'روابط الصور'],
+        ...data.map(r => [
+          r.mall,
+          r.user_email,
+          r.title,
+          r.priority || 'عادية',
+          r.description || '',
+          r.status,
+          r.repair_cost || '',
+          new Date(r.created_at).toLocaleString('en-GB', { hour12: false }),
+          r.updated_at ? new Date(r.updated_at).toLocaleString('en-GB', { hour12: false }) : '',
+          r.admin_reply || '',
+          r.invoice_image || '',
+          (r.images || []).length,
+          (r.images || []).join('\n')
+        ])
+      ];
+    }
+
+    function exportFilteredRequests() {
+      if (allRequestsData.length === 0) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(buildExportData(allRequestsData));
+      XLSX.utils.book_append_sheet(wb, ws, 'طلبات الصيانة');
+      XLSX.writeFile(wb, 'maintenance_requests_filtered.xlsx');
+      showToast('تم تصدير الطلبات المفلترة بنجاح ✅', 'success');
+    }
+
+    async function exportAllRequests() {
+      showToast('جاري تحميل كافة طلبات الصيانة للتصدير...', '');
+      let allExport = [];
+      let page = 0;
+      const batchSize = 1000;
+
+      while (true) {
+        const { data, error } = await supabaseClient
+          .from('maintenance_requests')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(page * batchSize, (page + 1) * batchSize - 1);
+
+        if (error || !data || data.length === 0) break;
+        allExport = allExport.concat(data);
+        if (data.length < batchSize) break;
+        page++;
+      }
+
+      if (allExport.length === 0) { showToast('لا توجد بيانات', 'error'); return; }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(buildExportData(allExport));
+      XLSX.utils.book_append_sheet(wb, ws, 'طلبات الصيانة');
+      XLSX.writeFile(wb, 'all_maintenance_requests.xlsx');
+      showToast(`تم تصدير ${allExport.length} طلب بنجاح ✅`, 'success');
+    }
+
+    function exportSingleRequest() {
+      if (!currentDetailRequest) return;
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(buildExportData([currentDetailRequest]));
+      XLSX.utils.book_append_sheet(wb, ws, 'طلب صيانة');
+      XLSX.writeFile(wb, `maintenance_${currentDetailRequest.mall}_${currentDetailRequest.id.substring(0, 8)}.xlsx`);
+      showToast('تم تصدير تفاصيل الطلب بنجاح ✅', 'success');
+    }
+
+    function exportAcData() {
+      const wb = XLSX.utils.book_new();
+      
+      const assetsData = [
+        ['كود المكيف', 'المعرض', 'المنطقة', 'الشركة المصنعة', 'السعة', 'نوع المكيف', 'نوع الغاز', 'الموقع داخل المعرض', 'الحالة', 'آخر صيانة', 'الصيانة القادمة'],
+        ...dbAcAssets.map(a => [
+          a.code, a.mall, a.region, a.brand, a.capacity, a.type, a.gas, a.location, a.status, a.last_maintenance, a.next_maintenance
+        ])
+      ];
+      const wsAssets = XLSX.utils.aoa_to_sheet(assetsData);
+      XLSX.utils.book_append_sheet(wb, wsAssets, 'أصول المكيفات');
+
+      const worksData = [
+        ['رقم الزيارة', 'تاريخ الزيارة', 'كود المكيف', 'نوع العمل', 'القطعة المستبدلة', 'تكلفة القطعة', 'تكلفة العمل', 'الملاحظات'],
+        ...dbAcWorks.map(w => [
+          w.visit_no, w.visit_date, w.ac_code, w.work_type, w.replaced_part, w.part_cost, w.work_cost, w.notes
+        ])
+      ];
+      const wsWorks = XLSX.utils.aoa_to_sheet(worksData);
+      XLSX.utils.book_append_sheet(wb, wsWorks, 'أعمال الصيانة والزيارات');
+
+      XLSX.writeFile(wb, 'orange_ac_maintenance_live.xlsx');
+      showToast('تم تصدير سجل المكيفات من Supabase ✅', 'success');
+    }
+
+    function exportExpensesData() {
+      const wb = XLSX.utils.book_new();
+      const expData = [
+        ['م', 'التاريخ', 'المعرض', 'التصنيف', 'كود المشروع', 'الشركة/المقاول', 'بيان العمل المنفذ', 'رقم الفاتورة', 'المبلغ (ر.س)', 'حالة الدفع', 'حالة الفاتورة', 'ملاحظات'],
+        ...dbExpenses.map(e => [
+          e.id, e.date, e.mall, e.category, e.project_code, e.company, e.description, e.invoice_no, e.amount, e.payment_status, e.invoice_status, e.notes
+        ])
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(expData);
+      XLSX.utils.book_append_sheet(wb, ws, 'سجل المصروفات');
+      XLSX.writeFile(wb, 'orange_maintenance_expenses_live.xlsx');
+      showToast('تم تصدير سجل المصروفات من Supabase ✅', 'success');
+    }
+
+    // ==========================================
+    // UTILS & IMAGE VIEWER
+    // ==========================================
+    function viewImage(url) {
+      document.getElementById('viewerImage').src = url;
+      document.getElementById('imageViewer').style.display = 'flex';
+    }
+
     function escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
