@@ -1343,7 +1343,7 @@
         if (search) {
             list = list.filter(a =>
                 (a.worker_id || '').toLowerCase().includes(search) ||
-                (a.employee_name || '').toLowerCase().includes(search) ||
+                (a.employee_name_arabic || a.employee_name || '').toLowerCase().includes(search) ||
                 (a.last_voucher || '').toLowerCase().includes(search) ||
                 (a.last_description || '').toLowerCase().includes(search)
             );
@@ -1359,6 +1359,10 @@
             list.sort((a, b) => {
                 let valA = a[sort.key] ?? '';
                 let valB = b[sort.key] ?? '';
+                if (sort.key === 'employee_name' || sort.key === 'employee_name_arabic') {
+                    valA = a.employee_name_arabic || a.employee_name || '';
+                    valB = b.employee_name_arabic || b.employee_name || '';
+                }
                 if (typeof valA === 'number' && typeof valB === 'number') {
                     return sort.dir === 'asc' ? valA - valB : valB - valA;
                 }
@@ -1385,7 +1389,7 @@
 
             const nameCell = document.createElement('td');
             nameCell.className = 'fw-bold';
-            nameCell.textContent = adv.employee_name || '—';
+            nameCell.textContent = adv.employee_name_arabic || adv.employee_name || (adv.worker_id ? `موظف ${adv.worker_id}` : '—');
 
             const accCell = document.createElement('td');
             accCell.className = 'text-center';
