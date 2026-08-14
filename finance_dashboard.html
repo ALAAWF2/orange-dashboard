@@ -400,7 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
-    <link rel="stylesheet" href="finance/finance.css?v=20260814-3">
+    <link rel="stylesheet" href="finance/finance.css?v=20260814-5">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -533,6 +533,11 @@
                             <i class="fa-solid fa-receipt"></i>
                             <span>الضرائب و ZATCA</span>
                             <span class="finance-subnav-badge" id="financeSubnavTaxBadge">VAT</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="maintenance" role="tab">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                            <span>صيانة المعارض والخدمات</span>
+                            <span class="finance-subnav-badge" id="financeSubnavMaintenanceBadge">صيانة</span>
                         </button>
 
                     </div>
@@ -1345,6 +1350,159 @@
                             </table>
                         </div>
                     </section>
+                </div>
+
+                <!-- Pane 11: Maintenance & Services Cost Center -->
+                <div class="finance-tab-pane" id="financePaneMaintenance" data-pane="maintenance" hidden>
+                    <div class="finance-pane-header">
+                        <div>
+                            <span class="finance-section-kicker">SHOWROOM MAINTENANCE & SERVICES ANALYTICS</span>
+                            <h2 class="finance-pane-title"><i class="fa-solid fa-screwdriver-wrench text-warning me-2"></i> مركز تحليل مصاريف صيانة المعارض والخدمات</h2>
+                            <p class="finance-pane-subtitle">تحليل تكاليف الصيانة الدورية، صيانة الأجهزة والشبكات، وفواتير المقاولين الموزعة على كل معرض ونسبتها من المبيعات.</p>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance KPI Summary Cards -->
+                    <div class="finance-metric-grid mb-4" aria-live="polite">
+                        <article class="finance-metric-card is-warning">
+                            <span class="finance-metric-index">M1</span>
+                            <span class="finance-metric-label">إجمالي مصاريف الصيانة والخدمات</span>
+                            <strong class="finance-metric-value" id="financeMaintTotalCost">0</strong>
+                            <span class="finance-metric-sub">لكافة الفروع في الفترة المحددة</span>
+                        </article>
+                        <article class="finance-metric-card is-info">
+                            <span class="finance-metric-index">M2</span>
+                            <span class="finance-metric-label">متوسط تكلفة صيانة المعرض</span>
+                            <strong class="finance-metric-value" id="financeMaintAvgCost">0</strong>
+                            <span class="finance-metric-sub">ريال لكل معرض نشط</span>
+                        </article>
+                        <article class="finance-metric-card is-orange">
+                            <span class="finance-metric-index">M3</span>
+                            <span class="finance-metric-label">أعلى المعارض استهلاكاً للصيانة</span>
+                            <strong class="finance-metric-value" id="financeMaintTopShowroom" style="font-size: 1.15rem;">—</strong>
+                            <span class="finance-metric-sub">الفرع الأكثر إنفاقاً في الفترة</span>
+                        </article>
+                        <article class="finance-metric-card is-success">
+                            <span class="finance-metric-index">M4</span>
+                            <span class="finance-metric-label">فواتير وسندات الصيانة المنفذة</span>
+                            <strong class="finance-metric-value" id="financeMaintInvoicesCount">0</strong>
+                            <span class="finance-metric-sub">فاتورة صيانة موزعة على الفروع</span>
+                        </article>
+                    </div>
+
+                    <!-- 2 Column Analytics: Top Contractors & Monthly Trend -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-7">
+                            <div class="finance-card">
+                                <div class="finance-card-header d-flex justify-content-between align-items-center">
+                                    <h3 class="finance-card-title m-0"><i class="fa-solid fa-users-gear text-primary me-2"></i> كبار مقاولي وموردي الصيانة والخدمات</h3>
+                                    <span class="badge bg-light text-dark" id="financeMaintContractorsCountBadge">0 مقاول</span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm finance-register-table align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>المقاول / المورد</th>
+                                                <th>كود الحساب</th>
+                                                <th class="text-center">الفواتير</th>
+                                                <th class="text-center">المعارض المخدومة</th>
+                                                <th class="text-end">إجمالي المبلغ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financeMaintContractorsBody">
+                                            <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل بيانات المقاولين…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="finance-card">
+                                <div class="finance-card-header d-flex justify-content-between align-items-center">
+                                    <h3 class="finance-card-title m-0"><i class="fa-solid fa-chart-line text-info me-2"></i> التطور الشهري لمصاريف الصيانة</h3>
+                                    <span class="badge bg-light text-dark">شهرياً</span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm finance-register-table align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>الشهر</th>
+                                                <th class="text-center">الفواتير</th>
+                                                <th class="text-center">المعارض النشطة</th>
+                                                <th class="text-end">التكلفة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financeMaintTrendBody">
+                                            <tr><td colspan="4" class="finance-empty-state">جارٍ تحميل الاتجاه الشهري…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Comparison Table: Showroom Maintenance Ranking -->
+                    <div class="finance-card mb-4">
+                        <div class="finance-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <h3 class="finance-card-title m-0"><i class="fa-solid fa-store text-warning me-2"></i> تكاليف الصيانة والخدمات حسب المعرض</h3>
+                                <p class="text-muted small m-0">مقارنة مصاريف صيانة المعارض وصيانة الأجهزة مقابل مبيعات الفرع</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <div class="finance-search-wrap">
+                                    <input type="search" id="financeMaintSearch" class="finance-search-input" placeholder="بحث بالمعرض أو الكود…" aria-label="بحث في معارض الصيانة">
+                                    <button type="button" id="financeMaintSearchClear" class="finance-search-clear" hidden>×</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="finance-sortable" data-table="maintenance" data-sort="showroom_name">المعرض <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-end finance-sortable" data-table="maintenance" data-sort="sales_revenue">مبيعات المعرض <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-end finance-sortable" data-table="maintenance" data-sort="showroom_maint_amount">صيانة معارض (560019) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-end finance-sortable" data-table="maintenance" data-sort="electronic_maint_amount">أجهزة وإلكترونيات (560014) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-end finance-sortable" data-table="maintenance" data-sort="other_maint_amount">صيانة أخرى <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-end finance-sortable" data-table="maintenance" data-sort="total_maintenance_amount">إجمالي الصيانة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-center finance-sortable" data-table="maintenance" data-sort="maintenance_ratio_pct">% من المبيعات <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-center">الفواتير</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeMaintShowroomsBody">
+                                    <tr><td colspan="9" class="finance-empty-state">جارٍ تحميل مقارنة المعارض…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Maintenance Invoices Stream -->
+                    <div class="finance-card">
+                        <div class="finance-card-header d-flex justify-content-between align-items-center">
+                            <h3 class="finance-card-title m-0"><i class="fa-solid fa-receipt text-success me-2"></i> أحدث فواتير وسندات الصيانة المنفذة</h3>
+                            <span class="badge bg-light text-dark">سجل الفواتير المباشرة</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm finance-register-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>المعرض</th>
+                                        <th>رقم الفاتورة</th>
+                                        <th>المقاول / المورد</th>
+                                        <th>التاريخ</th>
+                                        <th>الحساب المحاسبي</th>
+                                        <th>البيان / الوصف</th>
+                                        <th class="text-end">المبلغ</th>
+                                        <th class="text-end">الضريبة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeMaintRecentInvoicesBody">
+                                    <tr><td colspan="8" class="finance-empty-state">جارٍ تحميل أحدث الفواتير…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Showroom Drawer (Available across all tabs) -->
@@ -2681,8 +2839,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260814-4"></script>
-    <script src="finance/finance-dashboard.js?v=20260814-4"></script>
+    <script src="finance/finance-api.js?v=20260814-5"></script>
+    <script src="finance/finance-dashboard.js?v=20260814-5"></script>
 
 </body>
 

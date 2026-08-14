@@ -82,6 +82,7 @@
         showroomPnl: (number, params) => request(
             `/api/finance/showrooms/${encodeURIComponent(number)}/pnl`,
             params
-        )
+        ),
+        maintenanceAnalytics: params => request('/api/finance/maintenance-analytics', params)
     });
 })();
