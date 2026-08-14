@@ -671,6 +671,130 @@
             }
         }
 
+        /* =========================================================
+           📱 Mobile Responsive Card View for All Wide Tables
+           Converts wide tables to elegant, touch-friendly cards on mobile
+           ========================================================= */
+        @media (max-width: 768px) {
+            .table-responsive {
+                overflow-x: visible !important;
+                border: none !important;
+            }
+
+            .table-premium,
+            .table-responsive table.table {
+                display: block !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
+                border-spacing: 0 !important;
+                background: transparent !important;
+            }
+
+            .table-premium thead,
+            .table-responsive table.table thead {
+                display: none !important; /* Headers appear inline via data-label */
+            }
+
+            .table-premium tbody,
+            .table-responsive table.table tbody {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+                width: 100% !important;
+            }
+
+            .table-premium tbody tr,
+            .table-responsive table.table tbody tr {
+                display: flex !important;
+                flex-direction: column !important;
+                background: #ffffff !important;
+                border: 1px solid var(--border-light) !important;
+                border-radius: 16px !important;
+                padding: 16px !important;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+                transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+                position: relative !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .table-premium tbody tr:hover,
+            .table-responsive table.table tbody tr:hover {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 8px 22px rgba(254, 121, 0, 0.12) !important;
+                border-color: rgba(254, 121, 0, 0.35) !important;
+            }
+
+            .table-premium tbody tr td,
+            .table-responsive table.table tbody tr td {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 8px 0 !important;
+                border: none !important;
+                border-bottom: 1px dashed rgba(0, 0, 0, 0.07) !important;
+                border-radius: 0 !important;
+                font-size: 0.88rem !important;
+                text-align: left !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            /* First row cell acts as Card Title / Header */
+            .table-premium tbody tr td:first-child,
+            .table-responsive table.table tbody tr td:first-child {
+                border-bottom: 2px solid rgba(254, 121, 0, 0.15) !important;
+                padding-bottom: 10px !important;
+                font-size: 1.05rem !important;
+                font-weight: 800 !important;
+                color: var(--orange) !important;
+            }
+
+            /* Last row cell (Actions / Buttons) */
+            .table-premium tbody tr td:last-child,
+            .table-responsive table.table tbody tr td:last-child {
+                border-bottom: none !important;
+                padding-top: 12px !important;
+                margin-top: 4px !important;
+                justify-content: stretch !important;
+                display: flex !important;
+            }
+
+            .table-premium tbody tr td:last-child .btn,
+            .table-responsive table.table tbody tr td:last-child .btn {
+                width: 100% !important;
+                padding: 8px 14px !important;
+                font-size: 0.88rem !important;
+                border-radius: 8px !important;
+            }
+
+            /* Label pseudo element from data-label */
+            .table-premium tbody tr td[data-label]::before,
+            .table-responsive table.table tbody tr td[data-label]::before {
+                content: attr(data-label);
+                font-weight: 700;
+                color: var(--text-muted);
+                font-size: 0.8rem;
+                text-align: right;
+                margin-left: 14px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            /* When td is an empty/placeholder/loading row */
+            .table-premium tbody tr td[colspan],
+            .table-responsive table.table tbody tr td[colspan] {
+                display: block !important;
+                text-align: center !important;
+                padding: 24px !important;
+                border: none !important;
+            }
+            .table-premium tbody tr td[colspan]::before,
+            .table-responsive table.table tbody tr td[colspan]::before {
+                display: none !important;
+            }
+        }
+
         /* AI Chat Custom Styles */
         .bg-light-orange {
             background-color: rgba(254, 121, 0, 0.08) !important;
@@ -3011,6 +3135,40 @@
             });
         }
 
+        // =========================================================
+        // 📱 Mobile Card View: Automatic Header to Data-Label Mapper
+        // =========================================================
+        function applyTableCardLabels() {
+            const tables = document.querySelectorAll('.table-premium, .table-responsive table');
+            tables.forEach(table => {
+                const thead = table.querySelector('thead');
+                if (!thead) return;
+                const thElements = Array.from(thead.querySelectorAll('th'));
+                const headers = thElements.map(th => th.textContent.replace(/[\n\r]+/g, ' ').trim());
+                if (headers.length === 0) return;
+
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(tr => {
+                    const cells = tr.querySelectorAll('td');
+                    if (cells.length === 1 && cells[0].hasAttribute('colspan')) {
+                        return; // Empty state / loader row
+                    }
+                    cells.forEach((td, idx) => {
+                        if (headers[idx] && !td.getAttribute('data-label')) {
+                            td.setAttribute('data-label', headers[idx]);
+                        }
+                    });
+                });
+            });
+        }
+
+        // Debounced observer for dynamic table DOM updates
+        let cardLabelTimeout = null;
+        function scheduleTableCardLabels() {
+            if (cardLabelTimeout) clearTimeout(cardLabelTimeout);
+            cardLabelTimeout = setTimeout(applyTableCardLabels, 60);
+        }
+
         // On Load
         document.addEventListener("DOMContentLoaded", async () => {
             const today = new Date();
@@ -3018,6 +3176,13 @@
             document.getElementById('salesMonthFilter').value = currentMonth;
             document.getElementById('targetMonth').value = currentMonth;
             document.getElementById('targetDispatchMonth').value = currentMonth;
+
+            // Setup MutationObserver to automatically apply data-labels for mobile cards
+            const tabContentEl = document.getElementById('adminTabContent');
+            if (tabContentEl) {
+                const tableObserver = new MutationObserver(() => scheduleTableCardLabels());
+                tableObserver.observe(tabContentEl, { childList: true, subtree: true });
+            }
 
             // Detect Active API Server URL first!
             await detectActiveApiBase();
@@ -3038,6 +3203,7 @@
                     
                     try {
                         await loadTabContent(targetId);
+                        scheduleTableCardLabels();
                     } catch (e) {
                         console.error("Error lazy loading tab: " + targetId, e);
                     }
