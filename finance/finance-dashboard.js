@@ -12,18 +12,21 @@
     let currentInvoices = [];
     let currentTopVendors = [];
     let currentLeases = [];
+    let currentAssets = [];
     let currentExpenseScopeStatus = 'approved';
 
     const sortState = {
         showrooms: { key: 'name', dir: 'asc' },
         invoices: { key: 'invoice_date', dir: 'desc' },
         topVendors: { key: 'remaining_amount', dir: 'desc' },
-        leases: { key: 'expiration_date', dir: 'asc' }
+        leases: { key: 'expiration_date', dir: 'asc' },
+        assets: { key: 'fixed_asset_group_id', dir: 'asc' }
     };
 
     const filters = {
         showrooms: { search: '', status: 'all' },
-        invoices: { search: '', status: 'all' }
+        invoices: { search: '', status: 'all' },
+        assets: { search: '', group: 'all', scope: 'all' }
     };
 
     function element(id) {
@@ -949,6 +952,129 @@
         sortAndRenderLeases();
     }
 
+    function filterAndRenderAssets() {
+        const body = element('financeAssetsBody');
+        if (!body) return;
+
+        let list = [...currentAssets];
+        const search = (filters.assets?.search || '').toLowerCase().trim();
+        const group = filters.assets?.group || 'all';
+        const scope = filters.assets?.scope || 'all';
+
+        if (group && group !== 'all') {
+            list = list.filter(a => a.fixed_asset_group_id === group);
+        }
+
+        if (scope === 'mapped') {
+            list = list.filter(a => !!a.showroom_number);
+        } else if (scope === 'general') {
+            list = list.filter(a => !a.showroom_number);
+        }
+
+        if (search) {
+            list = list.filter(a =>
+                (a.fixed_asset_number || '').toLowerCase().includes(search) ||
+                (a.asset_name || '').toLowerCase().includes(search) ||
+                (a.fixed_asset_group_id || '').toLowerCase().includes(search) ||
+                (a.asset_location_name || '').toLowerCase().includes(search) ||
+                (a.showroom_name || '').toLowerCase().includes(search) ||
+                (a.showroom_number || '').toLowerCase().includes(search)
+            );
+        }
+
+        const badge = element('financeAssetsCountBadge');
+        if (badge) {
+            badge.textContent = `${list.length} أصلاً`;
+        }
+
+        const sort = sortState.assets;
+        if (sort && sort.key) {
+            list.sort((a, b) => {
+                let valA = a[sort.key] ?? '';
+                let valB = b[sort.key] ?? '';
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return sort.dir === 'asc' ? valA - valB : valB - valA;
+                }
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                return sort.dir === 'asc' ? valA.localeCompare(valB, 'ar') : valB.localeCompare(valA, 'ar');
+            });
+        }
+
+        if (!list.length) {
+            body.innerHTML = '<tr><td colspan="8" class="finance-empty-state">لا توجد أصول مطابقة للبحث أو الفلتر.</td></tr>';
+            return;
+        }
+
+        body.replaceChildren(...list.map(asset => {
+            const row = document.createElement('tr');
+
+            const idCell = document.createElement('td');
+            const idBadge = document.createElement('span');
+            idBadge.className = 'finance-invoice-badge';
+            idBadge.textContent = asset.fixed_asset_number || '—';
+            idCell.append(idBadge);
+
+            const nameCell = document.createElement('td');
+            nameCell.className = 'fw-bold';
+            nameCell.textContent = asset.asset_name || '—';
+
+            const groupCell = document.createElement('td');
+            const groupBadge = document.createElement('span');
+            groupBadge.className = 'badge bg-light text-dark border';
+            groupBadge.textContent = asset.fixed_asset_group_id || '—';
+            groupCell.append(groupBadge);
+
+            const locationCell = document.createElement('td');
+            if (asset.showroom_name) {
+                const storeIcon = document.createElement('i');
+                storeIcon.className = 'fa-solid fa-store text-warning me-1';
+                locationCell.append(storeIcon, document.createTextNode(asset.showroom_name));
+            } else {
+                const locIcon = document.createElement('i');
+                locIcon.className = 'fa-solid fa-building text-muted me-1';
+                locationCell.append(locIcon, document.createTextNode(asset.asset_location_name || 'عام / إدارة'));
+            }
+
+            const dateCell = document.createElement('td');
+            dateCell.dir = 'ltr';
+            dateCell.textContent = asset.acquisition_date || '—';
+
+            const costCell = document.createElement('td');
+            costCell.className = 'text-end';
+            costCell.dir = 'ltr';
+            costCell.textContent = money.format(Number(asset.acquisition_cost) || 0);
+
+            const depCell = document.createElement('td');
+            depCell.className = 'text-end text-muted';
+            depCell.dir = 'ltr';
+            depCell.textContent = money.format(Number(asset.depreciation_movement) || 0);
+
+            const nbvCell = document.createElement('td');
+            nbvCell.className = 'text-end fw-bold text-success';
+            nbvCell.dir = 'ltr';
+            nbvCell.textContent = money.format(Number(asset.net_book_value) || 0);
+
+            row.append(idCell, nameCell, groupCell, locationCell, dateCell, costCell, depCell, nbvCell);
+            return row;
+        }));
+    }
+
+    function renderFixedAssets(payload) {
+        if (!payload || payload.state !== 'ready') return;
+        currentAssets = payload.data || [];
+        if (payload.summary?.total_count) {
+            setMetric('financeAssetsTotalCount', payload.summary.total_count);
+        }
+        if (payload.summary?.mapped_count !== undefined) {
+            setMetric('financeAssetsLinkedCount', `${payload.summary.mapped_count} أصل`);
+        }
+        if (payload.summary?.general_count !== undefined) {
+            setMetric('financeAssetsGeneralCount', `${payload.summary.general_count} أصل`);
+        }
+        filterAndRenderAssets();
+    }
+
     function renderLeaseInsights(payload) {
         if (!payload?.configured) return;
         const horizons = payload.due_horizons || {};
@@ -1191,6 +1317,8 @@
             '<tr><td colspan="7" class="finance-empty-state">تعذر تحميل فواتير الموردين.</td></tr>';
         element('financeLeasesBody').innerHTML =
             '<tr><td colspan="5" class="finance-empty-state">تعذر تحميل عقود الإيجار.</td></tr>';
+        element('financeAssetsBody').innerHTML =
+            '<tr><td colspan="8" class="finance-empty-state">تعذر تحميل سجل الأصول الثابتة.</td></tr>';
         [30, 60, 90].forEach(days => {
             setMetric(`financeLeaseDue${days}`, '—');
             setMetric(`financeLeaseDue${days}Count`, 'تعذر التحميل');
@@ -1209,7 +1337,7 @@
         button.disabled = true;
         try {
             const params = periodParams();
-            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional] = await Promise.all([
+            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional, fixedAssets] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
                 window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 100 }),
@@ -1226,7 +1354,9 @@
                 window.FinancePlatformApi.additionalAnalytics({
                     as_of: element('financePlatformEnd').value,
                     month: element('financePlatformEnd').value.slice(0, 7)
-                }).catch(() => ({ state: 'partial', sections: {} }))
+                }).catch(() => ({ state: 'partial', sections: {} })),
+                window.FinancePlatformApi.fixedAssets()
+                    .catch(() => ({ state: 'unavailable', data: [] }))
             ]);
             renderOverview(overview);
             renderShowrooms(showrooms, overview.summary?.expense_scope_status);
@@ -1237,6 +1367,7 @@
             renderVendorAnalytics(vendorAnalytics);
             renderTrialBalanceTrend(trend);
             renderAdditionalAnalytics(additional);
+            renderFixedAssets(fixedAssets);
         } catch (error) {
             renderError(error);
         } finally {
@@ -1394,6 +1525,39 @@
             });
         }
 
+        const assetsSearch = element('financeAssetsSearch');
+        const assetsSearchClear = element('financeAssetsSearchClear');
+        const assetsGroup = element('financeAssetsGroupFilter');
+        const assetsScope = element('financeAssetsScopeFilter');
+
+        if (assetsSearch) {
+            assetsSearch.addEventListener('input', () => {
+                filters.assets.search = assetsSearch.value;
+                if (assetsSearchClear) assetsSearchClear.hidden = !assetsSearch.value;
+                filterAndRenderAssets();
+            });
+        }
+        if (assetsSearchClear) {
+            assetsSearchClear.addEventListener('click', () => {
+                if (assetsSearch) assetsSearch.value = '';
+                filters.assets.search = '';
+                assetsSearchClear.hidden = true;
+                filterAndRenderAssets();
+            });
+        }
+        if (assetsGroup) {
+            assetsGroup.addEventListener('change', () => {
+                filters.assets.group = assetsGroup.value;
+                filterAndRenderAssets();
+            });
+        }
+        if (assetsScope) {
+            assetsScope.addEventListener('change', () => {
+                filters.assets.scope = assetsScope.value;
+                filterAndRenderAssets();
+            });
+        }
+
         document.querySelectorAll('th.finance-sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const table = th.dataset.table;
@@ -1408,6 +1572,7 @@
                 else if (table === 'invoices') filterAndRenderInvoices();
                 else if (table === 'topVendors') sortAndRenderTopVendors();
                 else if (table === 'leases') sortAndRenderLeases();
+                else if (table === 'assets') filterAndRenderAssets();
             });
         });
 

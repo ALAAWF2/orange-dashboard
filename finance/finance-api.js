@@ -63,6 +63,7 @@
             `/api/finance/vendors/${encodeURIComponent(vendorAccount)}/payments`,
             params
         ),
+        fixedAssets: params => request('/api/finance/fixed-assets', params),
         leases: params => request('/api/finance/leases', params),
         leaseInsights: params => request('/api/finance/lease-insights', params),
         apAging: params => request('/api/finance/ap-aging', params),
