@@ -978,73 +978,78 @@
 
                 <!-- Pane 6: Employee Advances & Loans -->
                 <div class="finance-tab-pane" id="financePaneAdvances" data-pane="advances" hidden>
-                    <div class="finance-asset-stats-grid mb-4">
+                    <div class="finance-asset-stats-grid mb-3">
                         <article class="finance-asset-stat-card is-primary">
-                            <span>إجمالي مبالغ السلف والقروض</span>
-                            <strong id="financeAdvancesTotalAmount">—</strong>
-                            <small>المعتمدة والمصروفة للموظفين</small>
+                            <span>إجمالي مبالغ الصرف (المدين)</span>
+                            <strong id="financeAdvancesTotalDebit">—</strong>
+                            <small>المصروف كقروض وسلف وعهد</small>
                         </article>
                         <article class="finance-asset-stat-card">
-                            <span>المبالغ المقتطعة والمسددة</span>
-                            <strong id="financeAdvancesTotalPaid" class="text-success">—</strong>
-                            <small>تم تحصيلها من مسيرات الرواتب</small>
+                            <span>إجمالي المسدد والمستقطع (الدائن)</span>
+                            <strong id="financeAdvancesTotalCredit" class="text-success">—</strong>
+                            <small>تم تحصيله واقتطاعه من مسيرات الرواتب</small>
                         </article>
                         <article class="finance-asset-stat-card">
-                            <span>الرصيد القائم المتبقي للاقتطاع</span>
-                            <strong id="financeAdvancesTotalRemaining" class="text-danger">—</strong>
-                            <small>مستحق الخصم على الأقساط الشهرية</small>
+                            <span>رصيد الأستاذ العام (GL Balance)</span>
+                            <strong id="financeAdvancesTotalGlBalance" class="text-danger">—</strong>
+                            <small>الصافي المحاسبي الدفتري المفتوح</small>
                         </article>
                         <article class="finance-asset-stat-card">
-                            <span>عدد السلف والعهد المفتوحة</span>
+                            <span>الموظفون ذوو الحركات المفتوحة</span>
                             <strong id="financeAdvancesActiveCount">—</strong>
-                            <small id="financeAdvancesSettledCount">— سلفة مسددة بالكامل</small>
+                            <small id="financeAdvancesSettledCount">— رصيد مسدد/مغطى</small>
                         </article>
+                    </div>
+
+                    <div class="alert d-flex align-items-center mb-3" style="background:#fff8e6; border:1px solid #ffe58f; border-radius:8px; padding:10px 16px; color:#d46b08; font-size:0.88rem;">
+                        <i class="fa-solid fa-circle-info me-2 fs-5"></i>
+                        <div>
+                            <strong>تنبيه محاسبي:</strong> الأرصدة المعروضة مستخرجة من دفتر اليومية والأستاذ العام (General Ledger) في Dynamics 365. الحسابات الفرعية مسجلة ومفصلة حسب الرقم الوظيفي، بينما كشوفات مسيرات الرواتب الشهرية تُقفل كقيد إجمالي مجمع مع صافي الرواتب.
+                        </div>
                     </div>
 
                     <section class="finance-ledger-panel">
                         <header>
                             <div>
-                                <span class="finance-section-kicker">EMPLOYEE ADVANCES & CUSTODY</span>
-                                <h2>سجل سلف وقروض وعهد الموظفين</h2>
+                                <span class="finance-section-kicker">EMPLOYEE ADVANCES & LOANS (GL)</span>
+                                <h2>سجل سلف وقروض وعهد الموظفين من دفتر الأستاذ</h2>
                             </div>
-                            <span class="finance-register-note">مربوطة بالرقم الوظيفي والمعارض وتحديثات الرواتب</span>
+                            <span class="finance-register-note">انقر على أي موظف لعرض كشف الحساب وتفاصيل القيود المحاسبية</span>
                         </header>
                         <div class="finance-table-toolbar">
                             <div class="finance-search-box">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="text" id="financeAdvancesSearch" placeholder="البحث برقم الموظف، اسم الموظف، المعرض، أو نوع السلفة...">
+                                <input type="text" id="financeAdvancesSearch" placeholder="البحث برقم الموظف، اسم الموظف، أو رقم القيد...">
                                 <button type="button" id="financeAdvancesSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
                             </div>
                             <div class="finance-filter-group">
-                                <select id="financeAdvancesTypeFilter" class="form-select finance-filter-select">
-                                    <option value="all">جميع أنواع السلف</option>
-                                    <option value="سلفة شخصية">سلفة شخصية</option>
-                                    <option value="سلفة راتب">سلفة راتب</option>
-                                    <option value="عهدة نقدية">عهدة نقدية</option>
-                                    <option value="قرض موظف">قرض موظف</option>
+                                <select id="financeAdvancesAccountFilter" class="form-select finance-filter-select">
+                                    <option value="all">جميع الحسابات</option>
+                                    <option value="151102">151102 - قروض وسلف الموظفين</option>
+                                    <option value="151101">151101 - عهد الموظفين</option>
                                 </select>
                                 <select id="financeAdvancesStatusFilter" class="form-select finance-filter-select">
                                     <option value="all">جميع الحالات</option>
-                                    <option value="active">سارية وقائمة (Active)</option>
-                                    <option value="settled">مسددة بالكامل (Settled)</option>
+                                    <option value="active">رصيد مدين قائم (Active)</option>
+                                    <option value="covered">مغطى / مسدد بالكامل (Covered)</option>
                                 </select>
-                                <span class="finance-badge-counter" id="financeAdvancesCountBadge">0 سجل</span>
+                                <span class="finance-badge-counter" id="financeAdvancesCountBadge">0 موظف</span>
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table finance-register-table finance-compact-table align-middle">
                                 <thead>
                                     <tr>
-                                        <th class="finance-sortable" data-table="advances" data-sort="employee_id">رقم الموظف <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="worker_id">رقم الموظف <i class="fa-solid fa-sort"></i></th>
                                         <th class="finance-sortable" data-table="advances" data-sort="employee_name">اسم الموظف <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable" data-table="advances" data-sort="showroom_name">المعرض / الفرع <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable" data-table="advances" data-sort="advance_type">نوع السلفة / العهدة <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable text-end" data-table="advances" data-sort="total_amount">إجمالي المبلغ <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable text-end" data-table="advances" data-sort="paid_amount">المسدد <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable text-end" data-table="advances" data-sort="remaining_amount">المتبقي <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable text-end" data-table="advances" data-sort="monthly_deduction">الخصم الشهري <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable" data-table="advances" data-sort="start_date">تاريخ البدء <i class="fa-solid fa-sort"></i></th>
-                                        <th class="finance-sortable" data-table="advances" data-sort="status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-center" data-table="advances" data-sort="main_account_id">الحساب <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="total_debit">إجمالي المنصرف (مدين) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="total_credit">إجمالي المستقطع (دائن) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="gl_balance">رصيد GL <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="last_movement_date">تاريخ آخر حركة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="last_voucher">رقم القيد / السند <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-center" data-table="advances" data-sort="coverage_status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-center">كشف الحساب</th>
                                     </tr>
                                 </thead>
                                 <tbody id="financeAdvancesBody">
@@ -1054,6 +1059,7 @@
                         </div>
                     </section>
                 </div>
+
 
                 <!-- Pane 7: Open Purchase Orders -->
                 <div class="finance-tab-pane" id="financePanePurchases" data-pane="purchases" hidden>
@@ -2630,8 +2636,53 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260814-3"></script>
-    <script src="finance/finance-dashboard.js?v=20260814-3"></script>
+    <!-- Employee Advance Details Modal -->
+    <div class="modal fade" id="financeAdvanceDetailsModal" tabindex="-1" aria-labelledby="financeAdvanceDetailsTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="financeAdvanceDetailsTitle">
+                        <i class="fa-solid fa-user-tag text-primary me-2"></i>
+                        <span id="financeAdvanceModalWorkerName">تفاصيل حركات الموظف</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="financeAdvanceModalSummary" class="mb-4">
+                        <!-- Summary injected via JS -->
+                    </div>
+                    <h6 class="fw-bold mb-3 border-bottom pb-2">
+                        <i class="fa-solid fa-list-check me-1 text-secondary"></i>
+                        سجل القيود اليومية والمستندات (Journal Lines)
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>تاريخ القيد</th>
+                                    <th>رقم اليومية / الدفتر</th>
+                                    <th>رقم السند (Voucher)</th>
+                                    <th>البيان / الوصف</th>
+                                    <th class="text-end">مدين (صرف)</th>
+                                    <th class="text-end">دائن (استقطاع)</th>
+                                    <th class="text-center">التصنيف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeAdvanceModalLinesBody">
+                                <tr><td colspan="7" class="finance-empty-state">جارٍ تحميل الحركات…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="finance/finance-api.js?v=20260814-4"></script>
+    <script src="finance/finance-dashboard.js?v=20260814-4"></script>
 
 </body>
 

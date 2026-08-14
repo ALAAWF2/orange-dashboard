@@ -65,6 +65,10 @@
         ),
         fixedAssets: params => request('/api/finance/fixed-assets', params),
         employeeAdvances: params => request('/api/finance/employee-advances', params),
+        employeeAdvanceDetails: (workerId, params) => request(
+            `/api/finance/employee-advances/${encodeURIComponent(workerId)}`,
+            params
+        ),
         purchaseOrders: params => request('/api/finance/purchase-orders', params),
         inventoryValuation: params => request('/api/finance/inventory-valuation', params),
         cashAndGateways: params => request('/api/finance/cash-and-gateways', params),

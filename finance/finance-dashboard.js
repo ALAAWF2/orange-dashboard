@@ -1086,36 +1086,139 @@
         filterAndRenderAssets();
     }
 
+    async function openEmployeeAdvanceDetailsModal(workerId) {
+        const modalEl = element('financeAdvanceDetailsModal');
+        if (!modalEl) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const nameEl = element('financeAdvanceModalWorkerName');
+        const summaryEl = element('financeAdvanceModalSummary');
+        const linesBodyEl = element('financeAdvanceModalLinesBody');
+
+        nameEl.textContent = `تفاصيل حركات الموظف: ${workerId}`;
+        summaryEl.innerHTML = '<div class="text-muted">جارٍ تحميل كشف الحساب والبيانات المحاسبية…</div>';
+        linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state">جارٍ تحميل الحركات…</td></tr>';
+        modal.show();
+
+        try {
+            const payload = await window.FinancePlatformApi.employeeAdvanceDetails(workerId);
+            if (payload.state !== 'ready') {
+                summaryEl.innerHTML = '<div class="alert alert-warning mb-0">لم يتم العثور على حركات مسجلة لهذا الموظف.</div>';
+                linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state">لا توجد حركات.</td></tr>';
+                return;
+            }
+
+            const bal = payload.balance || {};
+            nameEl.textContent = `${bal.employee_name_arabic || 'الموظف'} (${bal.worker_id})`;
+
+            summaryEl.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <span class="text-muted small d-block">إجمالي المنصرف (مدين)</span>
+                            <strong class="fs-5">${money.format(Number(bal.total_debit) || 0)}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <span class="text-muted small d-block">إجمالي المستقطع (دائن)</span>
+                            <strong class="fs-5 text-success">${money.format(Number(bal.total_credit) || 0)}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <span class="text-muted small d-block">رصيد الأستاذ العام (GL)</span>
+                            <strong class="fs-5 ${Number(bal.gl_balance) > 0 ? 'text-danger' : 'text-success'}">${money.format(Number(bal.gl_balance) || 0)}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <span class="text-muted small d-block">تاريخ آخر حركة</span>
+                            <strong class="fs-6 text-primary">${bal.last_movement_date || '—'}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const lines = payload.lines || [];
+            if (!lines.length) {
+                linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state">لا توجد قيود مسجلة لهذا الموظف.</td></tr>';
+            } else {
+                linesBodyEl.replaceChildren(...lines.map(line => {
+                    const row = document.createElement('tr');
+                    
+                    const dateCell = document.createElement('td');
+                    dateCell.dir = 'ltr';
+                    dateCell.textContent = line.accounting_date || '—';
+
+                    const journalCell = document.createElement('td');
+                    journalCell.dir = 'ltr';
+                    journalCell.textContent = line.journal_number || '—';
+
+                    const voucherCell = document.createElement('td');
+                    voucherCell.dir = 'ltr';
+                    voucherCell.className = 'fw-bold';
+                    voucherCell.textContent = line.voucher || '—';
+
+                    const descCell = document.createElement('td');
+                    descCell.textContent = line.description || '—';
+
+                    const debitCell = document.createElement('td');
+                    debitCell.className = 'text-end fw-bold';
+                    debitCell.dir = 'ltr';
+                    debitCell.textContent = Number(line.debit_amount) > 0 ? money.format(Number(line.debit_amount)) : '—';
+
+                    const creditCell = document.createElement('td');
+                    creditCell.className = 'text-end fw-bold text-success';
+                    creditCell.dir = 'ltr';
+                    creditCell.textContent = Number(line.credit_amount) > 0 ? money.format(Number(line.credit_amount)) : '—';
+
+                    const classCell = document.createElement('td');
+                    classCell.className = 'text-center';
+                    const classBadge = document.createElement('span');
+                    classBadge.className = `badge ${line.classification === 'deduction' ? 'bg-success' : (line.classification === 'advance_or_loan' ? 'bg-primary' : 'bg-secondary')}`;
+                    classBadge.textContent = line.classification === 'deduction' ? 'استقطاع راتب' : (line.classification === 'advance_or_loan' ? 'صرف سلفة/قرض' : 'حركة GL');
+                    classCell.append(classBadge);
+
+                    row.append(dateCell, journalCell, voucherCell, descCell, debitCell, creditCell, classCell);
+                    return row;
+                }));
+            }
+        } catch (err) {
+            console.error('Failed to load employee advance details:', err);
+            summaryEl.innerHTML = '<div class="alert alert-danger mb-0">تعذر تحميل تفاصيل حركات الموظف.</div>';
+            linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state text-danger">حدث خطأ أثناء الاتصال بالخادم.</td></tr>';
+        }
+    }
+
     function filterAndRenderAdvances() {
         const body = element('financeAdvancesBody');
         if (!body) return;
 
         let list = [...currentAdvances];
         const search = (filters.advances?.search || '').toLowerCase().trim();
-        const type = filters.advances?.type || 'all';
+        const account = filters.advances?.account || 'all';
         const status = filters.advances?.status || 'all';
 
-        if (type && type !== 'all') {
-            list = list.filter(a => a.advance_type === type);
+        if (account && account !== 'all') {
+            list = list.filter(a => a.main_account_id === account);
         }
 
         if (status && status !== 'all') {
-            list = list.filter(a => a.status === status);
+            list = list.filter(a => a.coverage_status === status);
         }
 
         if (search) {
             list = list.filter(a =>
-                (a.employee_id || '').toLowerCase().includes(search) ||
+                (a.worker_id || '').toLowerCase().includes(search) ||
                 (a.employee_name || '').toLowerCase().includes(search) ||
-                (a.showroom_name || '').toLowerCase().includes(search) ||
-                (a.advance_type || '').toLowerCase().includes(search) ||
-                (a.notes || '').toLowerCase().includes(search)
+                (a.last_voucher || '').toLowerCase().includes(search) ||
+                (a.last_description || '').toLowerCase().includes(search)
             );
         }
 
         const badge = element('financeAdvancesCountBadge');
         if (badge) {
-            badge.textContent = `${list.length} سجل`;
+            badge.textContent = `${list.length} موظف`;
         }
 
         const sort = sortState.advances;
@@ -1139,56 +1242,69 @@
 
         body.replaceChildren(...list.map(adv => {
             const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            row.title = 'انقر لعرض كشف الحساب التفصيلي للموظف';
 
             const idCell = document.createElement('td');
             idCell.dir = 'ltr';
-            idCell.className = 'fw-bold';
-            idCell.textContent = adv.employee_id || '—';
+            idCell.className = 'fw-bold font-monospace';
+            idCell.textContent = adv.worker_id || '—';
 
             const nameCell = document.createElement('td');
             nameCell.className = 'fw-bold';
             nameCell.textContent = adv.employee_name || '—';
 
-            const storeCell = document.createElement('td');
-            storeCell.textContent = adv.showroom_name || '—';
+            const accCell = document.createElement('td');
+            accCell.className = 'text-center';
+            const accBadge = document.createElement('span');
+            accBadge.className = `badge ${adv.main_account_id === '151102' ? 'bg-light text-primary border border-primary' : 'bg-light text-secondary border'}`;
+            accBadge.textContent = adv.main_account_id === '151102' ? '151102 قروض وسلف' : (adv.main_account_id === '151101' ? '151101 عهد' : adv.main_account_id);
+            accCell.append(accBadge);
 
-            const typeCell = document.createElement('td');
-            const typeBadge = document.createElement('span');
-            typeBadge.className = 'badge bg-light text-dark border';
-            typeBadge.textContent = adv.advance_type || '—';
-            typeCell.append(typeBadge);
+            const debitCell = document.createElement('td');
+            debitCell.className = 'text-end fw-bold';
+            debitCell.dir = 'ltr';
+            debitCell.textContent = money.format(Number(adv.total_debit) || 0);
 
-            const totalCell = document.createElement('td');
-            totalCell.className = 'text-end fw-bold';
-            totalCell.dir = 'ltr';
-            totalCell.textContent = money.format(Number(adv.total_amount) || 0);
+            const creditCell = document.createElement('td');
+            creditCell.className = 'text-end fw-bold text-success';
+            creditCell.dir = 'ltr';
+            creditCell.textContent = money.format(Number(adv.total_credit) || 0);
 
-            const paidCell = document.createElement('td');
-            paidCell.className = 'text-end text-success';
-            paidCell.dir = 'ltr';
-            paidCell.textContent = money.format(Number(adv.paid_amount) || 0);
-
-            const remCell = document.createElement('td');
-            remCell.className = 'text-end fw-bold text-danger';
-            remCell.dir = 'ltr';
-            remCell.textContent = money.format(Number(adv.remaining_amount) || 0);
-
-            const deductCell = document.createElement('td');
-            deductCell.className = 'text-end text-muted';
-            deductCell.dir = 'ltr';
-            deductCell.textContent = money.format(Number(adv.monthly_deduction) || 0);
+            const glCell = document.createElement('td');
+            glCell.className = `text-end fw-bold ${Number(adv.gl_balance) > 0 ? 'text-danger' : 'text-success'}`;
+            glCell.dir = 'ltr';
+            glCell.textContent = money.format(Number(adv.gl_balance) || 0);
 
             const dateCell = document.createElement('td');
             dateCell.dir = 'ltr';
-            dateCell.textContent = adv.start_date || '—';
+            dateCell.textContent = adv.last_movement_date || '—';
+
+            const voucherCell = document.createElement('td');
+            voucherCell.dir = 'ltr';
+            voucherCell.className = 'text-muted small';
+            voucherCell.textContent = adv.last_voucher || '—';
 
             const statusCell = document.createElement('td');
+            statusCell.className = 'text-center';
             const statusBadge = document.createElement('span');
-            statusBadge.className = `badge ${adv.status === 'active' ? 'bg-warning text-dark' : 'bg-success'}`;
-            statusBadge.textContent = adv.status === 'active' ? 'سارية' : 'مسددة';
+            statusBadge.className = `badge ${adv.coverage_status === 'active' ? 'bg-warning text-dark' : 'bg-success'}`;
+            statusBadge.textContent = adv.coverage_status === 'active' ? 'رصيد قائم' : 'مسدد/مغطى';
             statusCell.append(statusBadge);
 
-            row.append(idCell, nameCell, storeCell, typeCell, totalCell, paidCell, remCell, deductCell, dateCell, statusCell);
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-center';
+            const actionBtn = document.createElement('button');
+            actionBtn.className = 'btn btn-outline-primary btn-sm py-0 px-2';
+            actionBtn.innerHTML = '<i class="fa-solid fa-eye me-1"></i> عرض';
+            actionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openEmployeeAdvanceDetailsModal(adv.worker_id);
+            });
+            actionCell.append(actionBtn);
+
+            row.append(idCell, nameCell, accCell, debitCell, creditCell, glCell, dateCell, voucherCell, statusCell, actionCell);
+            row.addEventListener('click', () => openEmployeeAdvanceDetailsModal(adv.worker_id));
             return row;
         }));
     }
@@ -1197,11 +1313,11 @@
         if (!payload || payload.state !== 'ready') return;
         currentAdvances = payload.data || [];
         const s = payload.summary || {};
-        setMetric('financeAdvancesTotalAmount', money.format(Number(s.total_amount) || 0));
-        setMetric('financeAdvancesTotalPaid', money.format(Number(s.total_paid) || 0));
-        setMetric('financeAdvancesTotalRemaining', money.format(Number(s.total_remaining) || 0));
-        setMetric('financeAdvancesActiveCount', `${integer.format(Number(s.active_count) || 0)} سلفة سارية`);
-        setMetric('financeAdvancesSettledCount', `${integer.format(Number(s.settled_count) || 0)} سلفة مسددة بالكامل`);
+        setMetric('financeAdvancesTotalDebit', money.format(Number(s.total_debit) || 0));
+        setMetric('financeAdvancesTotalCredit', money.format(Number(s.total_credit) || 0));
+        setMetric('financeAdvancesTotalGlBalance', money.format(Number(s.total_gl_balance) || 0));
+        setMetric('financeAdvancesActiveCount', `${integer.format(Number(s.active_count) || 0)} موظف`);
+        setMetric('financeAdvancesSettledCount', `${integer.format(Number(s.settled_count) || 0)} رصيد مسدد/مغطى`);
         filterAndRenderAdvances();
     }
 
@@ -2012,7 +2128,7 @@
 
         const advancesSearch = element('financeAdvancesSearch');
         const advancesSearchClear = element('financeAdvancesSearchClear');
-        const advancesType = element('financeAdvancesTypeFilter');
+        const advancesAccount = element('financeAdvancesAccountFilter');
         const advancesStatus = element('financeAdvancesStatusFilter');
 
         if (advancesSearch) {
@@ -2030,9 +2146,9 @@
                 filterAndRenderAdvances();
             });
         }
-        if (advancesType) {
-            advancesType.addEventListener('change', () => {
-                filters.advances.type = advancesType.value;
+        if (advancesAccount) {
+            advancesAccount.addEventListener('change', () => {
+                filters.advances.account = advancesAccount.value;
                 filterAndRenderAdvances();
             });
         }
