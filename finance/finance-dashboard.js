@@ -13,6 +13,11 @@
     let currentTopVendors = [];
     let currentLeases = [];
     let currentAssets = [];
+    let currentAdvances = [];
+    let currentPurchases = [];
+    let currentInventory = [];
+    let currentTreasury = {};
+    let currentTaxHub = {};
     let currentExpenseScopeStatus = 'approved';
 
     const sortState = {
@@ -20,13 +25,19 @@
         invoices: { key: 'invoice_date', dir: 'desc' },
         topVendors: { key: 'remaining_amount', dir: 'desc' },
         leases: { key: 'expiration_date', dir: 'asc' },
-        assets: { key: 'fixed_asset_group_id', dir: 'asc' }
+        assets: { key: 'fixed_asset_group_id', dir: 'asc' },
+        advances: { key: 'start_date', dir: 'desc' },
+        purchases: { key: 'accounting_date', dir: 'desc' },
+        inventory: { key: 'total_retail_value', dir: 'desc' }
     };
 
     const filters = {
         showrooms: { search: '', status: 'all' },
         invoices: { search: '', status: 'all' },
-        assets: { search: '', group: 'all', scope: 'all' }
+        assets: { search: '', group: 'all', scope: 'all' },
+        advances: { search: '', type: 'all', status: 'all' },
+        purchases: { search: '', status: 'all' },
+        inventory: { search: '' }
     };
 
     function element(id) {
@@ -1075,6 +1086,431 @@
         filterAndRenderAssets();
     }
 
+    function filterAndRenderAdvances() {
+        const body = element('financeAdvancesBody');
+        if (!body) return;
+
+        let list = [...currentAdvances];
+        const search = (filters.advances?.search || '').toLowerCase().trim();
+        const type = filters.advances?.type || 'all';
+        const status = filters.advances?.status || 'all';
+
+        if (type && type !== 'all') {
+            list = list.filter(a => a.advance_type === type);
+        }
+
+        if (status && status !== 'all') {
+            list = list.filter(a => a.status === status);
+        }
+
+        if (search) {
+            list = list.filter(a =>
+                (a.employee_id || '').toLowerCase().includes(search) ||
+                (a.employee_name || '').toLowerCase().includes(search) ||
+                (a.showroom_name || '').toLowerCase().includes(search) ||
+                (a.advance_type || '').toLowerCase().includes(search) ||
+                (a.notes || '').toLowerCase().includes(search)
+            );
+        }
+
+        const badge = element('financeAdvancesCountBadge');
+        if (badge) {
+            badge.textContent = `${list.length} سجل`;
+        }
+
+        const sort = sortState.advances;
+        if (sort && sort.key) {
+            list.sort((a, b) => {
+                let valA = a[sort.key] ?? '';
+                let valB = b[sort.key] ?? '';
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return sort.dir === 'asc' ? valA - valB : valB - valA;
+                }
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                return sort.dir === 'asc' ? valA.localeCompare(valB, 'ar') : valB.localeCompare(valA, 'ar');
+            });
+        }
+
+        if (!list.length) {
+            body.innerHTML = '<tr><td colspan="10" class="finance-empty-state">لا توجد سلف أو عهد مطابقة للبحث.</td></tr>';
+            return;
+        }
+
+        body.replaceChildren(...list.map(adv => {
+            const row = document.createElement('tr');
+
+            const idCell = document.createElement('td');
+            idCell.dir = 'ltr';
+            idCell.className = 'fw-bold';
+            idCell.textContent = adv.employee_id || '—';
+
+            const nameCell = document.createElement('td');
+            nameCell.className = 'fw-bold';
+            nameCell.textContent = adv.employee_name || '—';
+
+            const storeCell = document.createElement('td');
+            storeCell.textContent = adv.showroom_name || '—';
+
+            const typeCell = document.createElement('td');
+            const typeBadge = document.createElement('span');
+            typeBadge.className = 'badge bg-light text-dark border';
+            typeBadge.textContent = adv.advance_type || '—';
+            typeCell.append(typeBadge);
+
+            const totalCell = document.createElement('td');
+            totalCell.className = 'text-end fw-bold';
+            totalCell.dir = 'ltr';
+            totalCell.textContent = money.format(Number(adv.total_amount) || 0);
+
+            const paidCell = document.createElement('td');
+            paidCell.className = 'text-end text-success';
+            paidCell.dir = 'ltr';
+            paidCell.textContent = money.format(Number(adv.paid_amount) || 0);
+
+            const remCell = document.createElement('td');
+            remCell.className = 'text-end fw-bold text-danger';
+            remCell.dir = 'ltr';
+            remCell.textContent = money.format(Number(adv.remaining_amount) || 0);
+
+            const deductCell = document.createElement('td');
+            deductCell.className = 'text-end text-muted';
+            deductCell.dir = 'ltr';
+            deductCell.textContent = money.format(Number(adv.monthly_deduction) || 0);
+
+            const dateCell = document.createElement('td');
+            dateCell.dir = 'ltr';
+            dateCell.textContent = adv.start_date || '—';
+
+            const statusCell = document.createElement('td');
+            const statusBadge = document.createElement('span');
+            statusBadge.className = `badge ${adv.status === 'active' ? 'bg-warning text-dark' : 'bg-success'}`;
+            statusBadge.textContent = adv.status === 'active' ? 'سارية' : 'مسددة';
+            statusCell.append(statusBadge);
+
+            row.append(idCell, nameCell, storeCell, typeCell, totalCell, paidCell, remCell, deductCell, dateCell, statusCell);
+            return row;
+        }));
+    }
+
+    function renderEmployeeAdvances(payload) {
+        if (!payload || payload.state !== 'ready') return;
+        currentAdvances = payload.data || [];
+        const s = payload.summary || {};
+        setMetric('financeAdvancesTotalAmount', money.format(Number(s.total_amount) || 0));
+        setMetric('financeAdvancesTotalPaid', money.format(Number(s.total_paid) || 0));
+        setMetric('financeAdvancesTotalRemaining', money.format(Number(s.total_remaining) || 0));
+        setMetric('financeAdvancesActiveCount', `${integer.format(Number(s.active_count) || 0)} سلفة سارية`);
+        setMetric('financeAdvancesSettledCount', `${integer.format(Number(s.settled_count) || 0)} سلفة مسددة بالكامل`);
+        filterAndRenderAdvances();
+    }
+
+    function filterAndRenderPurchases() {
+        const body = element('financePurchasesBody');
+        if (!body) return;
+
+        let list = [...currentPurchases];
+        const search = (filters.purchases?.search || '').toLowerCase().trim();
+        const status = filters.purchases?.status || 'all';
+
+        if (status && status !== 'all') {
+            list = list.filter(p => p.purchase_order_status === status);
+        }
+
+        if (search) {
+            list = list.filter(p =>
+                (p.purchase_order_number || '').toLowerCase().includes(search) ||
+                (p.vendor_name || '').toLowerCase().includes(search) ||
+                (p.vendor_account_number || '').toLowerCase().includes(search)
+            );
+        }
+
+        const badge = element('financePurchasesCountBadge');
+        if (badge) {
+            badge.textContent = `${list.length} أمر`;
+        }
+
+        const sort = sortState.purchases;
+        if (sort && sort.key) {
+            list.sort((a, b) => {
+                let valA = a[sort.key] ?? '';
+                let valB = b[sort.key] ?? '';
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return sort.dir === 'asc' ? valA - valB : valB - valA;
+                }
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                return sort.dir === 'asc' ? valA.localeCompare(valB, 'ar') : valB.localeCompare(valA, 'ar');
+            });
+        }
+
+        if (!list.length) {
+            body.innerHTML = '<tr><td colspan="9" class="finance-empty-state">لا توجد أوامر شراء مطابقة للبحث.</td></tr>';
+            return;
+        }
+
+        body.replaceChildren(...list.map(po => {
+            const row = document.createElement('tr');
+
+            const idCell = document.createElement('td');
+            const idBadge = document.createElement('span');
+            idBadge.className = 'finance-invoice-badge';
+            idBadge.textContent = po.purchase_order_number || '—';
+            idCell.append(idBadge);
+
+            const vendorCell = document.createElement('td');
+            vendorCell.className = 'fw-bold';
+            vendorCell.textContent = po.vendor_name || po.vendor_account_number || '—';
+
+            const orderDateCell = document.createElement('td');
+            orderDateCell.dir = 'ltr';
+            orderDateCell.textContent = po.accounting_date || '—';
+
+            const reqDateCell = document.createElement('td');
+            reqDateCell.dir = 'ltr';
+            reqDateCell.textContent = po.requested_delivery_date || '—';
+
+            const confDateCell = document.createElement('td');
+            confDateCell.dir = 'ltr';
+            confDateCell.textContent = po.confirmed_delivery_date || '—';
+
+            const totalCell = document.createElement('td');
+            totalCell.className = 'text-end fw-bold';
+            totalCell.dir = 'ltr';
+            totalCell.textContent = money.format(Number(po.total_amount) || 0);
+
+            const remCell = document.createElement('td');
+            remCell.className = 'text-end fw-bold text-primary';
+            remCell.dir = 'ltr';
+            remCell.textContent = money.format(Number(po.remaining_commitment) || 0);
+
+            const linesCell = document.createElement('td');
+            linesCell.className = 'text-center';
+            linesCell.textContent = integer.format(Number(po.lines_count) || 0);
+
+            const statusCell = document.createElement('td');
+            const statusBadge = document.createElement('span');
+            statusBadge.className = `badge ${po.purchase_order_status === 'Open Order' ? 'bg-warning text-dark' : (po.purchase_order_status === 'Invoiced' ? 'bg-success' : 'bg-info')}`;
+            statusBadge.textContent = po.purchase_order_status || '—';
+            statusCell.append(statusBadge);
+
+            row.append(idCell, vendorCell, orderDateCell, reqDateCell, confDateCell, totalCell, remCell, linesCell, statusCell);
+            return row;
+        }));
+    }
+
+    function renderPurchaseOrders(payload) {
+        if (!payload || payload.state !== 'ready') return;
+        currentPurchases = payload.data || [];
+        const s = payload.summary || {};
+        setMetric('financePurchasesCommitment', money.format(Number(s.open_commitment) || 0));
+        setMetric('financePurchasesTotalAmount', money.format(Number(s.total_po_amount) || 0));
+        setMetric('financePurchasesTotalCount', `${integer.format(Number(s.total_po_count) || 0)} أمر شراء مسجل`);
+        setMetric('financePurchasesOpenCount', `${integer.format(Number(s.open_po_count) || 0)} أمر مفتوح`);
+        setMetric('financePurchasesPastDueCount', `${integer.format(Number(s.past_due_count) || 0)} متجاوز تاريخ التوريد`);
+        filterAndRenderPurchases();
+    }
+
+    function filterAndRenderInventory() {
+        const body = element('financeInventoryBody');
+        if (!body) return;
+
+        let list = [...currentInventory];
+        const search = (filters.inventory?.search || '').toLowerCase().trim();
+
+        if (search) {
+            list = list.filter(i =>
+                (i.store_number || '').toLowerCase().includes(search) ||
+                (i.store_name || '').toLowerCase().includes(search)
+            );
+        }
+
+        const badge = element('financeInventoryCountBadge');
+        if (badge) {
+            badge.textContent = `${list.length} موقع`;
+        }
+
+        const sort = sortState.inventory;
+        if (sort && sort.key) {
+            list.sort((a, b) => {
+                let valA = a[sort.key] ?? '';
+                let valB = b[sort.key] ?? '';
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return sort.dir === 'asc' ? valA - valB : valB - valA;
+                }
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                return sort.dir === 'asc' ? valA.localeCompare(valB, 'ar') : valB.localeCompare(valA, 'ar');
+            });
+        }
+
+        if (!list.length) {
+            body.innerHTML = '<tr><td colspan="7" class="finance-empty-state">لا توجد مواقع مخزون مطابقة للبحث.</td></tr>';
+            return;
+        }
+
+        body.replaceChildren(...list.map(inv => {
+            const row = document.createElement('tr');
+
+            const idCell = document.createElement('td');
+            idCell.dir = 'ltr';
+            idCell.className = 'fw-bold';
+            idCell.textContent = inv.store_number || '—';
+
+            const nameCell = document.createElement('td');
+            nameCell.className = 'fw-bold';
+            nameCell.textContent = inv.store_name || '—';
+
+            const skusCell = document.createElement('td');
+            skusCell.className = 'text-center';
+            skusCell.textContent = integer.format(Number(inv.skus_count) || 0);
+
+            const unitsCell = document.createElement('td');
+            unitsCell.className = 'text-end fw-bold';
+            unitsCell.dir = 'ltr';
+            unitsCell.textContent = integer.format(Number(inv.total_units) || 0);
+
+            const costCell = document.createElement('td');
+            costCell.className = 'text-end text-muted';
+            costCell.dir = 'ltr';
+            costCell.textContent = money.format(Number(inv.total_cost_value) || 0);
+
+            const retailCell = document.createElement('td');
+            retailCell.className = 'text-end fw-bold text-success';
+            retailCell.dir = 'ltr';
+            retailCell.textContent = money.format(Number(inv.total_retail_value) || 0);
+
+            const typeCell = document.createElement('td');
+            const typeBadge = document.createElement('span');
+            typeBadge.className = `badge ${inv.is_warehouse ? 'bg-primary' : 'bg-light text-dark border'}`;
+            typeBadge.textContent = inv.is_warehouse ? 'مستودع مركزي' : 'معرض';
+            typeCell.append(typeBadge);
+
+            row.append(idCell, nameCell, skusCell, unitsCell, costCell, retailCell, typeCell);
+            return row;
+        }));
+    }
+
+    function renderInventoryValuation(payload) {
+        if (!payload || payload.state !== 'ready') return;
+        currentInventory = payload.data || [];
+        const s = payload.summary || {};
+        setMetric('financeInventoryRetailValue', money.format(Number(s.total_retail_value) || 0));
+        setMetric('financeInventoryCostValue', money.format(Number(s.total_cost_value) || 0));
+        setMetric('financeInventoryWarehouseUnits', `${integer.format(Number(s.warehouse_units) || 0)} قطعة`);
+        setMetric('financeInventoryShowroomUnits', `${integer.format(Number(s.showroom_units) || 0)} قطعة`);
+        setMetric('financeInventoryTotalUnits', `${integer.format(Number(s.total_units) || 0)} إجمالي قطع البضاعة`);
+        filterAndRenderInventory();
+    }
+
+    function renderCashAndGateways(payload) {
+        if (!payload || payload.state !== 'ready') return;
+        currentTreasury = payload;
+        const s = payload.summary || {};
+        setMetric('financeTreasuryCashCount', `${integer.format(Number(s.cash_pos_count) || 0)} صندوق معرض`);
+        setMetric('financeTreasuryBankCount', `${integer.format(Number(s.banks_count) || 0)} حساب بنكي`);
+        setMetric('financeTreasuryGatewaysCount', `${integer.format(Number(s.gateways_count) || 0)} وسيط تحصيل`);
+
+        const cashBody = element('financeTreasuryCashBody');
+        if (cashBody && payload.cash_pos) {
+            cashBody.replaceChildren(...payload.cash_pos.map(c => {
+                const row = document.createElement('tr');
+                row.append(
+                    textElement('td', c.main_account_id, 'fw-bold font-monospace'),
+                    textElement('td', c.account_name),
+                    textElement('td', c.main_account_type || 'نقدية فروع')
+                );
+                return row;
+            }));
+        }
+
+        const banksBody = element('financeTreasuryBanksBody');
+        if (banksBody && payload.banks) {
+            banksBody.replaceChildren(...payload.banks.map(b => {
+                const row = document.createElement('tr');
+                row.append(
+                    textElement('td', b.main_account_id, 'fw-bold font-monospace'),
+                    textElement('td', b.account_name),
+                    textElement('td', b.main_account_type || 'بنك')
+                );
+                return row;
+            }));
+        }
+
+        const gatewaysBody = element('financeTreasuryGatewaysBody');
+        if (gatewaysBody && payload.gateways) {
+            gatewaysBody.replaceChildren(...payload.gateways.map(g => {
+                const row = document.createElement('tr');
+                row.append(
+                    textElement('td', g.main_account_id, 'fw-bold font-monospace'),
+                    textElement('td', g.account_name, 'fw-bold text-primary'),
+                    textElement('td', g.main_account_type || 'وسيط دفع')
+                );
+                return row;
+            }));
+        }
+    }
+
+    function renderVatHub(payload) {
+        if (!payload || payload.state !== 'ready') return;
+        currentTaxHub = payload;
+        const s = payload.summary || {};
+        setMetric('financeTaxOutputVat', money.format(Number(s.total_output_vat) || 0));
+        setMetric('financeTaxSalesExcl', `${money.format(Number(s.total_taxable_sales) || 0)} مبيعات خاضعة`);
+        setMetric('financeTaxInputVat', money.format(Number(s.total_input_vat) || 0));
+        setMetric('financeTaxPurchasesExcl', `${money.format(Number(s.total_taxable_purchases) || 0)} مشتريات خاضعة`);
+        setMetric('financeTaxNetPayable', money.format(Number(s.net_vat_payable) || 0));
+
+        const body = element('financeTaxBody');
+        if (!body || !payload.monthly) return;
+
+        body.replaceChildren(...payload.monthly.map(m => {
+            const row = document.createElement('tr');
+
+            const monthCell = document.createElement('td');
+            monthCell.dir = 'ltr';
+            monthCell.className = 'fw-bold';
+            monthCell.textContent = m.month || '—';
+
+            const salesCell = document.createElement('td');
+            salesCell.className = 'text-end';
+            salesCell.dir = 'ltr';
+            salesCell.textContent = money.format(Number(m.taxable_sales) || 0);
+
+            const outVatCell = document.createElement('td');
+            outVatCell.className = 'text-end fw-bold text-primary';
+            outVatCell.dir = 'ltr';
+            outVatCell.textContent = money.format(Number(m.output_vat) || 0);
+
+            const purchCell = document.createElement('td');
+            purchCell.className = 'text-end';
+            purchCell.dir = 'ltr';
+            purchCell.textContent = money.format(Number(m.taxable_purchases) || 0);
+
+            const inVatCell = document.createElement('td');
+            inVatCell.className = 'text-end text-success';
+            inVatCell.dir = 'ltr';
+            inVatCell.textContent = money.format(Number(m.input_vat) || 0);
+
+            const netCell = document.createElement('td');
+            netCell.className = 'text-end fw-bold text-danger';
+            netCell.dir = 'ltr';
+            netCell.textContent = money.format(Number(m.net_vat_payable) || 0);
+
+            const invCountCell = document.createElement('td');
+            invCountCell.className = 'text-center';
+            invCountCell.textContent = integer.format(Number(m.invoice_count) || 0);
+
+            const transCountCell = document.createElement('td');
+            transCountCell.className = 'text-center';
+            transCountCell.textContent = integer.format(Number(m.trans_count) || 0);
+
+            row.append(monthCell, salesCell, outVatCell, purchCell, inVatCell, netCell, invCountCell, transCountCell);
+            return row;
+        }));
+    }
+
+
     function renderLeaseInsights(payload) {
         if (!payload?.configured) return;
         const horizons = payload.due_horizons || {};
@@ -1337,7 +1773,7 @@
         button.disabled = true;
         try {
             const params = periodParams();
-            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional, fixedAssets] = await Promise.all([
+            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional, fixedAssets, advances, purchases, inventory, treasury, taxHub] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
                 window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 100 }),
@@ -1356,6 +1792,16 @@
                     month: element('financePlatformEnd').value.slice(0, 7)
                 }).catch(() => ({ state: 'partial', sections: {} })),
                 window.FinancePlatformApi.fixedAssets()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.employeeAdvances()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.purchaseOrders()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.inventoryValuation()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.cashAndGateways()
+                    .catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.vatHub()
                     .catch(() => ({ state: 'unavailable', data: [] }))
             ]);
             renderOverview(overview);
@@ -1368,6 +1814,11 @@
             renderTrialBalanceTrend(trend);
             renderAdditionalAnalytics(additional);
             renderFixedAssets(fixedAssets);
+            renderEmployeeAdvances(advances);
+            renderPurchaseOrders(purchases);
+            renderInventoryValuation(inventory);
+            renderCashAndGateways(treasury);
+            renderVatHub(taxHub);
         } catch (error) {
             renderError(error);
         } finally {
@@ -1377,7 +1828,7 @@
     }
 
     function switchSubtab(tabName) {
-        const validTabs = ['overview', 'showrooms', 'ap', 'leases', 'assets'];
+        const validTabs = ['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax'];
         if (!validTabs.includes(tabName)) tabName = 'overview';
 
         document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
@@ -1411,7 +1862,7 @@
         });
 
         const initialHash = (window.location.hash || '').replace('#', '');
-        if (['overview', 'showrooms', 'ap', 'leases', 'assets'].includes(initialHash)) {
+        if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax'].includes(initialHash)) {
             switchSubtab(initialHash);
         } else {
             switchSubtab('overview');
@@ -1419,7 +1870,7 @@
 
         window.addEventListener('hashchange', () => {
             const currentHash = (window.location.hash || '').replace('#', '');
-            if (['overview', 'showrooms', 'ap', 'leases', 'assets'].includes(currentHash)) {
+            if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax'].includes(currentHash)) {
                 switchSubtab(currentHash);
             }
         });
@@ -1558,6 +2009,85 @@
             });
         }
 
+
+        const advancesSearch = element('financeAdvancesSearch');
+        const advancesSearchClear = element('financeAdvancesSearchClear');
+        const advancesType = element('financeAdvancesTypeFilter');
+        const advancesStatus = element('financeAdvancesStatusFilter');
+
+        if (advancesSearch) {
+            advancesSearch.addEventListener('input', () => {
+                filters.advances.search = advancesSearch.value;
+                if (advancesSearchClear) advancesSearchClear.hidden = !advancesSearch.value;
+                filterAndRenderAdvances();
+            });
+        }
+        if (advancesSearchClear) {
+            advancesSearchClear.addEventListener('click', () => {
+                if (advancesSearch) advancesSearch.value = '';
+                filters.advances.search = '';
+                advancesSearchClear.hidden = true;
+                filterAndRenderAdvances();
+            });
+        }
+        if (advancesType) {
+            advancesType.addEventListener('change', () => {
+                filters.advances.type = advancesType.value;
+                filterAndRenderAdvances();
+            });
+        }
+        if (advancesStatus) {
+            advancesStatus.addEventListener('change', () => {
+                filters.advances.status = advancesStatus.value;
+                filterAndRenderAdvances();
+            });
+        }
+
+        const purchasesSearch = element('financePurchasesSearch');
+        const purchasesSearchClear = element('financePurchasesSearchClear');
+        const purchasesStatus = element('financePurchasesStatusFilter');
+
+        if (purchasesSearch) {
+            purchasesSearch.addEventListener('input', () => {
+                filters.purchases.search = purchasesSearch.value;
+                if (purchasesSearchClear) purchasesSearchClear.hidden = !purchasesSearch.value;
+                filterAndRenderPurchases();
+            });
+        }
+        if (purchasesSearchClear) {
+            purchasesSearchClear.addEventListener('click', () => {
+                if (purchasesSearch) purchasesSearch.value = '';
+                filters.purchases.search = '';
+                purchasesSearchClear.hidden = true;
+                filterAndRenderPurchases();
+            });
+        }
+        if (purchasesStatus) {
+            purchasesStatus.addEventListener('change', () => {
+                filters.purchases.status = purchasesStatus.value;
+                filterAndRenderPurchases();
+            });
+        }
+
+        const inventorySearch = element('financeInventorySearch');
+        const inventorySearchClear = element('financeInventorySearchClear');
+
+        if (inventorySearch) {
+            inventorySearch.addEventListener('input', () => {
+                filters.inventory.search = inventorySearch.value;
+                if (inventorySearchClear) inventorySearchClear.hidden = !inventorySearch.value;
+                filterAndRenderInventory();
+            });
+        }
+        if (inventorySearchClear) {
+            inventorySearchClear.addEventListener('click', () => {
+                if (inventorySearch) inventorySearch.value = '';
+                filters.inventory.search = '';
+                inventorySearchClear.hidden = true;
+                filterAndRenderInventory();
+            });
+        }
+
         document.querySelectorAll('th.finance-sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const table = th.dataset.table;
@@ -1573,6 +2103,9 @@
                 else if (table === 'topVendors') sortAndRenderTopVendors();
                 else if (table === 'leases') sortAndRenderLeases();
                 else if (table === 'assets') filterAndRenderAssets();
+                else if (table === 'advances') filterAndRenderAdvances();
+                else if (table === 'purchases') filterAndRenderPurchases();
+                else if (table === 'inventory') filterAndRenderInventory();
             });
         });
 

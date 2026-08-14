@@ -400,7 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
-    <link rel="stylesheet" href="finance/finance.css?v=20260814-2">
+    <link rel="stylesheet" href="finance/finance.css?v=20260814-3">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -509,6 +509,32 @@
                             <span>الأصول الثابتة والضمانات</span>
                             <span class="finance-subnav-badge" id="financeSubnavAssetsBadge">315</span>
                         </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="advances" role="tab">
+                            <i class="fa-solid fa-users"></i>
+                            <span>سلف وعهد الموظفين</span>
+                            <span class="finance-subnav-badge" id="financeSubnavAdvancesBadge">سلف</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="purchases" role="tab">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            <span>أوامر الشراء المفتوحة</span>
+                            <span class="finance-subnav-badge" id="financeSubnavPurchasesBadge">PO</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="inventory" role="tab">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <span>تقييم المخزون</span>
+                            <span class="finance-subnav-badge" id="financeSubnavInventoryBadge">مخزون</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="treasury" role="tab">
+                            <i class="fa-solid fa-coins"></i>
+                            <span>الصناديق والمنصات</span>
+                            <span class="finance-subnav-badge" id="financeSubnavTreasuryBadge">نقدية</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="tax" role="tab">
+                            <i class="fa-solid fa-receipt"></i>
+                            <span>الضرائب و ZATCA</span>
+                            <span class="finance-subnav-badge" id="financeSubnavTaxBadge">VAT</span>
+                        </button>
+
                     </div>
                 </div>
 
@@ -943,6 +969,372 @@
                                 </thead>
                                 <tbody id="financeAssetsBody">
                                     <tr><td colspan="8" class="finance-empty-state">جارٍ تحميل سجل الأصول الثابتة…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+
+                <!-- Pane 6: Employee Advances & Loans -->
+                <div class="finance-tab-pane" id="financePaneAdvances" data-pane="advances" hidden>
+                    <div class="finance-asset-stats-grid mb-4">
+                        <article class="finance-asset-stat-card is-primary">
+                            <span>إجمالي مبالغ السلف والقروض</span>
+                            <strong id="financeAdvancesTotalAmount">—</strong>
+                            <small>المعتمدة والمصروفة للموظفين</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>المبالغ المقتطعة والمسددة</span>
+                            <strong id="financeAdvancesTotalPaid" class="text-success">—</strong>
+                            <small>تم تحصيلها من مسيرات الرواتب</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>الرصيد القائم المتبقي للاقتطاع</span>
+                            <strong id="financeAdvancesTotalRemaining" class="text-danger">—</strong>
+                            <small>مستحق الخصم على الأقساط الشهرية</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>عدد السلف والعهد المفتوحة</span>
+                            <strong id="financeAdvancesActiveCount">—</strong>
+                            <small id="financeAdvancesSettledCount">— سلفة مسددة بالكامل</small>
+                        </article>
+                    </div>
+
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">EMPLOYEE ADVANCES & CUSTODY</span>
+                                <h2>سجل سلف وقروض وعهد الموظفين</h2>
+                            </div>
+                            <span class="finance-register-note">مربوطة بالرقم الوظيفي والمعارض وتحديثات الرواتب</span>
+                        </header>
+                        <div class="finance-table-toolbar">
+                            <div class="finance-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="financeAdvancesSearch" placeholder="البحث برقم الموظف، اسم الموظف، المعرض، أو نوع السلفة...">
+                                <button type="button" id="financeAdvancesSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="finance-filter-group">
+                                <select id="financeAdvancesTypeFilter" class="form-select finance-filter-select">
+                                    <option value="all">جميع أنواع السلف</option>
+                                    <option value="سلفة شخصية">سلفة شخصية</option>
+                                    <option value="سلفة راتب">سلفة راتب</option>
+                                    <option value="عهدة نقدية">عهدة نقدية</option>
+                                    <option value="قرض موظف">قرض موظف</option>
+                                </select>
+                                <select id="financeAdvancesStatusFilter" class="form-select finance-filter-select">
+                                    <option value="all">جميع الحالات</option>
+                                    <option value="active">سارية وقائمة (Active)</option>
+                                    <option value="settled">مسددة بالكامل (Settled)</option>
+                                </select>
+                                <span class="finance-badge-counter" id="financeAdvancesCountBadge">0 سجل</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-compact-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="finance-sortable" data-table="advances" data-sort="employee_id">رقم الموظف <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="employee_name">اسم الموظف <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="showroom_name">المعرض / الفرع <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="advance_type">نوع السلفة / العهدة <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="total_amount">إجمالي المبلغ <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="paid_amount">المسدد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="remaining_amount">المتبقي <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="advances" data-sort="monthly_deduction">الخصم الشهري <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="start_date">تاريخ البدء <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="advances" data-sort="status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeAdvancesBody">
+                                    <tr><td colspan="10" class="finance-empty-state">جارٍ تحميل سجل السلف والعهد…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Pane 7: Open Purchase Orders -->
+                <div class="finance-tab-pane" id="financePanePurchases" data-pane="purchases" hidden>
+                    <div class="finance-asset-stats-grid mb-4">
+                        <article class="finance-asset-stat-card is-primary">
+                            <span>التزام أوامر الشراء المفتوح</span>
+                            <strong id="financePurchasesCommitment">—</strong>
+                            <small>مبالغ أوامر الشراء قيد التوريد</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>إجمالي قيمة أوامر الشراء</span>
+                            <strong id="financePurchasesTotalAmount">—</strong>
+                            <small id="financePurchasesTotalCount">— أمر شراء مسجل</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>أوامر الشراء المفتوحة</span>
+                            <strong id="financePurchasesOpenCount">—</strong>
+                            <small>بانتظار استلام البضاعة والفواتير</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>أوامر متجاوزة تاريخ التوريد</span>
+                            <strong id="financePurchasesPastDueCount" class="text-warning">—</strong>
+                            <small>تتطلب متابعة الموردين</small>
+                        </article>
+                    </div>
+
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">PURCHASE ORDERS REGISTER</span>
+                                <h2>سجل التزامات وأوامر الشراء (Dynamics 365)</h2>
+                            </div>
+                            <span class="finance-register-note">محدثة ومربوطة بحسابات الموردين وتواريخ التوريد</span>
+                        </header>
+                        <div class="finance-table-toolbar">
+                            <div class="finance-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="financePurchasesSearch" placeholder="البحث برقم أمر الشراء، اسم المورد، أو كود المورد...">
+                                <button type="button" id="financePurchasesSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="finance-filter-group">
+                                <select id="financePurchasesStatusFilter" class="form-select finance-filter-select">
+                                    <option value="all">جميع الحالات</option>
+                                    <option value="Open Order">أمر مفتوح (Open Order)</option>
+                                    <option value="Received">مستلم (Received)</option>
+                                    <option value="Invoiced">مفوتر (Invoiced)</option>
+                                </select>
+                                <span class="finance-badge-counter" id="financePurchasesCountBadge">0 أمر</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-compact-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="finance-sortable" data-table="purchases" data-sort="purchase_order_number">رقم أمر الشراء <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="purchases" data-sort="vendor_name">المورد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="purchases" data-sort="accounting_date">تاريخ الأمر <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="purchases" data-sort="requested_delivery_date">التسليم المطلوب <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="purchases" data-sort="confirmed_delivery_date">التسليم المؤكد <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="purchases" data-sort="total_amount">القيمة الإجمالية <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="purchases" data-sort="remaining_commitment">الالتزام المتبقي <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-center" data-table="purchases" data-sort="lines_count">عدد السطور <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="purchases" data-sort="purchase_order_status">الحالة <i class="fa-solid fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financePurchasesBody">
+                                    <tr><td colspan="9" class="finance-empty-state">جارٍ تحميل أوامر الشراء…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Pane 8: Inventory Valuation -->
+                <div class="finance-tab-pane" id="financePaneInventory" data-pane="inventory" hidden>
+                    <div class="finance-asset-stats-grid mb-4">
+                        <article class="finance-asset-stat-card is-primary">
+                            <span>إجمالي القيمة البيعية للمخزون</span>
+                            <strong id="financeInventoryRetailValue">—</strong>
+                            <small>حسب أسعار البيع المعتمدة في Dynamics</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>القيمة التقديرية للتكلفة</span>
+                            <strong id="financeInventoryCostValue">—</strong>
+                            <small>رأس المال العامل المستثمر في البضاعة</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>مخزون المستودعات المركزية</span>
+                            <strong id="financeInventoryWarehouseUnits">—</strong>
+                            <small>إجمالي القطع في WH01 و WH02</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>مخزون المعارض (53 معرضاً)</span>
+                            <strong id="financeInventoryShowroomUnits">—</strong>
+                            <small id="financeInventoryTotalUnits">— إجمالي قطع البضاعة</small>
+                        </article>
+                    </div>
+
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">INVENTORY FINANCIAL VALUATION</span>
+                                <h2>تقييم المخزون المالي حسب المعارض والمستودعات</h2>
+                            </div>
+                            <span class="finance-register-note">مستورد ومطابق مع أرصدة On-Hand الحالية</span>
+                        </header>
+                        <div class="finance-table-toolbar">
+                            <div class="finance-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="financeInventorySearch" placeholder="البحث بكود الفرع أو اسم المعرض/المستودع...">
+                                <button type="button" id="financeInventorySearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div class="finance-filter-group">
+                                <span class="finance-badge-counter" id="financeInventoryCountBadge">0 موقع</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-compact-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="finance-sortable" data-table="inventory" data-sort="store_number">كود الموقع <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="inventory" data-sort="store_name">اسم المعرض / المستودع <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-center" data-table="inventory" data-sort="skus_count">الأصناف المتوفرة (SKUs) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="inventory" data-sort="total_units">إجمالي عدد القطع <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="inventory" data-sort="total_cost_value">التكلفة التقديرية (SAR) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable text-end" data-table="inventory" data-sort="total_retail_value">القيمة البيعية (SAR) <i class="fa-solid fa-sort"></i></th>
+                                        <th class="finance-sortable" data-table="inventory" data-sort="is_warehouse">النوع <i class="fa-solid fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeInventoryBody">
+                                    <tr><td colspan="7" class="finance-empty-state">جارٍ تحميل تقييم المخزون…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Pane 9: Treasury, Banks & Gateways -->
+                <div class="finance-tab-pane" id="financePaneTreasury" data-pane="treasury" hidden>
+                    <div class="finance-asset-stats-grid mb-4">
+                        <article class="finance-asset-stat-card is-primary">
+                            <span>صناديق المعارض النقدية (POS)</span>
+                            <strong id="financeTreasuryCashCount">—</strong>
+                            <small>حسابات النقدية لدى الـ 53 معرضاً</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>الحسابات البنكية الرسمية</span>
+                            <strong id="financeTreasuryBankCount">—</strong>
+                            <small>الأهلي، الراجحي، الإنماء، البلاد، الجزيرة</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>وسطاء الدفع والمنصات</span>
+                            <strong id="financeTreasuryGatewaysCount">—</strong>
+                            <small>تمارا، تابي، ترينديول، نون، أمازون</small>
+                        </article>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <section class="finance-ledger-panel h-100">
+                                <header>
+                                    <div>
+                                        <span class="finance-section-kicker">SHOWROOM CASH POS</span>
+                                        <h2>صناديق المعارض النقدية (1201xx)</h2>
+                                    </div>
+                                </header>
+                                <div class="table-responsive p-2" style="max-height: 480px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover align-middle">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>رقم الحساب</th>
+                                                <th>اسم صندوق المعرض</th>
+                                                <th>النوع</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financeTreasuryCashBody">
+                                            <tr><td colspan="3" class="finance-empty-state">جارٍ تحميل الصناديق…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="col-lg-6">
+                            <section class="finance-ledger-panel mb-4">
+                                <header>
+                                    <div>
+                                        <span class="finance-section-kicker">PAYMENT GATEWAYS</span>
+                                        <h2>وسطاء التحصيل والمنصات (1203xx)</h2>
+                                    </div>
+                                </header>
+                                <div class="table-responsive p-2">
+                                    <table class="table table-sm table-hover align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>رقم الحساب</th>
+                                                <th>اسم وسيط التحصيل / المنصة</th>
+                                                <th>النوع</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financeTreasuryGatewaysBody">
+                                            <tr><td colspan="3" class="finance-empty-state">جارٍ تحميل وسطاء التحصيل…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+
+                            <section class="finance-ledger-panel">
+                                <header>
+                                    <div>
+                                        <span class="finance-section-kicker">BANK ACCOUNTS</span>
+                                        <h2>حسابات البنوك المعتمدة (1202xx)</h2>
+                                    </div>
+                                </header>
+                                <div class="table-responsive p-2" style="max-height: 240px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover align-middle">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>رقم الحساب</th>
+                                                <th>اسم الحساب البنكي</th>
+                                                <th>النوع</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financeTreasuryBanksBody">
+                                            <tr><td colspan="3" class="finance-empty-state">جارٍ تحميل حسابات البنوك…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pane 10: VAT Hub & ZATCA -->
+                <div class="finance-tab-pane" id="financePaneTax" data-pane="tax" hidden>
+                    <div class="finance-asset-stats-grid mb-4">
+                        <article class="finance-asset-stat-card is-primary">
+                            <span>ضريبة المبيعات الصادرة (Output VAT)</span>
+                            <strong id="financeTaxOutputVat" class="text-primary">—</strong>
+                            <small id="financeTaxSalesExcl">— مبيعات خاضعة للضريبة</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>ضريبة المشتريات والمدخلات (Input VAT)</span>
+                            <strong id="financeTaxInputVat" class="text-success">—</strong>
+                            <small id="financeTaxPurchasesExcl">— مشتريات خاضعة للخصم</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>صافي الضريبة المستحقة للسداد (ZATCA)</span>
+                            <strong id="financeTaxNetPayable" class="text-danger">—</strong>
+                            <small>المبلغ الصافي واجب السداد للهيئة</small>
+                        </article>
+                        <article class="finance-asset-stat-card">
+                            <span>النسبة الضريبية المعتمدة</span>
+                            <strong>15%</strong>
+                            <small>المملكة العربية السعودية (ZATCA)</small>
+                        </article>
+                    </div>
+
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">ZATCA VAT RECONCILIATION HUB</span>
+                                <h2>مصالحة ضريبة القيمة المضافة الشهرية والفصلية</h2>
+                            </div>
+                            <span class="finance-register-note">مقارنة آلية بين ضريبة المبيعات المحصلة وضريبة فواتير المشتريات المعتمدة</span>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-compact-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>الشهر الضريبي</th>
+                                        <th class="text-end">المبيعات قبل الضريبة (SAR)</th>
+                                        <th class="text-end">ضريبة المبيعات (15%)</th>
+                                        <th class="text-end">المشتريات قبل الضريبة (SAR)</th>
+                                        <th class="text-end">ضريبة المشتريات (15%)</th>
+                                        <th class="text-end">صافي الضريبة المستحقة (SAR)</th>
+                                        <th class="text-center">فواتير المشتريات</th>
+                                        <th class="text-center">عمليات البيع</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeTaxBody">
+                                    <tr><td colspan="8" class="finance-empty-state">جارٍ تحميل مركز مصالحة الضرائب…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2238,8 +2630,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260814-2"></script>
-    <script src="finance/finance-dashboard.js?v=20260814-2"></script>
+    <script src="finance/finance-api.js?v=20260814-3"></script>
+    <script src="finance/finance-dashboard.js?v=20260814-3"></script>
 
 </body>
 

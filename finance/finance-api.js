@@ -64,6 +64,11 @@
             params
         ),
         fixedAssets: params => request('/api/finance/fixed-assets', params),
+        employeeAdvances: params => request('/api/finance/employee-advances', params),
+        purchaseOrders: params => request('/api/finance/purchase-orders', params),
+        inventoryValuation: params => request('/api/finance/inventory-valuation', params),
+        cashAndGateways: params => request('/api/finance/cash-and-gateways', params),
+        vatHub: params => request('/api/finance/vat-hub', params),
         leases: params => request('/api/finance/leases', params),
         leaseInsights: params => request('/api/finance/lease-insights', params),
         apAging: params => request('/api/finance/ap-aging', params),
