@@ -8010,12 +8010,27 @@
                 const col = document.createElement('div');
                 col.className = 'col-12 col-sm-6 col-md-4 col-xl-3';
                 
-                const isOnline = sh.present_count > 0;
+                const count = (sh.employee_count !== undefined ? sh.employee_count : (sh.present_count !== undefined ? sh.present_count : 0));
+                const isOnline = count > 0;
                 const statusBadge = isOnline
                     ? '<span class="badge bg-success rounded-pill px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>نشط</span>'
                     : '<span class="badge bg-secondary rounded-pill px-2 py-1">لا توجد بصمات</span>';
 
-                const firstPunchFormatted = sh.first_punch ? new Date(sh.first_punch).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                let firstPunchFormatted = '--:--';
+                if (sh.first_punch && sh.first_punch !== '--' && sh.first_punch !== '--:--') {
+                    firstPunchFormatted = sh.first_punch;
+                    if (!firstPunchFormatted.includes('ص') && !firstPunchFormatted.includes('م') && firstPunchFormatted.includes(':')) {
+                        const parts = firstPunchFormatted.split(':');
+                        if (parts.length >= 2) {
+                            let h = parseInt(parts[0], 10);
+                            const m = parts[1];
+                            const period = h < 12 ? 'ص' : 'م';
+                            h = h % 12;
+                            if (h === 0) h = 12;
+                            firstPunchFormatted = `${String(h).padStart(2, '0')}:${m} ${period}`;
+                        }
+                    }
+                }
 
                 col.innerHTML = `
                     <div class="glass-card p-3 h-100 shadow-sm border ${isOnline ? 'border-success-subtle' : ''}" style="cursor: pointer; transition: transform 0.2s;" onclick="filterPunchesByShowroom('${escapeHtml(sh.area_name)}')">
@@ -8025,7 +8040,7 @@
                         </div>
                         <div class="d-flex justify-content-between align-items-baseline my-3">
                             <span class="text-muted small">الموظفون الحاضرون:</span>
-                            <span class="fs-4 fw-bold ${isOnline ? 'text-success' : 'text-muted'}">${sh.present_count}</span>
+                            <span class="fs-4 fw-bold ${isOnline ? 'text-success' : 'text-muted'}">${count}</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center small text-muted border-top pt-2">
                             <span><i class="fa-regular fa-clock me-1"></i>أول بصمة:</span>
@@ -8096,12 +8111,27 @@
 
                     logs.forEach(log => {
                         const tr = document.createElement('tr');
-                        const timeStr = log.punch_time ? new Date(log.punch_time).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
+                        
+                        // Safe Time formatting (supports '02:44:02 م' or '14:44:02' or ISO)
+                        let timeStr = log.punch_time || '--:--';
+                        if (timeStr && !timeStr.includes('ص') && !timeStr.includes('م') && timeStr.includes(':')) {
+                            const parts = timeStr.split(':');
+                            if (parts.length >= 2) {
+                                let h = parseInt(parts[0], 10);
+                                const m = parts[1];
+                                const s = parts[2] || '00';
+                                const period = h < 12 ? 'ص' : 'م';
+                                h = h % 12;
+                                if (h === 0) h = 12;
+                                timeStr = `${String(h).padStart(2, '0')}:${m}:${s} ${period}`;
+                            }
+                        }
                         
                         let punchBadge = '<span class="badge bg-secondary">بصمة</span>';
-                        if (log.punch_state_display === 'دخول' || log.punch_state === '0') {
+                        const stateStr = String(log.punch_state_display || log.punch_state || '').trim().toLowerCase();
+                        if (stateStr === 'دخول' || stateStr === '0' || stateStr.includes('in')) {
                             punchBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>دخول</span>';
-                        } else if (log.punch_state_display === 'خروج' || log.punch_state === '1') {
+                        } else if (stateStr === 'خروج' || stateStr === '1' || stateStr.includes('out')) {
                             punchBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>خروج</span>';
                         }
 
