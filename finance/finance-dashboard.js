@@ -20,6 +20,9 @@
     let currentTaxHub = {};
     let currentExpenseScopeStatus = 'approved';
     let currentMaintenance = {};
+    let currentShowroomPayload = null;
+    let currentShowroomPnl = null;
+    let chartInstances = {};
 
     const sortState = {
         showrooms: { key: 'name', dir: 'asc' },
@@ -289,6 +292,8 @@
     }
 
     function renderShowroomDetail(payload, pnl) {
+        currentShowroomPayload = payload;
+        currentShowroomPnl = pnl;
         const showroom = payload.showroom || {};
         const summary = payload.summary || {};
         const pnlSummary = pnl?.summary || {};
@@ -2136,16 +2141,21 @@
                 contractorsBody.replaceChildren();
                 contractors.forEach(c => {
                     const row = document.createElement('tr');
+                    row.className = 'finance-clickable-row';
+                    row.style.cursor = 'pointer';
+                    row.title = 'انقر لعرض كافة فواتير المقاول والمعارض المرتبطة';
+
                     const cName = document.createElement('td');
-                    cName.innerHTML = `<strong class="d-block">${c.vendor_name || c.invoice_account}</strong>`;
+                    cName.innerHTML = `<strong class="d-block text-primary"><i class="fa-solid fa-folder-open me-1 text-warning"></i> ${c.vendor_name || c.invoice_account}</strong>`;
                     const cAcc = textElement('td', c.invoice_account, 'small text-muted');
                     cAcc.dir = 'ltr';
-                    const cInv = textElement('td', integer.format(c.invoice_count || 0), 'text-center');
+                    const cInv = textElement('td', integer.format(c.invoice_count || 0), 'text-center fw-bold');
                     cInv.dir = 'ltr';
                     const cSh = textElement('td', `${integer.format(c.showrooms_served || 0)} معرض`, 'text-center small');
                     const cAmt = textElement('td', money.format(c.total_amount || 0), 'text-end fw-bold text-primary');
                     cAmt.dir = 'ltr';
                     row.append(cName, cAcc, cInv, cSh, cAmt);
+                    row.addEventListener('click', () => openContractorDetail(c.invoice_account, c.vendor_name));
                     contractorsBody.append(row);
                 });
             }
@@ -2210,392 +2220,445 @@
         }
     }
 
-    async function load() {
-        if (loading || !window.FinancePlatformApi) return;
-        loading = true;
-        setState('loading', 'جارٍ تحديث البيانات');
-        const button = element('financePlatformRefresh');
-        button.disabled = true;
-        try {
-            const params = periodParams();
-            const [overview, showrooms, vendorInvoices, leases, leaseInsights, apAging, vendorAnalytics, trend, additional, fixedAssets, advances, purchases, inventory, treasury, taxHub, maintData] = await Promise.all([
-                window.FinancePlatformApi.overview(params),
-                window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
-                window.FinancePlatformApi.vendorInvoices({ page: 1, page_size: 100 }),
-                window.FinancePlatformApi.leases({ horizon_days: 90 }),
-                window.FinancePlatformApi.leaseInsights({})
-                    .catch(() => ({ configured: false })),
-                window.FinancePlatformApi.apAging({})
-                    .catch(() => ({ configured: false })),
-                window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 50, invoice_limit: 50 })
-                    .catch(() => ({ configured: false, vendors: [], open_invoices: [] })),
-                window.FinancePlatformApi.trialBalanceTrend({
-                    start: '2025-01-01', end: element('financePlatformEnd').value
-                }).catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.additionalAnalytics({
-                    as_of: element('financePlatformEnd').value,
-                    month: element('financePlatformEnd').value.slice(0, 7)
-                }).catch(() => ({ state: 'partial', sections: {} })),
-                window.FinancePlatformApi.fixedAssets()
-                    .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.employeeAdvances()
-                    .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.purchaseOrders()
-                    .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.inventoryValuation()
-                    .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.cashAndGateways()
-                    .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.vatHub()
-                    .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.maintenanceAnalytics(params)
-                    .catch(() => ({ state: 'unavailable', showrooms: [], contractors: [], monthly_trend: [], recent_invoices: [], summary: {} }))
-            ]);
-            renderOverview(overview);
-            renderShowrooms(showrooms, overview.summary?.expense_scope_status);
-            renderVendorInvoices(vendorInvoices);
-            renderLeases(leases);
-            renderLeaseInsights(leaseInsights);
-            renderApAging(apAging);
-            renderVendorAnalytics(vendorAnalytics);
-            renderTrialBalanceTrend(trend);
-            renderAdditionalAnalytics(additional);
-            renderFixedAssets(fixedAssets);
-            renderEmployeeAdvances(advances);
-            renderPurchaseOrders(purchases);
-            renderInventoryValuation(inventory);
-            renderCashAndGateways(treasury);
-            renderVatHub(taxHub);
-            renderMaintenance(maintData);
-        } catch (error) {
-            renderError(error);
-        } finally {
-            loading = false;
-            button.disabled = false;
+    function openContractorDetail(invoiceAccount, vendorName) {
+        const modalEl = element('financeContractorInvoicesModal');
+        if (!modalEl) return;
+
+        const titleEl = element('financeContractorInvoicesTitle');
+        if (titleEl) titleEl.textContent = `سجل أعمال وفواتير: ${vendorName || invoiceAccount}`;
+        const subTitleEl = element('financeContractorInvoicesSubtitle');
+        if (subTitleEl) subTitleEl.textContent = `كود المورد: ${invoiceAccount} — كافة فواتير الصيانة والمعارض المستفيدة`;
+
+        const allInvoices = (currentMaintenance.recent_invoices || []).filter(
+            inv => String(inv.invoice_account) === String(invoiceAccount)
+        );
+
+        const totalAmt = allInvoices.reduce((sum, i) => sum + (Number(i.line_amount) || 0), 0);
+        const totalTax = allInvoices.reduce((sum, i) => sum + (Number(i.sales_tax_amount) || 0), 0);
+        const totalGross = totalAmt + totalTax;
+        const showrooms = new Set(allInvoices.map(i => i.branch_code)).size;
+
+        const headerStats = element('financeContractorHeaderStats');
+        if (headerStats) {
+            headerStats.innerHTML = `
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded text-center border">
+                        <small class="text-muted d-block mb-1">إجمالي مبالغ الصيانة</small>
+                        <strong class="text-primary fs-5" dir="ltr">${money.format(totalAmt)} SAR</strong>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded text-center border">
+                        <small class="text-muted d-block mb-1">الضريبة المضافة</small>
+                        <strong class="text-secondary fs-5" dir="ltr">${money.format(totalTax)} SAR</strong>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded text-center border">
+                        <small class="text-muted d-block mb-1">الإجمالي شامل الضريبة</small>
+                        <strong class="text-success fs-5" dir="ltr">${money.format(totalGross)} SAR</strong>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded text-center border">
+                        <small class="text-muted d-block mb-1">الفواتير / المعارض</small>
+                        <strong class="text-dark fs-5">${allInvoices.length} فاتورة / ${showrooms} معرض</strong>
+                    </div>
+                </div>
+            `;
         }
-    }
 
-    function switchSubtab(tabName) {
-        const validTabs = ['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'];
-        if (!validTabs.includes(tabName)) tabName = 'overview';
+        function renderInvoicesTable(filterTerm = '') {
+            const body = element('financeContractorInvoicesBody');
+            if (!body) return;
 
-        document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.subtab === tabName);
-        });
-
-        document.querySelectorAll('.finance-tab-pane').forEach(pane => {
-            pane.hidden = (pane.dataset.pane !== tabName);
-        });
-
-        if (window.location.hash !== `#${tabName}`) {
-            history.replaceState(null, '', `#${tabName}`);
-        }
-    }
-
-    function initSubnav() {
-        document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                switchSubtab(btn.dataset.subtab);
+            const term = (filterTerm || '').toLowerCase().trim();
+            const filtered = allInvoices.filter(inv => {
+                if (!term) return true;
+                return String(inv.showroom_name || '').toLowerCase().includes(term) ||
+                    String(inv.branch_code || '').toLowerCase().includes(term) ||
+                    String(inv.invoice_id || '').toLowerCase().includes(term) ||
+                    String(inv.account_name || '').toLowerCase().includes(term) ||
+                    String(inv.description || '').toLowerCase().includes(term);
             });
-        });
 
-        document.querySelectorAll('[data-goto-tab]').forEach(el => {
-            el.addEventListener('click', () => {
-                const targetTab = el.dataset.gotoTab;
-                if (targetTab) {
-                    switchSubtab(targetTab);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (!filtered.length) {
+                tableMessage(body, 8, 'لا توجد فواتير صيانة مطابقة للبحث.');
+                return;
+            }
+
+            body.replaceChildren();
+            filtered.forEach(inv => {
+                const row = document.createElement('tr');
+
+                // Showroom
+                const shCell = document.createElement('td');
+                shCell.innerHTML = `<strong class="d-block text-dark">${inv.showroom_name}</strong><span class="small text-muted">كود الفرع: ${inv.branch_code}</span>`;
+
+                // Invoice ID
+                const invCell = textElement('td', inv.invoice_id, 'fw-bold small');
+                invCell.dir = 'ltr';
+
+                // Date
+                const dateCell = textElement('td', inv.invoice_date, 'small text-muted');
+                dateCell.dir = 'ltr';
+
+                // Main Account
+                const accCell = document.createElement('td');
+                accCell.innerHTML = `<span class="small d-block fw-semibold">${inv.account_name}</span><span class="text-muted" style="font-size:0.75rem;" dir="ltr">${inv.main_account}</span>`;
+
+                // Description
+                const descCell = textElement('td', inv.description || '—', 'small');
+
+                // Net Amount
+                const amtCell = textElement('td', money.format(inv.line_amount || 0), 'text-end fw-bold');
+                amtCell.dir = 'ltr';
+
+                // Tax Amount
+                const taxCell = textElement('td', money.format(inv.sales_tax_amount || 0), 'text-end text-muted small');
+                taxCell.dir = 'ltr';
+
+                // Gross Amount
+                const grossVal = (Number(inv.line_amount) || 0) + (Number(inv.sales_tax_amount) || 0);
+                const grossCell = textElement('td', money.format(grossVal), 'text-end fw-bold text-success');
+                grossCell.dir = 'ltr';
+
+                row.append(shCell, invCell, dateCell, accCell, descCell, amtCell, taxCell, grossCell);
+                body.append(row);
+            });
+        }
+
+        const searchInput = element('financeContractorModalSearch');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.oninput = () => renderInvoicesTable(searchInput.value);
+        }
+
+        renderInvoicesTable();
+
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
+    function renderOverviewCharts(overview, showrooms, additional, maintData) {
+        if (typeof Chart === 'undefined') return;
+
+        // 1. OPEX Donut Chart
+        const donutCtx = element('financeOpexDonutChart')?.getContext('2d');
+        if (donutCtx) {
+            if (chartInstances.opexDonut) {
+                chartInstances.opexDonut.destroy();
+            }
+
+            const categories = overview?.categories || [];
+            let labels = [];
+            let values = [];
+
+            if (categories.length) {
+                labels = categories.slice(0, 7).map(c => c.category_name || c.main_account_id);
+                values = categories.slice(0, 7).map(c => Math.abs(Number(c.amount) || 0));
+            } else {
+                labels = ['مصاريف تشغيلية'];
+                values = [Number(overview?.summary?.non_sales_expenses) || 1];
+            }
+
+            chartInstances.opexDonut = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#fe7900', '#3b82f6', '#10b981', '#f59e0b',
+                            '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                font: { family: 'Tajawal', size: 11 },
+                                color: '#4b5563'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.label}: ${money.format(ctx.raw)} SAR`
+                            }
+                        }
+                    },
+                    cutout: '68%'
                 }
             });
-        });
-
-        const initialHash = (window.location.hash || '').replace('#', '');
-        if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(initialHash)) {
-            switchSubtab(initialHash);
-        } else {
-            switchSubtab('overview');
         }
 
-        window.addEventListener('hashchange', () => {
-            const currentHash = (window.location.hash || '').replace('#', '');
-            if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(currentHash)) {
-                switchSubtab(currentHash);
+        // 2. Showroom Expense & Performance Comparison (Bar Chart)
+        const barCtx = element('financeEbitdaBarChart')?.getContext('2d');
+        if (barCtx) {
+            if (chartInstances.ebitdaBar) {
+                chartInstances.ebitdaBar.destroy();
+            }
+
+            const shList = (showrooms?.showrooms || []).filter(s => Number(s.non_sales_amount) > 0 || Number(s.sales_revenue) > 0);
+            const sorted = [...shList].sort((a, b) => (Number(b.non_sales_amount) || 0) - (Number(a.non_sales_amount) || 0));
+            const top5 = sorted.slice(0, 5);
+            const bottom5 = sorted.slice(-5).reverse();
+            const combined = [...top5, ...bottom5];
+
+            const barLabels = combined.map(s => s.name || s.number);
+            const barValues = combined.map(s => Number(s.non_sales_amount || 0));
+            const barColors = combined.map((s, idx) => idx < top5.length ? 'rgba(254, 121, 0, 0.85)' : 'rgba(59, 130, 246, 0.85)');
+
+            chartInstances.ebitdaBar = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: barLabels,
+                    datasets: [{
+                        label: 'مصروف الفرع Trial Balance (SAR)',
+                        data: barValues,
+                        backgroundColor: barColors,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` المصروف: ${money.format(ctx.raw)} SAR`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: { family: 'Tajawal', size: 10 },
+                                callback: val => (val >= 1000 ? (val / 1000) + 'k' : val)
+                            },
+                            grid: { color: 'rgba(0,0,0,0.04)' }
+                        },
+                        y: {
+                            ticks: { font: { family: 'Tajawal', size: 10 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function renderMaintenanceChart(trendData) {
+        if (typeof Chart === 'undefined') return;
+        const ctx = element('financeMaintTrendChart')?.getContext('2d');
+        if (!ctx) return;
+
+        if (chartInstances.maintTrend) {
+            chartInstances.maintTrend.destroy();
+        }
+
+        const data = [...(trendData || [])].reverse();
+        const labels = data.map(t => t.period_month);
+        const values = data.map(t => Number(t.total_amount) || 0);
+
+        chartInstances.maintTrend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'تكلفة الصيانة الشهرية (SAR)',
+                    data: values,
+                    borderColor: '#fe7900',
+                    backgroundColor: 'rgba(254, 121, 0, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fe7900'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` التكلفة: ${money.format(ctx.raw)} SAR`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { font: { family: 'Tajawal', size: 9 } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: {
+                            font: { family: 'Tajawal', size: 9 },
+                            callback: val => (val >= 1000 ? (val / 1000) + 'k' : val)
+                        },
+                        grid: { color: 'rgba(0,0,0,0.04)' }
+                    }
+                }
             }
         });
     }
 
-    function applyPreset(presetName) {
-        const today = new Date();
-        let start, end;
-
-        if (presetName === 'thisMonth') {
-            start = new Date(today.getFullYear(), today.getMonth(), 1);
-            end = today;
-        } else if (presetName === 'lastMonth') {
-            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            end = new Date(today.getFullYear(), today.getMonth(), 0);
-        } else if (presetName === 'thisQuarter') {
-            const currentQuarter = Math.floor(today.getMonth() / 3);
-            start = new Date(today.getFullYear(), currentQuarter * 3, 1);
-            end = today;
-        } else if (presetName === 'ytd') {
-            start = new Date(today.getFullYear(), 0, 1);
-            end = today;
-        } else if (presetName === 'lastYear') {
-            start = new Date(today.getFullYear() - 1, 0, 1);
-            end = new Date(today.getFullYear() - 1, 11, 31);
-        } else if (presetName === 'last30days') {
-            start = new Date();
-            start.setDate(today.getDate() - 30);
-            end = today;
+    function exportShowroom360Pack(payload, pnl) {
+        if (!payload || !payload.showroom) {
+            alert('يرجى فتح ملف المعرض أولاً لتصدير البيانات.');
+            return;
+        }
+        if (typeof XLSX === 'undefined') {
+            alert('مكتبة تصدير Excel غير محملة.');
+            return;
         }
 
-        if (start && end) {
-            element('financePlatformStart').value = isoDate(start);
-            element('financePlatformEnd').value = isoDate(end);
+        const sh = payload.showroom;
+        const pnlSum = pnl?.summary || {};
+        const hasPnl = pnl?.state === 'ready' && pnlSum.revenue_available;
 
-            document.querySelectorAll('.finance-preset-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.preset === presetName);
-            });
+        const wb = XLSX.utils.book_new();
 
-            load();
-        }
+        // Sheet 1: Showroom P&L
+        const pnlRows = [
+            { "البند المالي": "اسم المعرض", "القيمة / البيان": sh.name, "ملاحظات": `كود الفرع: ${sh.branch_dimension || sh.number}` },
+            { "البند المالي": "الفترة المالية", "القيمة / البيان": `${payload.period?.start || ''} إلى ${payload.period?.end || ''}`, "ملاحظات": "تاريخ الحركة" },
+            { "البند المالي": "إيرادات مبيعات المعرض (Revenue)", "القيمة / البيان": hasPnl ? Number(pnlSum.revenue || 0) : "غير متوفر", "ملاحظات": "إجمالي المبيعات المعتمدة" },
+            { "البند المالي": "تكلفة البضاعة المباعة (COGS)", "القيمة / البيان": hasPnl ? Number(pnlSum.cogs || 0) : "غير متوفر", "ملاحظات": "تكلفة المخزون المباع" },
+            { "البند المالي": "مجمل الربح (Gross Profit)", "القيمة / البيان": hasPnl ? Number(pnlSum.gross_profit || 0) : "غير متوفر", "ملاحظات": `هامش مجمل الربح: ${pnlSum.gross_margin_pct || 0}%` },
+            { "البند المالي": "مصروف الإيجار الشهري المستهلك", "القيمة / البيان": Number(pnlSum.lease_amortization || payload.summary?.monthly_lease_expense || 0), "ملاحظات": "إيجار الفرع" },
+            { "البند المالي": "رواتب ومستحقات الموظفين", "القيمة / البيان": Number(pnlSum.salaries_expense || 0), "ملاحظات": "رواتب كادر المعرض" },
+            { "البند المالي": "مصاريف الصيانة والخدمات", "القيمة / البيان": Number(pnlSum.maintenance_expense || 0), "ملاحظات": "صيانة وتشغيل" },
+            { "البند المالي": "إهلاك الأصول الثابتة والديكور", "القيمة / البيان": Number(pnlSum.depreciation_expense || 0), "ملاحظات": "إهلاك دفتري" },
+            { "البند المالي": "مصاريف تشغيلية أخرى", "القيمة / البيان": Number(pnlSum.other_opex || 0), "ملاحظات": "كهرباء، ضيافة، عُدد" },
+            { "البند المالي": "إجمالي المصاريف التشغيلية (Total OPEX)", "القيمة / البيان": Number(pnlSum.total_expense || payload.summary?.trial_balance_expense || 0), "ملاحظات": "مجموع مصاريف المعرض" },
+            { "البند المالي": "صافي الربح التشغيلي للمعرض (EBITDA)", "القيمة / البيان": hasPnl ? Number(pnlSum.operating_result || 0) : "—", "ملاحظات": `هامش EBITDA: ${pnlSum.ebitda_margin_pct || 0}%` }
+        ];
+        const wsPnl = XLSX.utils.json_to_sheet(pnlRows);
+        XLSX.utils.book_append_sheet(wb, wsPnl, "قائمة الدخل والربحية");
+
+        // Sheet 2: Leases
+        const leaseRows = (payload.leases || []).map(l => ({
+            "رقم العقد": l.lease_id,
+            "المؤجر": l.landlord_name || '—',
+            "المبلغ السنوي": Number(l.annual_amount || 0),
+            "المبلغ الشهري المستهلك": Number(l.monthly_amount || 0),
+            "تاريخ الاستحقاق القادم": l.next_due_date || '—',
+            "تاريخ البداية": l.start_date || '—',
+            "تاريخ النهاية": l.end_date || '—',
+            "إجمالي قيمة العقد": Number(l.total_lease_amount || 0)
+        }));
+        const wsLeases = XLSX.utils.json_to_sheet(leaseRows.length ? leaseRows : [{ "ملاحظة": "لا توجد عقود إيجار مسجلة لهذا المعرض" }]);
+        XLSX.utils.book_append_sheet(wb, wsLeases, "عقد الإيجار");
+
+        // Sheet 3: Fixed Assets
+        const assetRows = (payload.fixed_assets || []).map(a => ({
+            "رقم الأصل": a.asset_number,
+            "اسم الأصل": a.name,
+            "مجموعة الأصول": a.asset_group || '—',
+            "الموقع / الفرع": a.location || sh.branch_dimension,
+            "تاريخ الاقتناء": a.acquisition_date || '—',
+            "تكلفة الاقتناء": Number(a.acquisition_cost || 0),
+            "مجمع الإهلاك": Number(a.depreciation || 0),
+            "صافي القيمة الدفترية": Number(a.net_book_value || 0)
+        }));
+        const wsAssets = XLSX.utils.json_to_sheet(assetRows.length ? assetRows : [{ "ملاحظة": "لا توجد أصول ثابتة مرتبطة بهذا المعرض" }]);
+        XLSX.utils.book_append_sheet(wb, wsAssets, "الأصول الثابتة");
+
+        // Sheet 4: Maintenance & Invoices
+        const invRows = (payload.invoices || []).map(inv => ({
+            "رقم الفاتورة": inv.invoice_id,
+            "المورد / المقاول": inv.vendor_name || inv.invoice_account,
+            "تاريخ الفاتورة": inv.invoice_date,
+            "الحساب المحاسبي": inv.account_name || inv.main_account,
+            "رقم الحساب": inv.main_account,
+            "البيان / الوصف": inv.description || '—',
+            "المبلغ": Number(inv.line_amount || 0),
+            "الضريبة": Number(inv.sales_tax_amount || 0),
+            "الإجمالي شامل الضريبة": Number(inv.line_amount || 0) + Number(inv.sales_tax_amount || 0)
+        }));
+        const wsInvs = XLSX.utils.json_to_sheet(invRows.length ? invRows : [{ "ملاحظة": "لا توجد فواتير صيانة منسوبة لهذا المعرض" }]);
+        XLSX.utils.book_append_sheet(wb, wsInvs, "فواتير الصيانة والمقاولين");
+
+        // Sheet 5: Employee Advances
+        const advRows = (payload.employee_advances || []).map(adv => ({
+            "الرقم الوظيفي": adv.worker_id,
+            "اسم الموظف": adv.worker_name,
+            "المعرض / الفرع": adv.branch_code || sh.branch_dimension,
+            "رصيد السلفة المفتوح": Number(adv.open_balance || 0),
+            "الحالة": adv.status === 'open' ? 'قائمة / نشطة' : adv.status
+        }));
+        const wsAdv = XLSX.utils.json_to_sheet(advRows.length ? advRows : [{ "ملاحظة": "لا توجد سلف معلقة لموظفي هذا المعرض" }]);
+        XLSX.utils.book_append_sheet(wb, wsAdv, "سلف الموظفين");
+
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `Orange_Showroom_360_${sh.branch_dimension || sh.number}_${dateStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
     }
 
-    function initialize() {
-        if (initialized) return;
-        initialized = true;
-        setDefaultPeriod();
-        initSubnav();
-
-        document.querySelectorAll('.finance-preset-btn').forEach(btn => {
-            btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
-        });
-
-        const showroomsSearch = element('financeShowroomsSearch');
-        const showroomsSearchClear = element('financeShowroomsSearchClear');
-        const showroomsStatus = element('financeShowroomsStatusFilter');
-
-        if (showroomsSearch) {
-            showroomsSearch.addEventListener('input', () => {
-                filters.showrooms.search = showroomsSearch.value;
-                if (showroomsSearchClear) showroomsSearchClear.hidden = !showroomsSearch.value;
-                filterAndRenderShowrooms();
-            });
+    function exportMaintenanceExecutiveReport() {
+        if (!currentMaintenance || !currentMaintenance.showrooms) {
+            alert('لا توجد بيانات صيانة متاحة للتصدير.');
+            return;
         }
-        if (showroomsSearchClear) {
-            showroomsSearchClear.addEventListener('click', () => {
-                if (showroomsSearch) showroomsSearch.value = '';
-                filters.showrooms.search = '';
-                showroomsSearchClear.hidden = true;
-                filterAndRenderShowrooms();
-            });
-        }
-        if (showroomsStatus) {
-            showroomsStatus.addEventListener('change', () => {
-                filters.showrooms.status = showroomsStatus.value;
-                filterAndRenderShowrooms();
-            });
+        if (typeof XLSX === 'undefined') {
+            alert('مكتبة تصدير Excel غير محملة.');
+            return;
         }
 
-        const invoicesSearch = element('financeInvoicesSearch');
-        const invoicesSearchClear = element('financeInvoicesSearchClear');
-        const invoicesStatus = element('financeInvoicesStatusFilter');
+        const wb = XLSX.utils.book_new();
 
-        if (invoicesSearch) {
-            invoicesSearch.addEventListener('input', () => {
-                filters.invoices.search = invoicesSearch.value;
-                if (invoicesSearchClear) invoicesSearchClear.hidden = !invoicesSearch.value;
-                filterAndRenderInvoices();
-            });
-        }
-        if (invoicesSearchClear) {
-            invoicesSearchClear.addEventListener('click', () => {
-                if (invoicesSearch) invoicesSearch.value = '';
-                filters.invoices.search = '';
-                invoicesSearchClear.hidden = true;
-                filterAndRenderInvoices();
-            });
-        }
-        if (invoicesStatus) {
-            invoicesStatus.addEventListener('change', () => {
-                filters.invoices.status = invoicesStatus.value;
-                filterAndRenderInvoices();
-            });
-        }
+        // Sheet 1: Showrooms Benchmark
+        const shRows = (currentMaintenance.showrooms || []).map(sh => ({
+            "كود الفرع": sh.branch_code,
+            "اسم المعرض": sh.showroom_name,
+            "مبيعات المعرض": Number(sh.sales_revenue || 0),
+            "صيانة معارض (560019)": Number(sh.showroom_maint_amount || 0),
+            "صيانة أجهزة وإلكترونيات (560014)": Number(sh.electronic_maint_amount || 0),
+            "صيانة أخرى ومصاريف": Number(sh.other_maint_amount || 0),
+            "إجمالي مصاريف الصيانة": Number(sh.total_maintenance_amount || 0),
+            "نسبة الصيانة من المبيعات %": Number(sh.maintenance_ratio_pct || 0),
+            "عدد الفواتير": Number(sh.invoice_count || 0)
+        }));
+        const wsSh = XLSX.utils.json_to_sheet(shRows);
+        XLSX.utils.book_append_sheet(wb, wsSh, "ملخص المعارض");
 
-        const assetsSearch = element('financeAssetsSearch');
-        const assetsSearchClear = element('financeAssetsSearchClear');
-        const assetsGroup = element('financeAssetsGroupFilter');
-        const assetsScope = element('financeAssetsScopeFilter');
+        // Sheet 2: Top Contractors
+        const cRows = (currentMaintenance.contractors || []).map(c => ({
+            "كود المورد / المقاول": c.invoice_account,
+            "اسم المقاول": c.vendor_name,
+            "عدد الفواتير": Number(c.invoice_count || 0),
+            "المعارض المخدومة": Number(c.showrooms_served || 0),
+            "إجمالي المبالغ": Number(c.total_amount || 0),
+            "إجمالي الضريبة": Number(c.total_tax || 0),
+            "الإجمالي شامل الضريبة": Number(c.total_amount || 0) + Number(c.total_tax || 0)
+        }));
+        const wsC = XLSX.utils.json_to_sheet(cRows);
+        XLSX.utils.book_append_sheet(wb, wsC, "كبار المقاولين");
 
-        if (assetsSearch) {
-            assetsSearch.addEventListener('input', () => {
-                filters.assets.search = assetsSearch.value;
-                if (assetsSearchClear) assetsSearchClear.hidden = !assetsSearch.value;
-                filterAndRenderAssets();
-            });
-        }
-        if (assetsSearchClear) {
-            assetsSearchClear.addEventListener('click', () => {
-                if (assetsSearch) assetsSearch.value = '';
-                filters.assets.search = '';
-                assetsSearchClear.hidden = true;
-                filterAndRenderAssets();
-            });
-        }
-        if (assetsGroup) {
-            assetsGroup.addEventListener('change', () => {
-                filters.assets.group = assetsGroup.value;
-                filterAndRenderAssets();
-            });
-        }
-        if (assetsScope) {
-            assetsScope.addEventListener('change', () => {
-                filters.assets.scope = assetsScope.value;
-                filterAndRenderAssets();
-            });
-        }
-
-
-        const advancesSearch = element('financeAdvancesSearch');
-        const advancesSearchClear = element('financeAdvancesSearchClear');
-        const advancesAccount = element('financeAdvancesAccountFilter');
-        const advancesStatus = element('financeAdvancesStatusFilter');
-
-        if (advancesSearch) {
-            advancesSearch.addEventListener('input', () => {
-                filters.advances.search = advancesSearch.value;
-                if (advancesSearchClear) advancesSearchClear.hidden = !advancesSearch.value;
-                filterAndRenderAdvances();
-            });
-        }
-        if (advancesSearchClear) {
-            advancesSearchClear.addEventListener('click', () => {
-                if (advancesSearch) advancesSearch.value = '';
-                filters.advances.search = '';
-                advancesSearchClear.hidden = true;
-                filterAndRenderAdvances();
-            });
-        }
-        if (advancesAccount) {
-            advancesAccount.addEventListener('change', () => {
-                filters.advances.account = advancesAccount.value;
-                filterAndRenderAdvances();
-            });
-        }
-        if (advancesStatus) {
-            advancesStatus.addEventListener('change', () => {
-                filters.advances.status = advancesStatus.value;
-                filterAndRenderAdvances();
-            });
-        }
-
-        const purchasesSearch = element('financePurchasesSearch');
-        const purchasesSearchClear = element('financePurchasesSearchClear');
-        const purchasesStatus = element('financePurchasesStatusFilter');
-
-        if (purchasesSearch) {
-            purchasesSearch.addEventListener('input', () => {
-                filters.purchases.search = purchasesSearch.value;
-                if (purchasesSearchClear) purchasesSearchClear.hidden = !purchasesSearch.value;
-                filterAndRenderPurchases();
-            });
-        }
-        if (purchasesSearchClear) {
-            purchasesSearchClear.addEventListener('click', () => {
-                if (purchasesSearch) purchasesSearch.value = '';
-                filters.purchases.search = '';
-                purchasesSearchClear.hidden = true;
-                filterAndRenderPurchases();
-            });
-        }
-        if (purchasesStatus) {
-            purchasesStatus.addEventListener('change', () => {
-                filters.purchases.status = purchasesStatus.value;
-                filterAndRenderPurchases();
-            });
-        }
-
-        const inventorySearch = element('financeInventorySearch');
-        const inventorySearchClear = element('financeInventorySearchClear');
-
-        if (inventorySearch) {
-            inventorySearch.addEventListener('input', () => {
-                filters.inventory.search = inventorySearch.value;
-                if (inventorySearchClear) inventorySearchClear.hidden = !inventorySearch.value;
-                filterAndRenderInventory();
-            });
-        }
-        if (inventorySearchClear) {
-            inventorySearchClear.addEventListener('click', () => {
-                if (inventorySearch) inventorySearch.value = '';
-                filters.inventory.search = '';
-                inventorySearchClear.hidden = true;
-                filterAndRenderInventory();
-            });
-        }
-
-        const maintSearch = element('financeMaintSearch');
-        const maintSearchClear = element('financeMaintSearchClear');
-
-        if (maintSearch) {
-            maintSearch.addEventListener('input', () => {
-                filters.maintenance.search = maintSearch.value;
-                if (maintSearchClear) maintSearchClear.hidden = !maintSearch.value;
-                filterAndRenderMaintenanceShowrooms();
-            });
-        }
-        if (maintSearchClear) {
-            maintSearchClear.addEventListener('click', () => {
-                if (maintSearch) maintSearch.value = '';
-                filters.maintenance.search = '';
-                maintSearchClear.hidden = true;
-                filterAndRenderMaintenanceShowrooms();
-            });
-        }
-
-        document.querySelectorAll('th.finance-sortable').forEach(th => {
-            th.addEventListener('click', () => {
-                const table = th.dataset.table;
-                const key = th.dataset.sort;
-                if (!table || !key) return;
-                if (sortState[table]?.key === key) {
-                    sortState[table].dir = sortState[table].dir === 'asc' ? 'desc' : 'asc';
-                } else {
-                    sortState[table] = { key, dir: 'asc' };
-                }
-                if (table === 'showrooms') filterAndRenderShowrooms();
-                else if (table === 'invoices') filterAndRenderInvoices();
-                else if (table === 'topVendors') sortAndRenderTopVendors();
-                else if (table === 'leases') sortAndRenderLeases();
-                else if (table === 'assets') filterAndRenderAssets();
-                else if (table === 'advances') filterAndRenderAdvances();
-                else if (table === 'purchases') filterAndRenderPurchases();
-                else if (table === 'inventory') filterAndRenderInventory();
-                else if (table === 'maintenance') filterAndRenderMaintenanceShowrooms();
-            });
-        });
-
-        element('financePlatformRefresh').addEventListener('click', load);
-        element('financePlatformApplyPeriod').addEventListener('click', () => {
-            document.querySelectorAll('.finance-preset-btn').forEach(btn => btn.classList.remove('active'));
-            load();
-        });
-        element('financeShowroomClose').addEventListener('click', closeShowroomDetail);
-        element('financeShowroomBackdrop').addEventListener('click', closeShowroomDetail);
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && !element('financeShowroomDrawer').hidden) {
-                closeShowroomDetail();
-            }
-        });
-        element('platform-tab').addEventListener('shown.bs.tab', load);
-        load();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialize, { once: true });
-    } else {
-        initialize();
-    }
-})();
+        // Sheet 3: Detailed Invoices
+        const invRows = (currentMaintenance.recent_invoices || []).map(inv => ({
+            "كود الفرع": inv.branch_code,
+            "اسم المعرض": inv.showroom_name,
+            "رقم الفاتورة": inv.invoice_id,
+            "كود المقاول": inv.invoice_account,
+            "اسم المقاول / المورد": inv.vendor_name,
+            "تاريخ الفاتورة": inv.invoice_date,
+            "رقم الحساب": inv.main_account,
+            "اسم الحساب المحاسبي": inv.account_name,
+            "البيان / الوصف": inv.description || '—',
+            "المبلغ": Number(inv.line_amount || 0),
+            "الضريبة": Number(inv.sales_tax_amount || 0),
+            "الإجمالي شامل الضريبة": Number(inv.line_amount || 0) + Number(inv.sales_tax_amount || 

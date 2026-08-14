@@ -605,6 +605,32 @@
                         </article>
                     </div>
 
+                    <!-- Executive Visual Charts Grid -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-5">
+                            <div class="finance-card h-100 shadow-sm border-0" style="border-radius: 14px; background: white;">
+                                <div class="finance-card-header d-flex justify-content-between align-items-center p-3 border-bottom">
+                                    <h3 class="finance-card-title m-0 fs-6 fw-bold"><i class="fa-solid fa-chart-pie text-warning me-2"></i> توزيع المصاريف التشغيلية</h3>
+                                    <span class="badge bg-light text-muted">Trial Balance OPEX</span>
+                                </div>
+                                <div class="p-3 d-flex justify-content-center align-items-center" style="min-height: 260px; position: relative;">
+                                    <canvas id="financeOpexDonutChart" style="max-height: 240px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="finance-card h-100 shadow-sm border-0" style="border-radius: 14px; background: white;">
+                                <div class="finance-card-header d-flex justify-content-between align-items-center p-3 border-bottom">
+                                    <h3 class="finance-card-title m-0 fs-6 fw-bold"><i class="fa-solid fa-chart-simple text-primary me-2"></i> مقارنة هوامش أرباح المعارض (EBITDA Margin)</h3>
+                                    <span class="badge bg-light text-muted">Top & Bottom Showrooms</span>
+                                </div>
+                                <div class="p-3" style="min-height: 260px; position: relative;">
+                                    <canvas id="financeEbitdaBarChart" style="max-height: 240px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="finance-analytics-grid">
                         <section class="finance-ledger-panel">
                             <header>
@@ -1354,11 +1380,16 @@
 
                 <!-- Pane 11: Maintenance & Services Cost Center -->
                 <div class="finance-tab-pane" id="financePaneMaintenance" data-pane="maintenance" hidden>
-                    <div class="finance-pane-header">
+                    <div class="finance-pane-header d-flex flex-wrap justify-content-between align-items-center gap-3">
                         <div>
                             <span class="finance-section-kicker">SHOWROOM MAINTENANCE & SERVICES ANALYTICS</span>
                             <h2 class="finance-pane-title"><i class="fa-solid fa-screwdriver-wrench text-warning me-2"></i> مركز تحليل مصاريف صيانة المعارض والخدمات</h2>
                             <p class="finance-pane-subtitle">تحليل تكاليف الصيانة الدورية، صيانة الأجهزة والشبكات، وفواتير المقاولين الموزعة على كل معرض ونسبتها من المبيعات.</p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-success fw-bold px-3 py-2 d-flex align-items-center gap-2 shadow-sm" id="financeMaintExportReportBtn" style="border-radius: 10px;">
+                                <i class="fa-solid fa-file-excel"></i> تصدير التقرير التنفيذي للصيانة (Excel)
+                            </button>
                         </div>
                     </div>
 
@@ -1421,6 +1452,9 @@
                                 <div class="finance-card-header d-flex justify-content-between align-items-center">
                                     <h3 class="finance-card-title m-0"><i class="fa-solid fa-chart-line text-info me-2"></i> التطور الشهري لمصاريف الصيانة</h3>
                                     <span class="badge bg-light text-dark">شهرياً</span>
+                                </div>
+                                <div class="p-3 border-bottom" style="height: 180px; position: relative;">
+                                    <canvas id="financeMaintTrendChart"></canvas>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm finance-register-table align-middle">
@@ -1509,15 +1543,20 @@
                 <div class="finance-showroom-drawer" id="financeShowroomDrawer" hidden>
                     <button type="button" class="finance-drawer-backdrop" id="financeShowroomBackdrop" aria-label="إغلاق تفاصيل المعرض"></button>
                     <aside class="finance-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="financeShowroomTitle">
-                        <header class="finance-drawer-header">
+                        <header class="finance-drawer-header d-flex flex-wrap justify-content-between align-items-start gap-2">
                             <div>
                                 <span class="finance-section-kicker">SHOWROOM FINANCE FILE</span>
                                 <h2 id="financeShowroomTitle">تفاصيل المعرض المالية</h2>
                                 <p id="financeShowroomMeta">جارٍ تحميل البيانات المرتبطة من Dynamics…</p>
                             </div>
-                            <button type="button" class="finance-drawer-close" id="financeShowroomClose" aria-label="إغلاق">
-                                <span aria-hidden="true">×</span>
-                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-success fw-bold px-3 d-flex align-items-center gap-2 shadow-sm" id="financeShowroomExportPackBtn" style="border-radius: 8px;">
+                                    <i class="fa-solid fa-file-excel"></i> تصدير ملف المعرض (Showroom Pack)
+                                </button>
+                                <button type="button" class="finance-drawer-close" id="financeShowroomClose" aria-label="إغلاق">
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                            </div>
                         </header>
                         <div class="finance-drawer-content" id="financeShowroomContent">
                             <div class="finance-empty-state">جارٍ تحميل تفاصيل المعرض…</div>
@@ -2834,6 +2873,66 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contractor Invoices & Showrooms Modal -->
+    <div class="modal fade" id="financeContractorInvoicesModal" tabindex="-1" aria-labelledby="financeContractorInvoicesTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header bg-light border-0 py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded-3 bg-warning bg-opacity-10 text-warning">
+                            <i class="fa-solid fa-screwdriver-wrench fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold m-0" id="financeContractorInvoicesTitle">سجل فواتير وأعمال المقاول</h5>
+                            <small class="text-muted" id="financeContractorInvoicesSubtitle">كافة فواتير الصيانة والمعارض المستفيدة</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Contractor Summary Stats -->
+                    <div id="financeContractorHeaderStats" class="row g-3 mb-4">
+                        <!-- Injected via JS -->
+                    </div>
+
+                    <!-- Filter / Search Invoices -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                        <h6 class="fw-bold m-0 text-secondary">
+                            <i class="fa-solid fa-list-check me-1"></i> فواتير الصيانة وسندات المعارض
+                        </h6>
+                        <div class="finance-search-wrap" style="max-width: 280px;">
+                            <input type="search" id="financeContractorModalSearch" class="finance-search-input" placeholder="بحث بالمعرض أو الفاتورة…">
+                        </div>
+                    </div>
+
+                    <!-- Invoices Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>المعرض / الفرع المستفيد</th>
+                                    <th>رقم الفاتورة</th>
+                                    <th>التاريخ</th>
+                                    <th>الحساب المحاسبي</th>
+                                    <th>البيان / الوصف</th>
+                                    <th class="text-end">المبلغ</th>
+                                    <th class="text-end">الضريبة</th>
+                                    <th class="text-end">الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeContractorInvoicesBody">
+                                <tr><td colspan="8" class="text-center text-muted py-4">جارٍ تحميل الفواتير…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">إغلاق</button>
                 </div>
             </div>
         </div>
