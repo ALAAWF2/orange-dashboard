@@ -6956,16 +6956,8 @@ const EMPLOYEES = [
         "name": "ساره ابراهيم",
         "startDate": "2026-06-15",
         "manager": "المنطقة الغربية",
-        "showroom": "1008-48 - Jeddah Park و 1002-05-Haifa Mall",
+        "showroom": "1002-05-Haifa Mall و 1008-48 - Jeddah Park",
         "showroomDetails": [
-            {
-                "name": "1008-48 - Jeddah Park",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1008-C",
-                    "1008-E"
-                ]
-            },
             {
                 "name": "1002-05-Haifa Mall",
                 "manager": "المنطقة الغربية",
@@ -6973,9 +6965,17 @@ const EMPLOYEES = [
                     "1002-C",
                     "1002-E"
                 ]
+            },
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
             }
         ],
-        "addressBooks": "1008-C;1008-E;1002-C;1002-E"
+        "addressBooks": "1002-C;1002-E;1008-C;1008-E"
     },
     {
         "employeeId": "4980-ريمه فقيه",
@@ -7440,6 +7440,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1004-C;1004-E"
+    },
+    {
+        "employeeId": "5008-رتاج الحربي",
+        "personnelNumber": "5008",
+        "name": "رتاج الحربي",
+        "startDate": "2026-08-12",
+        "manager": "عبدالله السرداح",
+        "showroom": "2401-47-Al-Nakheel Plaza",
+        "showroomDetails": [
+            {
+                "name": "2401-47-Al-Nakheel Plaza",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "2401-C",
+                    "2401-E"
+                ]
+            }
+        ],
+        "addressBooks": "2401-C;2401-E"
     }
 ];
 
