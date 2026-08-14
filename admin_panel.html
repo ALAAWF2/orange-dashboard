@@ -946,6 +946,10 @@
                         <i class="fa-solid fa-fingerprint text-warning"></i>
                         <span class="nav-text">سجل البصمات والدوام 🕒 <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.68rem; padding: 2px 6px;">مباشر</span></span>
                     </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="timesheet-tab" data-bs-toggle="tab" data-bs-target="#timesheet-content" type="button" role="tab">
+                        <i class="fa-solid fa-business-time text-success"></i>
+                        <span class="nav-text">مسير الساعات والإجازات 📋 <span class="badge bg-success rounded-pill ms-1" style="font-size:0.68rem; padding: 2px 6px;">شهري</span></span>
+                    </button>
                     
                     <span class="sidebar-section-header">── إدارة البيانات ──</span>
                     
@@ -1427,6 +1431,167 @@
                         <div id="attViewShowroomsContainer" class="mb-4" style="display: none;">
                             <div class="row g-3" id="attendanceShowroomsGrid">
                                 <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    <!-- ========================================== -->
+                    <!-- 📋 Tab: مسير الساعات والإجازات الشهرية -->
+                    <!-- ========================================== -->
+                    <div class="tab-pane fade" id="timesheet-content" role="tabpanel">
+                        <!-- Top Header & Action Bar -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                            <div>
+                                <h2 class="h3 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-business-time text-success"></i>
+                                    <span>مسير الدوام وساعات العمل الشهرية</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fs-6 px-3 py-1">شهري</span>
+                                </h2>
+                                <p class="text-muted small mb-0">حساب ساعات العمل الفعلية، أيام الدوام والإجازات، رصد نسيان بصمة الخروج، وتتبع مناقلات الفروع</p>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportTimesheetExcel()">
+                                    <i class="fa-solid fa-file-excel"></i>
+                                    <span>تصدير مسير الدوام (Excel)</span>
+                                </button>
+                                <button class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="loadTimesheetData()">
+                                    <i class="fa-solid fa-rotate"></i>
+                                    <span>تحديث البيانات</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards for Monthly Timesheet -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-sm-6 col-xl">
+                                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-muted small d-block mb-1">الموظفون المداومون</span>
+                                            <h3 class="fw-bold mb-0 text-primary" id="tsKpiActiveStaff">--</h3>
+                                        </div>
+                                        <div class="bg-primary-subtle text-primary p-3 rounded-circle">
+                                            <i class="fa-solid fa-users fs-4"></i>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary mt-2">على رأس العمل هذا الشهر</span>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-sm-6 col-xl">
+                                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-muted small d-block mb-1">إجمالي ساعات العمل</span>
+                                            <h3 class="fw-bold mb-0 text-success" id="tsKpiTotalHours">--</h3>
+                                        </div>
+                                        <div class="bg-success-subtle text-success p-3 rounded-circle">
+                                            <i class="fa-solid fa-clock fs-4"></i>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success mt-2">ساعات العمل الفعلية</span>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-sm-6 col-xl">
+                                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-info">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-muted small d-block mb-1">معدل ساعات الوردية</span>
+                                            <h3 class="fw-bold mb-0 text-info" id="tsKpiAvgShift">--</h3>
+                                        </div>
+                                        <div class="bg-info-subtle text-info p-3 rounded-circle">
+                                            <i class="fa-solid fa-chart-line fs-4"></i>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-info-subtle text-info mt-2">ساعة / يوم عمل</span>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-sm-6 col-xl">
+                                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-muted small d-block mb-1">نسيان بصمة الخروج</span>
+                                            <h3 class="fw-bold mb-0 text-warning" id="tsKpiMissingOut">--</h3>
+                                        </div>
+                                        <div class="bg-warning-subtle text-warning p-3 rounded-circle">
+                                            <i class="fa-solid fa-triangle-exclamation fs-4"></i>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-warning-subtle text-warning mt-2">بصمة واحدة فقط</span>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-sm-6 col-xl">
+                                <div class="glass-card p-3 h-100 shadow-sm border-start border-4" style="border-left-color: #6f42c1 !important;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-muted small d-block mb-1">المتنقلون بين الفروع</span>
+                                            <h3 class="fw-bold mb-0" style="color: #6f42c1;" id="tsKpiRoaming">--</h3>
+                                        </div>
+                                        <div class="p-3 rounded-circle" style="background-color: #e2d9f3; color: #6f42c1;">
+                                            <i class="fa-solid fa-shuffle fs-4"></i>
+                                        </div>
+                                    </div>
+                                    <span class="badge mt-2" style="background-color: #e2d9f3; color: #6f42c1;">تغطية / انتداب</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filter Controls -->
+                        <div class="glass-card p-3 mb-4 shadow-sm">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa-regular fa-calendar me-1"></i>الشهر المستهدف:</label>
+                                    <input type="month" class="form-control form-control-sm" id="tsMonthInput" onchange="loadTimesheetData()">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-store me-1"></i>المعرض / الفرع:</label>
+                                    <select class="form-select form-select-sm" id="tsAreaSelect" onchange="loadTimesheetData()">
+                                        <option value="all">جميع المعارض والفروع</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-magnifying-glass me-1"></i>بحث بالاسم أو الرقم:</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="tsSearchInput" placeholder="بحث بالاسم أو الرقم الوظيفي..." onkeyup="if(event.key==='Enter') loadTimesheetData()">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="loadTimesheetData()"><i class="fa-solid fa-search"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timesheet Table -->
+                        <div class="glass-card p-0 shadow-sm overflow-hidden mb-4">
+                            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                                <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-success"></i>جدول مسير الدوام وساعات العمل</h6>
+                                <span class="badge bg-secondary" id="tsTableCountBadge">0 موظف</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.88rem; min-width: 1050px;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start ps-3">الموظف</th>
+                                            <th>الرقم الوظيفي</th>
+                                            <th>الفرع الأساسي</th>
+                                            <th>مناقلات الفروع</th>
+                                            <th>أيام الدوام</th>
+                                            <th>الإجازات / الغياب</th>
+                                            <th>إجمالي الساعات</th>
+                                            <th>المعدل اليومي</th>
+                                            <th>ساعات الإضافي</th>
+                                            <th>نسيان الخروج</th>
+                                            <th>السجل اليومي</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="timesheetTableBody">
+                                        <tr>
+                                            <td colspan="11" class="text-center py-4 text-muted">جاري تحميل مسير الدوام...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -2937,6 +3102,9 @@
             switch (tabId) {
                 case '#attendance-content':
                     await loadAttendanceData(forceRefresh);
+                    break;
+                case '#timesheet-content':
+                    await loadTimesheetData();
                     break;
                 case '#sales-content':
                     await ensureMgmtDataLoaded();
@@ -8364,9 +8532,242 @@
             }
         }
 
+    
+        // ==========================================
+        // 📋 MONTHLY TIMESHEET JAVASCRIPT ENGINE
+        // ==========================================
+        let tsCurrentMonth = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+        let tsAreasPopulated = false;
+
+        async function loadTimesheetData() {
+            const tbody = document.getElementById('timesheetTableBody');
+            const monthInput = document.getElementById('tsMonthInput');
+            const areaSelect = document.getElementById('tsAreaSelect');
+            const searchInput = document.getElementById('tsSearchInput');
+
+            if (!monthInput.value) {
+                monthInput.value = tsCurrentMonth;
+            }
+            const month = monthInput.value || tsCurrentMonth;
+            const area = areaSelect ? areaSelect.value : 'all';
+            const q = searchInput ? searchInput.value.trim() : '';
+
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-success me-2"></div>جاري احتساب ساعات العمل ومسير الدوام...</td></tr>';
+
+            try {
+                const params = new URLSearchParams({
+                    month: month,
+                    area: area,
+                    q: q,
+                    limit: 200,
+                    offset: 0
+                });
+
+                const res = await fetch(`${API_BASE}/api/attendance/timesheet?${params.toString()}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const kpis = data.kpis || {};
+                    const list = data.timesheet || [];
+
+                    // Populate KPIs
+                    document.getElementById('tsKpiActiveStaff').textContent = kpis.total_active_staff || 0;
+                    document.getElementById('tsKpiTotalHours').textContent = `${(kpis.grand_total_hours || 0).toLocaleString()} س`;
+                    document.getElementById('tsKpiAvgShift').textContent = `${kpis.avg_shift_hours || 0} س`;
+                    document.getElementById('tsKpiMissingOut').textContent = kpis.total_missing_out || 0;
+                    document.getElementById('tsKpiRoaming').textContent = kpis.total_roaming_staff || 0;
+
+                    document.getElementById('tsTableCountBadge').textContent = `${data.total || list.length} موظف`;
+
+                    // Populate area options once if not yet populated
+                    if (!tsAreasPopulated && window.attAreasCache && window.attAreasCache.length > 0) {
+                        window.attAreasCache.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a;
+                            opt.textContent = a;
+                            areaSelect.appendChild(opt);
+                        });
+                        tsAreasPopulated = true;
+                    }
+
+                    if (list.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-5 text-muted"><i class="fa-solid fa-inbox fs-3 d-block mb-2 text-muted opacity-50"></i>لا توجد بيانات مسير دوام مسجلة للشهر المحدد.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = '';
+                    list.forEach((t, idx) => {
+                        const tr = document.createElement('tr');
+                        
+                        // Roaming Badge
+                        const roamingBadge = t.is_roaming
+                            ? `<span class="badge rounded-pill px-2 py-1" style="background-color: #e2d9f3; color: #6f42c1;" title="${escapeHtml(t.branches_worked.join('، '))}"><i class="fa-solid fa-shuffle me-1"></i>${t.branches_worked.length} فروع (متنقل)</span>`
+                            : `<span class="text-muted small">فرع واحد</span>`;
+
+                        // Missing out badge
+                        const missingBadge = t.single_punch_days > 0
+                            ? `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>${t.single_punch_days} يوم</span>`
+                            : `<span class="text-success small"><i class="fa-solid fa-check me-1"></i>مكتمل</span>`;
+
+                        // Overtime badge
+                        const otBadge = t.overtime_hours > 0
+                            ? `<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">+${t.overtime_hours} س</span>`
+                            : `<span class="text-muted small">0</span>`;
+
+                        tr.innerHTML = `
+                            <td class="text-start ps-3">
+                                <div class="fw-bold text-dark">${escapeHtml(t.employee_name)}</div>
+                                <div class="text-muted small" style="font-size: 0.75rem;">${escapeHtml(t.department || 'معارض التجزئة')}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border px-2 py-1 font-monospace">${escapeHtml(t.emp_code)}</span></td>
+                            <td><span class="fw-semibold text-dark">${escapeHtml(t.primary_branch)}</span></td>
+                            <td>${roamingBadge}</td>
+                            <td><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">${t.days_present} يوم</span></td>
+                            <td><span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${t.days_off_absent} يوم</span></td>
+                            <td><span class="fw-bold text-primary fs-6">${t.total_hours} س</span></td>
+                            <td><span class="fw-semibold">${t.avg_daily_hours} س/يوم</span></td>
+                            <td>${otBadge}</td>
+                            <td>${missingBadge}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openEmployeeTimesheetModal('${escapeHtml(t.emp_code)}')">
+                                    <i class="fa-solid fa-calendar-day me-1"></i>التفاصيل
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-danger">تعذر تحميل مسير الدوام. يرجى التحقق من الخادم.</td></tr>';
+                }
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">حدث خطأ أثناء جلب مسير الدوام: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function openEmployeeTimesheetModal(empCode) {
+            const modalEl = document.getElementById('employeeTimesheetModal');
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            const tbody = document.getElementById('empModalDailyBody');
+            const monthInput = document.getElementById('tsMonthInput');
+            const month = monthInput.value || tsCurrentMonth;
+
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-success me-2"></div>جاري تحميل السجل اليومي...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/timesheet/employee/${empCode}?month=${month}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('empModalName').textContent = data.employee_name || empCode;
+                    document.getElementById('empModalCodeDept').textContent = `${data.emp_code} (${data.department || 'معارض التجزئة'})`;
+                    document.getElementById('empModalMonth').textContent = `شهر: ${data.month}`;
+
+                    const days = data.days || [];
+                    tbody.innerHTML = '';
+
+                    days.forEach(d => {
+                        const tr = document.createElement('tr');
+                        
+                        let statusBadge = `<span class="badge bg-${d.badge}-subtle text-${d.badge} border border-${d.badge}-subtle px-2 py-1">${d.status}</span>`;
+
+                        tr.innerHTML = `
+                            <td class="font-monospace">${d.date}</td>
+                            <td class="fw-semibold">${d.day_name}</td>
+                            <td class="text-success fw-bold">${d.first_in}</td>
+                            <td class="text-danger fw-bold">${d.last_out}</td>
+                            <td><span class="fw-bold ${d.hours > 0 ? 'text-primary' : 'text-muted'}">${d.hours > 0 ? d.hours + ' س' : '--'}</span></td>
+                            <td class="small">${escapeHtml(d.branch)}</td>
+                            <td>${statusBadge}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">حدث خطأ: ${e.message}</td></tr>`;
+            }
+        }
+
+        function exportTimesheetExcel() {
+            const monthInput = document.getElementById('tsMonthInput');
+            const month = monthInput.value || tsCurrentMonth;
+            window.open(`${API_BASE}/api/attendance/timesheet/export?month=${month}`, '_blank');
+        }
+
     </script>
 
     <!-- Modal: تقرير مطابقة الموظفين بين سيرفر البصمات وقاعدة البيانات -->
+    
+            <!-- ========================================== -->
+            
+    <!-- Modal: السجل اليومي التفصيلي للموظف -->
+    <div class="modal fade" id="employeeTimesheetModal" tabindex="-1" aria-labelledby="empTimesheetModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-modal border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold" id="empTimesheetModalLabel">
+                        <i class="fa-solid fa-calendar-day me-2"></i>السجل اليومي التفصيلي لساعات العمل
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Header Info Box -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-4">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <span class="text-muted small d-block">اسم الموظف</span>
+                                <h6 class="fw-bold text-dark mb-0" id="empModalName">--</h6>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <span class="text-muted small d-block">الرقم الوظيفي والقسم</span>
+                                <h6 class="fw-bold text-dark mb-0" id="empModalCodeDept">--</h6>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <span class="text-muted small d-block">الشهر المحدد</span>
+                                <h6 class="fw-bold text-success mb-0" id="empModalMonth">--</h6>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daily Calendar Table -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>اليوم</th>
+                                    <th>أول بصمة (دخول)</th>
+                                    <th>آخر بصمة (خروج)</th>
+                                    <th>ساعات العمل</th>
+                                    <th>المعرض / الفرع</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="empModalDailyBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">جاري تحميل السجل اليومي...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="attendanceMatchingModal" tabindex="-1" aria-labelledby="attMatchingModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
