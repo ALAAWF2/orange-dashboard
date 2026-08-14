@@ -2096,11 +2096,11 @@
                 <div id="customFilters" class="col-md-auto gap-2" style="display: none;">
                     <div>
                         <label class="form-label small text-muted fw-bold">من تاريخ</label>
-                        <input type="date" id="startDate" class="form-control form-control-sm">
+                        <input type="date" id="startDate" class="form-control form-control-sm" onchange="updateDashboard()">
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">إلى تاريخ</label>
-                        <input type="date" id="endDate" class="form-control form-control-sm">
+                        <input type="date" id="endDate" class="form-control form-control-sm" onchange="updateDashboard()">
                     </div>
                 </div>
 
@@ -2364,7 +2364,10 @@
         <div class="row">
             <!-- Monthly Trend -->
             <div class="col-md-8">
-                <h5 class="section-title">الأداء الشهري (Monthly Trend)</h5>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="section-title mb-0" id="monthlyTrendTitle">الأداء الشهري (Monthly Trend)</h5>
+                    <span id="trendChartBadge" class="badge bg-light text-secondary border fw-normal" style="font-size: 0.78rem; display: none;"></span>
+                </div>
                 <div class="chart-container">
                     <canvas id="trendChart"></canvas>
                 </div>
@@ -4028,6 +4031,7 @@
             const calcStats = (start, end, filters = {}) => {
                 let sales = 0, trans = 0, visitors = 0, target = 0, items = 0;
                 let monthly = {};
+                let monthlyYear = {};
                 let branchSales = {};
                 let branchTrans = {};
                 let branchVisitors = {};
@@ -4045,6 +4049,8 @@
 
                 let sTime = start.getTime();
                 let eTime = end.getTime();
+                const sDateStr = toYMD(start);
+                const eDateStr = toYMD(end);
 
                 const filterFn = (dStr, sId) => {
                     // Branch
@@ -4060,17 +4066,18 @@
                         if (filterCity !== 'all' || filterManager !== 'all' || filterType !== 'all') return false;
                     }
 
-                    // Date
-                    let dTime = new Date(dStr).getTime();
-                    return dTime >= sTime && dTime <= eTime;
+                    // Exact lexicographical date comparison
+                    return dStr >= sDateStr && dStr <= eDateStr;
                 };
 
                 // Sales
                 rawData.sales.forEach(([d, s, v]) => {
                     if (filterFn(d, s)) {
                         sales += v;
-                        let m = new Date(d).getMonth() + 1;
+                        let m = parseInt(d.slice(5, 7), 10);
+                        let ym = d.slice(0, 7);
                         monthly[m] = (monthly[m] || 0) + v;
+                        monthlyYear[ym] = (monthlyYear[ym] || 0) + v;
                         branchSales[s] = (branchSales[s] || 0) + v;
                         daily[d] = (daily[d] || 0) + v;
                     }
@@ -4118,7 +4125,33 @@
                     }
                 });
 
-                return { sales, trans, visitors, target, items, monthly, branchSales, branchTrans, branchVisitors, branchTarget, branchItems, daily, dailyTrans, dailyVisitors };
+                return { sales, trans, visitors, target, items, monthly, monthlyYear, branchSales, branchTrans, branchVisitors, branchTarget, branchItems, daily, dailyTrans, dailyVisitors };
+            };
+
+            // Fast helper for computing full-year monthly breakdown for Trend Chart context
+            const calcYearMonthly = (year, filters = {}) => {
+                const monthly = {};
+                const filterBranch = filters.branch || selBranch;
+                const filterCity = filters.city || selCity;
+                const filterManager = filters.manager || selManager;
+                const filterType = filters.type || selType;
+                const yearStr = String(year);
+
+                (rawData.sales || []).forEach(([d, s, v]) => {
+                    if (!d.startsWith(yearStr)) return;
+                    if (filterBranch !== 'all' && s !== filterBranch) return;
+                    if (rawData.store_meta && rawData.store_meta[s]) {
+                        let meta = rawData.store_meta[s];
+                        if (filterCity !== 'all' && meta.city !== filterCity) return;
+                        if (filterManager !== 'all' && meta.manager !== filterManager) return;
+                        if (filterType !== 'all' && meta.type !== filterType) return;
+                    } else {
+                        if (filterCity !== 'all' || filterManager !== 'all' || filterType !== 'all') return;
+                    }
+                    const m = parseInt(d.slice(5, 7), 10);
+                    monthly[m] = (monthly[m] || 0) + v;
+                });
+                return monthly;
             };
 
             // --- 2.5 Basket Aggregation (respects same filters) ---
@@ -4451,10 +4484,25 @@
             }
 
             // --- 4. Trend Chart ---
-            // Extract Year for Chart Labels from starts
             let cYear = currentStart.getFullYear();
             let pYear = prevStart.getFullYear();
-            renderTrendChart(curr.monthly, prev.monthly, cYear, pYear);
+            const currYearM = calcYearMonthly(cYear);
+            const prevYearM = calcYearMonthly(pYear);
+
+            renderTrendChart({
+                mode,
+                currentStart,
+                currentEnd,
+                prevStart,
+                prevEnd,
+                cYear,
+                pYear,
+                curr,
+                prev,
+                currYearM,
+                prevYearM,
+                selMonth: document.getElementById('monthFilter').value
+            });
 
             // --- 5. Top 10 Chart & Table ---
             // Prepare Branch Data
@@ -6899,9 +6947,10 @@
             run = 0;
             const prevCum = prevDates.map(d => { run += prevDaily[d]; return Math.round(run); });
 
+            const isMultiYear = currDates.length > 0 && currDates[0].slice(0, 4) !== currDates[currDates.length - 1].slice(0, 4);
             const labels = currDates.map((d, i) => {
                 const dt = new Date(d);
-                return dt.getDate() + '/' + (dt.getMonth() + 1);
+                return dt.getDate() + '/' + (dt.getMonth() + 1) + (isMultiYear ? '/' + String(dt.getFullYear()).slice(2) : '');
             });
 
             charts['cumulative'] = new Chart(ctx, {
@@ -7206,13 +7255,224 @@
             });
         }
 
-        function renderTrendChart(currM, prevM, y1, y2) {
-            const ctx = document.getElementById('trendChart').getContext('2d');
+        const AR_MONTH_NAMES = [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+
+        const AR_MONTH_SHORT = [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+
+        // Global state for custom range drilldown zoom
+        window.customRangeBackup = null;
+
+        function getMonthListBetween(start, end) {
+            const list = [];
+            const curr = new Date(start.getFullYear(), start.getMonth(), 1);
+            const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+            while (curr <= endMonth) {
+                const y = curr.getFullYear();
+                const m = String(curr.getMonth() + 1).padStart(2, '0');
+                list.push(`${y}-${m}`);
+                curr.setMonth(curr.getMonth() + 1);
+            }
+            return list;
+        }
+
+        function renderTrendChart(cfg) {
+            const canvas = document.getElementById('trendChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             if (charts['trend']) charts['trend'].destroy();
 
-            const selectedM = document.getElementById('monthFilter').value;
+            const badgeEl = document.getElementById('trendChartBadge');
+            const titleEl = document.getElementById('monthlyTrendTitle');
 
-            const labels = Array.from({ length: 12 }, (_, i) => i + 1);
+            const isCustom = (cfg.mode === 'custom');
+            const monthList = isCustom ? getMonthListBetween(cfg.currentStart, cfg.currentEnd) : [];
+
+            // Case A: Custom multi-month range (e.g. 7-2025 to 7-2026 => 2 or more months)
+            if (isCustom && monthList.length > 1) {
+                if (titleEl) titleEl.textContent = 'الأداء الشهري (Monthly Trend)';
+                if (badgeEl) {
+                    badgeEl.style.display = 'inline-block';
+                    badgeEl.innerHTML = `<i class="bi bi-calendar3 me-1 text-primary"></i>${monthList.length} شهر (${toYMD(cfg.currentStart)} إلى ${toYMD(cfg.currentEnd)}) · اضغط على أي شهر للتركيز عليه`;
+                }
+
+                // Month labels: e.g. "يوليو 25", "أغسطس 25"
+                const labels = monthList.map(ym => {
+                    const parts = ym.split('-');
+                    const mIdx = parseInt(parts[1], 10) - 1;
+                    const yShort = parts[0].slice(2);
+                    return `${AR_MONTH_SHORT[mIdx]} ${yShort}`;
+                });
+
+                // Primary series (current period sales per month)
+                const currData = monthList.map(ym => cfg.curr.monthlyYear ? (cfg.curr.monthlyYear[ym] || 0) : 0);
+
+                // Comparison series (same month 1 year ago)
+                const prevData = monthList.map(ym => {
+                    const parts = ym.split('-');
+                    const prevYM = `${parseInt(parts[0], 10) - 1}-${parts[1]}`;
+                    let sum = 0;
+                    const filterBranch = document.getElementById('branchFilter')?.value || 'all';
+                    const filterCity = document.getElementById('cityFilter')?.value || 'all';
+                    let filterManager = document.getElementById('managerFilter')?.value || 'all';
+                    if (currentUser && currentUser.role !== 'Admin') filterManager = currentUser.name;
+                    const filterType = document.getElementById('typeFilter')?.value || 'all';
+
+                    (rawData.sales || []).forEach(([d, s, v]) => {
+                        if (!d.startsWith(prevYM)) return;
+                        if (filterBranch !== 'all' && s !== filterBranch) return;
+                        if (rawData.store_meta && rawData.store_meta[s]) {
+                            let meta = rawData.store_meta[s];
+                            if (filterCity !== 'all' && meta.city !== filterCity) return;
+                            if (filterManager !== 'all' && meta.manager !== filterManager) return;
+                            if (filterType !== 'all' && meta.type !== filterType) return;
+                        } else {
+                            if (filterCity !== 'all' || filterManager !== 'all' || filterType !== 'all') return;
+                        }
+                        sum += v;
+                    });
+                    return sum;
+                });
+
+                charts['trend'] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'الفترة المحددة',
+                                data: currData,
+                                backgroundColor: '#fe7900',
+                                hoverBackgroundColor: '#cc6100',
+                                borderRadius: 5,
+                                barPercentage: 0.75,
+                                categoryPercentage: 0.8
+                            },
+                            {
+                                label: 'العام السابق (LY)',
+                                data: prevData,
+                                backgroundColor: '#e9ecef',
+                                hoverBackgroundColor: '#ced4da',
+                                borderRadius: 5,
+                                barPercentage: 0.75,
+                                categoryPercentage: 0.8
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { family: 'Tajawal', size: 11, weight: '600' } }
+                            },
+                            y: {
+                                grid: { borderDash: [5, 5] },
+                                ticks: {
+                                    font: { family: 'Tajawal', size: 11 },
+                                    callback: (v) => (v >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v)
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { font: { family: 'Tajawal', size: 12, weight: 'bold' }, usePointStyle: true, boxWidth: 8 }
+                            },
+                            tooltip: {
+                                rtl: true,
+                                textDirection: 'rtl',
+                                titleFont: { family: 'Tajawal', size: 13, weight: 'bold' },
+                                bodyFont: { family: 'Tajawal', size: 12 },
+                                callbacks: {
+                                    label: (item) => {
+                                        const val = item.raw || 0;
+                                        const dsLabel = item.dataset.label || '';
+                                        return ` ${dsLabel}: ${Math.round(val).toLocaleString('en-US')} ريال`;
+                                    },
+                                    afterBody: (items) => {
+                                        if (items.length >= 2) {
+                                            const cVal = items[0].raw || 0;
+                                            const pVal = items[1].raw || 0;
+                                            if (pVal > 0) {
+                                                const diff = cVal - pVal;
+                                                const pct = (diff / pVal) * 100;
+                                                const sign = diff >= 0 ? '+' : '';
+                                                return `\nالنمو vs العام السابق: ${sign}${pct.toFixed(1)}% (${sign}${Math.round(diff).toLocaleString('en-US')} ريال)`;
+                                            }
+                                        }
+                                        return '';
+                                    }
+                                }
+                            }
+                        },
+                        onClick: (e, activeEls, chart) => {
+                            const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                            if (points.length) {
+                                const index = points[0].index;
+                                const selectedYM = monthList[index];
+                                if (!selectedYM) return;
+
+                                const [sYear, sMonth] = selectedYM.split('-').map(Number);
+                                const lastDay = new Date(sYear, sMonth, 0).getDate();
+                                const newStart = `${sYear}-${String(sMonth).padStart(2, '0')}-01`;
+                                const newEnd = `${sYear}-${String(sMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+                                const sInput = document.getElementById('startDate');
+                                const eInput = document.getElementById('endDate');
+
+                                if (sInput.value === newStart && eInput.value === newEnd && window.customRangeBackup) {
+                                    // Toggle back to full custom range
+                                    sInput.value = window.customRangeBackup.start;
+                                    eInput.value = window.customRangeBackup.end;
+                                    window.customRangeBackup = null;
+                                } else {
+                                    // Backup current range and drill down to this month
+                                    if (!window.customRangeBackup) {
+                                        window.customRangeBackup = { start: sInput.value, end: eInput.value };
+                                    }
+                                    sInput.value = newStart;
+                                    eInput.value = newEnd;
+                                }
+                                updateDashboard();
+                            }
+                        },
+                        onHover: (event, chartElement) => {
+                            event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+                        }
+                    }
+                });
+                return;
+            }
+
+            // Case B: Standard Mode (or Single Month Custom Mode)
+            // Displays 12 months for cfg.cYear vs cfg.pYear with active month highlighted
+            if (badgeEl) {
+                if (isCustom && window.customRangeBackup) {
+                    badgeEl.style.display = 'inline-block';
+                    badgeEl.innerHTML = `<button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 fw-bold" onclick="restoreCustomRange()" style="font-size:0.75rem;">↩ استعادة الفترة الممتدة</button>`;
+                } else {
+                    badgeEl.style.display = 'none';
+                }
+            }
+
+            const selM = cfg.selMonth || 'all';
+            const activeMonthNum = isCustom ? (cfg.currentStart.getMonth() + 1) : (selM === 'all' ? null : parseInt(selM, 10));
+
+            const labels = AR_MONTH_NAMES;
+            const y1 = String(cfg.cYear);
+            const y2 = String(cfg.pYear);
+
+            const currData = Array.from({ length: 12 }, (_, i) => cfg.currYearM[i + 1] || 0);
+            const prevData = Array.from({ length: 12 }, (_, i) => cfg.prevYearM[i + 1] || 0);
+
             charts['trend'] = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -7220,43 +7480,106 @@
                     datasets: [
                         {
                             label: y1,
-                            data: labels.map(m => currM[m] || 0),
-                            // Selected: Dark Brand (#cc6100), Unselected: Faded (#ffd8a8), All: Brand (#fe7900)
-                            backgroundColor: (ctx) => {
-                                if (selectedM === 'all') return '#fe7900';
-                                return (ctx.dataIndex + 1) == selectedM ? '#cc6100' : '#ffd8a8';
+                            data: currData,
+                            backgroundColor: (context) => {
+                                const mNum = context.dataIndex + 1;
+                                if (!activeMonthNum || activeMonthNum === 'all') return '#fe7900';
+                                return mNum === activeMonthNum ? '#fe7900' : 'rgba(254, 121, 0, 0.28)';
                             },
-                            borderRadius: 4
+                            borderColor: (context) => {
+                                const mNum = context.dataIndex + 1;
+                                return mNum === activeMonthNum ? '#cc6100' : 'transparent';
+                            },
+                            borderWidth: 1.5,
+                            borderRadius: 5,
+                            barPercentage: 0.75,
+                            categoryPercentage: 0.8
                         },
-                        { label: y2, data: labels.map(m => prevM[m] || 0), backgroundColor: '#e9ecef', borderRadius: 4 }
+                        {
+                            label: y2,
+                            data: prevData,
+                            backgroundColor: '#e9ecef',
+                            borderRadius: 5,
+                            barPercentage: 0.75,
+                            categoryPercentage: 0.8
+                        }
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [5, 5] } } },
-                    plugins: { legend: { position: 'top' } },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Tajawal', size: 11, weight: '600' } }
+                        },
+                        y: {
+                            grid: { borderDash: [5, 5] },
+                            ticks: {
+                                font: { family: 'Tajawal', size: 11 },
+                                callback: (v) => (v >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v)
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { font: { family: 'Tajawal', size: 12, weight: 'bold' }, usePointStyle: true, boxWidth: 8 }
+                        },
+                        tooltip: {
+                            rtl: true,
+                            textDirection: 'rtl',
+                            titleFont: { family: 'Tajawal', size: 13, weight: 'bold' },
+                            bodyFont: { family: 'Tajawal', size: 12 },
+                            callbacks: {
+                                label: (item) => {
+                                    const val = item.raw || 0;
+                                    const dsLabel = item.dataset.label || '';
+                                    return ` ${dsLabel}: ${Math.round(val).toLocaleString('en-US')} ريال`;
+                                },
+                                afterBody: (items) => {
+                                    if (items.length >= 2) {
+                                        const cVal = items[0].raw || 0;
+                                        const pVal = items[1].raw || 0;
+                                        if (pVal > 0) {
+                                            const diff = cVal - pVal;
+                                            const pct = (diff / pVal) * 100;
+                                            const sign = diff >= 0 ? '+' : '';
+                                            return `\nالنمو vs العام السابق: ${sign}${pct.toFixed(1)}% (${sign}${Math.round(diff).toLocaleString('en-US')} ريال)`;
+                                        }
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
                     onClick: (e, activeEls, chart) => {
                         const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
                         if (points.length) {
                             const index = points[0].index;
                             const month = index + 1;
 
-                            const mFilter = document.getElementById('monthFilter');
                             const modeSelect = document.getElementById('filterMode');
+                            const mFilter = document.getElementById('monthFilter');
 
-                            // Ensure we switch to Standard mode if currently Custom (logic edge case)
-                            // But usually chart is visible in both. Best to just set month filter.
                             if (modeSelect.value === 'custom') {
-                                modeSelect.value = 'standard';
-                                toggleFilterMode();
-                            }
-
-                            if (mFilter.value == month) {
-                                mFilter.value = 'all';
+                                // In custom mode, switch dates to that month
+                                const sYear = cfg.cYear;
+                                const lastDay = new Date(sYear, month, 0).getDate();
+                                const newStart = `${sYear}-${String(month).padStart(2, '0')}-01`;
+                                const newEnd = `${sYear}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                                document.getElementById('startDate').value = newStart;
+                                document.getElementById('endDate').value = newEnd;
+                                updateDashboard();
                             } else {
-                                mFilter.value = month;
+                                if (mFilter.value == month) {
+                                    mFilter.value = 'all';
+                                } else {
+                                    mFilter.value = month;
+                                }
+                                updateDashboard();
                             }
-                            updateDashboard();
                         }
                     },
                     onHover: (event, chartElement) => {
@@ -7264,6 +7587,15 @@
                     }
                 }
             });
+        }
+
+        function restoreCustomRange() {
+            if (window.customRangeBackup) {
+                document.getElementById('startDate').value = window.customRangeBackup.start;
+                document.getElementById('endDate').value = window.customRangeBackup.end;
+                window.customRangeBackup = null;
+                updateDashboard();
+            }
         }
 
         function renderTop10(data) {
