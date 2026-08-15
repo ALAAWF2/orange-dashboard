@@ -183,6 +183,7 @@ async function initNavbar() {
                         👥 الموظفون
                     </button>
                     <ul class="dropdown-menu">
+                        <li><a class="dropdown-item fw-bold text-orange" href="hr.html">🌟 إدارة الموارد البشرية والدوام (HR Hub)</a></li>
                         <li><a class="dropdown-item" href="employees.html">👥 أداء الموظفين والعمولات</a></li>
                         ${isManager ? `
                         <li><a class="dropdown-item" href="edit_employee_targets.html">🎯 تعديل تارجت الموظفين</a></li>
@@ -190,6 +191,10 @@ async function initNavbar() {
                         ` : ''}
                     </ul>
                 </div>
+
+                <a href="hr.html" class="btn btn-sm btn-outline-warning fw-bold text-dark d-none d-lg-inline-block shadow-sm" title="لوحة الموارد البشرية والدوام والبصمات">
+                    👥 <span>الـ HR والدوام</span>
+                </a>
 
                 <!-- Admin Section (Only for Alaa) -->
                 ${isAlaa ? `
