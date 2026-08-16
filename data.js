@@ -4509,25 +4509,6 @@ const EMPLOYEES = [
         "addressBooks": "1402-C;1402-E"
     },
     {
-        "employeeId": "4670-سلمى علي مجرشي",
-        "personnelNumber": "4670",
-        "name": "سلمى علي مجرشي",
-        "startDate": "2025-08-13",
-        "manager": "محمدكلو",
-        "showroom": "1111-46-Khaleej Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1111-46-Khaleej Mall Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1111-C",
-                    "1111-E"
-                ]
-            }
-        ],
-        "addressBooks": "1111-C;1111-E"
-    },
-    {
         "employeeId": "4664-نجد درزى الحربي",
         "personnelNumber": "4664",
         "name": "نجد درزى الحربي",
