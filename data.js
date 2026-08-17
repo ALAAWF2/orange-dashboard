@@ -7407,7 +7407,7 @@ const EMPLOYEES = [
         "employeeId": "5008-رتاج الحربي",
         "personnelNumber": "5008",
         "name": "رتاج الحربي",
-        "startDate": "2026-08-12",
+        "startDate": "2026-08-13",
         "manager": "عبدالله السرداح",
         "showroom": "2401-47-Al-Nakheel Plaza",
         "showroomDetails": [
@@ -7421,6 +7421,44 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2401-C;2401-E"
+    },
+    {
+        "employeeId": "5007-5007 - GHARAM ABDULL",
+        "personnelNumber": "5007",
+        "name": "5007 - GHARAM ABDULL",
+        "startDate": "2026-08-10",
+        "manager": "المنطقة الشمالية",
+        "showroom": "2001-22-Tabuk Park",
+        "showroomDetails": [
+            {
+                "name": "2001-22-Tabuk Park",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "2001-C",
+                    "2001-E"
+                ]
+            }
+        ],
+        "addressBooks": "2001-C;2001-E"
+    },
+    {
+        "employeeId": "5009-5009 - Fatimah Abdul",
+        "personnelNumber": "5009",
+        "name": "5009 - Fatimah Abdul",
+        "startDate": "2026-08-13",
+        "manager": "جهاد ايوبي",
+        "showroom": "1602-49-AlAhsa Mall",
+        "showroomDetails": [
+            {
+                "name": "1602-49-AlAhsa Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1602-C",
+                    "1602-E"
+                ]
+            }
+        ],
+        "addressBooks": "1602-C;1602-E"
     }
 ];
 
