@@ -4105,8 +4105,39 @@
       document.getElementById('printBarcodeModal').style.display = 'none';
     }
 
+    function findProductForBarcode(inputCode) {
+      if (!inputCode) return null;
+      const key = String(inputCode).trim().toLowerCase();
+      if (!key) return null;
+
+      const list = (Array.isArray(window.allProductsUnfiltered) && window.allProductsUnfiltered.length > 0)
+        ? window.allProductsUnfiltered
+        : ((Array.isArray(window.products) && window.products.length > 0) ? window.products : (window.data || []));
+
+      let p = list.find(item =>
+        String(item.code || '').trim().toLowerCase() === key ||
+        (item.alias && String(item.alias).trim().toLowerCase() === key)
+      );
+      if (p) return p;
+
+      if (key.startsWith('kit-')) {
+        const baseKey = key.replace(/^kit-/i, '');
+        p = list.find(item =>
+          String(item.code || '').trim().toLowerCase() === baseKey ||
+          (item.alias && String(item.alias).trim().toLowerCase() === baseKey)
+        );
+        if (p) return p;
+      } else {
+        const kitKey = 'kit-' + key;
+        p = list.find(item => String(item.code || '').trim().toLowerCase() === kitKey);
+        if (p) return p;
+      }
+
+      return null;
+    }
+
     function printItemBarcode(code, name, alias, price) {
-      const product = (window.data || []).find(p => String(p.code).toLowerCase() === String(code).toLowerCase() || (p.alias && String(p.alias).toLowerCase() === String(code).toLowerCase()));
+      const product = findProductForBarcode(code) || findProductForBarcode(alias);
       const resolvedCode = product ? product.code : code;
       const resolvedAlias = product ? (product.alias || "") : (alias || "");
       const promoPrice = getPromoPrice(resolvedCode, resolvedAlias);
@@ -4124,7 +4155,7 @@
       qty = parseInt(qty);
       if (isNaN(qty) || qty <= 0) qty = 1;
 
-      const product = (window.data || []).find(p => String(p.code).toLowerCase() === String(code).toLowerCase() || (p.alias && String(p.alias).toLowerCase() === String(code).toLowerCase()));
+      const product = findProductForBarcode(code) || findProductForBarcode(alias);
       let resolvedCode = product ? product.code : code;
       let resolvedName = product ? product.name : (name || "منتج غير معروف");
       let resolvedAlias = product ? (product.alias || "") : (alias || "");
