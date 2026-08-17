@@ -5776,25 +5776,6 @@ const EMPLOYEES = [
         "addressBooks": "1201-C;1201-E"
     },
     {
-        "employeeId": "4872-لجين الروقي",
-        "personnelNumber": "4872",
-        "name": "لجين الروقي",
-        "startDate": "2026-02-12",
-        "manager": "المنطقة الغربية",
-        "showroom": "1010-54-THE VILLAGE",
-        "showroomDetails": [
-            {
-                "name": "1010-54-THE VILLAGE",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1010-C",
-                    "1010-E"
-                ]
-            }
-        ],
-        "addressBooks": "1010-C;1010-E"
-    },
-    {
         "employeeId": "4854-محمد شهيم",
         "personnelNumber": "4854",
         "name": "محمد شهيم",
