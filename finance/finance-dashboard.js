@@ -1862,18 +1862,43 @@
         if (!payload || payload.state !== 'ready') return;
         currentTreasury = payload;
         const s = payload.summary || {};
-        setMetric('financeTreasuryCashCount', `${integer.format(Number(s.cash_pos_count) || 0)} صندوق معرض`);
+        setMetric('financeTreasuryCashCount', `${integer.format(Number(s.cash_pos_count) || 0)} صندوق`);
         setMetric('financeTreasuryBankCount', `${integer.format(Number(s.banks_count) || 0)} حساب بنكي`);
         setMetric('financeTreasuryGatewaysCount', `${integer.format(Number(s.gateways_count) || 0)} وسيط تحصيل`);
+
+        const cashBalanceElem = element('financeTreasuryCashBalance');
+        if (cashBalanceElem) {
+            cashBalanceElem.textContent = `إجمالي الرصيد: ${money.format(Number(s.cash_pos_total_balance) || 0)}`;
+        }
+        const bankBalanceElem = element('financeTreasuryBankBalance');
+        if (bankBalanceElem) {
+            bankBalanceElem.textContent = `إجمالي الرصيد: ${money.format(Number(s.banks_total_balance) || 0)}`;
+        }
 
         const cashBody = element('financeTreasuryCashBody');
         if (cashBody && payload.cash_pos) {
             cashBody.replaceChildren(...payload.cash_pos.map(c => {
                 const row = document.createElement('tr');
+                const bal = Number(c.balance) || 0;
+                const balCell = textElement('td', money.format(bal), `text-end fw-bold ${bal < 0 ? 'text-danger' : (bal > 0 ? 'text-success' : 'text-muted')}`);
+                balCell.dir = 'ltr';
+
+                const inCell = textElement('td', money.format(Number(c.total_inflows) || 0), 'text-end text-success');
+                inCell.dir = 'ltr';
+
+                const outCell = textElement('td', money.format(Math.abs(Number(c.total_outflows) || 0)), 'text-end text-danger');
+                outCell.dir = 'ltr';
+
+                const txCell = textElement('td', integer.format(Number(c.trans_count) || 0), 'text-center');
+                txCell.dir = 'ltr';
+
                 row.append(
                     textElement('td', c.main_account_id, 'fw-bold font-monospace'),
-                    textElement('td', c.account_name),
-                    textElement('td', c.main_account_type || 'نقدية فروع')
+                    textElement('td', c.account_name, 'fw-semibold'),
+                    inCell,
+                    outCell,
+                    balCell,
+                    txCell
                 );
                 return row;
             }));
@@ -1883,10 +1908,26 @@
         if (banksBody && payload.banks) {
             banksBody.replaceChildren(...payload.banks.map(b => {
                 const row = document.createElement('tr');
+                const bal = Number(b.balance) || 0;
+                const balCell = textElement('td', money.format(bal), `text-end fw-bold ${bal < 0 ? 'text-danger' : (bal > 0 ? 'text-success' : 'text-muted')}`);
+                balCell.dir = 'ltr';
+
+                const inCell = textElement('td', money.format(Number(b.total_inflows) || 0), 'text-end text-success');
+                inCell.dir = 'ltr';
+
+                const outCell = textElement('td', money.format(Math.abs(Number(b.total_outflows) || 0)), 'text-end text-danger');
+                outCell.dir = 'ltr';
+
+                const txCell = textElement('td', integer.format(Number(b.trans_count) || 0), 'text-center');
+                txCell.dir = 'ltr';
+
                 row.append(
                     textElement('td', b.main_account_id, 'fw-bold font-monospace'),
-                    textElement('td', b.account_name),
-                    textElement('td', b.main_account_type || 'بنك')
+                    textElement('td', b.account_name, 'fw-semibold'),
+                    inCell,
+                    outCell,
+                    balCell,
+                    txCell
                 );
                 return row;
             }));
