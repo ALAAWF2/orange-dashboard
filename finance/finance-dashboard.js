@@ -1218,18 +1218,21 @@
         }
         filterAndRenderAssets();
     }
-
     async function openEmployeeAdvanceDetailsModal(workerId) {
         const modalEl = element('financeAdvanceDetailsModal');
         if (!modalEl) return;
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         const nameEl = element('financeAdvanceModalWorkerName');
         const summaryEl = element('financeAdvanceModalSummary');
+        const tabsContainer = element('financeAdvanceModalTabsContainer');
         const linesBodyEl = element('financeAdvanceModalLinesBody');
+        const countBadgeEl = element('financeAdvanceModalLinesCount');
 
         nameEl.textContent = `تفاصيل حركات الموظف: ${workerId}`;
-        summaryEl.innerHTML = '<div class="text-muted">جارٍ تحميل كشف الحساب والبيانات المحاسبية…</div>';
+        summaryEl.innerHTML = '<div class="text-muted text-center py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>جارٍ تحميل كشف الحساب والبيانات المحاسبية…</div>';
+        if (tabsContainer) tabsContainer.innerHTML = '';
         linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state">جارٍ تحميل الحركات…</td></tr>';
+        if (countBadgeEl) countBadgeEl.textContent = '0 حركة';
         modal.show();
 
         try {
@@ -1241,42 +1244,73 @@
             }
 
             const bal = payload.balance || {};
+            const allLines = payload.lines || [];
             nameEl.textContent = `${bal.employee_name_arabic || 'الموظف'} (${bal.worker_id})`;
 
-            summaryEl.innerHTML = `
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded-3 bg-light">
-                            <span class="text-muted small d-block">إجمالي المنصرف (مدين)</span>
-                            <strong class="fs-5">${money.format(Number(bal.total_debit) || 0)}</strong>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded-3 bg-light">
-                            <span class="text-muted small d-block">إجمالي المستقطع (دائن)</span>
-                            <strong class="fs-5 text-success">${money.format(Number(bal.total_credit) || 0)}</strong>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded-3 bg-light">
-                            <span class="text-muted small d-block">رصيد الأستاذ العام (GL)</span>
-                            <strong class="fs-5 ${Number(bal.gl_balance) > 0 ? 'text-danger' : 'text-success'}">${money.format(Number(bal.gl_balance) || 0)}</strong>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded-3 bg-light">
-                            <span class="text-muted small d-block">تاريخ آخر حركة</span>
-                            <strong class="fs-6 text-primary">${bal.last_movement_date || '—'}</strong>
-                        </div>
-                    </div>
-                </div>
-            `;
+            // Extract distinct accounts directly from allLines
+            const distinctAccounts = [];
+            const accountsSeen = new Set();
+            for (const l of allLines) {
+                const acc = l.main_account_id;
+                if (acc && !accountsSeen.has(acc)) {
+                    accountsSeen.add(acc);
+                    distinctAccounts.push(acc);
+                }
+            }
 
-            const lines = payload.lines || [];
-            if (!lines.length) {
-                linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state">لا توجد قيود مسجلة لهذا الموظف.</td></tr>';
-            } else {
-                linesBodyEl.replaceChildren(...lines.map(line => {
+            // Function to update the summary cards based on the selected tab
+            function updateSummaryCards(tabDebit, tabCredit, tabBalance, labelPrefix) {
+                summaryEl.innerHTML = `
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 bg-white shadow-sm">
+                                <span class="text-muted small d-block mb-1">إجمالي المنصرف (مدين)${labelPrefix ? ` - ${labelPrefix}` : ''}</span>
+                                <strong class="fs-5 text-dark">${money.format(tabDebit)}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 bg-white shadow-sm">
+                                <span class="text-muted small d-block mb-1">إجمالي المستقطع / المسدد (دائن)</span>
+                                <strong class="fs-5 text-success">${money.format(tabCredit)}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 bg-white shadow-sm">
+                                <span class="text-muted small d-block mb-1">صافي الرصيد القائم (GL)</span>
+                                <strong class="fs-5 ${tabBalance > 0 ? 'text-danger' : 'text-success'}">${money.format(tabBalance)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Build Dynamic Account Tabs
+            function renderLinesForTab(selectedTab) {
+                let filteredLines = allLines;
+                let tabLabel = '';
+                if (selectedTab !== 'all') {
+                    filteredLines = allLines.filter(l => l.main_account_id === selectedTab);
+                    const meta = getAccountBadgeMeta(selectedTab);
+                    tabLabel = meta.text;
+                }
+
+                const tabDebit = filteredLines.reduce((acc, l) => acc + Number(l.debit_amount || 0), 0);
+                const tabCredit = filteredLines.reduce((acc, l) => acc + Number(l.credit_amount || 0), 0);
+                const tabBalance = tabDebit - tabCredit;
+
+                // Update summary cards for the selected tab
+                updateSummaryCards(tabDebit, tabCredit, tabBalance, tabLabel);
+
+                if (countBadgeEl) {
+                    countBadgeEl.textContent = `${filteredLines.length} قيد (مدين: ${money.format(tabDebit)})`;
+                }
+
+                if (!filteredLines.length) {
+                    linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state">لا توجد قيود مسجلة لهذا الحساب.</td></tr>';
+                    return;
+                }
+
+                linesBodyEl.replaceChildren(...filteredLines.map(line => {
                     const row = document.createElement('tr');
                     
                     const dateCell = document.createElement('td');
@@ -1289,7 +1323,7 @@
 
                     const voucherCell = document.createElement('td');
                     voucherCell.dir = 'ltr';
-                    voucherCell.className = 'fw-bold';
+                    voucherCell.className = 'fw-bold font-monospace';
                     voucherCell.textContent = line.voucher || '—';
 
                     const descCell = document.createElement('td');
@@ -1317,6 +1351,52 @@
                     return row;
                 }));
             }
+
+            if (tabsContainer) {
+                const nav = document.createElement('div');
+                nav.className = 'd-flex flex-wrap gap-2 p-2 bg-light rounded-3 border';
+
+                // "All Entries" Tab
+                const allBtn = document.createElement('button');
+                allBtn.type = 'button';
+                allBtn.className = 'btn btn-sm btn-primary active fw-bold px-3';
+                allBtn.innerHTML = `<i class="fa-solid fa-list me-1"></i> جميع الحركات <span class="badge bg-white text-primary ms-1">${allLines.length}</span>`;
+                allBtn.addEventListener('click', () => {
+                    nav.querySelectorAll('button').forEach(b => {
+                        b.classList.remove('btn-primary', 'active', 'text-white');
+                        b.classList.add('btn-outline-secondary');
+                    });
+                    allBtn.classList.remove('btn-outline-secondary');
+                    allBtn.classList.add('btn-primary', 'active', 'text-white');
+                    renderLinesForTab('all');
+                });
+                nav.append(allBtn);
+
+                // Account specific tabs
+                distinctAccounts.forEach(accId => {
+                    const accMeta = getAccountBadgeMeta(accId);
+                    const accLinesCount = allLines.filter(l => l.main_account_id === accId).length;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-outline-secondary fw-bold px-3';
+                    btn.innerHTML = `${accMeta.text} <span class="badge bg-secondary ms-1">${accLinesCount}</span>`;
+                    btn.addEventListener('click', () => {
+                        nav.querySelectorAll('button').forEach(b => {
+                            b.classList.remove('btn-primary', 'active', 'text-white');
+                            b.classList.add('btn-outline-secondary');
+                        });
+                        btn.classList.remove('btn-outline-secondary');
+                        btn.classList.add('btn-primary', 'active', 'text-white');
+                        renderLinesForTab(accId);
+                    });
+                    nav.append(btn);
+                });
+
+                tabsContainer.replaceChildren(nav);
+            }
+
+            renderLinesForTab('all');
+
         } catch (err) {
             console.error('Failed to load employee advance details:', err);
             summaryEl.innerHTML = '<div class="alert alert-danger mb-0">تعذر تحميل تفاصيل حركات الموظف.</div>';
@@ -1399,6 +1479,47 @@
 
         if (account && account !== 'all') {
             list = list.filter(a => a.main_account_id === account);
+        } else {
+            // When viewing "All Accounts", group by worker_id so each employee appears in 1 single row
+            const groupedMap = new Map();
+            for (const item of list) {
+                const wid = item.worker_id;
+                if (!groupedMap.has(wid)) {
+                    groupedMap.set(wid, {
+                        worker_id: wid,
+                        data_area_id: item.data_area_id,
+                        employee_name_arabic: item.employee_name_arabic,
+                        employee_name: item.employee_name,
+                        main_account_id: 'all',
+                        accounts: [item.main_account_id],
+                        total_debit: 0,
+                        total_credit: 0,
+                        gl_balance: 0,
+                        last_movement_date: item.last_movement_date,
+                        last_voucher: item.last_voucher,
+                        last_description: item.last_description,
+                        coverage_status: 'covered',
+                        open_lines_count: 0,
+                    });
+                }
+                const g = groupedMap.get(wid);
+                if (!g.accounts.includes(item.main_account_id)) {
+                    g.accounts.push(item.main_account_id);
+                }
+                g.total_debit += Number(item.total_debit || 0);
+                g.total_credit += Number(item.total_credit || 0);
+                g.gl_balance += Number(item.gl_balance || 0);
+                g.open_lines_count += Number(item.open_lines_count || 0);
+                if (item.last_movement_date && (!g.last_movement_date || item.last_movement_date > g.last_movement_date)) {
+                    g.last_movement_date = item.last_movement_date;
+                    g.last_voucher = item.last_voucher;
+                    g.last_description = item.last_description;
+                }
+            }
+            for (const g of groupedMap.values()) {
+                g.coverage_status = g.gl_balance > 0 ? 'active' : 'covered';
+            }
+            list = Array.from(groupedMap.values());
         }
 
         if (status && status !== 'all') {
@@ -1438,7 +1559,7 @@
         }
 
         if (!list.length) {
-            body.innerHTML = '<tr><td colspan="10" class="finance-empty-state">لا توجد سلف أو عهد مطابقة للبحث.</td></tr>';
+            body.innerHTML = '<tr><td colspan="10" class="finance-empty-state">لا توجد سجلات مطابقة للبحث.</td></tr>';
             return;
         }
 
@@ -1458,11 +1579,26 @@
 
             const accCell = document.createElement('td');
             accCell.className = 'text-center';
-            const accBadge = document.createElement('span');
-            const accMeta = getAccountBadgeMeta(adv.main_account_id);
-            accBadge.className = `badge ${accMeta.cls}`;
-            accBadge.textContent = accMeta.text;
-            accCell.append(accBadge);
+            if (adv.main_account_id === 'all' && Array.isArray(adv.accounts)) {
+                const badgeWrap = document.createElement('div');
+                badgeWrap.className = 'd-flex flex-wrap justify-content-center gap-1';
+                adv.accounts.forEach(acc => {
+                    const accMeta = getAccountBadgeMeta(acc);
+                    const accBadge = document.createElement('span');
+                    accBadge.className = `badge ${accMeta.cls}`;
+                    accBadge.style.fontSize = '0.75rem';
+                    accBadge.style.padding = '3px 6px';
+                    accBadge.textContent = accMeta.text;
+                    badgeWrap.append(accBadge);
+                });
+                accCell.append(badgeWrap);
+            } else {
+                const accBadge = document.createElement('span');
+                const accMeta = getAccountBadgeMeta(adv.main_account_id);
+                accBadge.className = `badge ${accMeta.cls}`;
+                accBadge.textContent = accMeta.text;
+                accCell.append(accBadge);
+            }
 
             const debitCell = document.createElement('td');
             debitCell.className = 'text-end fw-bold';
