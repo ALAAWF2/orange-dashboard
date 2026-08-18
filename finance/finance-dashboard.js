@@ -1308,8 +1308,9 @@
                     const classCell = document.createElement('td');
                     classCell.className = 'text-center';
                     const classBadge = document.createElement('span');
-                    classBadge.className = `badge ${line.classification === 'deduction' ? 'bg-success' : (line.classification === 'advance_or_loan' ? 'bg-primary' : 'bg-secondary')}`;
-                    classBadge.textContent = line.classification === 'deduction' ? 'استقطاع راتب' : (line.classification === 'advance_or_loan' ? 'صرف سلفة/قرض' : 'حركة GL');
+                    const classMeta = getClassificationBadgeMeta(line.classification);
+                    classBadge.className = `badge ${classMeta.cls}`;
+                    classBadge.textContent = classMeta.text;
                     classCell.append(classBadge);
 
                     row.append(dateCell, journalCell, voucherCell, descCell, debitCell, creditCell, classCell);
@@ -1320,6 +1321,70 @@
             console.error('Failed to load employee advance details:', err);
             summaryEl.innerHTML = '<div class="alert alert-danger mb-0">تعذر تحميل تفاصيل حركات الموظف.</div>';
             linesBodyEl.innerHTML = '<tr><td colspan="7" class="finance-empty-state text-danger">حدث خطأ أثناء الاتصال بالخادم.</td></tr>';
+        }
+    }
+
+    function getAccountBadgeMeta(accountId) {
+        switch (accountId) {
+            case '151102':
+                return { text: '151102 قروض وسلف', cls: 'bg-light text-primary border border-primary' };
+            case '151101':
+                return { text: '151101 عهد نقدية', cls: 'bg-light text-info border border-info' };
+            case '523004':
+                return { text: '523004 تذاكر سفر', cls: 'bg-light text-warning border border-warning' };
+            case '523101':
+                return { text: '523101 رحلات داخلية', cls: 'bg-light text-secondary border' };
+            case '523102':
+                return { text: '523102 رحلات خارجية', cls: 'bg-light text-secondary border' };
+            case '524101':
+                return { text: '524101 خروج وعودة', cls: 'bg-light text-dark border' };
+            case '524102':
+                return { text: '524102 تصريح عمل', cls: 'bg-light text-dark border' };
+            case '524104':
+                return { text: '524104 رسوم إقامة', cls: 'bg-light text-dark border' };
+            case '523002':
+                return { text: '523002 إضافي ومكافآت', cls: 'bg-light text-success border border-success' };
+            case '560030':
+                return { text: '560030 بنزين ووقود', cls: 'bg-light text-danger border border-danger' };
+            case '560029':
+                return { text: '560029 صيانة سيارات', cls: 'bg-light text-danger border border-danger' };
+            default:
+                return { text: accountId || 'GL', cls: 'bg-light text-secondary border' };
+        }
+    }
+
+    function getClassificationBadgeMeta(classification) {
+        switch (classification) {
+            case 'deduction':
+            case 'salary_deduction':
+                return { text: 'استقطاع راتب', cls: 'bg-success text-white' };
+            case 'advance':
+            case 'advance_or_loan':
+                return { text: 'صرف سلفة/قرض', cls: 'bg-primary text-white' };
+            case 'custody':
+                return { text: 'عهدة نقدية', cls: 'bg-info text-dark' };
+            case 'vacation_tickets':
+                return { text: 'تذكرة سفر إجازة', cls: 'bg-warning text-dark' };
+            case 'business_travel':
+                return { text: 'مهمة / رحلة عمل', cls: 'bg-secondary text-white' };
+            case 'exit_reentry_visa':
+                return { text: 'تأشيرة خروج وعودة', cls: 'bg-dark text-white' };
+            case 'work_permit':
+                return { text: 'تصريح عمل', cls: 'bg-dark text-white' };
+            case 'iqama_fees':
+                return { text: 'رسوم إقامة', cls: 'bg-dark text-white' };
+            case 'overtime_bonus':
+                return { text: 'إضافي ومكافأة', cls: 'bg-success text-white' };
+            case 'fuel_and_gasoline':
+                return { text: 'بنزين ووقود', cls: 'bg-danger text-white' };
+            case 'vehicle_maintenance':
+                return { text: 'صيانة سيارة', cls: 'bg-danger text-white' };
+            case 'vehicle_insurance':
+                return { text: 'تأمين سيارة', cls: 'bg-danger text-white' };
+            case 'opening_transfer':
+                return { text: 'رصيد افتتاحي', cls: 'bg-secondary text-white' };
+            default:
+                return { text: 'حركة GL', cls: 'bg-secondary text-white' };
         }
     }
 
@@ -1394,8 +1459,9 @@
             const accCell = document.createElement('td');
             accCell.className = 'text-center';
             const accBadge = document.createElement('span');
-            accBadge.className = `badge ${adv.main_account_id === '151102' ? 'bg-light text-primary border border-primary' : 'bg-light text-secondary border'}`;
-            accBadge.textContent = adv.main_account_id === '151102' ? '151102 قروض وسلف' : (adv.main_account_id === '151101' ? '151101 عهد' : adv.main_account_id);
+            const accMeta = getAccountBadgeMeta(adv.main_account_id);
+            accBadge.className = `badge ${accMeta.cls}`;
+            accBadge.textContent = accMeta.text;
             accCell.append(accBadge);
 
             const debitCell = document.createElement('td');
