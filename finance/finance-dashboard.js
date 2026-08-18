@@ -2261,7 +2261,7 @@
             nameBold.textContent = item.showroom_name || item.showroom_number;
             const codeSub = document.createElement('span');
             codeSub.className = 'text-muted small';
-            codeSub.textContent = `كود الفرع: ${item.showroom_number} (${item.branch_code || '—'})`;
+            codeSub.textContent = `كود الفرع: ${item.showroom_number}`;
             cellName.append(nameBold, codeSub);
 
             // 2. Sales Revenue
@@ -2269,18 +2269,18 @@
             cellSales.dir = 'ltr';
 
             // 3. Showroom Maintenance (560019)
-            const cellMaint = textElement('td', money.format(item.showroom_maint_amount || 0), 'text-end');
+            const cellMaint = textElement('td', money.format(item.showroom_maint_amount || 0), 'text-end fw-semibold');
             cellMaint.dir = 'ltr';
 
-            // 4. Electronic/POS Maintenance (560014)
-            const cellElec = textElement('td', money.format(item.electronic_maint_amount || 0), 'text-end');
-            cellElec.dir = 'ltr';
+            // 4. Contractor AP Invoices
+            const cellAp = textElement('td', money.format(item.ap_contractor_amount || 0), 'text-end text-primary fw-bold');
+            cellAp.dir = 'ltr';
 
-            // 5. Other Maintenance
-            const cellOther = textElement('td', money.format(item.other_maint_amount || 0), 'text-end text-muted');
-            cellOther.dir = 'ltr';
+            // 5. Petty Cash / Direct Vouchers
+            const cellPetty = textElement('td', money.format(item.petty_cash_amount || 0), 'text-end text-success fw-bold');
+            cellPetty.dir = 'ltr';
 
-            // 6. Total Maintenance
+            // 6. Total Maintenance (GL)
             const cellTotal = textElement('td', money.format(item.total_maintenance_amount || 0), 'text-end fw-bold text-danger');
             cellTotal.dir = 'ltr';
 
@@ -2314,7 +2314,7 @@
             detailBtn.addEventListener('click', () => openShowroomDetail(item.showroom_number));
             cellAction.append(detailBtn);
 
-            row.append(cellName, cellSales, cellMaint, cellElec, cellOther, cellTotal, cellRatio, cellCount, cellAction);
+            row.append(cellName, cellSales, cellMaint, cellAp, cellPetty, cellTotal, cellRatio, cellCount, cellAction);
             body.append(row);
         });
     }
@@ -2324,9 +2324,10 @@
         const summary = payload.summary || {};
 
         setMetric('financeMaintTotalCost', money.format(summary.total_maintenance_cost || 0));
-        setMetric('financeMaintAvgCost', money.format(summary.avg_cost_per_showroom || 0));
+        setMetric('financeMaintApCost', money.format(summary.total_ap_contractors_cost || 0));
+        setMetric('financeMaintPettyCashCost', money.format(summary.total_petty_cash_cost || 0));
         setMetric('financeMaintTopShowroom', summary.top_spending_showroom || '—');
-        setMetric('financeMaintInvoicesCount', integer.format(summary.total_invoices_count || 0));
+        setMetric('financeMaintInvoicesCount', `${integer.format(summary.total_invoices_count || 0)} فاتورة مقاول`);
 
         const contractorsBadge = element('financeMaintContractorsCountBadge');
         if (contractorsBadge) {
