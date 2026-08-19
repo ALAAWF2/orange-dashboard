@@ -1375,13 +1375,17 @@
                                 <h2 class="h3 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                                     <i class="fa-solid fa-fingerprint text-orange"></i>
                                     <span>مركز البصمات والدوام الحي</span>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fs-6 px-3 py-1 fw-normal">
-                                        <i class="fa-solid fa-circle-dot fa-fade me-1"></i> متصل بالسيرفر (BioTime 8.5)
+                                    <span class="badge bg-secondary border rounded-pill fs-6 px-3 py-1 fw-normal" id="biotimeStatusBadge" onclick="openBioTimeConfigModal()" style="cursor: pointer;" title="انقر لتعديل إعدادات خادم البصمات">
+                                        <i class="fa-solid fa-circle-dot me-1"></i> جاري فحص السيرفر...
                                     </span>
                                 </h2>
                                 <p class="text-muted small mb-0">مراقبة حضور وانصراف موظفي الفروع لحظياً ومطابقتها التلقائية مع قاعدة البيانات</p>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button class="btn btn-outline-dark btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="openBioTimeConfigModal()" title="تعديل رابط خادم البصمات واختبار الاتصال">
+                                    <i class="fa-solid fa-server text-orange"></i>
+                                    <span>إعدادات السيرفر</span>
+                                </button>
                                 <a href="/api/attendance/export-matching-excel" target="_blank" class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" title="تحميل ملف إكسل شامل بكافة المطابقات والموظفين">
                                     <i class="fa-solid fa-file-excel"></i>
                                     <span>تقرير المطابقة الشامل (Excel)</span>
@@ -1397,6 +1401,31 @@
                                 <button class="btn btn-orange-premium btn-sm d-flex align-items-center gap-2 shadow-sm px-3" id="btnSyncAttendance" onclick="syncAttendanceNow()">
                                     <i class="fa-solid fa-arrows-rotate" id="attSyncIcon"></i>
                                     <span id="attSyncText">مزامنة لحظية من السيرفر</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Outage Gap Warning Banner -->
+                        <div id="attOutageAlertBanner" class="alert alert-warning border-warning d-none align-items-center justify-content-between p-3 rounded-3 shadow-sm mb-4" role="alert">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-warning text-dark p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; min-width: 42px;">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark" id="attOutageTitle">تم رصد انقطاع في مزامنة البصمات</h6>
+                                    <div class="small text-muted" id="attOutageDesc">
+                                        آخر بصمة مسجلة في قاعدة البيانات: <b id="attOutageLastPunch">--</b> | مدة الانقطاع: <b id="attOutageDuration" class="text-danger">--</b>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                                <button class="btn btn-dark btn-sm d-flex align-items-center gap-1 px-3 shadow-sm" onclick="openBioTimeConfigModal()">
+                                    <i class="fa-solid fa-gear"></i>
+                                    <span>إعدادات السيرفر</span>
+                                </button>
+                                <button class="btn btn-warning btn-sm fw-bold d-flex align-items-center gap-2 px-3 shadow-sm" id="btnQuickSyncGap" onclick="syncAttendanceGap()">
+                                    <i class="fa-solid fa-cloud-arrow-down" id="quickSyncGapIcon"></i>
+                                    <span id="quickSyncGapText">مزامنة فترة الانقطاع وجلب البصمات</span>
                                 </button>
                             </div>
                         </div>
@@ -8560,6 +8589,9 @@
             const selectedDate = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
             attCurrentDate = selectedDate;
 
+            // 0. Check BioTime Server status and outage
+            checkBioTimeServerStatus();
+
             // 1. Fetch Summary KPIs
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/summary?date=${selectedDate}`, {
@@ -8829,6 +8861,270 @@
                 btn.disabled = false;
                 icon.classList.remove('fa-spin');
                 text.textContent = 'مزامنة لحظية من السيرفر';
+            }
+        }
+
+        let biotimeConfigCache = null;
+
+        async function checkBioTimeServerStatus() {
+            const badge = document.getElementById('biotimeStatusBadge');
+            const alertBanner = document.getElementById('attOutageAlertBanner');
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/server-config`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    biotimeConfigCache = data;
+                    const conn = data.connection || {};
+                    const outage = data.outage || {};
+
+                    if (badge) {
+                        if (conn.success) {
+                            badge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill fs-6 px-3 py-1 fw-normal';
+                            badge.innerHTML = `<i class="fa-solid fa-circle-dot fa-fade me-1"></i> متصل بالسيرفر (${conn.latency_ms}ms)`;
+                        } else {
+                            badge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fs-6 px-3 py-1 fw-normal';
+                            badge.innerHTML = `<i class="fa-solid fa-circle-exclamation me-1"></i> انقطاع الاتصال بالسيرفر`;
+                        }
+                    }
+
+                    if (outage.has_outage) {
+                        if (alertBanner) {
+                            alertBanner.classList.remove('d-none');
+                            alertBanner.classList.add('d-flex');
+                            document.getElementById('attOutageLastPunch').textContent = outage.last_punch_formatted || outage.last_punch_time || '--';
+                            document.getElementById('attOutageDuration').textContent = outage.gap_formatted || `${outage.gap_hours} ساعة`;
+                        }
+                    } else {
+                        if (alertBanner) {
+                            alertBanner.classList.add('d-none');
+                            alertBanner.classList.remove('d-flex');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to check BioTime server status:", e);
+                if (badge) {
+                    badge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fs-6 px-3 py-1 fw-normal';
+                    badge.innerHTML = `<i class="fa-solid fa-circle-exclamation me-1"></i> تعذر الاتصال بالسيرفر`;
+                }
+            }
+        }
+
+        async function openBioTimeConfigModal() {
+            const modalEl = document.getElementById('biotimeConfigModal');
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            const input = document.getElementById('inputBiotimeUrl');
+            const connBadge = document.getElementById('modalBioTimeConnBadge');
+            const connMsg = document.getElementById('modalBioTimeConnMsg');
+            const testResultBox = document.getElementById('modalTestResultBox');
+            const gapSyncResult = document.getElementById('modalGapSyncResult');
+            
+            if (testResultBox) testResultBox.className = 'alert py-2 px-3 small d-none mb-0';
+            if (gapSyncResult) gapSyncResult.className = 'mt-2 small d-none';
+
+            connBadge.className = 'badge bg-secondary px-3 py-2 fs-6';
+            connBadge.textContent = 'جاري الفحص...';
+            connMsg.className = 'small text-muted mt-2';
+            connMsg.textContent = 'جاري الاتصال بخادم البصمات...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/server-config`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    biotimeConfigCache = data;
+                    input.value = data.url || 'http://176.224.90.165:8081';
+
+                    const conn = data.connection || {};
+                    const outage = data.outage || {};
+
+                    if (conn.success) {
+                        connBadge.className = 'badge bg-success px-3 py-2 fs-6';
+                        connBadge.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> متصل بنجاح (${conn.latency_ms}ms)`;
+                        connMsg.className = 'small text-success mt-2 fw-semibold';
+                        connMsg.textContent = `${conn.message} - الرابط النشط: ${data.url}`;
+                    } else {
+                        connBadge.className = 'badge bg-danger px-3 py-2 fs-6';
+                        connBadge.innerHTML = `<i class="fa-solid fa-circle-xmark me-1"></i> غير متصل`;
+                        connMsg.className = 'small text-danger mt-2 fw-semibold';
+                        connMsg.textContent = `${conn.message} - الرابط النشط: ${data.url}`;
+                    }
+
+                    document.getElementById('modalOutageLastPunch').textContent = outage.last_punch_formatted || outage.last_punch_time || '--';
+                    document.getElementById('modalOutageDuration').textContent = outage.gap_formatted || `${outage.gap_hours} ساعة`;
+                }
+            } catch (e) {
+                connBadge.className = 'badge bg-danger px-3 py-2 fs-6';
+                connBadge.textContent = 'خطأ في جلب الإعدادات';
+                connMsg.textContent = e.message;
+            }
+        }
+
+        async function testBioTimeUrlInModal() {
+            const input = document.getElementById('inputBiotimeUrl');
+            const btn = document.getElementById('btnTestBiotimeUrl');
+            const icon = document.getElementById('iconTestBiotime');
+            const resultBox = document.getElementById('modalTestResultBox');
+            const testUrl = (input.value || '').trim();
+
+            if (!testUrl) {
+                resultBox.className = 'alert alert-danger py-2 px-3 small mb-0';
+                resultBox.textContent = 'يرجى إدخال رابط السيرفر أولاً.';
+                return;
+            }
+
+            btn.disabled = true;
+            icon.className = 'fa-solid fa-spinner fa-spin';
+            resultBox.className = 'alert alert-info py-2 px-3 small mb-0';
+            resultBox.textContent = 'جاري اختبار الاتصال والمصادقة مع السيرفر...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/test-connection`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ url: testUrl })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    resultBox.className = 'alert alert-success py-2 px-3 small mb-0';
+                    resultBox.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> <b>الاتصال ناجح!</b> زمن الاستجابة: <b>${data.latency_ms}ms</b> - تم التحقق من JWT Auth بنجاح.`;
+                } else {
+                    resultBox.className = 'alert alert-danger py-2 px-3 small mb-0';
+                    resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark me-1"></i> <b>فشل الاتصال:</b> ${data.message}`;
+                }
+            } catch (e) {
+                resultBox.className = 'alert alert-danger py-2 px-3 small mb-0';
+                resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark me-1"></i> <b>خطأ في الشبكة:</b> ${e.message}`;
+            } finally {
+                btn.disabled = false;
+                icon.className = 'fa-solid fa-plug';
+            }
+        }
+
+        async function saveBioTimeServerUrl() {
+            const input = document.getElementById('inputBiotimeUrl');
+            const btn = document.getElementById('btnSaveBiotimeUrl');
+            const newUrl = (input.value || '').trim();
+
+            if (!newUrl) {
+                showAdminToast('يرجى إدخال رابط خادم البصمات.', 'danger', 'fa-triangle-exclamation');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جاري الحفظ والتطبيق...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/server-config`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ url: newUrl })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showAdminToast('تم حفظ وتحديث رابط خادم البصمات بنجاح!', 'success', 'fa-circle-check');
+                    bootstrap.Modal.getInstance(document.getElementById('biotimeConfigModal')).hide();
+                    await checkBioTimeServerStatus();
+                    await loadAttendanceData(true);
+                } else {
+                    const err = await res.json();
+                    showAdminToast(`فشل حفظ الإعدادات: ${err.error || 'خطأ غير معروف'}`, 'danger', 'fa-triangle-exclamation');
+                }
+            } catch (e) {
+                showAdminToast(`خطأ أثناء حفظ رابط السيرفر: ${e.message}`, 'danger', 'fa-triangle-exclamation');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> حفظ وتطبيق الرابط الجديد';
+            }
+        }
+
+        async function syncAttendanceGap() {
+            const btnQuick = document.getElementById('btnQuickSyncGap');
+            const iconQuick = document.getElementById('quickSyncGapIcon');
+            const textQuick = document.getElementById('quickSyncGapText');
+
+            const btnModal = document.getElementById('btnModalSyncGap');
+            const iconModal = document.getElementById('modalSyncGapIcon');
+            const textModal = document.getElementById('modalSyncGapText');
+            const gapSyncResult = document.getElementById('modalGapSyncResult');
+
+            if (btnQuick) btnQuick.disabled = true;
+            if (iconQuick) iconQuick.className = 'fa-solid fa-spinner fa-spin';
+            if (textQuick) textQuick.textContent = 'جاري المزامنة...';
+
+            if (btnModal) btnModal.disabled = true;
+            if (iconModal) iconModal.className = 'fa-solid fa-spinner fa-spin';
+            if (textModal) textModal.textContent = 'جاري المزامنة...';
+
+            if (gapSyncResult) {
+                gapSyncResult.className = 'mt-2 alert alert-info py-2 px-3 small';
+                gapSyncResult.textContent = 'جاري جلب البصمات المفقودة من السيرفر وإدراجها بقاعدة البيانات...';
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/sync-gap`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': authHeader, 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const msg = `تمت مزامنة فترة الانقطاع بنجاح! تم استيراد وتحديث ${data.total_synced_to_db || 0} حركة بصمة عبر ${data.days_synced || 0} أيام (${data.start_date} إلى ${data.end_date}).`;
+                    showAdminToast(msg, 'success', 'fa-circle-check');
+                    
+                    if (gapSyncResult) {
+                        gapSyncResult.className = 'mt-2 alert alert-success py-2 px-3 small';
+                        gapSyncResult.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> <b>اكتملت المزامنة:</b> تم جلب <b>${data.total_synced_to_db || 0}</b> حركة بصمة بنجاح!`;
+                    }
+
+                    await checkBioTimeServerStatus();
+                    await loadAttendanceData(true);
+                } else {
+                    const err = await res.json();
+                    const errMsg = `فشلت مزامنة فترة الانقطاع: ${err.error || 'خطأ غير معروف'}`;
+                    showAdminToast(errMsg, 'danger', 'fa-triangle-exclamation');
+                    if (gapSyncResult) {
+                        gapSyncResult.className = 'mt-2 alert alert-danger py-2 px-3 small';
+                        gapSyncResult.textContent = errMsg;
+                    }
+                }
+            } catch (e) {
+                const errMsg = `خطأ أثناء مزامنة فترة الانقطاع: ${e.message}`;
+                showAdminToast(errMsg, 'danger', 'fa-triangle-exclamation');
+                if (gapSyncResult) {
+                    gapSyncResult.className = 'mt-2 alert alert-danger py-2 px-3 small';
+                    gapSyncResult.textContent = errMsg;
+                }
+            } finally {
+                if (btnQuick) {
+                    btnQuick.disabled = false;
+                    iconQuick.className = 'fa-solid fa-cloud-arrow-down';
+                    textQuick.textContent = 'مزامنة فترة الانقطاع وجلب البصمات';
+                }
+                if (btnModal) {
+                    btnModal.disabled = false;
+                    iconModal.className = 'fa-solid fa-cloud-arrow-down';
+                    textModal.textContent = 'مزامنة فترة الانقطاع الآن';
+                }
             }
         }
 
@@ -9293,6 +9589,80 @@
                 </div>
                 <div class="modal-footer bg-white border-0 px-4 py-3">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BioTime Server Configuration & Outage Modal -->
+    <div class="modal fade" id="biotimeConfigModal" tabindex="-1" aria-labelledby="biotimeConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white border-0 px-4 py-3" style="border-radius: 16px 16px 0 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-server text-orange fs-5"></i>
+                        <h5 class="modal-title fw-bold" id="biotimeConfigModalLabel">إعدادات خادم البصمات (BioTime 8.5 Server)</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <!-- Connection Status Card -->
+                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="text-muted small fw-bold"><i class="fa-solid fa-signal me-1"></i> حالة الاتصال الحالية:</span>
+                            <span id="modalBioTimeConnBadge" class="badge bg-secondary px-3 py-2 fs-6">جاري الفحص...</span>
+                        </div>
+                        <div id="modalBioTimeConnMsg" class="small text-muted mt-2">--</div>
+                    </div>
+
+                    <!-- URL Input Form -->
+                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3">
+                        <label for="inputBiotimeUrl" class="form-label fw-bold text-dark mb-1">
+                            <i class="fa-solid fa-link text-orange me-1"></i> رابط خادم البصمات (BioTime API URL):
+                        </label>
+                        <p class="text-muted small mb-2">في حال تغيّر عنوان IP أو منفذ السيرفر، أدخل الرابط الجديد هنا واحفظه لتحديث المزامنة اللحظية فوراً.</p>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-light"><i class="fa-solid fa-globe"></i></span>
+                            <input type="text" class="form-control" id="inputBiotimeUrl" placeholder="http://176.224.90.165:8081" dir="ltr">
+                            <button class="btn btn-outline-primary" type="button" id="btnTestBiotimeUrl" onclick="testBioTimeUrlInModal()">
+                                <i class="fa-solid fa-plug" id="iconTestBiotime"></i> اختبار الاتصال
+                            </button>
+                        </div>
+                        <div id="modalTestResultBox" class="alert py-2 px-3 small d-none mb-0"></div>
+                    </div>
+
+                    <!-- Outage & Recovery Info Card -->
+                    <div class="card border-0 shadow-sm p-3 bg-white rounded-3">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock-rotate-left text-warning me-1"></i> فحص مدة الانقطاع واسترجاع البصمات المفقودة</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="bg-light p-2 rounded text-center">
+                                    <small class="text-muted d-block">آخر بصمة في النظام</small>
+                                    <strong id="modalOutageLastPunch" class="text-dark small">--</strong>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="bg-light p-2 rounded text-center">
+                                    <small class="text-muted d-block">مدة الانقطاع</small>
+                                    <strong id="modalOutageDuration" class="text-danger small">--</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="text-muted small">جلب كافة البصمات منذ آخر تسجيل وحتى اللحظة الحالية تلقائياً:</span>
+                            <button class="btn btn-warning btn-sm fw-bold d-flex align-items-center gap-1 shadow-sm px-3" id="btnModalSyncGap" onclick="syncAttendanceGap()">
+                                <i class="fa-solid fa-cloud-arrow-down" id="modalSyncGapIcon"></i>
+                                <span id="modalSyncGapText">مزامنة فترة الانقطاع الآن</span>
+                            </button>
+                        </div>
+                        <div id="modalGapSyncResult" class="mt-2 small d-none"></div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-0 px-4 py-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-orange-premium btn-sm px-4 shadow-sm" id="btnSaveBiotimeUrl" onclick="saveBioTimeServerUrl()">
+                        <i class="fa-solid fa-check me-1"></i> حفظ وتطبيق الرابط الجديد
+                    </button>
                 </div>
             </div>
         </div>
