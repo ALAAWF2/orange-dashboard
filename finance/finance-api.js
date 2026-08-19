@@ -83,6 +83,9 @@
             `/api/finance/showrooms/${encodeURIComponent(number)}/pnl`,
             params
         ),
-        maintenanceAnalytics: params => request('/api/finance/maintenance-analytics', params)
+        maintenanceAnalytics: params => request('/api/finance/maintenance-analytics', params),
+        cashDropsReconciliation: params => request('/api/finance/reconciliation/cash-drops', params),
+        gatewaysReconciliation: params => request('/api/finance/reconciliation/gateways', params),
+        reconciliationSummary: params => request('/api/finance/reconciliation/summary', params)
     });
 })();

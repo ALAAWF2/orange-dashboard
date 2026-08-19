@@ -400,7 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
-    <link rel="stylesheet" href="finance/finance.css?v=20260816-1">
+    <link rel="stylesheet" href="finance/finance.css?v=20260819-1">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -1245,99 +1245,205 @@
                     </section>
                 </div>
 
-                <!-- Pane 9: Treasury, Banks & Gateways -->
+                <!-- Pane 9: Treasury, Banks & Gateways Reconciliation Command Center -->
                 <div class="finance-tab-pane" id="financePaneTreasury" data-pane="treasury" hidden>
-                    <div class="finance-asset-stats-grid mb-4">
-                        <article class="finance-asset-stat-card is-primary">
-                            <span>صناديق المعارض النقدية (POS)</span>
-                            <strong id="financeTreasuryCashCount">—</strong>
-                            <small id="financeTreasuryCashBalance">حسابات النقدية لدى معارض المملكة</small>
+                    <div class="finance-pane-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                        <div>
+                            <span class="finance-section-kicker">TREASURY &amp; PAYMENT RECONCILIATION HUB</span>
+                            <h2 class="finance-pane-title m-0"><i class="fa-solid fa-scale-balanced text-primary me-2"></i> مركز مطابقة الخزينة، إيداعات الكاش وبوابات الدفع</h2>
+                            <p class="text-muted small m-0 mt-1">مطابقة مبيعات الكاش اليومية مع قسائم الإيداع البنكية وكشف العجز/الفائض، ومطابقة بوابات الدفع (مدى، فيزا، تمارا، تابي) واحتساب عمولات MDR.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-success fw-bold px-3 py-2 d-flex align-items-center gap-2 shadow-sm" id="financeReconciliationExportBtn" style="border-radius: 10px;">
+                                <i class="fa-solid fa-file-excel"></i> تصدير تقرير المطابقة الشامل (Excel)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Treasury KPI Summary Grid -->
+                    <div class="finance-metric-grid mb-4" aria-live="polite">
+                        <article class="finance-metric-card is-orange">
+                            <span class="finance-metric-index">TR1</span>
+                            <span class="finance-metric-label">إجمالي مبيعات الكاش (POS Cash)</span>
+                            <strong class="finance-metric-value" id="financeReconTotalPosCash">0</strong>
+                            <span class="finance-metric-sub" id="financeReconCashTxCount">مبيعات نقدية عبر الفروع</span>
                         </article>
-                        <article class="finance-asset-stat-card">
-                            <span>الحسابات البنكية الرسمية</span>
-                            <strong id="financeTreasuryBankCount">—</strong>
-                            <small id="financeTreasuryBankBalance">الأهلي، الراجحي، الإنماء، البلاد</small>
+                        <article class="finance-metric-card is-primary">
+                            <span class="finance-metric-index">TR2</span>
+                            <span class="finance-metric-label">إيداعات الكاش البنكية الفعلية</span>
+                            <strong class="finance-metric-value" id="financeReconTotalDeposits">0</strong>
+                            <span class="finance-metric-sub" id="financeReconCashNetVariance">مطابقة إيداعات الفروع</span>
                         </article>
-                        <article class="finance-asset-stat-card">
-                            <span>وسطاء الدفع والمنصات</span>
-                            <strong id="financeTreasuryGatewaysCount">—</strong>
-                            <small>تمارا، تابي، ترينديول، نون، أمازون</small>
+                        <article class="finance-metric-card is-sand">
+                            <span class="finance-metric-index">TR3</span>
+                            <span class="finance-metric-label">إجمالي مبيعات بوابات الدفع</span>
+                            <strong class="finance-metric-value" id="financeReconTotalGatewaysGross">0</strong>
+                            <span class="finance-metric-sub" id="financeReconGatewaysCount">مدى، فيزا، تمارا، تابي</span>
+                        </article>
+                        <article class="finance-metric-card is-ink">
+                            <span class="finance-metric-index">TR4</span>
+                            <span class="finance-metric-label">عمولات البنوك المحسوبة (MDR Fees)</span>
+                            <strong class="finance-metric-value" id="financeReconTotalMdrFees">0</strong>
+                            <span class="finance-metric-sub" id="financeReconEffectiveMdrPct">عمولات الوسطاء العقدية + VAT</span>
                         </article>
                     </div>
 
+                    <!-- Section 1: Showroom Cash Drops vs Bank Deposits -->
+                    <div class="finance-card mb-4">
+                        <div class="finance-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <h3 class="finance-card-title m-0"><i class="fa-solid fa-money-bill-transfer text-success me-2"></i> مطابقة إيداعات الكاش اليومية للمعارض (Cash Drops vs Deposits)</h3>
+                                <p class="text-muted small m-0">كشف فوري لعجز وفائض الصناديق النقدية ومطابقة إيصالات الإيداع البنكية لكل معرض</p>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="finance-search-wrap">
+                                    <input type="search" id="financeCashReconSearch" class="finance-search-input" placeholder="بحث بالمعرض أو الكود…" aria-label="بحث في مطابقة الكاش">
+                                    <button type="button" id="financeCashReconSearchClear" class="finance-search-clear" hidden>×</button>
+                                </div>
+                                <select id="financeCashReconStatusFilter" class="form-select form-select-sm" style="width: auto; font-weight: 700;">
+                                    <option value="all">جميع الحالات</option>
+                                    <option value="shortage">🚨 المعارض التي عليها عجز فقط</option>
+                                    <option value="overage">⚠️ المعارض التي عليها فائض فقط</option>
+                                    <option value="matched">✅ المطابقة تماماً</option>
+                                    <option value="pending">⏳ إيداعات معلقة</option>
+                                </select>
+                                <span class="badge bg-light text-dark p-2" id="financeCashReconBadge">0 حركة</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>تاريخ المبيعات</th>
+                                        <th>المعرض / الفرع</th>
+                                        <th class="text-center">حركات الكاش</th>
+                                        <th class="text-end">مبيعات الكاش (POS)</th>
+                                        <th class="text-end">المودع في البنك</th>
+                                        <th class="text-end">الفارق (عجز / فائض)</th>
+                                        <th class="text-center">حالة المطابقة</th>
+                                        <th>رقم قسيمة الإيداع</th>
+                                        <th>تاريخ الإيداع</th>
+                                        <th>الموظف المودع</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeCashReconBody">
+                                    <tr><td colspan="10" class="finance-empty-state">جارٍ تحميل مطابقة إيداعات الكاش…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" id="financeCashReconPagination">
+                            <small class="text-muted" id="financeCashReconPageInfo">—</small>
+                            <div class="btn-group btn-group-sm" id="financeCashReconNav">
+                                <button type="button" class="btn btn-outline-secondary" id="financeCashReconPrevBtn">السابق</button>
+                                <button type="button" class="btn btn-outline-secondary" id="financeCashReconNextBtn">التالي</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Payment Gateways & MDR Fees Reconciliation -->
+                    <div class="finance-card mb-4">
+                        <div class="finance-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <h3 class="finance-card-title m-0"><i class="fa-solid fa-credit-card text-info me-2"></i> مطابقة بوابات الدفع الإلكتروني والتقسيط وعمولات MDR</h3>
+                                <p class="text-muted small m-0">احتساب عمولات البنوك العقدية ومقارنتها بالصافي المتوقع وصوله للحساب البنكي (مدى، فيزا، تمارا، تابي)</p>
+                            </div>
+                            <span class="badge bg-light text-dark p-2" id="financeGatewaysSummaryBadge">5 وسطاء دفع معتمدين</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>وسيط التحصيل / البوابة</th>
+                                        <th class="text-center">عدد العمليات</th>
+                                        <th class="text-end">إجمالي مبيعات البوابة (Gross)</th>
+                                        <th class="text-center">النسبة العقدية %</th>
+                                        <th class="text-end">عمولة البنك المحسوبة (MDR + VAT)</th>
+                                        <th class="text-end">الصافي المتوقع بالبنك (Net Settlement)</th>
+                                        <th class="text-center">النسبة الفعالة %</th>
+                                        <th class="text-center">زمن التحصيل</th>
+                                        <th>شروط العقد البنكي</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeGatewaysReconBody">
+                                    <tr><td colspan="9" class="finance-empty-state">جارٍ تحميل مطابقة بوابات الدفع…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: GL Accounts for Cash, Banks & Gateways -->
                     <div class="row g-4">
-                        <div class="col-lg-6">
+                        <div class="col-lg-4">
                             <section class="finance-ledger-panel h-100">
                                 <header>
                                     <div>
                                         <span class="finance-section-kicker">SHOWROOM CASH POS</span>
-                                        <h2>صناديق المعارض النقدية (1201xx)</h2>
+                                        <h2>صناديق المعارض (1201xx)</h2>
                                     </div>
                                 </header>
-                                <div class="table-responsive p-2" style="max-height: 520px; overflow-y: auto;">
+                                <div class="table-responsive p-2" style="max-height: 380px; overflow-y: auto;">
                                     <table class="table table-sm table-hover align-middle">
                                         <thead class="table-light sticky-top">
                                             <tr>
                                                 <th>رقم الحساب</th>
-                                                <th>اسم صندوق المعرض</th>
-                                                <th class="text-end">الوارد (إيداعات)</th>
-                                                <th class="text-end">المنصرف (مسحوبات)</th>
-                                                <th class="text-end">الرصيد الدفتري</th>
-                                                <th class="text-center">الحركات</th>
+                                                <th>اسم الصندوق</th>
+                                                <th class="text-end">الوارد</th>
+                                                <th class="text-end">المنصرف</th>
+                                                <th class="text-end">الرصيد</th>
                                             </tr>
                                         </thead>
                                         <tbody id="financeTreasuryCashBody">
-                                            <tr><td colspan="6" class="finance-empty-state">جارٍ تحميل الصناديق…</td></tr>
+                                            <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل الصناديق…</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </section>
                         </div>
-                        <div class="col-lg-6">
-                            <section class="finance-ledger-panel mb-4">
-                                <header>
-                                    <div>
-                                        <span class="finance-section-kicker">PAYMENT GATEWAYS</span>
-                                        <h2>وسطاء التحصيل والمنصات (1203xx)</h2>
-                                    </div>
-                                </header>
-                                <div class="table-responsive p-2">
-                                    <table class="table table-sm table-hover align-middle">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>رقم الحساب</th>
-                                                <th>اسم وسيط التحصيل / المنصة</th>
-                                                <th>النوع والتصنيف</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="financeTreasuryGatewaysBody">
-                                            <tr><td colspan="3" class="finance-empty-state">جارٍ تحميل وسطاء التحصيل…</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </section>
-
-                            <section class="finance-ledger-panel">
+                        <div class="col-lg-4">
+                            <section class="finance-ledger-panel h-100">
                                 <header>
                                     <div>
                                         <span class="finance-section-kicker">BANK ACCOUNTS</span>
-                                        <h2>حسابات البنوك المعتمدة (1202xx)</h2>
+                                        <h2>حسابات البنوك (1202xx)</h2>
                                     </div>
                                 </header>
-                                <div class="table-responsive p-2" style="max-height: 280px; overflow-y: auto;">
+                                <div class="table-responsive p-2" style="max-height: 380px; overflow-y: auto;">
                                     <table class="table table-sm table-hover align-middle">
                                         <thead class="table-light sticky-top">
                                             <tr>
                                                 <th>رقم الحساب</th>
                                                 <th>اسم الحساب البنكي</th>
-                                                <th class="text-end">إجمالي الوارد</th>
-                                                <th class="text-end">إجمالي المنصرف</th>
-                                                <th class="text-end">الرصيد الحالي</th>
-                                                <th class="text-center">الحركات</th>
+                                                <th class="text-end">الوارد</th>
+                                                <th class="text-end">المنصرف</th>
+                                                <th class="text-end">الرصيد</th>
                                             </tr>
                                         </thead>
                                         <tbody id="financeTreasuryBanksBody">
-                                            <tr><td colspan="6" class="finance-empty-state">جارٍ تحميل حسابات البنوك…</td></tr>
+                                            <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل حسابات البنوك…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="col-lg-4">
+                            <section class="finance-ledger-panel h-100">
+                                <header>
+                                    <div>
+                                        <span class="finance-section-kicker">PAYMENT GATEWAYS GL</span>
+                                        <h2>حسابات وسطاء الدفع</h2>
+                                    </div>
+                                </header>
+                                <div class="table-responsive p-2" style="max-height: 380px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover align-middle">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>رقم الحساب</th>
+                                                <th>اسم الوسيط</th>
+                                                <th>النوع</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financeTreasuryGatewaysBody">
+                                            <tr><td colspan="3" class="finance-empty-state">جارٍ تحميل وسطاء الدفع…</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2964,8 +3070,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260818-4"></script>
-    <script src="finance/finance-dashboard.js?v=20260818-4"></script>
+    <script src="finance/finance-api.js?v=20260819-1"></script>
+    <script src="finance/finance-dashboard.js?v=20260819-1"></script>
 
 </body>
 
