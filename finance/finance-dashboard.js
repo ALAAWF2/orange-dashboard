@@ -17,9 +17,6 @@
     let currentPurchases = [];
     let currentInventory = [];
     let currentTreasury = {};
-    let currentCashReconciliation = {};
-    let currentGatewaysReconciliation = {};
-    let currentReconciliationSummary = {};
     let currentTaxHub = {};
     let currentExpenseScopeStatus = 'approved';
     let currentMaintenance = {};
@@ -36,8 +33,7 @@
         advances: { key: 'start_date', dir: 'desc' },
         purchases: { key: 'accounting_date', dir: 'desc' },
         inventory: { key: 'total_retail_value', dir: 'desc' },
-        maintenance: { key: 'total_maintenance_amount', dir: 'desc' },
-        cashRecon: { key: 'business_date', dir: 'desc' }
+        maintenance: { key: 'total_maintenance_amount', dir: 'desc' }
     };
 
     const filters = {
@@ -1952,224 +1948,6 @@
         }
     }
 
-    function renderCashDropsReconciliation(payload) {
-        if (!payload || payload.state !== 'ready') return;
-        currentCashReconciliation = payload;
-        filterAndRenderCashDrops();
-    }
-
-    function filterAndRenderCashDrops() {
-        const payload = currentCashReconciliation;
-        if (!payload || !payload.items) return;
-
-        const search = (filters.cashRecon?.search || '').trim().toLowerCase();
-        const status = (filters.cashRecon?.status || 'all').toLowerCase();
-
-        const filtered = payload.items.filter(item => {
-            const matchSearch = !search || 
-                (item.showroom_name && item.showroom_name.toLowerCase().includes(search)) ||
-                (item.store_number && item.store_number.toLowerCase().includes(search)) ||
-                (item.deposit_slip_number && item.deposit_slip_number.toLowerCase().includes(search)) ||
-                (item.deposited_by_staff && item.deposited_by_staff.toLowerCase().includes(search));
-            
-            const matchStatus = (status === 'all') || (item.reconciliation_status === status);
-            return matchSearch && matchStatus;
-        });
-
-        const body = element('financeCashReconBody');
-        if (!body) return;
-
-        if (filtered.length === 0) {
-            body.innerHTML = '<tr><td colspan="10" class="finance-empty-state">لا توجد حركات مطابقة تطابق خيارات البحث الحالية.</td></tr>';
-        } else {
-            body.replaceChildren(...filtered.map(r => {
-                const row = document.createElement('tr');
-                const posAmt = Number(r.pos_cash_amount) || 0;
-                const depAmt = Number(r.actual_deposit_amount) || 0;
-                const varAmt = Number(r.variance_amount) || 0;
-
-                let varBadge;
-                if (varAmt < -0.05) {
-                    varBadge = `<span class="badge bg-danger p-2" dir="ltr">🚨 عجز ${money.format(Math.abs(varAmt))} SAR</span>`;
-                } else if (varAmt > 0.05) {
-                    varBadge = `<span class="badge bg-warning text-dark p-2" dir="ltr">⚠️ فائض +${money.format(varAmt)} SAR</span>`;
-                } else {
-                    varBadge = `<span class="badge bg-success p-2" dir="ltr">✅ مطابق 0 SAR</span>`;
-                }
-
-                let statusBadge;
-                if (r.reconciliation_status === 'shortage') {
-                    statusBadge = '<span class="badge bg-danger-subtle text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> عجز كاش</span>';
-                } else if (r.reconciliation_status === 'overage') {
-                    statusBadge = '<span class="badge bg-warning-subtle text-dark fw-bold"><i class="fa-solid fa-circle-exclamation me-1"></i> فائض كاش</span>';
-                } else if (r.reconciliation_status === 'matched') {
-                    statusBadge = '<span class="badge bg-success-subtle text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> مطابق</span>';
-                } else {
-                    statusBadge = '<span class="badge bg-secondary-subtle text-muted fw-bold"><i class="fa-solid fa-clock me-1"></i> إيداع معلق</span>';
-                }
-
-                row.innerHTML = `
-                    <td class="fw-bold font-monospace">${r.business_date || '—'}</td>
-                    <td>
-                        <div class="fw-bold text-dark">${r.showroom_name}</div>
-                        <small class="text-muted font-monospace">${r.store_number} ${r.branch_dimension_value ? '· ' + r.branch_dimension_value : ''}</small>
-                    </td>
-                    <td class="text-center font-monospace" dir="ltr">${integer.format(r.cash_transactions_count || 0)}</td>
-                    <td class="text-end fw-bold font-monospace" dir="ltr">${money.format(posAmt)}</td>
-                    <td class="text-end fw-bold font-monospace text-primary" dir="ltr">${money.format(depAmt)}</td>
-                    <td class="text-end font-monospace">${varBadge}</td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td class="font-monospace">${r.deposit_slip_number || '<span class="text-muted">—</span>'}</td>
-                    <td class="font-monospace">${r.actual_deposit_date || '<span class="text-muted">—</span>'}</td>
-                    <td>${r.deposited_by_staff || '<span class="text-muted">—</span>'}</td>
-                `;
-                return row;
-            }));
-        }
-
-        const badge = element('financeCashReconBadge');
-        if (badge) {
-            const sum = payload.summary || {};
-            badge.textContent = `${integer.format(filtered.length)} حركة | عجز: ${money.format(sum.total_shortage || 0)} SAR`;
-        }
-
-        const pageInfo = element('financeCashReconPageInfo');
-        if (pageInfo) {
-            const sum = payload.summary || {};
-            pageInfo.textContent = `عرض ${integer.format(filtered.length)} من أصل ${integer.format(sum.total_days_records || 0)} حركة · نسبة المطابقة: ${sum.reconciled_pct || 0}%`;
-        }
-    }
-
-    function renderGatewaysReconciliation(payload) {
-        if (!payload || payload.state !== 'ready') return;
-        currentGatewaysReconciliation = payload;
-
-        const body = element('financeGatewaysReconBody');
-        if (!body) return;
-
-        const gateways = payload.gateways || [];
-        if (gateways.length === 0) {
-            body.innerHTML = '<tr><td colspan="9" class="finance-empty-state">لا توجد عمليات بوابات دفع مسجلة في الفترة.</td></tr>';
-            return;
-        }
-
-        const icons = {
-            'MADA': '<i class="fa-solid fa-credit-card text-success me-2"></i>',
-            'VISA_MC': '<i class="fa-brands fa-cc-visa text-primary me-2"></i>',
-            'TAMARA': '<i class="fa-solid fa-clock-rotate-left text-warning me-2"></i>',
-            'TABBY': '<i class="fa-solid fa-tag text-info me-2"></i>',
-            'AMEX': '<i class="fa-brands fa-cc-amex text-danger me-2"></i>'
-        };
-
-        body.replaceChildren(...gateways.map(g => {
-            const row = document.createElement('tr');
-            const icon = icons[g.gateway_key] || '<i class="fa-solid fa-wallet text-secondary me-2"></i>';
-            const gross = Number(g.gross_sales_amount) || 0;
-            const fee = Number(g.expected_mdr_fee_amount) || 0;
-            const net = Number(g.expected_net_settlement) || 0;
-
-            row.innerHTML = `
-                <td>
-                    <div class="fw-bold text-dark">${icon} ${g.gateway_name_ar}</div>
-                    <small class="text-muted font-monospace">${g.gateway_name_en}</small>
-                </td>
-                <td class="text-center font-monospace" dir="ltr">${integer.format(g.transaction_count || 0)}</td>
-                <td class="text-end fw-bold font-monospace" dir="ltr">${money.format(gross)} SAR</td>
-                <td class="text-center font-monospace fw-bold" dir="ltr">${g.mdr_contract_rate_pct}% ${g.fixed_fee_sar > 0 ? '+ ' + g.fixed_fee_sar + ' SAR' : ''}</td>
-                <td class="text-end fw-bold font-monospace text-danger" dir="ltr">-${money.format(fee)} SAR</td>
-                <td class="text-end fw-bold font-monospace text-success" dir="ltr">${money.format(net)} SAR</td>
-                <td class="text-center font-monospace fw-bold text-primary" dir="ltr">${g.effective_mdr_pct}%</td>
-                <td class="text-center"><span class="badge bg-light text-dark font-monospace">D+${g.settlement_lag_days}</span></td>
-                <td><small class="text-muted">${g.contract_notes || '—'}</small></td>
-            `;
-            return row;
-        }));
-
-        const badge = element('financeGatewaysSummaryBadge');
-        if (badge) {
-            const sum = payload.summary || {};
-            badge.textContent = `${integer.format(sum.gateways_count || 0)} وسطاء | إجمالي مبيعات: ${money.format(sum.total_electronic_gross_sales || 0)} SAR | عمولات: ${money.format(sum.total_expected_mdr_fees || 0)} SAR`;
-        }
-    }
-
-    function renderReconciliationSummary(payload) {
-        if (!payload || payload.state !== 'ready') return;
-        currentReconciliationSummary = payload;
-
-        const cash = payload.cash || {};
-        const gateways = payload.gateways || {};
-
-        setMetric('financeReconTotalPosCash', `${money.format(Number(cash.total_pos_cash) || 0)} SAR`);
-        setMetric('financeReconCashTxCount', `${integer.format(Number(cash.total_days_records) || 0)} حركة مطابقة · كاش: ${payload.overall?.cash_share_pct || 0}%`);
-
-        setMetric('financeReconTotalDeposits', `${money.format(Number(cash.total_deposited_cash) || 0)} SAR`);
-        const netVar = Number(cash.net_variance) || 0;
-        const varianceElem = element('financeReconCashNetVariance');
-        if (varianceElem) {
-            if (netVar < -0.05) {
-                varianceElem.innerHTML = `<span class="text-danger fw-bold">🚨 إجمالي العجز: -${money.format(Math.abs(netVar))} SAR (${cash.shortage_count || 0} فرع)</span>`;
-            } else if (netVar > 0.05) {
-                varianceElem.innerHTML = `<span class="text-warning fw-bold">⚠️ إجمالي الفائض: +${money.format(netVar)} SAR</span>`;
-            } else {
-                varianceElem.innerHTML = `<span class="text-success fw-bold">✅ مطابقة تامة 100%</span>`;
-            }
-        }
-
-        setMetric('financeReconTotalGatewaysGross', `${money.format(Number(gateways.total_electronic_gross_sales) || 0)} SAR`);
-        setMetric('financeReconGatewaysCount', `${integer.format(Number(gateways.total_transactions_count) || 0)} عملية · إلكتروني: ${payload.overall?.electronic_share_pct || 0}%`);
-
-        setMetric('financeReconTotalMdrFees', `${money.format(Number(gateways.total_expected_mdr_fees) || 0)} SAR`);
-        setMetric('financeReconEffectiveMdrPct', `متوسط العمولة: ${gateways.overall_effective_mdr_pct || 0}% + VAT`);
-    }
-
-    function exportReconciliationReport() {
-        if (typeof XLSX === 'undefined') {
-            alert('مكتبة SheetJS غير محملة');
-            return;
-        }
-
-        const wb = XLSX.utils.book_new();
-
-        // 1. Cash drops sheet
-        const cashRows = (currentCashReconciliation?.items || []).map(r => ({
-            'تاريخ_المبيعات': r.business_date,
-            'كود_المعرض': r.store_number,
-            'اسم_المعرض': r.showroom_name,
-            'بُعد_الفرع': r.branch_dimension_value || '',
-            'عدد_حركات_الكاش': r.cash_transactions_count,
-            'مبيعات_الكاش_POS_SAR': r.pos_cash_amount,
-            'المودع_بالبنك_SAR': r.actual_deposit_amount,
-            'الفارق_عجز_فائض_SAR': r.variance_amount,
-            'حالة_المطابقة': r.reconciliation_status,
-            'رقم_قسيمة_الإيداع': r.deposit_slip_number || '',
-            'تاريخ_الإيداع_الفعلي': r.actual_deposit_date || '',
-            'الموظف_المودع': r.deposited_by_staff || ''
-        }));
-        const wsCash = XLSX.utils.json_to_sheet(cashRows);
-        XLSX.utils.book_append_sheet(wb, wsCash, 'مطابقة_كاش_المعارض');
-
-        // 2. Gateways sheet
-        const gatewayRows = (currentGatewaysReconciliation?.gateways || []).map(g => ({
-            'كود_الوسيط': g.gateway_key,
-            'اسم_الوسيط_عربي': g.gateway_name_ar,
-            'اسم_الوسيط_انجليزي': g.gateway_name_en,
-            'عدد_العمليات': g.transaction_count,
-            'إجمالي_المبيعات_SAR': g.gross_sales_amount,
-            'نسبة_العمولة_العقدية_%': g.mdr_contract_rate_pct,
-            'الرسوم_الثابتة_SAR': g.fixed_fee_sar,
-            'عمولة_MDR_المحسوبة_SAR': g.expected_mdr_fee_amount,
-            'الصافي_المتوقع_بالبنك_SAR': g.expected_net_settlement,
-            'النسبة_الفعالية_%': g.effective_mdr_pct,
-            'زمن_التحصيل_أيام': g.settlement_lag_days,
-            'شروط_العقد': g.contract_notes
-        }));
-        const wsGateways = XLSX.utils.json_to_sheet(gatewayRows);
-        XLSX.utils.book_append_sheet(wb, wsGateways, 'مطابقة_بوابات_الدفع_MDR');
-
-        const dateStr = element('financePlatformEnd')?.value || new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(wb, `Orange_Cash_and_Gateways_Reconciliation_${dateStr}.xlsx`);
-    }
-
     function renderVatHub(payload) {
         if (!payload || payload.state !== 'ready') return;
         currentTaxHub = payload;
@@ -3165,8 +2943,7 @@
             const [
                 overview, showrooms, vendorInvoices, leases, leaseInsights, apAging,
                 vendorAnalytics, trend, additional, fixedAssets, advances, purchases,
-                inventory, treasury, cashReconData, gatewaysReconData, reconSummaryData,
-                taxHub, maintData
+                inventory, treasury, taxHub, maintData
             ] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
                 window.FinancePlatformApi.showrooms({ ...params, page: 1, page_size: 100 }),
@@ -3195,12 +2972,6 @@
                     .catch(() => ({ state: 'unavailable', data: [] })),
                 window.FinancePlatformApi.cashAndGateways()
                     .catch(() => ({ state: 'unavailable', data: [] })),
-                window.FinancePlatformApi.cashDropsReconciliation(params)
-                    .catch(() => ({ state: 'unavailable', items: [], summary: {} })),
-                window.FinancePlatformApi.gatewaysReconciliation(params)
-                    .catch(() => ({ state: 'unavailable', gateways: [], summary: {} })),
-                window.FinancePlatformApi.reconciliationSummary(params)
-                    .catch(() => ({ state: 'unavailable', cash: {}, gateways: {}, overall: {} })),
                 window.FinancePlatformApi.vatHub()
                     .catch(() => ({ state: 'unavailable', data: [] })),
                 window.FinancePlatformApi.maintenanceAnalytics(params)
@@ -3221,9 +2992,6 @@
             renderPurchaseOrders(purchases);
             renderInventoryValuation(inventory);
             renderCashAndGateways(treasury);
-            renderCashDropsReconciliation(cashReconData);
-            renderGatewaysReconciliation(gatewaysReconData);
-            renderReconciliationSummary(reconSummaryData);
             renderVatHub(taxHub);
             renderMaintenance(maintData);
         } catch (error) {
@@ -3562,38 +3330,7 @@
             });
         }
 
-        const cashReconSearch = element('financeCashReconSearch');
-        const cashReconSearchClear = element('financeCashReconSearchClear');
-        const cashReconStatus = element('financeCashReconStatusFilter');
 
-        if (cashReconSearch) {
-            cashReconSearch.addEventListener('input', () => {
-                filters.cashRecon.search = cashReconSearch.value;
-                if (cashReconSearchClear) cashReconSearchClear.hidden = !cashReconSearch.value;
-                filterAndRenderCashDrops();
-            });
-        }
-        if (cashReconSearchClear) {
-            cashReconSearchClear.addEventListener('click', () => {
-                if (cashReconSearch) cashReconSearch.value = '';
-                filters.cashRecon.search = '';
-                cashReconSearchClear.hidden = true;
-                filterAndRenderCashDrops();
-            });
-        }
-        if (cashReconStatus) {
-            cashReconStatus.addEventListener('change', () => {
-                filters.cashRecon.status = cashReconStatus.value;
-                filterAndRenderCashDrops();
-            });
-        }
-
-        const reconExportBtn = element('financeReconciliationExportBtn');
-        if (reconExportBtn) {
-            reconExportBtn.addEventListener('click', () => {
-                exportReconciliationReport();
-            });
-        }
 
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && !element('financeShowroomDrawer').hidden) {
