@@ -1219,6 +1219,235 @@
         }
         filterAndRenderAssets();
     }
+
+    let advancesCategory = 'loans'; // 'loans' | 'expenses' | 'all'
+
+    function isAdvanceAccount(accId) {
+        if (!accId) return false;
+        const str = String(accId).trim();
+        return str.startsWith('151') || ['151102', '151101'].includes(str);
+    }
+
+    function isExpenseAccount(accId) {
+        if (!accId) return false;
+        const str = String(accId).trim();
+        return str.startsWith('52') || str.startsWith('56') || [
+            '523004', '523101', '523102', '524101', '524102', '524104', '523002', '560030', '560029', '560021'
+        ].includes(str);
+    }
+
+    function updateAdvancesAccountFilterOptions(category) {
+        const select = element('financeAdvancesAccountFilter');
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '';
+
+        if (category === 'loans') {
+            select.innerHTML = `
+                <option value="all">جميع حسابات السلف والعهد</option>
+                <option value="151102">151102 - قروض وسلف الموظفين (ذمة شخصية)</option>
+                <option value="151101">151101 - عهد الموظفين النقدية والمؤقتة</option>
+            `;
+        } else if (category === 'expenses') {
+            select.innerHTML = `
+                <option value="all">جميع بنود المصاريف التشغيلية</option>
+                <optgroup label="── مصاريف ومنافع وبدلات الموظفين (52xxxx) ──">
+                    <option value="523004">523004 - تذاكر سفر الإجازة السنوية</option>
+                    <option value="523101">523101 - رحلات ومهمات العمل الداخلية</option>
+                    <option value="523102">523102 - رحلات ومهمات العمل الخارجية</option>
+                    <option value="524101">524101 - تأشيرات الخروج والعودة</option>
+                    <option value="524102">524102 - تصاريح وتراخيص العمل</option>
+                    <option value="524104">524104 - رسوم تصاريح الإقامة</option>
+                    <option value="523002">523002 - إضافي ومكافآت الموظفين</option>
+                </optgroup>
+                <optgroup label="── مصاريف المحروقات وصيانة السيارات (56xxxx) ──">
+                    <option value="560030">560030 - وقود وبنزين سيارات المستودع والمعارض</option>
+                    <option value="560029">560029 - صيانة سيارات المستودع والمعارض</option>
+                </optgroup>
+            `;
+        } else {
+            select.innerHTML = `
+                <option value="all">جميع الحسابات والبنود المفتوحة</option>
+                <optgroup label="── حسابات السلف والعهد (أصول / ذمم مدينة 151xxx) ──">
+                    <option value="151102">151102 - قروض وسلف الموظفين</option>
+                    <option value="151101">151101 - عهد الموظفين النقدية والمؤقتة</option>
+                </optgroup>
+                <optgroup label="── مصاريف وبدلات ومنافع الموظفين (52xxxx) ──">
+                    <option value="523004">523004 - تذاكر سفر الإجازة السنوية</option>
+                    <option value="523101">523101 - رحلات ومهمات العمل الداخلية</option>
+                    <option value="523102">523102 - رحلات ومهمات العمل الخارجية</option>
+                    <option value="524101">524101 - تأشيرات الخروج والعودة</option>
+                    <option value="524102">524102 - تصاريح وتراخيص العمل</option>
+                    <option value="524104">524104 - رسوم تصاريح الإقامة</option>
+                    <option value="523002">523002 - إضافي ومكافآت الموظفين</option>
+                </optgroup>
+                <optgroup label="── مصاريف السيارات والتشغيل (56xxxx) ──">
+                    <option value="560030">560030 - وقود وبنزين سيارات المستودع والمعارض</option>
+                    <option value="560029">560029 - صيانة سيارات المستودع</option>
+                </optgroup>
+            `;
+        }
+
+        const exists = Array.from(select.options).some(o => o.value === currentVal);
+        select.value = exists ? currentVal : 'all';
+        if (filters.advances) filters.advances.account = select.value;
+    }
+
+    function updateAdvancesCategoryUi(category) {
+        advancesCategory = category;
+        const loansBtn = element('financeAdvCategoryLoansBtn');
+        const expBtn = element('financeAdvCategoryExpensesBtn');
+        const allBtn = element('financeAdvCategoryAllBtn');
+        const activeLabel = element('financeAdvActiveCategoryLabel');
+
+        [loansBtn, expBtn, allBtn].forEach(b => {
+            if (b) {
+                b.classList.remove('btn-primary', 'active', 'text-white');
+                b.classList.add('btn-outline-secondary');
+            }
+        });
+
+        if (category === 'loans' && loansBtn) {
+            loansBtn.classList.remove('btn-outline-secondary');
+            loansBtn.classList.add('btn-primary', 'active', 'text-white');
+            if (activeLabel) activeLabel.innerHTML = '<i class="fa-solid fa-filter me-1 text-primary"></i> العرض النشط: السلف والعهد (أصول وذمم مدينة)';
+        } else if (category === 'expenses' && expBtn) {
+            expBtn.classList.remove('btn-outline-secondary');
+            expBtn.classList.add('btn-primary', 'active', 'text-white');
+            if (activeLabel) activeLabel.innerHTML = '<i class="fa-solid fa-filter me-1 text-warning"></i> العرض النشط: المصاريف والمنافع والسيارات (مصروفات P&L)';
+        } else if (category === 'all' && allBtn) {
+            allBtn.classList.remove('btn-outline-secondary');
+            allBtn.classList.add('btn-primary', 'active', 'text-white');
+            if (activeLabel) activeLabel.innerHTML = '<i class="fa-solid fa-filter me-1 text-secondary"></i> العرض النشط: عرض شامل مجمع (سلف + مصاريف)';
+        }
+
+        const kickerEl = element('financeAdvancesSectionKicker');
+        const titleEl = element('financeAdvancesSectionTitle');
+        const noticeEl = element('financeAdvancesNoticeText');
+        const noticeIcon = element('financeAdvancesNoticeIcon');
+        const noticeBanner = element('financeAdvancesNoticeBanner');
+
+        if (category === 'loans') {
+            if (kickerEl) kickerEl.textContent = 'EMPLOYEE ADVANCES, LOANS & CUSTODIES (GL)';
+            if (titleEl) titleEl.textContent = 'سجل سلف وقروض وعهد الموظفين من دفتر الأستاذ';
+            if (noticeEl) {
+                noticeEl.innerHTML = '<strong>💼 طبيعة محاسبية:</strong> الأرصدة المعروضة تمثل <strong>سلف وقروض وعهد الموظفين (حسابات 151xxx)</strong> المستخرجة من دفتر الأستاذ في Dynamics 365، وتُعامل كأصول وذمم مدينة مستحقة الاسترداد أو الاستقطاع من مسيرات الرواتب الشهرية وتسويات العهد.';
+            }
+            if (noticeIcon) noticeIcon.className = 'fa-solid fa-hand-holding-dollar me-2 fs-5 text-primary';
+            if (noticeBanner) {
+                noticeBanner.style.background = '#f0f7ff';
+                noticeBanner.style.borderColor = '#bae0ff';
+                noticeBanner.style.color = '#0958d9';
+            }
+        } else if (category === 'expenses') {
+            if (kickerEl) kickerEl.textContent = 'EMPLOYEE & VEHICLE EXPENSES (P&L)';
+            if (titleEl) titleEl.textContent = 'سجل مصاريف ومنافع وبدلات الموظفين والسيارات';
+            if (noticeEl) {
+                noticeEl.innerHTML = '<strong>🧾 طبيعة محاسبية:</strong> هذه البنود تمثل <strong>مصاريف تشغيلية وإدارية</strong> تتحملها الشركة وتُسجل في قائمة الدخل (حسابات 52xxxx و 56xxxx) كالإقامات وتذاكر السفر وصيانة وبنزين السيارات، <strong>وليست سلفاً أو ديوناً مستردة من الموظفين</strong>.';
+            }
+            if (noticeIcon) noticeIcon.className = 'fa-solid fa-receipt me-2 fs-5 text-warning';
+            if (noticeBanner) {
+                noticeBanner.style.background = '#fffbe6';
+                noticeBanner.style.borderColor = '#ffe58f';
+                noticeBanner.style.color = '#d46b08';
+            }
+        } else {
+            if (kickerEl) kickerEl.textContent = 'EMPLOYEE LEDGER TRANSACTIONS (ADVANCES & EXPENSES)';
+            if (titleEl) titleEl.textContent = 'سجل قيود ومصروفات الموظفين الشامل من دفتر الأستاذ';
+            if (noticeEl) {
+                noticeEl.innerHTML = '<strong>📊 عرض شامل:</strong> يعرض هذا السجل كافة القيود المسجلة بأرقام الموظفين، مع تمييز دقيق بين السلف والعهد (ذمم مستردة) والمصاريف التشغيلية (تكلفة على الشركة).';
+            }
+            if (noticeIcon) noticeIcon.className = 'fa-solid fa-circle-info me-2 fs-5 text-secondary';
+            if (noticeBanner) {
+                noticeBanner.style.background = '#f8f9fa';
+                noticeBanner.style.borderColor = '#dee2e6';
+                noticeBanner.style.color = '#495057';
+            }
+        }
+
+        updateAdvancesAccountFilterOptions(category);
+        updateAdvancesKpiStats(category);
+        filterAndRenderAdvances();
+    }
+
+    function updateAdvancesKpiStats(category) {
+        const card1Title = element('financeAdvancesCard1Title');
+        const card1Sub = element('financeAdvancesCard1Sub');
+        const card2Title = element('financeAdvancesCard2Title');
+        const card2Sub = element('financeAdvancesCard2Sub');
+        const card3Title = element('financeAdvancesCard3Title');
+        const card3Sub = element('financeAdvancesCard3Sub');
+        const card4Title = element('financeAdvancesCard4Title');
+
+        const loanItems = currentAdvances.filter(a => isAdvanceAccount(a.main_account_id));
+        const expItems = currentAdvances.filter(a => isExpenseAccount(a.main_account_id));
+
+        const loansCountBadge = element('financeAdvLoansCountBadge');
+        const expCountBadge = element('financeAdvExpensesCountBadge');
+        if (loansCountBadge) loansCountBadge.textContent = new Set(loanItems.map(i => i.worker_id)).size;
+        if (expCountBadge) expCountBadge.textContent = new Set(expItems.map(i => i.worker_id)).size;
+
+        if (category === 'loans') {
+            if (card1Title) card1Title.textContent = 'إجمالي السلف والعهد المنصرفة (المدين)';
+            if (card1Sub) card1Sub.textContent = 'مبالغ القروض والسلف المنصرفة (151xxx)';
+            if (card2Title) card2Title.textContent = 'إجمالي المستقطع والمسدد (الدائن)';
+            if (card2Sub) card2Sub.textContent = 'تم تحصيله واقتطاعه من مسيرات الرواتب';
+            if (card3Title) card3Title.textContent = 'رصيد السلف القائم للتحصيل (GL)';
+            if (card3Sub) card3Sub.textContent = 'الصافي المتبقي ذمة على الموظفين';
+            if (card4Title) card4Title.textContent = 'الموظفون ذوو السلف القائمة';
+
+            const debit = loanItems.reduce((acc, i) => acc + Number(i.total_debit || 0), 0);
+            const credit = loanItems.reduce((acc, i) => acc + Number(i.total_credit || 0), 0);
+            const glBal = debit - credit;
+            const activeEmps = loanItems.filter(i => (Number(i.total_debit || 0) - Number(i.total_credit || 0)) > 0).length;
+            const settledEmps = loanItems.filter(i => (Number(i.total_debit || 0) - Number(i.total_credit || 0)) <= 0).length;
+
+            setMetric('financeAdvancesTotalDebit', money.format(debit));
+            setMetric('financeAdvancesTotalCredit', money.format(credit));
+            setMetric('financeAdvancesTotalGlBalance', money.format(glBal));
+            setMetric('financeAdvancesActiveCount', `${integer.format(activeEmps)} موظف`);
+            setMetric('financeAdvancesSettledCount', `${integer.format(settledEmps)} رصيد مسدد/مغطى`);
+        } else if (category === 'expenses') {
+            if (card1Title) card1Title.textContent = 'إجمالي المصاريف التشغيلية (المدين)';
+            if (card1Sub) card1Sub.textContent = 'إجمالي تكاليف الموظفين والسيارات';
+            if (card2Title) card2Title.textContent = 'مصاريف ومنافع الموظفين (52xxxx)';
+            if (card2Sub) card2Sub.textContent = 'إقامات، تذاكر، تأشيرات، مهمات ومكافآت';
+            if (card3Title) card3Title.textContent = 'مصاريف وقود وصيانة السيارات (56xxxx)';
+            if (card3Sub) card3Sub.textContent = 'بنزين، صيانة وتأمين سيارات العمل';
+            if (card4Title) card4Title.textContent = 'الموظفون والعمليات المستفيدة';
+
+            const totalExp = expItems.reduce((acc, i) => acc + Number(i.total_debit || 0), 0);
+            const empExp = expItems.filter(i => String(i.main_account_id).startsWith('52')).reduce((acc, i) => acc + Number(i.total_debit || 0), 0);
+            const vehExp = expItems.filter(i => String(i.main_account_id).startsWith('56')).reduce((acc, i) => acc + Number(i.total_debit || 0), 0);
+            const uniqueBeneficiaries = new Set(expItems.map(i => i.worker_id)).size;
+
+            setMetric('financeAdvancesTotalDebit', money.format(totalExp));
+            setMetric('financeAdvancesTotalCredit', money.format(empExp));
+            setMetric('financeAdvancesTotalGlBalance', money.format(vehExp));
+            setMetric('financeAdvancesActiveCount', `${integer.format(uniqueBeneficiaries)} مستفيد`);
+            setMetric('financeAdvancesSettledCount', `${integer.format(expItems.length)} قيد مصروف مسجل`);
+        } else {
+            if (card1Title) card1Title.textContent = 'إجمالي مبالغ الصرف (المدين)';
+            if (card1Sub) card1Sub.textContent = 'سلف وقروض + مصاريف تشغيلية';
+            if (card2Title) card2Title.textContent = 'إجمالي المسدد والمستقطع (الدائن)';
+            if (card2Sub) card2Sub.textContent = 'اقتطاعات مسيرات الرواتب وتسويات العهد';
+            if (card3Title) card3Title.textContent = 'رصيد السلف الفعلي (GL Balance)';
+            if (card3Sub) card3Sub.textContent = 'صافي ذمم السلف والقروض فقط (151xxx)';
+            if (card4Title) card4Title.textContent = 'إجمالي الموظفين والمسجلين';
+
+            const totalDebit = currentAdvances.reduce((acc, i) => acc + Number(i.total_debit || 0), 0);
+            const totalCredit = currentAdvances.reduce((acc, i) => acc + Number(i.total_credit || 0), 0);
+            const actualLoanBal = loanItems.reduce((acc, i) => acc + (Number(i.total_debit || 0) - Number(i.total_credit || 0)), 0);
+            const totalEmps = new Set(currentAdvances.map(i => i.worker_id)).size;
+
+            setMetric('financeAdvancesTotalDebit', money.format(totalDebit));
+            setMetric('financeAdvancesTotalCredit', money.format(totalCredit));
+            setMetric('financeAdvancesTotalGlBalance', money.format(actualLoanBal));
+            setMetric('financeAdvancesActiveCount', `${integer.format(totalEmps)} موظف`);
+            setMetric('financeAdvancesSettledCount', `${integer.format(currentAdvances.length)} حركة مسجلة`);
+        }
+    }
+
     async function openEmployeeAdvanceDetailsModal(workerId) {
         const modalEl = element('financeAdvanceDetailsModal');
         if (!modalEl) return;
@@ -1248,7 +1477,6 @@
             const allLines = payload.lines || [];
             nameEl.textContent = `${bal.employee_name_arabic || 'الموظف'} (${bal.worker_id})`;
 
-            // Extract distinct accounts directly from allLines
             const distinctAccounts = [];
             const accountsSeen = new Set();
             for (const l of allLines) {
@@ -1259,49 +1487,81 @@
                 }
             }
 
-            // Function to update the summary cards based on the selected tab
-            function updateSummaryCards(tabDebit, tabCredit, tabBalance, labelPrefix) {
-                summaryEl.innerHTML = `
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded-3 bg-white shadow-sm">
-                                <span class="text-muted small d-block mb-1">إجمالي المنصرف (مدين)${labelPrefix ? ` - ${labelPrefix}` : ''}</span>
-                                <strong class="fs-5 text-dark">${money.format(tabDebit)}</strong>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded-3 bg-white shadow-sm">
-                                <span class="text-muted small d-block mb-1">إجمالي المستقطع / المسدد (دائن)</span>
-                                <strong class="fs-5 text-success">${money.format(tabCredit)}</strong>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded-3 bg-white shadow-sm">
-                                <span class="text-muted small d-block mb-1">صافي الرصيد القائم (GL)</span>
-                                <strong class="fs-5 ${tabBalance > 0 ? 'text-danger' : 'text-success'}">${money.format(tabBalance)}</strong>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+            const hasLoanLines = allLines.some(l => isAdvanceAccount(l.main_account_id));
+            const hasExpLines = allLines.some(l => isExpenseAccount(l.main_account_id));
 
-            // Build Dynamic Account Tabs
-            function renderLinesForTab(selectedTab) {
-                let filteredLines = allLines;
-                let tabLabel = '';
-                if (selectedTab !== 'all') {
-                    filteredLines = allLines.filter(l => l.main_account_id === selectedTab);
-                    const meta = getAccountBadgeMeta(selectedTab);
-                    tabLabel = meta.text;
-                }
-
+            function updateSummaryCards(filteredLines, labelPrefix, isExpenseMode) {
                 const tabDebit = filteredLines.reduce((acc, l) => acc + Number(l.debit_amount || 0), 0);
                 const tabCredit = filteredLines.reduce((acc, l) => acc + Number(l.credit_amount || 0), 0);
                 const tabBalance = tabDebit - tabCredit;
 
-                // Update summary cards for the selected tab
-                updateSummaryCards(tabDebit, tabCredit, tabBalance, tabLabel);
+                if (isExpenseMode) {
+                    summaryEl.innerHTML = `
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-warning">
+                                    <span class="text-muted small d-block mb-1">إجمالي المصروفات المنصرفة (تكلفة على الشركة)${labelPrefix ? ` - ${labelPrefix}` : ''}</span>
+                                    <strong class="fs-5 text-dark">${money.format(tabDebit)}</strong>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning ms-2">مصروف P&L</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-secondary">
+                                    <span class="text-muted small d-block mb-1">عدد قيود المصروف المسجلة</span>
+                                    <strong class="fs-5 text-secondary">${integer.format(filteredLines.length)} قيد</strong>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    summaryEl.innerHTML = `
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-primary">
+                                    <span class="text-muted small d-block mb-1">إجمالي السلف والمنصرف (مدين)${labelPrefix ? ` - ${labelPrefix}` : ''}</span>
+                                    <strong class="fs-5 text-dark">${money.format(tabDebit)}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-success">
+                                    <span class="text-muted small d-block mb-1">إجمالي المستقطع / المسدد (دائن)</span>
+                                    <strong class="fs-5 text-success">${money.format(tabCredit)}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 ${tabBalance > 0 ? 'border-danger' : 'border-success'}">
+                                    <span class="text-muted small d-block mb-1">صافي الرصيد القائم للتحصيل (GL)</span>
+                                    <strong class="fs-5 ${tabBalance > 0 ? 'text-danger' : 'text-success'}">${money.format(tabBalance)}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
 
+            function renderLinesForTab(selectedTab) {
+                let filteredLines = allLines;
+                let tabLabel = '';
+                let isExpenseMode = false;
+
+                if (selectedTab === 'group_loans') {
+                    filteredLines = allLines.filter(l => isAdvanceAccount(l.main_account_id));
+                    tabLabel = 'السلف والعهد والقروض';
+                    isExpenseMode = false;
+                } else if (selectedTab === 'group_expenses') {
+                    filteredLines = allLines.filter(l => isExpenseAccount(l.main_account_id));
+                    tabLabel = 'المصاريف والبدلات والسيارات';
+                    isExpenseMode = true;
+                } else if (selectedTab !== 'all') {
+                    filteredLines = allLines.filter(l => l.main_account_id === selectedTab);
+                    const meta = getAccountBadgeMeta(selectedTab);
+                    tabLabel = meta.text;
+                    isExpenseMode = isExpenseAccount(selectedTab);
+                }
+
+                updateSummaryCards(filteredLines, tabLabel, isExpenseMode);
+
+                const tabDebit = filteredLines.reduce((acc, l) => acc + Number(l.debit_amount || 0), 0);
                 if (countBadgeEl) {
                     countBadgeEl.textContent = `${filteredLines.length} قيد (مدين: ${money.format(tabDebit)})`;
                 }
@@ -1355,32 +1615,13 @@
 
             if (tabsContainer) {
                 const nav = document.createElement('div');
-                nav.className = 'd-flex flex-wrap gap-2 p-2 bg-light rounded-3 border';
+                nav.className = 'd-flex flex-wrap gap-2 p-2 bg-light rounded-3 border align-items-center';
 
-                // "All Entries" Tab
-                const allBtn = document.createElement('button');
-                allBtn.type = 'button';
-                allBtn.className = 'btn btn-sm btn-primary active fw-bold px-3';
-                allBtn.innerHTML = `<i class="fa-solid fa-list me-1"></i> جميع الحركات <span class="badge bg-white text-primary ms-1">${allLines.length}</span>`;
-                allBtn.addEventListener('click', () => {
-                    nav.querySelectorAll('button').forEach(b => {
-                        b.classList.remove('btn-primary', 'active', 'text-white');
-                        b.classList.add('btn-outline-secondary');
-                    });
-                    allBtn.classList.remove('btn-outline-secondary');
-                    allBtn.classList.add('btn-primary', 'active', 'text-white');
-                    renderLinesForTab('all');
-                });
-                nav.append(allBtn);
-
-                // Account specific tabs
-                distinctAccounts.forEach(accId => {
-                    const accMeta = getAccountBadgeMeta(accId);
-                    const accLinesCount = allLines.filter(l => l.main_account_id === accId).length;
+                function makeTabBtn(labelHtml, tabKey, isDefault) {
                     const btn = document.createElement('button');
                     btn.type = 'button';
-                    btn.className = 'btn btn-sm btn-outline-secondary fw-bold px-3';
-                    btn.innerHTML = `${accMeta.text} <span class="badge bg-secondary ms-1">${accLinesCount}</span>`;
+                    btn.className = `btn btn-sm ${isDefault ? 'btn-primary active text-white' : 'btn-outline-secondary'} fw-bold px-3`;
+                    btn.innerHTML = labelHtml;
                     btn.addEventListener('click', () => {
                         nav.querySelectorAll('button').forEach(b => {
                             b.classList.remove('btn-primary', 'active', 'text-white');
@@ -1388,15 +1629,39 @@
                         });
                         btn.classList.remove('btn-outline-secondary');
                         btn.classList.add('btn-primary', 'active', 'text-white');
-                        renderLinesForTab(accId);
+                        renderLinesForTab(tabKey);
                     });
-                    nav.append(btn);
+                    return btn;
+                }
+
+                // Main Group Tabs
+                if (hasLoanLines && hasExpLines) {
+                    const defaultTab = advancesCategory === 'expenses' ? 'group_expenses' : 'group_loans';
+                    nav.append(
+                        makeTabBtn(`<i class="fa-solid fa-hand-holding-dollar me-1"></i> السلف والعهد <span class="badge bg-white text-primary ms-1">${allLines.filter(l => isAdvanceAccount(l.main_account_id)).length}</span>`, 'group_loans', defaultTab === 'group_loans'),
+                        makeTabBtn(`<i class="fa-solid fa-receipt me-1"></i> المصاريف والسيارات <span class="badge bg-secondary ms-1">${allLines.filter(l => isExpenseAccount(l.main_account_id)).length}</span>`, 'group_expenses', defaultTab === 'group_expenses'),
+                        makeTabBtn(`<i class="fa-solid fa-list me-1"></i> جميع الحركات <span class="badge bg-secondary ms-1">${allLines.length}</span>`, 'all', false)
+                    );
+                } else {
+                    nav.append(
+                        makeTabBtn(`<i class="fa-solid fa-list me-1"></i> جميع الحركات <span class="badge bg-white text-primary ms-1">${allLines.length}</span>`, 'all', true)
+                    );
+                }
+
+                // Account specific tabs
+                distinctAccounts.forEach(accId => {
+                    const accMeta = getAccountBadgeMeta(accId);
+                    const accLinesCount = allLines.filter(l => l.main_account_id === accId).length;
+                    nav.append(makeTabBtn(`${accMeta.text} <span class="badge bg-secondary ms-1">${accLinesCount}</span>`, accId, false));
                 });
 
                 tabsContainer.replaceChildren(nav);
             }
 
-            renderLinesForTab('all');
+            const initialModalTab = (hasLoanLines && hasExpLines) 
+                ? (advancesCategory === 'expenses' ? 'group_expenses' : 'group_loans')
+                : 'all';
+            renderLinesForTab(initialModalTab);
 
         } catch (err) {
             console.error('Failed to load employee advance details:', err);
@@ -1408,29 +1673,29 @@
     function getAccountBadgeMeta(accountId) {
         switch (accountId) {
             case '151102':
-                return { text: '151102 قروض وسلف', cls: 'bg-light text-primary border border-primary' };
+                return { text: '151102 قروض وسلف', cls: 'bg-light text-primary border border-primary', kind: 'loan' };
             case '151101':
-                return { text: '151101 عهد نقدية', cls: 'bg-light text-info border border-info' };
+                return { text: '151101 عهد نقدية', cls: 'bg-light text-info border border-info', kind: 'loan' };
             case '523004':
-                return { text: '523004 تذاكر سفر', cls: 'bg-light text-warning border border-warning' };
+                return { text: '523004 تذاكر سفر', cls: 'bg-light text-warning border border-warning', kind: 'expense' };
             case '523101':
-                return { text: '523101 رحلات داخلية', cls: 'bg-light text-secondary border' };
+                return { text: '523101 رحلات داخلية', cls: 'bg-light text-secondary border', kind: 'expense' };
             case '523102':
-                return { text: '523102 رحلات خارجية', cls: 'bg-light text-secondary border' };
+                return { text: '523102 رحلات خارجية', cls: 'bg-light text-secondary border', kind: 'expense' };
             case '524101':
-                return { text: '524101 خروج وعودة', cls: 'bg-light text-dark border' };
+                return { text: '524101 خروج وعودة', cls: 'bg-light text-dark border', kind: 'expense' };
             case '524102':
-                return { text: '524102 تصريح عمل', cls: 'bg-light text-dark border' };
+                return { text: '524102 تصريح عمل', cls: 'bg-light text-dark border', kind: 'expense' };
             case '524104':
-                return { text: '524104 رسوم إقامة', cls: 'bg-light text-dark border' };
+                return { text: '524104 رسوم إقامة', cls: 'bg-light text-dark border', kind: 'expense' };
             case '523002':
-                return { text: '523002 إضافي ومكافآت', cls: 'bg-light text-success border border-success' };
+                return { text: '523002 إضافي ومكافآت', cls: 'bg-light text-success border border-success', kind: 'expense' };
             case '560030':
-                return { text: '560030 بنزين ووقود', cls: 'bg-light text-danger border border-danger' };
+                return { text: '560030 بنزين ووقود', cls: 'bg-light text-danger border border-danger', kind: 'expense' };
             case '560029':
-                return { text: '560029 صيانة سيارات', cls: 'bg-light text-danger border border-danger' };
+                return { text: '560029 صيانة سيارات', cls: 'bg-light text-danger border border-danger', kind: 'expense' };
             default:
-                return { text: accountId || 'GL', cls: 'bg-light text-secondary border' };
+                return { text: accountId || 'GL', cls: 'bg-light text-secondary border', kind: 'other' };
         }
     }
 
@@ -1471,6 +1736,7 @@
 
     function filterAndRenderAdvances() {
         const body = element('financeAdvancesBody');
+        const thead = element('financeAdvancesTableHead');
         if (!body) return;
 
         let list = [...currentAdvances];
@@ -1478,10 +1744,18 @@
         const account = filters.advances?.account || 'all';
         const status = filters.advances?.status || 'all';
 
+        // 1. Filter by category (loans vs expenses vs all)
+        if (advancesCategory === 'loans') {
+            list = list.filter(a => isAdvanceAccount(a.main_account_id));
+        } else if (advancesCategory === 'expenses') {
+            list = list.filter(a => isExpenseAccount(a.main_account_id));
+        }
+
+        // 2. Filter by Account
         if (account && account !== 'all') {
             list = list.filter(a => a.main_account_id === account);
         } else {
-            // When viewing "All Accounts", group by worker_id so each employee appears in 1 single row
+            // Group by worker_id when viewing "All Accounts" in current category
             const groupedMap = new Map();
             for (const item of list) {
                 const wid = item.worker_id;
@@ -1523,10 +1797,12 @@
             list = Array.from(groupedMap.values());
         }
 
+        // 3. Filter by Status (active/covered)
         if (status && status !== 'all') {
             list = list.filter(a => a.coverage_status === status);
         }
 
+        // 4. Filter by Search
         if (search) {
             list = list.filter(a =>
                 (a.worker_id || '').toLowerCase().includes(search) ||
@@ -1538,7 +1814,7 @@
 
         const badge = element('financeAdvancesCountBadge');
         if (badge) {
-            badge.textContent = `${list.length} موظف`;
+            badge.textContent = `${list.length} ${advancesCategory === 'expenses' ? 'حركة / موظف' : 'موظف'}`;
         }
 
         const sort = sortState.advances;
@@ -1560,7 +1836,7 @@
         }
 
         if (!list.length) {
-            body.innerHTML = '<tr><td colspan="10" class="finance-empty-state">لا توجد سجلات مطابقة للبحث.</td></tr>';
+            body.innerHTML = '<tr><td colspan="10" class="finance-empty-state">لا توجد سجلات مطابقة للبحث أو الفلتر المختار.</td></tr>';
             return;
         }
 
@@ -1611,10 +1887,11 @@
             creditCell.dir = 'ltr';
             creditCell.textContent = money.format(Number(adv.total_credit) || 0);
 
+            const isExpense = advancesCategory === 'expenses' || isExpenseAccount(adv.main_account_id);
             const glCell = document.createElement('td');
-            glCell.className = `text-end fw-bold ${Number(adv.gl_balance) > 0 ? 'text-danger' : 'text-success'}`;
+            glCell.className = `text-end fw-bold ${isExpense ? 'text-secondary' : (Number(adv.gl_balance) > 0 ? 'text-danger' : 'text-success')}`;
             glCell.dir = 'ltr';
-            glCell.textContent = money.format(Number(adv.gl_balance) || 0);
+            glCell.textContent = isExpense ? '— (مصروف)' : money.format(Number(adv.gl_balance) || 0);
 
             const dateCell = document.createElement('td');
             dateCell.dir = 'ltr';
@@ -1628,8 +1905,13 @@
             const statusCell = document.createElement('td');
             statusCell.className = 'text-center';
             const statusBadge = document.createElement('span');
-            statusBadge.className = `badge ${adv.coverage_status === 'active' ? 'bg-warning text-dark' : 'bg-success'}`;
-            statusBadge.textContent = adv.coverage_status === 'active' ? 'رصيد قائم' : 'مسدد/مغطى';
+            if (isExpense) {
+                statusBadge.className = 'badge bg-warning bg-opacity-10 text-warning border border-warning';
+                statusBadge.textContent = 'مصروف تشغيلي';
+            } else {
+                statusBadge.className = `badge ${adv.coverage_status === 'active' ? 'bg-warning text-dark' : 'bg-success'}`;
+                statusBadge.textContent = adv.coverage_status === 'active' ? 'رصيد قائم' : 'مسدد/مغطى';
+            }
             statusCell.append(statusBadge);
 
             const actionCell = document.createElement('td');
@@ -1652,13 +1934,7 @@
     function renderEmployeeAdvances(payload) {
         if (!payload || payload.state !== 'ready') return;
         currentAdvances = payload.data || [];
-        const s = payload.summary || {};
-        setMetric('financeAdvancesTotalDebit', money.format(Number(s.total_debit) || 0));
-        setMetric('financeAdvancesTotalCredit', money.format(Number(s.total_credit) || 0));
-        setMetric('financeAdvancesTotalGlBalance', money.format(Number(s.total_gl_balance) || 0));
-        setMetric('financeAdvancesActiveCount', `${integer.format(Number(s.active_count) || 0)} موظف`);
-        setMetric('financeAdvancesSettledCount', `${integer.format(Number(s.settled_count) || 0)} رصيد مسدد/مغطى`);
-        filterAndRenderAdvances();
+        updateAdvancesCategoryUi(advancesCategory);
     }
 
     function filterAndRenderPurchases() {
@@ -3189,6 +3465,20 @@
         const advancesSearchClear = element('financeAdvancesSearchClear');
         const advancesAccount = element('financeAdvancesAccountFilter');
         const advancesStatus = element('financeAdvancesStatusFilter');
+
+        const advLoansBtn = element('financeAdvCategoryLoansBtn');
+        const advExpBtn = element('financeAdvCategoryExpensesBtn');
+        const advAllBtn = element('financeAdvCategoryAllBtn');
+
+        if (advLoansBtn) {
+            advLoansBtn.addEventListener('click', () => updateAdvancesCategoryUi('loans'));
+        }
+        if (advExpBtn) {
+            advExpBtn.addEventListener('click', () => updateAdvancesCategoryUi('expenses'));
+        }
+        if (advAllBtn) {
+            advAllBtn.addEventListener('click', () => updateAdvancesCategoryUi('all'));
+        }
 
         if (advancesSearch) {
             advancesSearch.addEventListener('input', () => {

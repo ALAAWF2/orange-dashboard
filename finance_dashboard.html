@@ -519,8 +519,8 @@
                         </button>
                         <button type="button" class="finance-subnav-btn" data-subtab="advances" role="tab">
                             <i class="fa-solid fa-users"></i>
-                            <span>سلف وعهد الموظفين</span>
-                            <span class="finance-subnav-badge" id="financeSubnavAdvancesBadge">سلف</span>
+                            <span>سلف ومصاريف الموظفين</span>
+                            <span class="finance-subnav-badge" id="financeSubnavAdvancesBadge">موظفون</span>
                         </button>
                         <button type="button" class="finance-subnav-btn" data-subtab="purchases" role="tab">
                             <i class="fa-solid fa-clipboard-list"></i>
@@ -1015,34 +1015,58 @@
                 </div>
 
 
-                <!-- Pane 6: Employee Advances & Loans -->
+                <!-- Pane 6: Employee Advances, Loans & Expenses -->
                 <div class="finance-tab-pane" id="financePaneAdvances" data-pane="advances" hidden>
-                    <div class="finance-asset-stats-grid mb-3">
+                    <!-- Category Switcher: Loans/Advances vs Expenses vs All -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
+                        <div class="btn-group p-1 bg-light border rounded-pill shadow-sm" role="group" id="financeAdvancesCategoryGroup">
+                            <button type="button" class="btn btn-sm rounded-pill px-4 fw-bold active btn-primary" id="financeAdvCategoryLoansBtn" data-category="loans">
+                                <i class="fa-solid fa-hand-holding-dollar me-1"></i> السلف والعهد والقروض
+                                <span class="badge bg-white text-primary ms-1" id="financeAdvLoansCountBadge">0</span>
+                            </button>
+                            <button type="button" class="btn btn-sm rounded-pill px-4 fw-bold btn-outline-secondary" id="financeAdvCategoryExpensesBtn" data-category="expenses">
+                                <i class="fa-solid fa-receipt me-1"></i> مصاريف ومنافع الموظفين والسيارات
+                                <span class="badge bg-secondary ms-1" id="financeAdvExpensesCountBadge">0</span>
+                            </button>
+                            <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold btn-outline-secondary" id="financeAdvCategoryAllBtn" data-category="all">
+                                <i class="fa-solid fa-layer-group me-1"></i> عرض شامل مجمّع
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-secondary border px-3 py-2" id="financeAdvActiveCategoryLabel">
+                                <i class="fa-solid fa-filter me-1 text-primary"></i> العرض النشط: السلف والعهد (أصول وذمم مدينة)
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic KPI Stats Cards -->
+                    <div class="finance-asset-stats-grid mb-3" id="financeAdvancesStatsGrid">
                         <article class="finance-asset-stat-card is-primary">
-                            <span>إجمالي مبالغ الصرف (المدين)</span>
+                            <span id="financeAdvancesCard1Title">إجمالي مبالغ الصرف (المدين)</span>
                             <strong id="financeAdvancesTotalDebit">—</strong>
-                            <small>المصروف كقروض وسلف وعهد</small>
+                            <small id="financeAdvancesCard1Sub">المصروف كقروض وسلف وعهد</small>
                         </article>
                         <article class="finance-asset-stat-card">
-                            <span>إجمالي المسدد والمستقطع (الدائن)</span>
+                            <span id="financeAdvancesCard2Title">إجمالي المسدد والمستقطع (الدائن)</span>
                             <strong id="financeAdvancesTotalCredit" class="text-success">—</strong>
-                            <small>تم تحصيله واقتطاعه من مسيرات الرواتب</small>
+                            <small id="financeAdvancesCard2Sub">تم تحصيله واقتطاعه من مسيرات الرواتب</small>
                         </article>
                         <article class="finance-asset-stat-card">
-                            <span>رصيد الأستاذ العام (GL Balance)</span>
+                            <span id="financeAdvancesCard3Title">رصيد الأستاذ العام (GL Balance)</span>
                             <strong id="financeAdvancesTotalGlBalance" class="text-danger">—</strong>
-                            <small>الصافي المحاسبي الدفتري المفتوح</small>
+                            <small id="financeAdvancesCard3Sub">الصافي المحاسبي الدفتري المفتوح</small>
                         </article>
                         <article class="finance-asset-stat-card">
-                            <span>الموظفون ذوو الحركات المفتوحة</span>
+                            <span id="financeAdvancesCard4Title">الموظفون ذوو الحركات المفتوحة</span>
                             <strong id="financeAdvancesActiveCount">—</strong>
                             <small id="financeAdvancesSettledCount">— رصيد مسدد/مغطى</small>
                         </article>
                     </div>
 
-                    <div class="alert d-flex align-items-center mb-3" style="background:#fff8e6; border:1px solid #ffe58f; border-radius:8px; padding:10px 16px; color:#d46b08; font-size:0.88rem;">
-                        <i class="fa-solid fa-circle-info me-2 fs-5"></i>
-                        <div>
+                    <!-- Informational Alert Banner -->
+                    <div class="alert d-flex align-items-center mb-3" id="financeAdvancesNoticeBanner" style="background:#fff8e6; border:1px solid #ffe58f; border-radius:8px; padding:10px 16px; color:#d46b08; font-size:0.88rem;">
+                        <i class="fa-solid fa-circle-info me-2 fs-5" id="financeAdvancesNoticeIcon"></i>
+                        <div id="financeAdvancesNoticeText">
                             <strong>تنبيه محاسبي:</strong> الأرصدة المعروضة مستخرجة من دفتر اليومية والأستاذ العام (General Ledger) في Dynamics 365. الحسابات الفرعية مسجلة ومفصلة حسب الرقم الوظيفي، بينما كشوفات مسيرات الرواتب الشهرية تُقفل كقيد إجمالي مجمع مع صافي الرواتب.
                         </div>
                     </div>
@@ -1050,8 +1074,8 @@
                     <section class="finance-ledger-panel">
                         <header>
                             <div>
-                                <span class="finance-section-kicker">EMPLOYEE ADVANCES, BENEFITS & VEHICLE EXPENSES (GL)</span>
-                                <h2>سجل سلف وعهد ومصاريف الموظفين والسيارات من دفتر الأستاذ</h2>
+                                <span class="finance-section-kicker" id="financeAdvancesSectionKicker">EMPLOYEE ADVANCES & LOANS (GL)</span>
+                                <h2 id="financeAdvancesSectionTitle">سجل سلف وقروض وعهد الموظفين من دفتر الأستاذ</h2>
                             </div>
                             <span class="finance-register-note">انقر على أي موظف لعرض كشف الحساب وتفاصيل القيود المحاسبية</span>
                         </header>
@@ -1066,15 +1090,6 @@
                                     <option value="all">جميع الحسابات والبنود</option>
                                     <option value="151102">151102 - قروض وسلف الموظفين</option>
                                     <option value="151101">151101 - عهد الموظفين النقدية والمؤقتة</option>
-                                    <option value="523004">523004 - تذاكر سفر الإجازة السنوية</option>
-                                    <option value="523101">523101 - رحلات ومهمات العمل الداخلية</option>
-                                    <option value="523102">523102 - رحلات ومهمات العمل الخارجية</option>
-                                    <option value="524101">524101 - تأشيرات الخروج والعودة</option>
-                                    <option value="524102">524102 - تصاريح وتراخيص العمل</option>
-                                    <option value="524104">524104 - رسوم تصاريح الإقامة</option>
-                                    <option value="523002">523002 - إضافي ومكافآت الموظفين</option>
-                                    <option value="560030">560030 - وقود وبنزين سيارات المستودع والمعارض</option>
-                                    <option value="560029">560029 - صيانة سيارات المستودع</option>
                                 </select>
                                 <select id="financeAdvancesStatusFilter" class="form-select finance-filter-select">
                                     <option value="all">جميع الحالات</option>
@@ -1086,7 +1101,7 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table finance-register-table finance-compact-table align-middle">
-                                <thead>
+                                <thead id="financeAdvancesTableHead">
                                     <tr>
                                         <th class="finance-sortable" data-table="advances" data-sort="worker_id">رقم الموظف <i class="fa-solid fa-sort"></i></th>
                                         <th class="finance-sortable" data-table="advances" data-sort="employee_name">اسم الموظف <i class="fa-solid fa-sort"></i></th>
@@ -2963,8 +2978,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260819-2"></script>
-    <script src="finance/finance-dashboard.js?v=20260819-2"></script>
+    <script src="finance/finance-api.js?v=20260819-3"></script>
+    <script src="finance/finance-dashboard.js?v=20260819-3"></script>
 
 </body>
 
