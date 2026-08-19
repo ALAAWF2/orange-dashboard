@@ -4419,16 +4419,8 @@ const EMPLOYEES = [
         "name": "خالد محمد النهاري",
         "startDate": "2025-07-08",
         "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall و 1004-07-Arab Mall",
+        "showroom": "1004-07-Arab Mall",
         "showroomDetails": [
-            {
-                "name": "1002-05-Haifa Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1002-C",
-                    "1002-E"
-                ]
-            },
             {
                 "name": "1004-07-Arab Mall",
                 "manager": "المنطقة الغربية",
@@ -4438,7 +4430,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1002-C;1002-E;1004-C;1004-E"
+        "addressBooks": "1004-C;1004-E"
     },
     {
         "employeeId": "4651-اماني سعد المالكي",
@@ -6229,6 +6221,25 @@ const EMPLOYEES = [
         "addressBooks": "2001-C;2001-E"
     },
     {
+        "employeeId": "4902-محمد أرشد بالولي",
+        "personnelNumber": "4902",
+        "name": "محمد أرشد بالولي",
+        "startDate": "2026-03-12",
+        "manager": "جهاد ايوبي",
+        "showroom": "2101-27-Dhahran Mall khobar",
+        "showroomDetails": [
+            {
+                "name": "2101-27-Dhahran Mall khobar",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2101-C",
+                    "2101-E"
+                ]
+            }
+        ],
+        "addressBooks": "2101-C;2101-E"
+    },
+    {
         "employeeId": "4917-فارس مورامبيلاف",
         "personnelNumber": "4917",
         "name": "فارس مورامبيلاف",
@@ -6246,6 +6257,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2102-C;2102-E"
+    },
+    {
+        "employeeId": "4906-محمد نوفال باليبات ت",
+        "personnelNumber": "4906",
+        "name": "محمد نوفال باليبات ت",
+        "startDate": "2026-03-12",
+        "manager": "جهاد ايوبي",
+        "showroom": "2103-42-Dareen Mall Dammam",
+        "showroomDetails": [
+            {
+                "name": "2103-42-Dareen Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2103-C",
+                    "2103-E"
+                ]
+            }
+        ],
+        "addressBooks": "2103-C;2103-E"
     },
     {
         "employeeId": "4914-محمد فاحص كالاكاندات",
@@ -6926,16 +6956,8 @@ const EMPLOYEES = [
         "name": "ساره ابراهيم",
         "startDate": "2026-06-15",
         "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall و 1008-48 - Jeddah Park",
+        "showroom": "1008-48 - Jeddah Park",
         "showroomDetails": [
-            {
-                "name": "1002-05-Haifa Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1002-C",
-                    "1002-E"
-                ]
-            },
             {
                 "name": "1008-48 - Jeddah Park",
                 "manager": "المنطقة الغربية",
@@ -6945,7 +6967,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1002-C;1002-E;1008-C;1008-E"
+        "addressBooks": "1008-C;1008-E"
     },
     {
         "employeeId": "4980-ريمه فقيه",
@@ -7448,6 +7470,44 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1602-C;1602-E"
+    },
+    {
+        "employeeId": "5010-5010 - Tala Saud AlS",
+        "personnelNumber": "5010",
+        "name": "5010 - Tala Saud AlS",
+        "startDate": "2026-08-17",
+        "manager": "المنطقة الغربية",
+        "showroom": "1010-54-THE VILLAGE",
+        "showroomDetails": [
+            {
+                "name": "1010-54-THE VILLAGE",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1010-C",
+                    "1010-E"
+                ]
+            }
+        ],
+        "addressBooks": "1010-C;1010-E"
+    },
+    {
+        "employeeId": "5011-رجاء المولد",
+        "personnelNumber": "5011",
+        "name": "رجاء المولد",
+        "startDate": "2026-08-17",
+        "manager": "المنطقة الغربية",
+        "showroom": "1002-05-Haifa Mall",
+        "showroomDetails": [
+            {
+                "name": "1002-05-Haifa Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1002-C",
+                    "1002-E"
+                ]
+            }
+        ],
+        "addressBooks": "1002-C;1002-E"
     }
 ];
 
