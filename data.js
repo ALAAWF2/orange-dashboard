@@ -7494,7 +7494,7 @@ const EMPLOYEES = [
         "employeeId": "5011-رجاء المولد",
         "personnelNumber": "5011",
         "name": "رجاء المولد",
-        "startDate": "2026-08-17",
+        "startDate": "2026-08-18",
         "manager": "المنطقة الغربية",
         "showroom": "1002-05-Haifa Mall",
         "showroomDetails": [
