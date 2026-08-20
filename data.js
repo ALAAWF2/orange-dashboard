@@ -1828,7 +1828,7 @@ const EMPLOYEES = [
         "name": "محمد فيفاز",
         "startDate": "2022-10-23",
         "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh",
+        "showroom": "1105-30-Tala Mall Riyadh و 1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1105-30-Tala Mall Riyadh",
@@ -1837,9 +1837,17 @@ const EMPLOYEES = [
                     "1105-C",
                     "1105-E"
                 ]
+            },
+            {
+                "name": "1109-40-Hayat Mall Riyad",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1109-C",
+                    "1109-E"
+                ]
             }
         ],
-        "addressBooks": "1105-C;1105-E"
+        "addressBooks": "1105-C;1105-E;1109-C;1109-E"
     },
     {
         "employeeId": "3345-ثاجودين باثنقادي",
