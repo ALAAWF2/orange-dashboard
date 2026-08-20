@@ -3384,7 +3384,7 @@
       return null;
     }
 
-    function getDynamicsOffer(code) { return dynamicsOffers[String(code)]?.name || null; }
+    function getDynamicsOffer(code) { return dynamicsOffers[String(code)]?.offer_name || dynamicsOffers[String(code)]?.name || null; }
     function getDynamicsDealPrice(code) { return dynamicsOffers[String(code)]?.deal_price !== undefined ? dynamicsOffers[String(code)].deal_price : null; }
     function getDynamicsOriginalPrice(code) { return dynamicsOffers[String(code)]?.original_price !== undefined ? dynamicsOffers[String(code)].original_price : null; }
 
@@ -3564,7 +3564,7 @@
         return `
           <div class="product">
             <div class="product-image-container" onclick="showProductDetails('${d.code}')">
-              <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', ${effectivePromoPrice !== null ? effectivePromoPrice : parseFloat(d.price || 0)})" title="طباعة الباركود">🖨️</button>
+              <button class="print-icon-btn" onclick="event.stopPropagation(); printItemBarcode('${d.code}', '${safeName}', '${d.alias || ''}', ${promoPrice !== null ? promoPrice : parseFloat(d.price || 0)})" title="طباعة الباركود">🖨️</button>
               
               <div class="product-badges-stack">
                 ${badgesHtml}
@@ -4141,11 +4141,9 @@
       const resolvedCode = product ? product.code : code;
       const resolvedAlias = product ? (product.alias || "") : (alias || "");
       const promoPrice = getPromoPrice(resolvedCode, resolvedAlias);
-      const dynDeal = getDynamicsDealPrice(resolvedCode);
-      const effectivePromo = (promoPrice !== null) ? promoPrice : dynDeal;
-      const finalPrice = (effectivePromo !== null && effectivePromo !== undefined)
-        ? effectivePromo
-        : (price !== undefined && price !== null && !isNaN(parseFloat(price)) && parseFloat(price) > 0 ? parseFloat(price) : (product ? (product.price || 0) : 0));
+      const finalPrice = (price !== undefined && price !== null && !isNaN(parseFloat(price)) && parseFloat(price) > 0)
+        ? parseFloat(price)
+        : (promoPrice !== null && promoPrice !== undefined ? promoPrice : (product ? (product.price || 0) : 0));
 
       addManualBarcodeItem(code, name, alias, finalPrice, 1);
       showSuccessModal('تمت إضافة المنتج إلى قائمة الطباعة');
@@ -4161,14 +4159,12 @@
       let resolvedAlias = product ? (product.alias || "") : (alias || "");
       
       const promoPrice = getPromoPrice(resolvedCode, resolvedAlias);
-      const dynDeal = getDynamicsDealPrice(resolvedCode);
-      const effectivePromo = (promoPrice !== null) ? promoPrice : dynDeal;
 
       let resolvedPrice;
-      if (effectivePromo !== null && effectivePromo !== undefined) {
-        resolvedPrice = effectivePromo;
-      } else if (price !== undefined && price !== null && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+      if (price !== undefined && price !== null && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
         resolvedPrice = parseFloat(price);
+      } else if (promoPrice !== null && promoPrice !== undefined) {
+        resolvedPrice = promoPrice;
       } else if (product && product.price !== undefined) {
         resolvedPrice = product.price || 0;
       } else {
