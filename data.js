@@ -4256,7 +4256,7 @@ const EMPLOYEES = [
         "name": "رنيم اليزيدي",
         "startDate": "2025-05-08",
         "manager": "عبدالله السرداح",
-        "showroom": "1103-25-Rabwa Othaim Mall",
+        "showroom": "1103-25-Rabwa Othaim Mall و 1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
@@ -4265,9 +4265,17 @@ const EMPLOYEES = [
                     "1103-C",
                     "1103-E"
                 ]
+            },
+            {
+                "name": "1105-30-Tala Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1105-C",
+                    "1105-E"
+                ]
             }
         ],
-        "addressBooks": "1103-C;1103-E"
+        "addressBooks": "1103-C;1103-E;1105-C;1105-E"
     },
     {
         "employeeId": "4581-نجاه عارضي",
