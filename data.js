@@ -3014,6 +3014,25 @@ const EMPLOYEES = [
         "addressBooks": "1601-C;1601-E"
     },
     {
+        "employeeId": "4242-محمد شمير كوندو بارا",
+        "personnelNumber": "4242",
+        "name": "محمد شمير كوندو بارا",
+        "startDate": "2024-07-08",
+        "manager": "المنطقة الشمالية",
+        "showroom": "1402-26-Al-Noor Mall Madinah",
+        "showroomDetails": [
+            {
+                "name": "1402-26-Al-Noor Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1402-C",
+                    "1402-E"
+                ]
+            }
+        ],
+        "addressBooks": "1402-C;1402-E"
+    },
+    {
         "employeeId": "4245-موده سليمان الدويرعا",
         "personnelNumber": "4245",
         "name": "موده سليمان الدويرعا",
@@ -7461,6 +7480,25 @@ const EMPLOYEES = [
         "addressBooks": "2001-C;2001-E"
     },
     {
+        "employeeId": "5012-Waad Riyad",
+        "personnelNumber": "5012",
+        "name": "Waad Riyad",
+        "startDate": "2026-08-19",
+        "manager": "محمدكلو",
+        "showroom": "1110-45- Riyadh Gallery Mall",
+        "showroomDetails": [
+            {
+                "name": "1110-45- Riyadh Gallery Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1110-C",
+                    "1110-E"
+                ]
+            }
+        ],
+        "addressBooks": "1110-C;1110-E"
+    },
+    {
         "employeeId": "5009-5009 - Fatimah Abdul",
         "personnelNumber": "5009",
         "name": "5009 - Fatimah Abdul",
@@ -7497,25 +7535,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1010-C;1010-E"
-    },
-    {
-        "employeeId": "5011-رجاء المولد",
-        "personnelNumber": "5011",
-        "name": "رجاء المولد",
-        "startDate": "2026-08-18",
-        "manager": "المنطقة الغربية",
-        "showroom": "1002-05-Haifa Mall",
-        "showroomDetails": [
-            {
-                "name": "1002-05-Haifa Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1002-C",
-                    "1002-E"
-                ]
-            }
-        ],
-        "addressBooks": "1002-C;1002-E"
     }
 ];
 
