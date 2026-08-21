@@ -3190,8 +3190,125 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260821-2"></script>
-    <script src="finance/finance-dashboard.js?v=20260821-2"></script>
+    <!-- Fixed Asset Details & Depreciation Modal -->
+    <div class="modal fade" id="financeFixedAssetModal" tabindex="-1" aria-labelledby="financeFixedAssetModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header bg-light border-0 py-3">
+                    <h5 class="modal-title fw-bold" id="financeFixedAssetModalTitle">
+                        <i class="fa-solid fa-shapes text-primary me-2"></i>
+                        <span>تفاصيل وحركات الأصل الثابت: <span id="financeAssetModalNumber" class="text-primary">—</span></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Asset Header Card -->
+                    <div class="card border-0 bg-light p-3 mb-3 rounded-3">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                                <span class="text-muted small d-block">اسم الأصل / الوصف</span>
+                                <strong class="fs-6 text-dark" id="financeAssetModalName">—</strong>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="text-muted small d-block">مجموعة الأصل</span>
+                                <span class="badge bg-secondary" id="financeAssetModalGroupBadge">—</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-muted small d-block">موقع الأصل / المعرض</span>
+                                <strong id="financeAssetModalLocation">—</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-muted small d-block">تاريخ الاستحواذ</span>
+                                <strong id="financeAssetModalAcqDate">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Metrics Bar -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">تكلفة الاستحواذ الأصلية</small>
+                                <strong class="text-dark fs-6" id="financeAssetModalAcqCost">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">مجمع الإهلاك حتى تاريخه</small>
+                                <strong class="text-danger fs-6" id="financeAssetModalDepreciation">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">صافي القيمة الدفترية (NBV)</small>
+                                <strong class="text-success fs-6" id="financeAssetModalNbv">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">دفتر وطريقة الإهلاك</small>
+                                <strong class="text-primary fs-6" id="financeAssetModalProfile">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Book / Depreciation Info Card -->
+                    <div class="card border-0 bg-white border p-3 mb-3 rounded-3 shadow-sm" id="financeAssetModalBookCard">
+                        <div class="row g-2 text-center align-items-center">
+                            <div class="col-md-3 border-end">
+                                <span class="text-muted small d-block">دفتر الإهلاك</span>
+                                <strong id="financeAssetModalBookId">—</strong>
+                            </div>
+                            <div class="col-md-3 border-end">
+                                <span class="text-muted small d-block">العمر الإنتاجي الإجمالي</span>
+                                <strong id="financeAssetModalLifetimePeriods">—</strong>
+                            </div>
+                            <div class="col-md-3 border-end">
+                                <span class="text-muted small d-block">الفترات المتبقية للإهلاك</span>
+                                <strong id="financeAssetModalLifetimeRemaining" class="text-warning-emphasis">—</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-muted small d-block">تاريخ آخر قسط إهلاك</span>
+                                <strong id="financeAssetModalLastDepDate">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                        <div class="card-header bg-white py-2 border-0 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 fw-bold text-dark"><i class="fa-solid fa-list-check text-primary me-2"></i>سجل قيود وحركات الأصل (الاستحواذ وأقساط الإهلاك)</h6>
+                            <span class="badge bg-primary-subtle text-primary border" id="financeAssetModalTxBadge">0 حركة</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center">#</th>
+                                        <th>رقم القيد / السند (Voucher)</th>
+                                        <th>تاريخ القيد</th>
+                                        <th>نوع الحركة</th>
+                                        <th>دفتر الأصول</th>
+                                        <th class="text-end">المبلغ المحاسبي (SAR)</th>
+                                        <th class="text-center">الأثر المالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeAssetModalTxBody">
+                                    <tr><td colspan="7" class="text-center text-muted py-4">جارٍ تحميل حركات الأصل…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="finance/finance-api.js?v=20260821-3"></script>
+    <script src="finance/finance-dashboard.js?v=20260821-3"></script>
 
 </body>
 

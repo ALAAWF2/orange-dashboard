@@ -64,6 +64,10 @@
             params
         ),
         fixedAssets: params => request('/api/finance/fixed-assets', params),
+        fixedAssetDetails: (assetNumber, params) => request(
+            `/api/finance/fixed-assets/${encodeURIComponent(assetNumber)}/details`,
+            params
+        ),
         employeeAdvances: params => request('/api/finance/employee-advances', params),
         employeeAdvanceDetails: (workerId, params) => request(
             `/api/finance/employee-advances/${encodeURIComponent(workerId)}`,

@@ -415,7 +415,7 @@
             content.append(pnlSection);
         }
 
-        // 3. Sub-tabs navigation for detailed breakdown
+        // Tabs navigation for deep breakdown
         const tabsNav = document.createElement('div');
         tabsNav.className = 'finance-showroom-tabs mt-4';
         tabsNav.innerHTML = `
@@ -437,34 +437,44 @@
         secAccounts.id = 'secDetailAccounts';
 
         const secInvoices = detailSection('فواتير الموردين ومصاريف الصيانة والتشغيل المرتبطة بالفرع', [
-            { key: 'invoice_id', label: 'رقم الفاتورة', ltr: true },
-            { key: 'vendor_name', label: 'المورد / المقاول' },
+            { key: 'invoice_id', label: 'رقم الفاتورة', ltr: true, badge: 'finance-invoice-badge' },
+            { key: 'vendor_name', label: 'المورد / المقاول', bold: true },
             { key: 'invoice_date', label: 'تاريخ الفاتورة', ltr: true },
             { key: 'due_date', label: 'موعد السداد (الاستحقاق)', ltr: true },
             { key: 'allocated_amount', label: 'المبلغ المعتمد', money: true },
             { key: 'allocated_tax_amount', label: 'الضريبة', money: true }
-        ], payload.vendor_invoices || []);
+        ], payload.vendor_invoices || [], item => {
+            if (item.source_key) {
+                openInvoiceLinesModal(item.source_key, item.data_area_id);
+            } else if (item.invoice_account) {
+                openVendorPaymentsModal(item.invoice_account, item.data_area_id);
+            }
+        }, item => `انقر لعرض تفاصيل وأسطر الفاتورة ${item.invoice_id || ''} للمورد ${item.vendor_name || ''}`);
         secInvoices.id = 'secDetailInvoices';
         secInvoices.hidden = true;
 
         const secLeases = detailSection('عقود إيجار الفرع والاستحقاقات', [
-            { key: 'lease_id', label: 'رقم العقد', ltr: true },
+            { key: 'lease_id', label: 'رقم العقد', ltr: true, badge: 'finance-invoice-badge' },
             { key: 'description', label: 'البيان / الوصف' },
             { key: 'expiration_date', label: 'تاريخ انتهاء العقد', ltr: true },
             { key: 'remaining_balance', label: 'الرصيد المتبقي', money: true },
             { key: 'upcoming_payment_amount', label: 'الدفعة القادمة خلال 90 يوماً', money: true }
-        ], payload.leases || []);
+        ], payload.leases || [], item => {
+            if (item.lease_id) openLeaseScheduleModal(item.lease_id);
+        }, item => `انقر لعرض جدول أقساط العقد ${item.lease_id || ''}`);
         secLeases.id = 'secDetailLeases';
         secLeases.hidden = true;
 
         const secAssets = detailSection('الأصول والممتلكات التابعة للفرع', [
-            { key: 'fixed_asset_number', label: 'رقم الأصل في النظام', ltr: true },
-            { key: 'name', label: 'اسم ووصف الأصل' },
+            { key: 'fixed_asset_number', label: 'رقم الأصل في النظام', ltr: true, badge: 'finance-invoice-badge' },
+            { key: 'name', label: 'اسم ووصف الأصل', bold: true },
             { key: 'asset_location_name', label: 'الموقع' },
             { key: 'acquisition_date', label: 'تاريخ الشراء / الاقتناء', ltr: true },
             { key: 'acquisition_price', label: 'تكلفة الشراء', money: true },
             { key: 'net_book_value', label: 'القيمة الدفترية الصافية (NBV)', money: true }
-        ], payload.assets || []);
+        ], payload.assets || [], item => {
+            if (item.fixed_asset_number) openFixedAssetModal(item.fixed_asset_number, item.data_area_id);
+        }, item => `انقر لعرض تفاصيل وحركات إهلاك الأصل ${item.fixed_asset_number || ''}`);
         secAssets.id = 'secDetailAssets';
         secAssets.hidden = true;
 
@@ -816,7 +826,7 @@
                 const icon = document.createElement('i');
                 icon.className = 'fa-solid fa-circle-info text-primary fs-5 flex-shrink-0';
                 const textContainer = document.createElement('div');
-                textContainer.innerHTML = '<strong>توضيح للإدارة:</strong> حركات الصرف التي تبدأ بـ <code>V-PAY</code> (سندات دفع) هي <strong>مبالغ تم سدادها وتحويلها بالفعل للمورد</strong>، وحالتها <em>"دفعة مسددة بانتظار المقاصة"</em> تعني أن السداد تم وبانتظار تسجيل قيد الفاتورة المقابلة وإجراء التسوية المحاسبية، وليست التزاماً مطلوباً دفعه مجدداً.';
+                textContainer.innerHTML = '<strong>توضيح للإدارة:</strong> حركات الصرف التي تبدأ بـ <code>V-PAY</code> (سندات دفع) هي <strong>مبالغ تم تحويلها وسدادها بالفعل للمورد وليست ديناً على الشركة</strong>. حالتها <em>"تم السداد (مدفوعة مسبقاً)"</em> تعني أن المبلغ خرج من حسابنا وتم دفعه، وبانتظار أن يقوم المحاسب بربط هذا السداد بالفاتورة المقابلة لإقفالها دفترياً فقط.';
                 alertNotice.append(icon, textContainer);
                 header.append(alertNotice);
             }
@@ -884,7 +894,7 @@
                     if (transaction.is_closed) {
                         statusCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-circle-check me-1"></i> مسواة ومغلقة ✓</span>';
                     } else if (isPayment) {
-                        statusCell.innerHTML = '<span class="badge bg-info-subtle text-info-emphasis border border-info" title="تم سداد الدفعة وهي بانتظار المقاصة مع الفاتورة المقابلة"><i class="fa-solid fa-clock me-1"></i> دفعة مسددة بانتظار المقاصة</span>';
+                        statusCell.innerHTML = '<span class="badge bg-info-subtle text-info-emphasis border border-info" title="تم سداد الدفعة مسبقاً وهي بانتظار ربطها بالفاتورة دفترياً"><i class="fa-solid fa-check-double me-1"></i> تم السداد (مدفوعة مسبقاً)</span>';
                     } else {
                         statusCell.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-exclamation me-1"></i> مستحقة السداد</span>';
                     }
@@ -1464,6 +1474,163 @@
         filterAndRenderLeases();
     }
 
+    async function openFixedAssetModal(assetNumber, dataAreaId) {
+        const modalEl = element('financeFixedAssetModal');
+        if (!modalEl) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        const assetNumberEl = element('financeAssetModalNumber');
+        const nameEl = element('financeAssetModalName');
+        const groupBadgeEl = element('financeAssetModalGroupBadge');
+        const locationEl = element('financeAssetModalLocation');
+        const acqDateEl = element('financeAssetModalAcqDate');
+
+        const acqCostEl = element('financeAssetModalAcqCost');
+        const depEl = element('financeAssetModalDepreciation');
+        const nbvEl = element('financeAssetModalNbv');
+        const profileEl = element('financeAssetModalProfile');
+
+        const bookIdEl = element('financeAssetModalBookId');
+        const lifetimeEl = element('financeAssetModalLifetimePeriods');
+        const remainingEl = element('financeAssetModalLifetimeRemaining');
+        const lastDepDateEl = element('financeAssetModalLastDepDate');
+
+        const txBadgeEl = element('financeAssetModalTxBadge');
+        const bodyEl = element('financeAssetModalTxBody');
+
+        if (assetNumberEl) assetNumberEl.textContent = assetNumber;
+        if (nameEl) nameEl.textContent = 'جارٍ التحميل…';
+        if (groupBadgeEl) groupBadgeEl.textContent = '—';
+        if (locationEl) locationEl.textContent = '—';
+        if (acqDateEl) acqDateEl.textContent = '—';
+
+        if (acqCostEl) acqCostEl.textContent = '—';
+        if (depEl) depEl.textContent = '—';
+        if (nbvEl) nbvEl.textContent = '—';
+        if (profileEl) profileEl.textContent = '—';
+
+        if (bookIdEl) bookIdEl.textContent = '—';
+        if (lifetimeEl) lifetimeEl.textContent = '—';
+        if (remainingEl) remainingEl.textContent = '—';
+        if (lastDepDateEl) lastDepDateEl.textContent = '—';
+
+        if (txBadgeEl) txBadgeEl.textContent = '0 حركة';
+        tableMessage(bodyEl, 7, 'جارٍ تحميل تفاصيل وحركات الأصل الثابت…');
+        modal.show();
+
+        try {
+            const payload = await window.FinancePlatformApi.fixedAssetDetails(assetNumber, {
+                data_area_id: dataAreaId || 'orng'
+            });
+
+            if (payload.state !== 'ready') {
+                tableMessage(bodyEl, 7, payload.message || 'تعذر تحميل تفاصيل الأصل.', 'text-center text-danger');
+                return;
+            }
+
+            const asset = payload.asset || {};
+            const summary = payload.summary || {};
+            const books = payload.books || [];
+            const transactions = payload.transactions || [];
+
+            if (nameEl) nameEl.textContent = asset.asset_name || '—';
+            if (groupBadgeEl) groupBadgeEl.textContent = asset.fixed_asset_group_id || '—';
+            if (locationEl) {
+                locationEl.textContent = asset.showroom_name || asset.asset_location_name || 'عام / إدارة';
+            }
+            if (acqDateEl) acqDateEl.textContent = asset.acquisition_date || '—';
+
+            if (acqCostEl) acqCostEl.textContent = money.format(Number(summary.acquisition_cost) || 0) + ' SAR';
+            if (depEl) depEl.textContent = money.format(Number(summary.accumulated_depreciation) || 0) + ' SAR';
+            if (nbvEl) nbvEl.textContent = money.format(Number(summary.net_book_value) || 0) + ' SAR';
+
+            // Primary Book details
+            const primaryBook = books[0] || {};
+            if (profileEl) {
+                profileEl.textContent = primaryBook.depreciation_profile ? `${primaryBook.depreciation_profile} (${primaryBook.book_id || ''})` : '—';
+            }
+            if (bookIdEl) bookIdEl.textContent = primaryBook.book_id || 'Orang Book';
+            if (lifetimeEl) lifetimeEl.textContent = primaryBook.lifetime_periods ? `${primaryBook.lifetime_periods} شهراً` : '—';
+            if (remainingEl) remainingEl.textContent = primaryBook.lifetime_remaining !== undefined ? `${primaryBook.lifetime_remaining} شهراً متبقياً` : '—';
+            if (lastDepDateEl) lastDepDateEl.textContent = primaryBook.last_depreciation_date || '—';
+
+            if (txBadgeEl) txBadgeEl.textContent = `${integer.format(transactions.length)} حركة`;
+
+            if (!transactions.length) {
+                tableMessage(bodyEl, 7, 'لا توجد حركات أو قيود إهلاك مسجلة لهذا الأصل.');
+                return;
+            }
+
+            bodyEl.replaceChildren(...transactions.map((tx, idx) => {
+                const row = document.createElement('tr');
+
+                // 1. Line Index
+                const numCell = textElement('td', String(idx + 1), 'text-center text-muted small');
+                numCell.dir = 'ltr';
+
+                // 2. Voucher Number
+                const voucherCell = document.createElement('td');
+                const vBadge = document.createElement('span');
+                vBadge.className = 'finance-invoice-badge';
+                vBadge.textContent = tx.voucher || '—';
+                voucherCell.append(vBadge);
+
+                // 3. Transaction Date
+                const dateCell = textElement('td', String(tx.transaction_date || '—'), '');
+                dateCell.dir = 'ltr';
+
+                // 4. Transaction Type Badge
+                const typeCell = document.createElement('td');
+                const tBadge = document.createElement('span');
+                const tType = String(tx.transaction_type || '');
+                if (tType === 'Acquisition') {
+                    tBadge.className = 'badge bg-primary text-white';
+                    tBadge.textContent = 'استحواذ / اقتناء الأصل';
+                } else if (tType === 'Depreciation') {
+                    tBadge.className = 'badge bg-secondary-subtle text-secondary-emphasis border';
+                    tBadge.textContent = 'قسط إهلاك شهري';
+                } else if (tType === 'Disposal') {
+                    tBadge.className = 'badge bg-danger text-white';
+                    tBadge.textContent = 'استبعاد / تخريد';
+                } else {
+                    tBadge.className = 'badge bg-light text-dark border';
+                    tBadge.textContent = tType || 'حركة أصل';
+                }
+                typeCell.append(tBadge);
+
+                // 5. Book ID
+                const bookCell = textElement('td', String(tx.book_id || '—'), 'text-muted small');
+
+                // 6. Amount
+                const amt = Number(tx.accounting_amount) || 0;
+                const amtCell = textElement('td', money.format(amt), `text-end fw-bold ${amt < 0 ? 'text-danger' : 'text-dark'}`);
+                amtCell.dir = 'ltr';
+
+                // 7. Accounting Impact
+                const impactCell = document.createElement('td');
+                impactCell.className = 'text-center';
+                const iBadge = document.createElement('span');
+                if (amt < 0) {
+                    iBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle';
+                    iBadge.textContent = 'تخفيض قيمة الأصل (دائن)';
+                } else if (amt > 0) {
+                    iBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                    iBadge.textContent = 'إثبات الأصل (مدين)';
+                } else {
+                    iBadge.className = 'badge bg-light text-muted border';
+                    iBadge.textContent = 'محايد';
+                }
+                impactCell.append(iBadge);
+
+                row.append(numCell, voucherCell, dateCell, typeCell, bookCell, amtCell, impactCell);
+                return row;
+            }));
+        } catch (err) {
+            console.error('Failed to load Fixed Asset details:', err);
+            tableMessage(bodyEl, 7, 'حدث خطأ أثناء تحميل تفاصيل الأصل الثابت.', 'text-center text-danger');
+        }
+    }
+
     function filterAndRenderAssets() {
         const body = element('financeAssetsBody');
         if (!body) return;
@@ -1520,6 +1687,8 @@
 
         body.replaceChildren(...list.map(asset => {
             const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            row.title = `انقر لعرض تفاصيل وحركات إهلاك الأصل ${asset.fixed_asset_number || ''}`;
 
             const idCell = document.createElement('td');
             const idBadge = document.createElement('span');
@@ -1568,6 +1737,9 @@
             nbvCell.textContent = money.format(Number(asset.net_book_value) || 0);
 
             row.append(idCell, nameCell, groupCell, locationCell, dateCell, costCell, depCell, nbvCell);
+
+            row.addEventListener('click', () => openFixedAssetModal(asset.fixed_asset_number, asset.data_area_id));
+
             return row;
         }));
     }
@@ -2867,7 +3039,7 @@
             const nameCell = document.createElement('td');
             nameCell.innerHTML = `<div>${vendor.vendor_name || '—'}</div>` +
                 (isDebitPayment
-                    ? `<span class="badge bg-info-subtle text-info-emphasis border border-info" style="font-size:0.72rem;"><i class="fa-solid fa-money-bill-transfer me-1"></i>دفعة مسددة بانتظار المقاصة</span>`
+                    ? `<span class="badge bg-info-subtle text-info-emphasis border border-info" style="font-size:0.72rem;"><i class="fa-solid fa-check-double me-1"></i>تم السداد (مدفوعة مسبقاً)</span>`
                     : `<span class="badge bg-light text-secondary border" style="font-size:0.72rem;"><i class="fa-solid fa-file-invoice me-1"></i>مستحق للمورد</span>`);
             row.append(nameCell);
 
