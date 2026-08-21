@@ -2867,23 +2867,24 @@
                 </div>
                 <div class="modal-body">
                     <div id="financeVendorPaymentsHeader" class="mb-3 p-3 bg-light rounded"></div>
-                    <h6 class="fw-bold text-secondary mb-2">حركات وسجل فواتير المورد (Vendor Transactions)</h6>
+                    <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-list-check me-1"></i> حركات وسجل فواتير وسداد المورد (Vendor Transactions)</h6>
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
                                     <th>رقم السند / القيد المحاسبي (Voucher)</th>
+                                    <th>نوع الحركة</th>
                                     <th>رقم الفاتورة</th>
-                                    <th>تاريخ الفاتورة</th>
-                                    <th>موعد السداد (الاستحقاق)</th>
-                                    <th class="text-end">مبلغ الحركة / الفاتورة</th>
-                                    <th class="text-end">المبلغ المسدد</th>
-                                    <th class="text-end">المتبقي واجب السداد</th>
-                                    <th>حالة الفاتورة</th>
+                                    <th>تاريخ الحركة</th>
+                                    <th>موعد الاستحقاق</th>
+                                    <th class="text-end">مبلغ الحركة</th>
+                                    <th class="text-end">المسوى محاسبياً</th>
+                                    <th class="text-end">الرصيد المعلق</th>
+                                    <th class="text-center">حالة السداد والمقاصة</th>
                                 </tr>
                             </thead>
                             <tbody id="financeVendorPaymentsBody">
-                                <tr><td colspan="8" class="text-center text-muted">جارٍ تحميل حركات السداد…</td></tr>
+                                <tr><td colspan="9" class="text-center text-muted">جارٍ تحميل حركات السداد…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3077,6 +3078,106 @@
                                 </thead>
                                 <tbody id="financeLeaseScheduleModalBody">
                                     <tr><td colspan="6" class="text-center text-muted py-4">جارٍ تحميل جدول الأقساط…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Order Lines Modal -->
+    <div class="modal fade" id="financePurchaseOrderModal" tabindex="-1" aria-labelledby="financePurchaseOrderModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header bg-light border-0 py-3">
+                    <h5 class="modal-title fw-bold" id="financePurchaseOrderModalTitle">
+                        <i class="fa-solid fa-file-lines text-primary me-2"></i>
+                        <span>تفاصيل وأصناف أمر الشراء: <span id="financePoModalPoNumber" class="text-primary">—</span></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- PO Header Card -->
+                    <div class="card border-0 bg-light p-3 mb-3 rounded-3">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                                <span class="text-muted small d-block">المورد</span>
+                                <strong class="fs-6 text-dark" id="financePoModalVendorName">—</strong>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="text-muted small d-block">تاريخ إصدار الأمر</span>
+                                <strong id="financePoModalOrderDate">—</strong>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="text-muted small d-block">تاريخ التوريد المطلوب</span>
+                                <strong id="financePoModalReqDate">—</strong>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="text-muted small d-block">تاريخ التوريد المؤكد</span>
+                                <strong id="financePoModalConfDate">—</strong>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <span class="text-muted small d-block">حالة الأمر</span>
+                                <span class="badge bg-secondary" id="financePoModalStatusBadge">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Metrics Bar -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">إجمالي قيمة الطلب</small>
+                                <strong class="text-dark fs-6" id="financePoModalTotalAmount">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">إجمالي الكمية المطلوبة</small>
+                                <strong class="text-primary fs-6" id="financePoModalTotalQty">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">الكمية المتبقية قيد التوريد</small>
+                                <strong class="text-warning-emphasis fs-6" id="financePoModalRemainingQty">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 text-center bg-white">
+                                <small class="text-muted d-block">عدد البنود / الأصناف</small>
+                                <strong class="text-success fs-6" id="financePoModalLinesCount">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                        <div class="card-header bg-white py-2 border-0 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 fw-bold text-dark"><i class="fa-solid fa-boxes-stacked text-primary me-2"></i>قائمة أصناف ومنتجات أمر الشراء</h6>
+                            <span class="badge bg-primary-subtle text-primary border" id="financePoModalLinesBadge">0 صنف</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center">#</th>
+                                        <th>رمز الصنف (Item Number)</th>
+                                        <th>اسم المنتج / الصنف</th>
+                                        <th class="text-end">سعر الشراء (SAR)</th>
+                                        <th class="text-center">الكمية المطلوبة</th>
+                                        <th class="text-center">المتبقي قيد التوريد</th>
+                                        <th class="text-end">إجمالي البند (SAR)</th>
+                                        <th class="text-center">حالة البند</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financePoModalLinesBody">
+                                    <tr><td colspan="8" class="text-center text-muted py-4">جارٍ تحميل بنود أمر الشراء…</td></tr>
                                 </tbody>
                             </table>
                         </div>

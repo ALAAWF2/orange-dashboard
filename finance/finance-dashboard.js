@@ -807,44 +807,89 @@
                     coverage.complete ? 'text-success small mt-1' : 'text-danger small mt-1'
                 )
             );
+            const transactions = payload.transactions || [];
+            const hasUnsettledPayment = transactions.some(t => !t.is_closed && (String(t.voucher || '').startsWith('V-PAY') || Number(t.transaction_amount) > 0));
+
+            if (hasUnsettledPayment) {
+                const alertNotice = document.createElement('div');
+                alertNotice.className = 'alert alert-info py-2 px-3 mt-2 mb-0 rounded-3 border-info-subtle small d-flex align-items-center gap-2';
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-circle-info text-primary fs-5 flex-shrink-0';
+                const textContainer = document.createElement('div');
+                textContainer.innerHTML = '<strong>توضيح للإدارة:</strong> حركات الصرف التي تبدأ بـ <code>V-PAY</code> (سندات دفع) هي <strong>مبالغ تم سدادها وتحويلها بالفعل للمورد</strong>، وحالتها <em>"دفعة مسددة بانتظار المقاصة"</em> تعني أن السداد تم وبانتظار تسجيل قيد الفاتورة المقابلة وإجراء التسوية المحاسبية، وليست التزاماً مطلوباً دفعه مجدداً.';
+                alertNotice.append(icon, textContainer);
+                header.append(alertNotice);
+            }
+
             headerEl.replaceChildren(header);
 
-            const transactions = payload.transactions || [];
             if (!transactions.length) {
-                tableMessage(bodyEl, 8, 'لا توجد حركات مسجلة لهذا المورد.');
+                tableMessage(bodyEl, 9, 'لا توجد حركات مسجلة لهذا المورد.');
             } else {
                 bodyEl.replaceChildren(...transactions.map(transaction => {
                     const row = document.createElement('tr');
-                    const values = [
-                        transaction.voucher || '—',
-                        transaction.invoice_id || '—',
-                        transaction.transaction_date || '—',
-                        transaction.due_date || '—',
-                        money.format(Number(transaction.transaction_amount) || 0),
-                        money.format(Number(transaction.settled_amount) || 0),
-                        money.format(Number(transaction.remaining_amount) || 0)
-                    ];
-                    values.forEach((value, index) => {
-                        const classNames = index === 0
-                            ? 'fw-bold'
-                            : index === 4
-                                ? 'text-end fw-bold'
-                                : index === 5
-                                    ? 'text-end text-success'
-                                    : index === 6
-                                        ? 'text-end text-danger'
-                                        : '';
-                        const cell = textElement('td', value, classNames);
-                        cell.dir = 'ltr';
-                        row.append(cell);
-                    });
+                    const voucher = String(transaction.voucher || '');
+                    const rawAmount = Number(transaction.transaction_amount) || 0;
+                    const isPayment = voucher.startsWith('V-PAY') || rawAmount > 0;
+
+                    // Voucher
+                    const vCell = textElement('td', voucher || '—', 'fw-bold');
+                    vCell.dir = 'ltr';
+                    row.append(vCell);
+
+                    // Type
+                    const typeCell = document.createElement('td');
+                    if (isPayment) {
+                        typeCell.innerHTML = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="fa-solid fa-money-bill-transfer me-1"></i> سند صرف وسداد</span>';
+                    } else if (transaction.invoice_id || voucher.startsWith('VJ-') || voucher.startsWith('C-P') || rawAmount < 0) {
+                        typeCell.innerHTML = '<span class="badge bg-light text-dark border"><i class="fa-solid fa-file-invoice me-1"></i> فاتورة مورد</span>';
+                    } else {
+                        typeCell.innerHTML = '<span class="badge bg-light text-secondary border">حركة قيد</span>';
+                    }
+                    row.append(typeCell);
+
+                    // Invoice ID
+                    const invCell = textElement('td', transaction.invoice_id || '—');
+                    invCell.dir = 'ltr';
+                    row.append(invCell);
+
+                    // Transaction Date
+                    const dtCell = textElement('td', transaction.transaction_date || '—');
+                    dtCell.dir = 'ltr';
+                    row.append(dtCell);
+
+                    // Due Date
+                    const dueCell = textElement('td', transaction.due_date || '—');
+                    dueCell.dir = 'ltr';
+                    row.append(dueCell);
+
+                    // Amount
+                    const amountCell = textElement('td', money.format(Math.abs(rawAmount)), 'text-end fw-bold');
+                    amountCell.dir = 'ltr';
+                    row.append(amountCell);
+
+                    // Settled Amount
+                    const settledCell = textElement('td', money.format(Math.abs(Number(transaction.settled_amount) || 0)), 'text-end text-success');
+                    settledCell.dir = 'ltr';
+                    row.append(settledCell);
+
+                    // Remaining Amount
+                    const remCell = textElement('td', money.format(Math.abs(Number(transaction.remaining_amount) || 0)), isPayment ? 'text-end text-primary' : 'text-end text-danger');
+                    remCell.dir = 'ltr';
+                    row.append(remCell);
+
+                    // Status
                     const statusCell = document.createElement('td');
-                    statusCell.append(textElement(
-                        'span',
-                        transaction.is_closed ? 'مغلقة' : 'مفتوحة',
-                        `badge ${transaction.is_closed ? 'bg-secondary' : 'bg-warning text-dark'}`
-                    ));
+                    statusCell.className = 'text-center';
+                    if (transaction.is_closed) {
+                        statusCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-circle-check me-1"></i> مسواة ومغلقة ✓</span>';
+                    } else if (isPayment) {
+                        statusCell.innerHTML = '<span class="badge bg-info-subtle text-info-emphasis border border-info" title="تم سداد الدفعة وهي بانتظار المقاصة مع الفاتورة المقابلة"><i class="fa-solid fa-clock me-1"></i> دفعة مسددة بانتظار المقاصة</span>';
+                    } else {
+                        statusCell.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-exclamation me-1"></i> مستحقة السداد</span>';
+                    }
                     row.append(statusCell);
+
                     return row;
                 }));
             }
@@ -2259,6 +2304,142 @@
         updateAdvancesCategoryUi(advancesCategory);
     }
 
+    async function openPurchaseOrderModal(poNumber, dataAreaId) {
+        const modalEl = element('financePurchaseOrderModal');
+        if (!modalEl) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        const poTitleEl = element('financePoModalPoNumber');
+        const vendorNameEl = element('financePoModalVendorName');
+        const orderDateEl = element('financePoModalOrderDate');
+        const reqDateEl = element('financePoModalReqDate');
+        const confDateEl = element('financePoModalConfDate');
+        const statusBadgeEl = element('financePoModalStatusBadge');
+
+        const totalAmountEl = element('financePoModalTotalAmount');
+        const totalQtyEl = element('financePoModalTotalQty');
+        const remainingQtyEl = element('financePoModalRemainingQty');
+        const linesCountEl = element('financePoModalLinesCount');
+        const linesBadgeEl = element('financePoModalLinesBadge');
+        const bodyEl = element('financePoModalLinesBody');
+
+        if (poTitleEl) poTitleEl.textContent = poNumber;
+        if (vendorNameEl) vendorNameEl.textContent = 'جارٍ التحميل…';
+        if (orderDateEl) orderDateEl.textContent = '—';
+        if (reqDateEl) reqDateEl.textContent = '—';
+        if (confDateEl) confDateEl.textContent = '—';
+        if (statusBadgeEl) {
+            statusBadgeEl.className = 'badge bg-secondary';
+            statusBadgeEl.textContent = 'جارٍ التحميل…';
+        }
+        if (totalAmountEl) totalAmountEl.textContent = '—';
+        if (totalQtyEl) totalQtyEl.textContent = '—';
+        if (remainingQtyEl) remainingQtyEl.textContent = '—';
+        if (linesCountEl) linesCountEl.textContent = '—';
+        if (linesBadgeEl) linesBadgeEl.textContent = '0 صنف';
+
+        tableMessage(bodyEl, 8, 'جارٍ تحميل أصناف وبنود أمر الشراء…');
+        modal.show();
+
+        try {
+            const payload = await window.FinancePlatformApi.purchaseOrderLines(poNumber, {
+                data_area_id: dataAreaId || 'orng'
+            });
+
+            if (payload.state !== 'ready') {
+                tableMessage(bodyEl, 8, payload.message || 'تعذر تحميل بنود أمر الشراء.', 'text-center text-danger');
+                return;
+            }
+
+            const header = payload.header || {};
+            const summary = payload.summary || {};
+            const lines = payload.lines || [];
+
+            if (vendorNameEl) vendorNameEl.textContent = header.vendor_name || header.vendor_account_number || '—';
+            if (orderDateEl) orderDateEl.textContent = header.accounting_date || '—';
+            if (reqDateEl) reqDateEl.textContent = header.requested_delivery_date || '—';
+            if (confDateEl) confDateEl.textContent = header.confirmed_delivery_date || '—';
+            if (statusBadgeEl) {
+                const st = header.purchase_order_status;
+                statusBadgeEl.className = `badge ${st === 'Open Order' || st === 'Backorder' ? 'bg-warning text-dark' : (st === 'Invoiced' ? 'bg-success' : 'bg-primary')}`;
+                statusBadgeEl.textContent = st || '—';
+            }
+
+            if (totalAmountEl) totalAmountEl.textContent = money.format(Number(summary.total_amount) || 0) + ' SAR';
+            if (totalQtyEl) totalQtyEl.textContent = integer.format(Number(summary.total_quantity) || 0) + ' قطعة';
+            if (remainingQtyEl) remainingQtyEl.textContent = integer.format(Number(summary.total_remaining_qty) || 0) + ' قطعة';
+            if (linesCountEl) linesCountEl.textContent = integer.format(Number(summary.total_lines) || 0) + ' صنف';
+            if (linesBadgeEl) linesBadgeEl.textContent = `${integer.format(lines.length)} صنف`;
+
+            if (!lines.length) {
+                tableMessage(bodyEl, 8, 'لا توجد أصناف مسجلة لهذا الأمر.');
+                return;
+            }
+
+            bodyEl.replaceChildren(...lines.map(line => {
+                const row = document.createElement('tr');
+
+                // 1. Line Number
+                const numCell = textElement('td', String(line.line_number || '—'), 'text-center text-muted small');
+                numCell.dir = 'ltr';
+
+                // 2. Item Number / SKU
+                const itemCell = textElement('td', String(line.item_number || '—'), 'fw-bold text-primary font-monospace');
+                itemCell.dir = 'ltr';
+
+                // 3. Product Name
+                const nameCell = textElement('td', String(line.product_name || line.item_number || '—'), 'fw-semibold text-dark');
+
+                // 4. Purchase Price
+                const priceCell = textElement('td', money.format(Number(line.purchase_price) || 0), 'text-end');
+                priceCell.dir = 'ltr';
+
+                // 5. Quantity Ordered
+                const qtyCell = textElement('td', integer.format(Number(line.purchase_quantity) || 0), 'text-center fw-bold');
+                qtyCell.dir = 'ltr';
+
+                // 6. Remaining Physical Qty
+                const remQty = Number(line.remaining_purchase_physical) || 0;
+                const remQtyCell = textElement('td', integer.format(remQty), remQty > 0 ? 'text-center fw-bold text-warning-emphasis' : 'text-center text-muted');
+                remQtyCell.dir = 'ltr';
+
+                // 7. Line Amount
+                const amtCell = textElement('td', money.format(Number(line.line_amount) || 0), 'text-end fw-bold text-dark');
+                amtCell.dir = 'ltr';
+
+                // 8. Line Status
+                const statusCell = document.createElement('td');
+                statusCell.className = 'text-center';
+                const st = String(line.line_status || '');
+                let badgeClass = 'bg-secondary';
+                let label = st;
+                if (st === 'Backorder' || st === 'Open Order') {
+                    badgeClass = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                    label = 'قيد التوريد (Backorder)';
+                } else if (st === 'Received') {
+                    badgeClass = 'bg-info-subtle text-info-emphasis border border-info-subtle';
+                    label = 'تم الاستلام (Received)';
+                } else if (st === 'Invoiced') {
+                    badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+                    label = 'مفوتر (Invoiced)';
+                } else if (st === 'Canceled') {
+                    badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+                    label = 'ملغي (Canceled)';
+                }
+                const stBadge = document.createElement('span');
+                stBadge.className = `badge ${badgeClass} px-2 py-1`;
+                stBadge.textContent = label || '—';
+                statusCell.append(stBadge);
+
+                row.append(numCell, itemCell, nameCell, priceCell, qtyCell, remQtyCell, amtCell, statusCell);
+                return row;
+            }));
+        } catch (err) {
+            console.error('Failed to load PO lines:', err);
+            tableMessage(bodyEl, 8, 'حدث خطأ أثناء تحميل أصناف أمر الشراء.', 'text-center text-danger');
+        }
+    }
+
     function filterAndRenderPurchases() {
         const body = element('financePurchasesBody');
         if (!body) return;
@@ -2305,6 +2486,8 @@
 
         body.replaceChildren(...list.map(po => {
             const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            row.title = `انقر لعرض تفاصيل وأصناف أمر الشراء ${po.purchase_order_number || ''}`;
 
             const idCell = document.createElement('td');
             const idBadge = document.createElement('span');
@@ -2349,6 +2532,9 @@
             statusCell.append(statusBadge);
 
             row.append(idCell, vendorCell, orderDateCell, reqDateCell, confDateCell, totalCell, remCell, linesCell, statusCell);
+
+            row.addEventListener('click', () => openPurchaseOrderModal(po.purchase_order_number, po.data_area_id));
+
             return row;
         }));
     }
@@ -2674,24 +2860,47 @@
             const row = document.createElement('tr');
             row.style.cursor = 'pointer';
             row.title = 'انقر لعرض كامل حركات المورد والتسويات المحاسبية';
-            [vendor.vendor_name || '—', vendor.vendor_account_number || '—',
-                money.format(Number(vendor.transaction_amount) || 0),
-                money.format(Number(vendor.paid_amount) || 0),
-                money.format(Number(vendor.remaining_amount) || 0),
-                money.format(Number(vendor.overdue_remaining_amount) || 0)
-            ].forEach((value, index) => {
-                const cell = document.createElement('td');
-                cell.textContent = value;
-                if (index === 1) cell.dir = 'ltr';
-                if (index >= 2) {
-                    cell.dir = 'ltr';
-                    cell.className = 'text-end fw-bold';
-                }
-                if (index === 5 && Number(vendor.overdue_remaining_amount) > 0) {
-                    cell.classList.add('text-danger');
-                }
-                row.append(cell);
-            });
+            const rawRem = Number(vendor.remaining_amount) || 0;
+            const isDebitPayment = rawRem > 0;
+
+            // Name Cell with clear sub-badge
+            const nameCell = document.createElement('td');
+            nameCell.innerHTML = `<div>${vendor.vendor_name || '—'}</div>` +
+                (isDebitPayment
+                    ? `<span class="badge bg-info-subtle text-info-emphasis border border-info" style="font-size:0.72rem;"><i class="fa-solid fa-money-bill-transfer me-1"></i>دفعة مسددة بانتظار المقاصة</span>`
+                    : `<span class="badge bg-light text-secondary border" style="font-size:0.72rem;"><i class="fa-solid fa-file-invoice me-1"></i>مستحق للمورد</span>`);
+            row.append(nameCell);
+
+            // Account number
+            const accCell = textElement('td', vendor.vendor_account_number || '—');
+            accCell.dir = 'ltr';
+            row.append(accCell);
+
+            // Total transactions amount
+            const totCell = textElement('td', money.format(Math.abs(Number(vendor.transaction_amount) || 0)), 'text-end fw-bold');
+            totCell.dir = 'ltr';
+            row.append(totCell);
+
+            // Paid / settled amount
+            const paidCell = textElement('td', money.format(Math.abs(Number(vendor.paid_amount) || 0)), 'text-end fw-bold text-success');
+            paidCell.dir = 'ltr';
+            row.append(paidCell);
+
+            // Remaining amount
+            const remCell = textElement('td', money.format(Math.abs(rawRem)), isDebitPayment ? 'text-end fw-bold text-primary' : 'text-end fw-bold text-danger');
+            remCell.dir = 'ltr';
+            row.append(remCell);
+
+            // Overdue
+            const overdueCell = textElement('td', isDebitPayment ? '0' : money.format(Math.abs(Number(vendor.overdue_remaining_amount) || 0)), 'text-end fw-bold');
+            overdueCell.dir = 'ltr';
+            if (Number(vendor.overdue_remaining_amount) > 0 && !isDebitPayment) {
+                overdueCell.classList.add('text-danger');
+            } else if (isDebitPayment) {
+                overdueCell.classList.add('text-muted');
+            }
+            row.append(overdueCell);
+
             row.addEventListener('click', () => openVendorPaymentsModal(
                 vendor.vendor_account_number,
                 vendor.data_area_id

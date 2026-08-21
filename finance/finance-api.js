@@ -70,6 +70,10 @@
             params
         ),
         purchaseOrders: params => request('/api/finance/purchase-orders', params),
+        purchaseOrderLines: (poNumber, params) => request(
+            `/api/finance/purchase-orders/${encodeURIComponent(poNumber)}/lines`,
+            params
+        ),
         inventoryValuation: params => request('/api/finance/inventory-valuation', params),
         cashAndGateways: params => request('/api/finance/cash-and-gateways', params),
         vatHub: params => request('/api/finance/vat-hub', params),
