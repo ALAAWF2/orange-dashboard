@@ -12,6 +12,7 @@
     let currentInvoices = [];
     let currentTopVendors = [];
     let currentLeases = [];
+    let currentLeaseSchedules = [];
     let currentAssets = [];
     let currentAdvances = [];
     let currentPurchases = [];
@@ -39,6 +40,7 @@
     const filters = {
         showrooms: { search: '', status: 'all' },
         invoices: { search: '', status: 'all' },
+        leases: { search: '', horizon: 'all' },
         assets: { search: '', group: 'all', scope: 'all' },
         advances: { search: '', type: 'all', status: 'all' },
         purchases: { search: '', status: 'all' },
@@ -1036,33 +1038,343 @@
         filterAndRenderInvoices();
     }
 
-    function sortAndRenderLeases() {
+    function openLeaseScheduleModal(leaseId) {
+        if (!leaseId) return;
+        const modalEl = element('financeLeaseScheduleModal');
+        if (!modalEl) return;
+
+        element('financeLeaseModalLeaseIdBadge').textContent = leaseId;
+        element('financeLeaseModalDesc').textContent = 'جارٍ التحميل…';
+        element('financeLeaseModalStartDate').textContent = '—';
+        element('financeLeaseModalExpDate').textContent = '—';
+        element('financeLeaseModalTotalAmount').textContent = '—';
+        element('financeLeaseModalRemaining').textContent = '—';
+        element('financeLeaseModalPaymentCountBadge').textContent = '0 قسط';
+
+        const tbody = element('financeLeaseScheduleModalBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>جارٍ تحميل جدول الأقساط والدفعات…</td></tr>';
+
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+
+        const localLease = currentLeases.find(l => l.lease_id === leaseId) || {};
+        if (localLease.description) {
+            element('financeLeaseModalDesc').textContent = localLease.description;
+            element('financeLeaseModalStartDate').textContent = localLease.commencement_date || '—';
+            element('financeLeaseModalExpDate').textContent = localLease.expiration_date || '—';
+            element('financeLeaseModalTotalAmount').textContent = money.format(Number(localLease.payment_amount) || 0) + ' SAR';
+            element('financeLeaseModalRemaining').textContent = money.format(Number(localLease.remaining_balance) || 0) + ' SAR';
+        }
+
+        FinancePlatformApi.leaseSchedule(leaseId).then(res => {
+            if (!res || !res.lease) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">تعذر العثور على بيانات العقد.</td></tr>';
+                return;
+            }
+            const lease = res.lease;
+            element('financeLeaseModalDesc').textContent = lease.description || '—';
+            element('financeLeaseModalStartDate').textContent = lease.commencement_date || '—';
+            element('financeLeaseModalExpDate').textContent = lease.expiration_date || '—';
+            element('financeLeaseModalTotalAmount').textContent = money.format(Number(lease.payment_amount) || 0) + ' SAR';
+            element('financeLeaseModalRemaining').textContent = money.format(Number(lease.remaining_balance) || 0) + ' SAR';
+
+            const lines = res.lines || [];
+            element('financeLeaseModalPaymentCountBadge').textContent = `${integer.format(lines.length)} قسط مجدول`;
+
+            if (!lines.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">لا توجد أقساط مجدولة مسجلة لهذا العقد.</td></tr>';
+                return;
+            }
+
+            const todayStr = isoDate(new Date());
+            tbody.replaceChildren(...lines.map((line, idx) => {
+                const tr = document.createElement('tr');
+
+                const idxTd = document.createElement('td');
+                idxTd.className = 'text-center fw-bold text-muted';
+                idxTd.textContent = idx + 1;
+
+                const dueTd = document.createElement('td');
+                dueTd.dir = 'ltr';
+                const dueDateSpan = document.createElement('span');
+                dueDateSpan.textContent = line.effective_due_date || line.schedule_date || '—';
+                dueDateSpan.className = 'fw-bold';
+                dueTd.append(dueDateSpan);
+
+                if (line.effective_due_date && line.effective_due_date < todayStr) {
+                    const b = document.createElement('span');
+                    b.className = 'badge bg-secondary-subtle text-secondary ms-2';
+                    b.textContent = 'سابق';
+                    dueTd.append(b);
+                } else if (line.effective_due_date && line.effective_due_date === todayStr) {
+                    const b = document.createElement('span');
+                    b.className = 'badge bg-danger ms-2';
+                    b.textContent = 'يستحق اليوم';
+                    dueTd.append(b);
+                }
+
+                const schedTd = document.createElement('td');
+                schedTd.dir = 'ltr';
+                schedTd.className = 'text-muted';
+                schedTd.textContent = line.schedule_date || '—';
+
+                const amtTd = document.createElement('td');
+                amtTd.className = 'text-end fw-bold text-dark';
+                amtTd.dir = 'ltr';
+                amtTd.textContent = money.format(Number(line.payment_amount) || 0);
+
+                const statusTd = document.createElement('td');
+                statusTd.className = 'text-center';
+                const isPosted = (line.journal_status || '').toLowerCase().includes('posted') || line.journal_status === 'مرحل';
+                statusTd.innerHTML = `<span class="badge ${isPosted ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-secondary border'}">${line.journal_status || 'غير مرحل'}</span>`;
+
+                const journalTd = document.createElement('td');
+                journalTd.className = 'text-center text-muted small';
+                journalTd.dir = 'ltr';
+                journalTd.textContent = line.journal_number || '—';
+
+                tr.append(idxTd, dueTd, schedTd, amtTd, statusTd, journalTd);
+                return tr;
+            }));
+        }).catch(err => {
+            console.error('Error loading lease schedule:', err);
+            const localLines = currentLeaseSchedules.filter(s => s.lease_id === leaseId);
+            if (localLines.length) {
+                element('financeLeaseModalPaymentCountBadge').textContent = `${integer.format(localLines.length)} قسط مجدول`;
+                tbody.replaceChildren(...localLines.map((line, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="text-center text-muted fw-bold">${idx + 1}</td>
+                        <td dir="ltr" class="fw-bold">${line.due_date || '—'}</td>
+                        <td dir="ltr" class="text-muted">${line.due_date || '—'}</td>
+                        <td dir="ltr" class="text-end fw-bold text-dark">${money.format(Number(line.payment_amount) || 0)}</td>
+                        <td class="text-center"><span class="badge bg-light text-secondary border">${line.journal_status || '—'}</span></td>
+                        <td class="text-center text-muted small" dir="ltr">${line.journal_number || '—'}</td>
+                    `;
+                    return tr;
+                }));
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">تعذر تحميل جدول الأقساط من الخادم.</td></tr>';
+            }
+        });
+    }
+
+    function setLeaseHorizonFilter(filterKey) {
+        if (filters.leases.horizon === filterKey) {
+            filters.leases.horizon = 'all';
+        } else {
+            filters.leases.horizon = filterKey;
+        }
+        filterAndRenderLeases();
+    }
+
+    function filterAndRenderLeases() {
         const body = element('financeLeasesBody');
         if (!body) return;
+
+        const horizon = filters.leases?.horizon || 'all';
+        const search = (filters.leases?.search || '').toLowerCase().trim();
+
+        // Update Horizon Card highlight states
+        const card30 = element('financeLeaseDue30Card');
+        const card60 = element('financeLeaseDue60Card');
+        const card90 = element('financeLeaseDue90Card');
+        const cardRenew = element('financeLeaseRenewals90Card');
+
+        if (card30) card30.classList.toggle('is-active-filter', horizon === 'due_30');
+        if (card60) card60.classList.toggle('is-active-filter', horizon === 'due_60');
+        if (card90) card90.classList.toggle('is-active-filter', horizon === 'due_90');
+        if (cardRenew) cardRenew.classList.toggle('is-active-filter', horizon === 'expiring_90');
+
+        const resetBtn = element('financeLeaseResetFilterBtn');
+        const filterBadge = element('financeLeaseActiveFilterBadge');
+        const filterNote = element('financeLeaseFilterStatusNote');
+        const countBadge = element('financeLeaseFilteredCountBadge');
+        const sectionTitle = element('financeLeasesSectionTitle');
+        const sectionKicker = element('financeLeasesSectionKicker');
+        const dateTh = element('financeLeaseDateTh');
+        const amountTh = element('financeLeaseAmountTh');
+
+        if (resetBtn) resetBtn.style.display = horizon !== 'all' ? 'inline-flex' : 'none';
+
+        const today = new Date();
+        const todayStr = isoDate(today);
+        const in90Days = new Date(today.getTime() + 90 * 86400000);
+        const in90DaysStr = isoDate(in90Days);
+
+        if (horizon === 'due_30' || horizon === 'due_60' || horizon === 'due_90') {
+            const days = horizon === 'due_30' ? 30 : (horizon === 'due_60' ? 60 : 90);
+            const cutoffDate = new Date(today.getTime() + days * 86400000);
+            const cutoffStr = isoDate(cutoffDate);
+
+            let schedules = [...currentLeaseSchedules].filter(s => {
+                const d = s.due_date;
+                return d && d >= todayStr && d <= cutoffStr;
+            });
+
+            if (search) {
+                schedules = schedules.filter(s =>
+                    (s.lease_id || '').toLowerCase().includes(search) ||
+                    (s.description || '').toLowerCase().includes(search) ||
+                    (s.vendor_account_number || '').toLowerCase().includes(search)
+                );
+            }
+
+            const state = sortState.leases;
+            if (state) {
+                schedules.sort((a, b) => {
+                    if (state.key === 'amount_column' || state.key === 'upcoming_payment_amount') {
+                        return compareValues(a, b, 'payment_amount', state.dir);
+                    }
+                    if (state.key === 'date_column' || state.key === 'expiration_date') {
+                        return compareValues(a, b, 'due_date', state.dir);
+                    }
+                    return compareValues(a, b, state.key, state.dir);
+                });
+            } else {
+                schedules.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
+            }
+            updateSortHeaders('leases');
+
+            const totalSum = schedules.reduce((sum, s) => sum + (Number(s.payment_amount) || 0), 0);
+
+            if (sectionKicker) sectionKicker.textContent = `DUE IN ${days} DAYS`;
+            if (sectionTitle) sectionTitle.textContent = `جدول دفعات وأقساط الإيجار المستحقة خلال ${days} يوماً`;
+            if (filterNote) filterNote.textContent = `تصفية نشطة: عرض الأقساط من ${todayStr} حتى ${cutoffStr}`;
+            if (filterBadge) {
+                filterBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2 fw-bold';
+                filterBadge.innerHTML = `<i class="fa-solid fa-filter me-1"></i> مستحق خلال ${days} يوماً: ${integer.format(schedules.length)} دفعة (إجمالي ${money.format(totalSum)} SAR)`;
+            }
+            if (countBadge) countBadge.textContent = `${integer.format(schedules.length)} دفعة`;
+            if (dateTh) dateTh.innerHTML = 'تاريخ استحقاق القسط <i class="fa-solid fa-sort"></i>';
+            if (amountTh) amountTh.innerHTML = 'مبلغ القسط المستحق <i class="fa-solid fa-sort"></i>';
+
+            if (!schedules.length) {
+                body.innerHTML = `<tr><td colspan="5" class="finance-empty-state">لا توجد أقساط إيجار مستحقة السداد خلال ${days} يوماً ${search ? 'مطابقة للبحث' : ''}.</td></tr>`;
+                return;
+            }
+
+            body.replaceChildren(...schedules.map(item => {
+                const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.title = 'انقر لعرض تفاصيل العقد وجدول الأقساط الكامل';
+                row.addEventListener('click', () => openLeaseScheduleModal(item.lease_id));
+
+                const idCell = document.createElement('td');
+                idCell.dir = 'ltr';
+                idCell.innerHTML = `<strong class="text-primary">${item.lease_id || '—'}</strong> <i class="fa-solid fa-arrow-up-right-from-square small text-muted ms-1"></i>`;
+
+                const descCell = document.createElement('td');
+                descCell.textContent = item.description || '—';
+
+                const dueCell = document.createElement('td');
+                dueCell.dir = 'ltr';
+                const dueText = document.createElement('span');
+                dueText.className = 'fw-bold';
+                dueText.textContent = item.due_date || '—';
+                dueCell.append(dueText);
+
+                if (item.due_date) {
+                    const diffDays = Math.ceil((new Date(item.due_date) - today) / 86400000);
+                    const badge = document.createElement('span');
+                    if (diffDays <= 0) {
+                        badge.className = 'badge bg-danger ms-2';
+                        badge.textContent = 'يستحق اليوم';
+                    } else if (diffDays <= 7) {
+                        badge.className = 'badge bg-warning text-dark ms-2';
+                        badge.textContent = `خلال ${diffDays} أيام`;
+                    } else {
+                        badge.className = 'badge bg-light text-secondary border ms-2';
+                        badge.textContent = `خلال ${diffDays} يوماً`;
+                    }
+                    dueCell.append(badge);
+                }
+
+                const statusCell = document.createElement('td');
+                statusCell.className = 'text-center';
+                const isPosted = (item.journal_status || '').toLowerCase().includes('posted') || item.journal_status === 'مرحل';
+                statusCell.innerHTML = `<span class="badge ${isPosted ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-secondary border'}">${item.journal_status || 'غير مرحل'}</span>`;
+
+                const amtCell = document.createElement('td');
+                amtCell.className = 'text-end fw-bold text-dark';
+                amtCell.dir = 'ltr';
+                amtCell.textContent = money.format(Number(item.payment_amount) || 0);
+
+                row.append(idCell, descCell, dueCell, statusCell, amtCell);
+                return row;
+            }));
+            return;
+        }
+
+        // Mode: expiring_90 or all
         let list = [...currentLeases];
+
+        if (horizon === 'expiring_90') {
+            list = list.filter(lease => {
+                const exp = lease.expiration_date;
+                if (!exp) return false;
+                const isExpiring = exp >= todayStr && exp <= in90DaysStr && lease.lease_status !== 'Closed' && lease.lease_status !== 'Terminated';
+                const isOverdue = exp < todayStr && lease.lease_status !== 'Closed' && lease.lease_status !== 'Terminated';
+                return isExpiring || isOverdue;
+            });
+            if (sectionKicker) sectionKicker.textContent = 'EXPIRING LEASES';
+            if (sectionTitle) sectionTitle.textContent = 'عقود الإيجار التي تنتهي خلال 90 يوماً وتتطلب المراجعة';
+            if (filterNote) filterNote.textContent = 'عقود تنتهي قريباً أو متجاوزة تاريخ الانتهاء وتحتاج إجراء التجديد';
+            if (filterBadge) {
+                filterBadge.className = 'badge bg-danger-subtle text-danger border border-danger px-3 py-2 fw-bold';
+                filterBadge.innerHTML = `<i class="fa-solid fa-clock-rotate-left me-1"></i> عقود تنتهي قريباً / متجاوزة (${integer.format(list.length)} عقد)`;
+            }
+        } else {
+            if (sectionKicker) sectionKicker.textContent = 'LEASE REGISTER';
+            if (sectionTitle) sectionTitle.textContent = 'سجل عقود إيجار الفروع ومواعيد الدفعات';
+            if (filterNote) filterNote.textContent = 'مواعيد الدفعات القادمة خلال 90 يوماً (انقر على أي بطاقة بالأعلى للتصفية)';
+            if (filterBadge) {
+                filterBadge.className = 'badge bg-secondary-subtle text-secondary border px-3 py-2';
+                filterBadge.textContent = 'عرض كل العقود (بدون تصفية)';
+            }
+        }
+
+        if (search) {
+            list = list.filter(lease =>
+                (lease.lease_id || '').toLowerCase().includes(search) ||
+                (lease.description || '').toLowerCase().includes(search) ||
+                (lease.lease_status || '').toLowerCase().includes(search) ||
+                (lease.vendor_account_number || '').toLowerCase().includes(search)
+            );
+        }
+
+        if (countBadge) countBadge.textContent = `${integer.format(list.length)} عقد`;
+        if (dateTh) dateTh.innerHTML = 'تاريخ انتهاء العقد <i class="fa-solid fa-sort"></i>';
+        if (amountTh) amountTh.innerHTML = 'مبلغ الدفعة القادمة <i class="fa-solid fa-sort"></i>';
+
         const state = sortState.leases;
         if (state) {
-            list.sort((a, b) => compareValues(a, b, state.key, state.dir));
+            list.sort((a, b) => {
+                if (state.key === 'amount_column' || state.key === 'upcoming_payment_amount') {
+                    return compareValues(a, b, 'upcoming_payment_amount', state.dir);
+                }
+                if (state.key === 'date_column' || state.key === 'expiration_date') {
+                    return compareValues(a, b, 'expiration_date', state.dir);
+                }
+                return compareValues(a, b, state.key, state.dir);
+            });
         }
         updateSortHeaders('leases');
 
         if (!list.length) {
-            body.innerHTML = '<tr><td colspan="5" class="finance-empty-state">لا توجد عقود إيجار مستوردة.</td></tr>';
+            body.innerHTML = `<tr><td colspan="5" class="finance-empty-state">لا توجد عقود إيجار ${search ? 'مطابقة للبحث' : ''}.</td></tr>`;
             return;
         }
 
-        const today = new Date();
-        const in90Days = new Date();
-        in90Days.setDate(today.getDate() + 90);
-        const todayStr = isoDate(today);
-        const in90DaysStr = isoDate(in90Days);
-
-        body.replaceChildren(...list.slice(0, 50).map(lease => {
+        body.replaceChildren(...list.slice(0, 100).map(lease => {
             const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            row.title = 'انقر لعرض تفاصيل العقد وجدول الأقساط الكامل';
+            row.addEventListener('click', () => openLeaseScheduleModal(lease.lease_id));
             
             const idCell = document.createElement('td');
             idCell.dir = 'ltr';
-            idCell.textContent = lease.lease_id || '—';
+            idCell.innerHTML = `<strong class="text-primary">${lease.lease_id || '—'}</strong> <i class="fa-solid fa-arrow-up-right-from-square small text-muted ms-1"></i>`;
 
             const descCell = document.createElement('td');
             descCell.textContent = lease.description || '—';
@@ -1072,11 +1384,18 @@
             expDateText.textContent = lease.expiration_date || '—';
             expDateText.dir = 'ltr';
             expCell.append(expDateText);
-            if (lease.expiration_date && lease.expiration_date >= todayStr && lease.expiration_date <= in90DaysStr) {
-                const badge = document.createElement('span');
-                badge.className = 'finance-lease-badge is-expiring ms-2';
-                badge.textContent = 'ينتهي قريباً';
-                expCell.append(badge);
+            if (lease.expiration_date) {
+                if (lease.expiration_date < todayStr && lease.lease_status !== 'Closed' && lease.lease_status !== 'Terminated') {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-danger ms-2';
+                    badge.textContent = 'متجاوز للمراجعة';
+                    expCell.append(badge);
+                } else if (lease.expiration_date >= todayStr && lease.expiration_date <= in90DaysStr) {
+                    const badge = document.createElement('span');
+                    badge.className = 'finance-lease-badge is-expiring ms-2';
+                    badge.textContent = 'ينتهي قريباً';
+                    expCell.append(badge);
+                }
             }
 
             const statusCell = document.createElement('td');
@@ -1084,6 +1403,7 @@
 
             const upcomingCell = document.createElement('td');
             upcomingCell.className = 'text-end fw-bold';
+            upcomingCell.dir = 'ltr';
             upcomingCell.textContent = money.format(Number(lease.upcoming_payment_amount) || 0);
 
             row.append(idCell, descCell, expCell, statusCell, upcomingCell);
@@ -1094,7 +1414,8 @@
     function renderLeases(payload) {
         if (!payload?.configured) return;
         currentLeases = payload.data || [];
-        sortAndRenderLeases();
+        currentLeaseSchedules = payload.schedules || [];
+        filterAndRenderLeases();
     }
 
     function filterAndRenderAssets() {
@@ -3572,6 +3893,30 @@
             });
         }
 
+        // Leases Horizon Cards & Filter Events
+        const leaseCard30 = element('financeLeaseDue30Card');
+        if (leaseCard30) leaseCard30.addEventListener('click', () => setLeaseHorizonFilter('due_30'));
+
+        const leaseCard60 = element('financeLeaseDue60Card');
+        if (leaseCard60) leaseCard60.addEventListener('click', () => setLeaseHorizonFilter('due_60'));
+
+        const leaseCard90 = element('financeLeaseDue90Card');
+        if (leaseCard90) leaseCard90.addEventListener('click', () => setLeaseHorizonFilter('due_90'));
+
+        const leaseCardRenew = element('financeLeaseRenewals90Card');
+        if (leaseCardRenew) leaseCardRenew.addEventListener('click', () => setLeaseHorizonFilter('expiring_90'));
+
+        const leaseResetBtn = element('financeLeaseResetFilterBtn');
+        if (leaseResetBtn) leaseResetBtn.addEventListener('click', () => setLeaseHorizonFilter('all'));
+
+        const leaseSearchInput = element('financeLeaseSearchInput');
+        if (leaseSearchInput) {
+            leaseSearchInput.addEventListener('input', () => {
+                filters.leases.search = leaseSearchInput.value;
+                filterAndRenderLeases();
+            });
+        }
+
         document.querySelectorAll('th.finance-sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const table = th.dataset.table;
@@ -3585,7 +3930,7 @@
                 if (table === 'showrooms') filterAndRenderShowrooms();
                 else if (table === 'invoices') filterAndRenderInvoices();
                 else if (table === 'topVendors') sortAndRenderTopVendors();
-                else if (table === 'leases') sortAndRenderLeases();
+                else if (table === 'leases') filterAndRenderLeases();
                 else if (table === 'assets') filterAndRenderAssets();
                 else if (table === 'advances') filterAndRenderAdvances();
                 else if (table === 'purchases') filterAndRenderPurchases();
