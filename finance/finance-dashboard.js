@@ -331,18 +331,18 @@
         const cardGross = document.createElement('article');
         cardGross.className = 'is-kpi-gross';
         cardGross.innerHTML = `
-            <span>مجمل الربح التشغيلي</span>
+            <span>مجمل الربح التجاري</span>
             <strong>${grossVal !== null ? money.format(grossVal) : '—'}</strong>
-            <small class="finance-kpi-badge is-positive">${grossPct !== null ? 'الهامش ' + grossPct + '%' : '—'}</small>
+            <small class="finance-kpi-badge is-positive">${grossPct !== null ? 'هامش الربح ' + grossPct + '%' : '—'}</small>
         `;
 
         // Card 3: OPEX
         const cardOpex = document.createElement('article');
         cardOpex.className = 'is-kpi-opex';
         cardOpex.innerHTML = `
-            <span>مصروف Trial Balance والتشغيل</span>
+            <span>المصروفات التشغيلية المعتمدة</span>
             <strong>${money.format(opexVal)}</strong>
-            <small class="finance-kpi-badge is-negative">تشمل الإيجار والرواتب</small>
+            <small class="finance-kpi-badge is-negative">تشمل الإيجار والرواتب والصيانة</small>
         `;
 
         // Card 4: EBITDA
@@ -350,7 +350,7 @@
         cardEbitda.className = 'is-kpi-ebitda';
         const isPos = (ebitdaVal || 0) >= 0;
         cardEbitda.innerHTML = `
-            <span>صافي الربح التشغيلي (EBITDA)</span>
+            <span>صافي الربح التشغيلي للفرع (EBITDA)</span>
             <strong>${ebitdaVal !== null ? money.format(ebitdaVal) : '—'}</strong>
             <small class="finance-kpi-badge ${isPos ? 'is-positive' : 'is-negative'}">${ebitdaPct !== null ? 'هامش ' + ebitdaPct + '%' : '—'}</small>
         `;
@@ -364,8 +364,8 @@
             pnlSection.className = 'finance-showroom-section mb-4';
             pnlSection.innerHTML = `
                 <h3>
-                    <span><i class="fa-solid fa-chart-pie text-warning me-2"></i> قائمة الدخل التشغيلية للمعرض (Showroom P&L 360°)</span>
-                    <span class="badge bg-light text-dark fw-normal border">Trial Balance</span>
+                    <span><i class="fa-solid fa-chart-pie text-warning me-2"></i> قائمة الدخل والأرباح التشغيلية للفرع</span>
+                    <span class="badge bg-light text-dark fw-normal border">المصروفات المعتمدة</span>
                 </h3>
                 <div class="table-responsive">
                     <table class="finance-pnl-waterfall">
@@ -376,32 +376,32 @@
                                 <td class="text-muted text-end small" style="width: 120px;">100.0%</td>
                             </tr>
                             <tr>
-                                <td><span class="finance-pnl-badge-sign is-sub">-</span> تكلفة البضاعة المباعة (Cost of Goods Sold - COGS)</td>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> تكلفة شراء البضاعة المباعة (COGS)</td>
                                 <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.cogs || 0)}</td>
                                 <td class="text-muted text-end small">${revVal ? ((pnlSummary.cogs / revVal) * 100).toFixed(1) + '%' : '—'}</td>
                             </tr>
                             <tr class="is-total-row">
-                                <td><span class="finance-pnl-badge-sign is-eq">=</span> مجمل الربح التشغيلي (Gross Profit)</td>
+                                <td><span class="finance-pnl-badge-sign is-eq">=</span> مجمل الربح التجاري (Gross Profit)</td>
                                 <td class="text-end fw-bold text-primary" dir="ltr">${money.format(pnlSummary.gross_profit || 0)}</td>
                                 <td class="text-end fw-bold text-primary small">${grossPct ? grossPct + '%' : '—'}</td>
                             </tr>
                             <tr>
-                                <td><span class="finance-pnl-badge-sign is-sub">-</span> استهلاك وإيجار المعرض (Rent & Lease Amortization)</td>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> استهلاك وإيجار المعرض (Rent)</td>
                                 <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.rent_expense || 0)}</td>
                                 <td class="text-muted text-end small">${revVal ? ((pnlSummary.rent_expense / revVal) * 100).toFixed(1) + '%' : '—'}</td>
                             </tr>
                             <tr>
-                                <td><span class="finance-pnl-badge-sign is-sub">-</span> رواتب ومصاريف الكادر (Payroll & Staff Allowances)</td>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> رواتب ومصاريف موظفي المعرض (Payroll)</td>
                                 <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.payroll_expense || 0)}</td>
                                 <td class="text-muted text-end small">${revVal ? ((pnlSummary.payroll_expense / revVal) * 100).toFixed(1) + '%' : '—'}</td>
                             </tr>
                             <tr>
-                                <td><span class="finance-pnl-badge-sign is-sub">-</span> مصاريف تشغيلية وصيانة وفواتير موردين (Other OPEX)</td>
+                                <td><span class="finance-pnl-badge-sign is-sub">-</span> مصاريف تشغيلية وصيانة وفواتير موردين (OPEX)</td>
                                 <td class="text-end text-danger" dir="ltr">${money.format(pnlSummary.other_opex || 0)}</td>
                                 <td class="text-muted text-end small">${revVal ? ((pnlSummary.other_opex / revVal) * 100).toFixed(1) + '%' : '—'}</td>
                             </tr>
                             <tr class="is-ebitda-row">
-                                <td><span class="finance-pnl-badge-sign is-eq">=</span> صافي الربح التشغيلي للمعرض (Showroom EBITDA)</td>
+                                <td><span class="finance-pnl-badge-sign is-eq">=</span> صافي الربح التشغيلي للمعرض (EBITDA)</td>
                                 <td class="text-end fw-bold" dir="ltr">${money.format(pnlSummary.operating_result || 0)}</td>
                                 <td class="text-end fw-bold small">${ebitdaPct ? ebitdaPct + '%' : '—'}</td>
                             </tr>
@@ -416,51 +416,51 @@
         const tabsNav = document.createElement('div');
         tabsNav.className = 'finance-showroom-tabs mt-4';
         tabsNav.innerHTML = `
-            <button type="button" class="finance-showroom-tab-btn is-active" data-detail-tab="accounts"><i class="fa-solid fa-list-check me-1"></i> حسابات المصروف (${payload.expense_categories?.length || 0})</button>
+            <button type="button" class="finance-showroom-tab-btn is-active" data-detail-tab="accounts"><i class="fa-solid fa-list-check me-1"></i> بنود المصروفات المعتمدة (${payload.expense_categories?.length || 0})</button>
             <button type="button" class="finance-showroom-tab-btn" data-detail-tab="leases"><i class="fa-solid fa-file-contract me-1"></i> عقود الإيجار (${payload.leases?.length || 0})</button>
             <button type="button" class="finance-showroom-tab-btn" data-detail-tab="invoices"><i class="fa-solid fa-receipt me-1"></i> فواتير الموردين والصيانة (${payload.vendor_invoices?.length || 0})</button>
-            <button type="button" class="finance-showroom-tab-btn" data-detail-tab="assets"><i class="fa-solid fa-boxes-stacked me-1"></i> الأصول الثابتة (${payload.assets?.length || 0})</button>
+            <button type="button" class="finance-showroom-tab-btn" data-detail-tab="assets"><i class="fa-solid fa-boxes-stacked me-1"></i> الأصول والممتلكات (${payload.assets?.length || 0})</button>
         `;
         content.append(tabsNav);
 
         // Sections containers
-        const secAccounts = detailSection('حسابات المصروف من ميزان المراجعة', [
-            { key: 'main_account_id', label: 'الحساب', ltr: true },
-            { key: 'category', label: 'الوصف' },
-            { key: 'debit_amount', label: 'مدين', money: true },
-            { key: 'credit_amount', label: 'دائن', money: true },
-            { key: 'net_amount', label: 'الصافي', money: true }
+        const secAccounts = detailSection('بنود المصروفات المعتمدة للفرع', [
+            { key: 'main_account_id', label: 'بند الحساب', ltr: true },
+            { key: 'category', label: 'البيان / التصنيف' },
+            { key: 'debit_amount', label: 'صرف (مدين)', money: true },
+            { key: 'credit_amount', label: 'تسوية (دائن)', money: true },
+            { key: 'net_amount', label: 'صافي المصروف', money: true }
         ], payload.expense_categories || []);
         secAccounts.id = 'secDetailAccounts';
 
-        const secInvoices = detailSection('فواتير الموردين ومصاريف الصيانة والتشغيل المرتبطة بالمعرض', [
-            { key: 'invoice_id', label: 'الفاتورة', ltr: true },
+        const secInvoices = detailSection('فواتير الموردين ومصاريف الصيانة والتشغيل المرتبطة بالفرع', [
+            { key: 'invoice_id', label: 'رقم الفاتورة', ltr: true },
             { key: 'vendor_name', label: 'المورد / المقاول' },
-            { key: 'invoice_date', label: 'التاريخ', ltr: true },
-            { key: 'due_date', label: 'الاستحقاق', ltr: true },
-            { key: 'allocated_amount', label: 'المبلغ المرتبط', money: true },
+            { key: 'invoice_date', label: 'تاريخ الفاتورة', ltr: true },
+            { key: 'due_date', label: 'موعد السداد (الاستحقاق)', ltr: true },
+            { key: 'allocated_amount', label: 'المبلغ المعتمد', money: true },
             { key: 'allocated_tax_amount', label: 'الضريبة', money: true }
         ], payload.vendor_invoices || []);
         secInvoices.id = 'secDetailInvoices';
         secInvoices.hidden = true;
 
-        const secLeases = detailSection('عقود الإيجار والاستحقاقات', [
-            { key: 'lease_id', label: 'العقد', ltr: true },
-            { key: 'description', label: 'الوصف' },
-            { key: 'expiration_date', label: 'الانتهاء', ltr: true },
-            { key: 'remaining_balance', label: 'الرصيد', money: true },
-            { key: 'upcoming_payment_amount', label: 'القادم خلال 90 يومًا', money: true }
+        const secLeases = detailSection('عقود إيجار الفرع والاستحقاقات', [
+            { key: 'lease_id', label: 'رقم العقد', ltr: true },
+            { key: 'description', label: 'البيان / الوصف' },
+            { key: 'expiration_date', label: 'تاريخ انتهاء العقد', ltr: true },
+            { key: 'remaining_balance', label: 'الرصيد المتبقي', money: true },
+            { key: 'upcoming_payment_amount', label: 'الدفعة القادمة خلال 90 يوماً', money: true }
         ], payload.leases || []);
         secLeases.id = 'secDetailLeases';
         secLeases.hidden = true;
 
-        const secAssets = detailSection('الأصول المرتبطة مباشرة بالمعرض', [
-            { key: 'fixed_asset_number', label: 'الأصل', ltr: true },
-            { key: 'name', label: 'الاسم' },
+        const secAssets = detailSection('الأصول والممتلكات التابعة للفرع', [
+            { key: 'fixed_asset_number', label: 'رقم الأصل في النظام', ltr: true },
+            { key: 'name', label: 'اسم ووصف الأصل' },
             { key: 'asset_location_name', label: 'الموقع' },
-            { key: 'acquisition_date', label: 'تاريخ الاقتناء', ltr: true },
-            { key: 'acquisition_price', label: 'قيمة الاقتناء', money: true },
-            { key: 'net_book_value', label: 'الصافي الدفتري (NBV)', money: true }
+            { key: 'acquisition_date', label: 'تاريخ الشراء / الاقتناء', ltr: true },
+            { key: 'acquisition_price', label: 'تكلفة الشراء', money: true },
+            { key: 'net_book_value', label: 'القيمة الدفترية الصافية (NBV)', money: true }
         ], payload.assets || []);
         secAssets.id = 'secDetailAssets';
         secAssets.hidden = true;
@@ -2948,7 +2948,7 @@
                 data: {
                     labels: barLabels,
                     datasets: [{
-                        label: 'مصروف الفرع Trial Balance (SAR)',
+                        label: 'المصروفات التشغيلية المعتمدة (SAR)',
                         data: barValues,
                         backgroundColor: barColors,
                         borderRadius: 6
@@ -2962,7 +2962,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ` المصروف: ${money.format(ctx.raw)} SAR`
+                                label: ctx => ` المصروف المعتمد: ${money.format(ctx.raw)} SAR`
                             }
                         }
                     },
