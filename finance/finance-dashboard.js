@@ -249,7 +249,7 @@
         document.body.classList.remove('finance-drawer-open');
     }
 
-    function detailSection(title, columns, rows) {
+    function detailSection(title, columns, rows, onRowClick, getRowTitle) {
         const section = document.createElement('section');
         section.className = 'finance-showroom-section';
         const heading = document.createElement('h3');
@@ -271,20 +271,38 @@
         columns.forEach(column => {
             const cell = document.createElement('th');
             cell.textContent = column.label;
+            if (column.money) cell.className = 'text-end';
             headRow.append(cell);
         });
         head.append(headRow);
         const body = document.createElement('tbody');
         rows.forEach(item => {
             const row = document.createElement('tr');
+            if (typeof onRowClick === 'function') {
+                row.style.cursor = 'pointer';
+                if (typeof getRowTitle === 'function') {
+                    row.title = getRowTitle(item);
+                }
+                row.addEventListener('click', (e) => {
+                    onRowClick(item, e);
+                });
+            }
             columns.forEach(column => {
                 const cell = document.createElement('td');
                 const rawValue = item[column.key];
-                cell.textContent = column.money
-                    ? money.format(Number(rawValue) || 0)
-                    : (rawValue ?? '—');
+                if (column.badge) {
+                    const badge = document.createElement('span');
+                    badge.className = column.badge;
+                    badge.textContent = rawValue ?? '—';
+                    cell.append(badge);
+                } else {
+                    cell.textContent = column.money
+                        ? money.format(Number(rawValue) || 0)
+                        : (rawValue ?? '—');
+                }
                 if (column.ltr || column.money) cell.dir = 'ltr';
                 if (column.money) cell.className = 'text-end fw-bold';
+                if (column.bold) cell.className = (cell.className ? cell.className + ' ' : '') + 'fw-bold';
                 row.append(cell);
             });
             body.append(row);
