@@ -8516,12 +8516,78 @@
         }
 
         function escapeHtml(str) {
-            return str
+            return String(str ?? '')
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        // ==========================================
+        // Toast Notification System
+        // ==========================================
+        function showAdminToast(message, type = 'info', iconClass = '') {
+            let container = document.getElementById('adminToastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'adminToastContainer';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = '99999';
+                document.body.appendChild(container);
+            }
+
+            const toastId = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            
+            let bgClass = 'bg-primary text-white';
+            let defaultIcon = 'fa-info-circle';
+            let closeBtnClass = 'btn-close btn-close-white';
+
+            if (type === 'success') {
+                bgClass = 'bg-success text-white';
+                defaultIcon = 'fa-circle-check';
+            } else if (type === 'danger' || type === 'error') {
+                bgClass = 'bg-danger text-white';
+                defaultIcon = 'fa-triangle-exclamation';
+            } else if (type === 'warning') {
+                bgClass = 'bg-warning text-dark';
+                defaultIcon = 'fa-triangle-exclamation';
+                closeBtnClass = 'btn-close';
+            }
+
+            const chosenIcon = iconClass ? iconClass.replace(/^fa-solid\s+/, '') : defaultIcon;
+
+            const toastEl = document.createElement('div');
+            toastEl.id = toastId;
+            toastEl.className = `toast align-items-center ${bgClass} border-0 shadow-lg`;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+
+            toastEl.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="toast-body d-flex align-items-center gap-2 py-2 px-3">
+                        <i class="fa-solid ${chosenIcon} fs-5"></i>
+                        <span class="small fw-semibold">${escapeHtml(message)}</span>
+                    </div>
+                    <button type="button" class="${closeBtnClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            container.appendChild(toastEl);
+            
+            if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                const bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
+                bsToast.show();
+                toastEl.addEventListener('hidden.bs.toast', () => {
+                    toastEl.remove();
+                });
+            } else {
+                toastEl.style.display = 'block';
+                setTimeout(() => {
+                    toastEl.remove();
+                }, 5000);
+            }
         }
     
         // ==========================================
@@ -9038,7 +9104,11 @@
                 if (res.ok) {
                     const data = await res.json();
                     showAdminToast('تم حفظ وتحديث رابط خادم البصمات بنجاح!', 'success', 'fa-circle-check');
-                    bootstrap.Modal.getInstance(document.getElementById('biotimeConfigModal')).hide();
+                    const modalEl = document.getElementById('biotimeConfigModal');
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
                     await checkBioTimeServerStatus();
                     await loadAttendanceData(true);
                 } else {
