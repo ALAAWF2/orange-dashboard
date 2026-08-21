@@ -1398,6 +1398,10 @@
                                     <i class="fa-solid fa-file-excel text-success"></i>
                                     <span>تصدير Excel</span>
                                 </button>
+                                <button class="btn btn-warning btn-sm d-flex align-items-center gap-1 shadow-sm px-3 text-dark fw-bold" onclick="openAlaaSalaryModal()" title="حاسبة بصمات وراتب المدير العام (الموظف 2855)">
+                                    <i class="fa-solid fa-calculator text-dark"></i>
+                                    <span>حاسبة راتب علاء (2855) 💼</span>
+                                </button>
                                 <button class="btn btn-orange-premium btn-sm d-flex align-items-center gap-2 shadow-sm px-3" id="btnSyncAttendance" onclick="syncAttendanceNow()">
                                     <i class="fa-solid fa-arrows-rotate" id="attSyncIcon"></i>
                                     <span id="attSyncText">مزامنة لحظية من السيرفر</span>
@@ -1605,6 +1609,10 @@
                                 <p class="text-muted small mb-0">حساب ساعات العمل الفعلية، أيام الدوام والإجازات، رصد نسيان بصمة الخروج، وتتبع مناقلات الفروع</p>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button class="btn btn-warning btn-sm d-flex align-items-center gap-1 shadow-sm px-3 text-dark fw-bold" onclick="openAlaaSalaryModal()" title="حاسبة بصمات وراتب المدير العام (الموظف 2855)">
+                                    <i class="fa-solid fa-calculator text-dark"></i>
+                                    <span>حاسبة راتب علاء (2855) 💼</span>
+                                </button>
                                 <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportTimesheetExcel()">
                                     <i class="fa-solid fa-file-excel"></i>
                                     <span>تصدير مسير الدوام (Excel)</span>
@@ -9511,6 +9519,145 @@
             window.open(`${API_BASE}/api/attendance/timesheet/export?month=${month}`, '_blank');
         }
 
+        // =========================================================
+        // 💼 General Manager (Employee 2855 - Alaa) Salary & Timesheet Hub
+        // =========================================================
+        function openAlaaSalaryModal() {
+            const modalEl = document.getElementById('alaaSalaryCalculatorModal');
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            const monthInput = document.getElementById('alaaSalaryMonthInput');
+            if (!monthInput.value) {
+                const now = new Date();
+                monthInput.value = now.toISOString().slice(0, 7);
+            }
+            loadAlaaSalaryData();
+        }
+
+        async function loadAlaaSalaryData() {
+            const monthInput = document.getElementById('alaaSalaryMonthInput');
+            const shiftInput = document.getElementById('alaaShiftHoursInput');
+            const salaryInput = document.getElementById('alaaBaseSalaryInput');
+            const icon = document.getElementById('alaaSalaryRefreshIcon');
+            const tbody = document.getElementById('alaaSalaryTableBody');
+
+            if (icon) icon.classList.add('fa-spin');
+
+            const month = monthInput.value || new Date().toISOString().slice(0, 7);
+            const shiftHours = parseFloat(shiftInput.value) || 9.5;
+            const baseSalary = parseFloat(salaryInput.value) || 7500.0;
+
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-orange me-2"></div>جاري حساب ساعات البصمة والراتب...</td></tr>';
+
+            try {
+                const params = new URLSearchParams({
+                    emp_code: '2855',
+                    month: month,
+                    shift_hours: shiftHours,
+                    base_salary: baseSalary,
+                    weekend_days: 'friday,saturday',
+                    single_punch_hours: shiftHours
+                });
+
+                const res = await fetch(`${API_BASE}/api/attendance/salary-calculator?${params.toString()}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const kpis = data.kpis || {};
+                    const days = data.days || [];
+
+                    document.getElementById('alaaDailyRateBadge').textContent = `${data.daily_rate} ر.س`;
+                    document.getElementById('alaaHourlyRateBadge').textContent = `${data.hourly_rate} ر.س`;
+
+                    document.getElementById('alaaNetSalaryKPI').textContent = `${(kpis.projected_net_salary_sar || 0).toLocaleString()} ر.س`;
+                    document.getElementById('alaaAccruedSalaryKPI').textContent = `${(kpis.accrued_mtd_salary_sar || 0).toLocaleString()} ر.س`;
+                    document.getElementById('alaaDaysElapsedSubtitle').textContent = `عن ${data.days_elapsed} يوماً منقضية`;
+
+                    document.getElementById('alaaDeductionsKPI').textContent = `${(kpis.total_deductions_sar || 0).toLocaleString()} ر.س`;
+                    document.getElementById('alaaDeficitHoursSubtitle').textContent = `نقص: ${kpis.total_deficit_hours || 0} س ${kpis.absent_days_count > 0 ? '| غياب: ' + kpis.absent_days_count + ' يوم' : ''}`;
+
+                    document.getElementById('alaaActualHoursKPI').textContent = `${kpis.total_actual_hours || 0} س`;
+                    document.getElementById('alaaWorkedDaysSubtitle').textContent = `${kpis.days_worked} يوم دوام | ${kpis.weekend_days_count} إجازة أسبوعية`;
+                    document.getElementById('alaaTableDaysCountBadge').textContent = `${days.length} يوم (${data.month})`;
+
+                    tbody.innerHTML = '';
+                    days.forEach(d => {
+                        const tr = document.createElement('tr');
+                        if (d.is_weekend) {
+                            tr.className = 'table-light';
+                        }
+
+                        let diffBadge = '--';
+                        if (!d.is_future && !d.is_weekend) {
+                            if (d.diff_hours > 0) {
+                                diffBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">+${d.diff_hours} س</span>`;
+                            } else if (d.diff_hours < 0) {
+                                diffBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">${d.diff_hours} س</span>`;
+                            } else {
+                                diffBadge = `<span class="badge bg-secondary-subtle text-secondary px-2 py-1">0.0 س</span>`;
+                            }
+                        } else if (d.is_weekend && d.worked_hours > 0) {
+                            diffBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">+${d.worked_hours} س (إضافي)</span>`;
+                        }
+
+                        let financeImpact = '<span class="text-muted small">0 ر.س</span>';
+                        if (d.deduction_amount > 0) {
+                            financeImpact = `<span class="text-danger fw-bold small">-${d.deduction_amount} ر.س</span>`;
+                        } else if (d.overtime_amount > 0) {
+                            financeImpact = `<span class="text-success fw-bold small">+${d.overtime_amount} ر.س</span>`;
+                        }
+
+                        let statusBadge = `<span class="badge bg-${d.badge}-subtle text-${d.badge} border border-${d.badge}-subtle px-2 py-1">${d.status}</span>`;
+
+                        tr.innerHTML = `
+                            <td class="font-monospace fw-semibold">${d.date}</td>
+                            <td class="fw-bold">${d.day_name_ar}</td>
+                            <td class="text-success fw-bold">${d.first_in}</td>
+                            <td class="text-danger fw-bold">${d.last_out}</td>
+                            <td><span class="fw-bold ${d.worked_hours > 0 ? 'text-primary' : 'text-muted'}">${d.worked_hours > 0 ? d.worked_hours + ' س' : '--'}</span></td>
+                            <td class="text-muted">${d.target_hours > 0 ? d.target_hours + ' س' : '--'}</td>
+                            <td>${diffBadge}</td>
+                            <td>${statusBadge}</td>
+                            <td class="small text-muted">${escapeHtml(d.area)}</td>
+                            <td>${financeImpact}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    const err = await res.json();
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">فشل جلب البيانات: ${err.error || 'خطأ غير معروف'}</td></tr>`;
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">خطأ في الاتصال: ${e.message}</td></tr>`;
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        }
+
+        function exportAlaaSalaryExcel() {
+            const monthInput = document.getElementById('alaaSalaryMonthInput');
+            const shiftInput = document.getElementById('alaaShiftHoursInput');
+            const salaryInput = document.getElementById('alaaBaseSalaryInput');
+
+            const month = monthInput.value || new Date().toISOString().slice(0, 7);
+            const shiftHours = parseFloat(shiftInput.value) || 9.5;
+            const baseSalary = parseFloat(salaryInput.value) || 7500.0;
+
+            const params = new URLSearchParams({
+                emp_code: '2855',
+                month: month,
+                shift_hours: shiftHours,
+                base_salary: baseSalary,
+                weekend_days: 'friday,saturday',
+                single_punch_hours: shiftHours
+            });
+
+            window.open(`${API_BASE}/api/attendance/salary-calculator/export?${params.toString()}`, '_blank');
+        }
+
     </script>
 
     <!-- Modal: تقرير مطابقة الموظفين بين سيرفر البصمات وقاعدة البيانات -->
@@ -9574,6 +9721,143 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: حاسبة راتب ودوام المدير العام (الموظف 2855 - علاء) -->
+    <div class="modal fade" id="alaaSalaryCalculatorModal" tabindex="-1" aria-labelledby="alaaSalaryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white border-0 px-4 py-3" style="border-radius: 16px 16px 0 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <i class="fa-solid fa-calculator fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="alaaSalaryModalLabel">حاسبة الراتب وساعات البصمة الدقيقة (علاء الدين - 2855)</h5>
+                            <small class="text-white-50" style="font-size: 0.75rem;">احتساب ساعات العمل الفعلية، الإجازات الأسبوعية الرسمية (الجمعة والسبت)، الخصومات وصافي الراتب</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <!-- Config & Month Control Bar -->
+                    <div class="card border-0 shadow-sm p-3 mb-4 bg-white rounded-3">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-bold text-muted mb-1"><i class="fa-regular fa-calendar me-1 text-orange"></i> شهر الاحتساب:</label>
+                                <input type="month" class="form-control form-control-sm" id="alaaSalaryMonthInput" onchange="loadAlaaSalaryData()">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-clock me-1 text-primary"></i> ساعات الوردية اليومية:</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="0.5" class="form-control" id="alaaShiftHoursInput" value="9.5" onchange="loadAlaaSalaryData()">
+                                    <span class="input-group-text">ساعات/يوم</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-money-bill-wave me-1 text-success"></i> الراتب الأساسي الشهري:</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="100" class="form-control" id="alaaBaseSalaryInput" value="7500" onchange="loadAlaaSalaryData()">
+                                    <span class="input-group-text">ر.س</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3 text-md-end pt-md-4">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportAlaaSalaryExcel()">
+                                        <i class="fa-solid fa-file-excel"></i>
+                                        <span>تصدير Excel</span>
+                                    </button>
+                                    <button class="btn btn-orange-premium btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="loadAlaaSalaryData()">
+                                        <i class="fa-solid fa-rotate" id="alaaSalaryRefreshIcon"></i>
+                                        <span>إعادة الحساب</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3 mt-3 pt-2 border-top small text-muted">
+                            <span><i class="fa-solid fa-calendar-check text-success me-1"></i> الإجازة الأسبوعية المعتمدة: <b>الجمعة والسبت (مدفوعة)</b></span>
+                            <span><i class="fa-solid fa-tag text-info me-1"></i> معدل اليومية: <b id="alaaDailyRateBadge">250.00 ر.س</b></span>
+                            <span><i class="fa-solid fa-stopwatch text-warning me-1"></i> معدل الساعة: <b id="alaaHourlyRateBadge">26.32 ر.س</b></span>
+                        </div>
+                    </div>
+
+                    <!-- Financial & Attendance KPI Summary -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border border-success-subtle h-100 text-center">
+                                <small class="text-muted d-block mb-1">صافي الراتب المقدر للشهر</small>
+                                <h3 class="fw-bold text-success mb-0" id="alaaNetSalaryKPI">--</h3>
+                                <small class="text-muted" style="font-size: 0.75rem;">(الأساسي - الخصومات + الإضافي)</small>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border border-primary-subtle h-100 text-center">
+                                <small class="text-muted d-block mb-1">الراتب المستحق حتى تاريخه</small>
+                                <h3 class="fw-bold text-primary mb-0" id="alaaAccruedSalaryKPI">--</h3>
+                                <small class="text-primary" id="alaaDaysElapsedSubtitle" style="font-size: 0.75rem;">عن -- يوماً منقضية</small>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border border-danger-subtle h-100 text-center">
+                                <small class="text-muted d-block mb-1">إجمالي الخصومات (نقص وساعات)</small>
+                                <h3 class="fw-bold text-danger mb-0" id="alaaDeductionsKPI">--</h3>
+                                <small class="text-danger" id="alaaDeficitHoursSubtitle" style="font-size: 0.75rem;">نقص: -- س</small>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="bg-white p-3 rounded-3 shadow-sm border border-warning-subtle h-100 text-center">
+                                <small class="text-muted d-block mb-1">ساعات العمل الفعلية المسجلة</small>
+                                <h3 class="fw-bold text-dark mb-0" id="alaaActualHoursKPI">--</h3>
+                                <small class="text-muted" id="alaaWorkedDaysSubtitle" style="font-size: 0.75rem;">-- يوم دوام | -- إجازة أسبوعية</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Daily Calendar Breakdown Table -->
+                    <div class="bg-white rounded-3 shadow-sm border overflow-hidden">
+                        <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-list-ol text-orange"></i>
+                                <span>السجل اليومي التفصيلي للشهر</span>
+                            </h6>
+                            <span class="badge bg-dark rounded-pill px-3 py-1" id="alaaTableDaysCountBadge">31 يوم</span>
+                        </div>
+                        <div class="table-responsive" style="max-height: 480px;">
+                            <table class="table table-hover table-bordered align-middle mb-0 text-center" style="font-size: 0.85rem;" id="alaaSalaryTable">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 110px;">التاريخ</th>
+                                        <th>اليوم</th>
+                                        <th>أول بصمة (دخول)</th>
+                                        <th>آخر بصمة (خروج)</th>
+                                        <th>الساعات الفعلية</th>
+                                        <th>المستهدف</th>
+                                        <th>الفارق</th>
+                                        <th>حالة الدوام</th>
+                                        <th>الموقع</th>
+                                        <th>الأثر المالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alaaSalaryTableBody">
+                                    <tr>
+                                        <td colspan="10" class="text-center py-5 text-muted">
+                                            <div class="spinner-border spinner-border-sm text-orange me-2"></div>
+                                            جاري حساب الحركات والراتب...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-0 px-4 py-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-success btn-sm px-4 shadow-sm" onclick="exportAlaaSalaryExcel()">
+                        <i class="fa-solid fa-file-excel me-1"></i> تحميل كشف الراتب الرسمي (Excel)
+                    </button>
                 </div>
             </div>
         </div>
