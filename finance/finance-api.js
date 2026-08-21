@@ -74,6 +74,10 @@
         cashAndGateways: params => request('/api/finance/cash-and-gateways', params),
         vatHub: params => request('/api/finance/vat-hub', params),
         leases: params => request('/api/finance/leases', params),
+        leaseSchedule: (leaseId, params) => request(
+            `/api/finance/leases/${encodeURIComponent(leaseId)}/schedule`,
+            params
+        ),
         leaseInsights: params => request('/api/finance/lease-insights', params),
         apAging: params => request('/api/finance/ap-aging', params),
         vendorAnalytics: params => request('/api/finance/vendor-analytics', params),
