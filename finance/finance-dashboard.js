@@ -340,7 +340,7 @@
         const cardOpex = document.createElement('article');
         cardOpex.className = 'is-kpi-opex';
         cardOpex.innerHTML = `
-            <span>المصروفات التشغيلية المعتمدة</span>
+            <span>المصروفات التشغيلية المعتمدة (مصروف Trial Balance)</span>
             <strong>${money.format(opexVal)}</strong>
             <small class="finance-kpi-badge is-negative">تشمل الإيجار والرواتب والصيانة</small>
         `;
@@ -3059,17 +3059,17 @@
 
         // Sheet 1: Showroom P&L
         const pnlRows = [
-            { "البند المالي": "اسم المعرض", "القيمة بالريال": sh.name, "ملاحظات": `كود الفرع: ${sh.branch_dimension || sh.number}` },
+            { "البند المالي": "اسم المعرض / الفرع", "القيمة بالريال": sh.name, "ملاحظات": `كود الفرع: ${sh.branch_dimension || sh.number}` },
             { "البند المالي": "الفترة المالية", "القيمة بالريال": `${payload.period?.start || ''} إلى ${payload.period?.end || ''}`, "ملاحظات": "تاريخ الحركة" },
-            { "البند المالي": "إيرادات مبيعات المعرض (Revenue)", "القيمة بالريال": hasPnl ? Number(pnlSum.revenue || 0) : "غير متوفر", "ملاحظات": "إجمالي المبيعات المعتمدة" },
-            { "البند المالي": "تكلفة البضاعة المباعة (COGS)", "القيمة بالريال": hasPnl ? Number(pnlSum.cogs || 0) : "غير متوفر", "ملاحظات": "تكلفة المخزون المباع" },
-            { "البند المالي": "مجمل الربح التشغيلي (Gross Profit)", "القيمة بالريال": hasPnl ? Number(pnlSum.gross_profit || 0) : "غير متوفر", "ملاحظات": hasPnl ? `الهامش: ${pnlSum.gross_margin_pct || 0}%` : "—" },
-            { "البند المالي": "مصروف الإيجار الشهري المستهلك", "القيمة بالريال": Number(pnlSum.lease_amortization || payload.summary?.upcoming_lease_amount || 0), "ملاحظات": "إيجار الفرع" },
-            { "البند المالي": "رواتب ومستحقات الموظفين", "القيمة بالريال": Number(pnlSum.salaries_expense || 0), "ملاحظات": "رواتب كادر المعرض" },
+            { "البند المالي": "إيرادات مبيعات المعرض (Sales Revenue)", "القيمة بالريال": hasPnl ? Number(pnlSum.revenue || 0) : "غير متوفر", "ملاحظات": "إجمالي المبيعات المعتمدة" },
+            { "البند المالي": "تكلفة شراء البضاعة المباعة (COGS)", "القيمة بالريال": hasPnl ? Number(pnlSum.cogs || 0) : "غير متوفر", "ملاحظات": "تكلفة المخزون المباع" },
+            { "البند المالي": "مجمل الربح التجاري (Gross Profit)", "القيمة بالريال": hasPnl ? Number(pnlSum.gross_profit || 0) : "غير متوفر", "ملاحظات": hasPnl ? `الهامش: ${pnlSum.gross_margin_pct || 0}%` : "—" },
+            { "البند المالي": "مصروف إيجار المعرض الشهري", "القيمة بالريال": Number(pnlSum.lease_amortization || payload.summary?.upcoming_lease_amount || 0), "ملاحظات": "إيجار الفرع" },
+            { "البند المالي": "رواتب ومنافع موظفي المعرض", "القيمة بالريال": Number(pnlSum.salaries_expense || 0), "ملاحظات": "رواتب كادر المعرض" },
             { "البند المالي": "مصاريف الصيانة والخدمات", "القيمة بالريال": Number(pnlSum.maintenance_expense || 0), "ملاحظات": "صيانة وتشغيل" },
-            { "البند المالي": "إهلاك الأصول الثابتة والديكور", "القيمة بالريال": Number(pnlSum.depreciation_expense || 0), "ملاحظات": "إهلاك دفتري" },
+            { "البند المالي": "استهلاك وإهلاك الديكور والأصول", "القيمة بالريال": Number(pnlSum.depreciation_expense || 0), "ملاحظات": "إهلاك دفتري" },
             { "البند المالي": "مصاريف تشغيلية أخرى", "القيمة بالريال": Number(pnlSum.other_opex || 0), "ملاحظات": "كهرباء، ضيافة، عُدد" },
-            { "البند المالي": "إجمالي المصاريف التشغيلية (Total OPEX)", "القيمة بالريال": Number(pnlSum.total_expense || payload.summary?.trial_balance_expense || 0), "ملاحظات": "مصروف Trial Balance" },
+            { "البند المالي": "إجمالي المصاريف التشغيلية المعتمدة", "القيمة بالريال": Number(pnlSum.total_expense || payload.summary?.trial_balance_expense || 0), "ملاحظات": "المصروفات المعتمدة" },
             { "البند المالي": "صافي الربح التشغيلي للمعرض (EBITDA)", "القيمة بالريال": hasPnl ? Number(pnlSum.operating_result || 0) : "—", "ملاحظات": hasPnl ? `هامش EBITDA: ${pnlSum.ebitda_margin_pct || 0}%` : "—" }
         ];
         const wsPnl = XLSX.utils.json_to_sheet(pnlRows);
@@ -3078,19 +3078,19 @@
         // Sheet 2: Expense Categories (Trial Balance breakdown for this showroom)
         const expRows = (payload.expense_categories || []).map(cat => ({
             "رقم الحساب المحاسبي": cat.main_account_id,
-            "التصنيف المالي": cat.category,
-            "مدين": Number(cat.debit_amount || 0),
-            "دائن": Number(cat.credit_amount || 0),
-            "صافي المصروف": Number(cat.net_amount || 0)
+            "التصنيف والبيان": cat.category,
+            "المبالغ المصروفة (مدين)": Number(cat.debit_amount || 0),
+            "المبالغ المسددة / المستردة (دائن)": Number(cat.credit_amount || 0),
+            "صافي المصروف الفعلي": Number(cat.net_amount || 0)
         }));
-        const wsExp = XLSX.utils.json_to_sheet(expRows.length ? expRows : [{ "ملاحظة": "لا توجد مصاريف Trial Balance مسجلة لهذا المعرض في الفترة" }]);
-        XLSX.utils.book_append_sheet(wb, wsExp, "تفاصيل المصاريف Trial Balance");
+        const wsExp = XLSX.utils.json_to_sheet(expRows.length ? expRows : [{ "ملاحظة": "لا توجد مصاريف تشغيلية مسجلة لهذا المعرض في الفترة" }]);
+        XLSX.utils.book_append_sheet(wb, wsExp, "تفاصيل المصروفات المعتمدة");
 
         // Sheet 3: Leases
         const leaseRows = (payload.leases || []).map(l => ({
             "رقم العقد": l.lease_id,
-            "الوصف": l.description || '—',
-            "كود المؤجر / الحساب": l.vendor_account_number || '—',
+            "الوصف وبيان المعرض": l.description || '—',
+            "حساب المؤجر": l.vendor_account_number || '—',
             "الدفعة الشهرية المستهلكة": Number(l.payment_amount || 0),
             "الرصيد المتبقي من العقد": Number(l.remaining_balance || 0),
             "تاريخ البداية": l.commencement_date || '—',
@@ -3099,32 +3099,32 @@
             "دفعات مستحقة قادمة": Number(l.upcoming_payment_amount || 0)
         }));
         const wsLeases = XLSX.utils.json_to_sheet(leaseRows.length ? leaseRows : [{ "ملاحظة": "لا توجد عقود إيجار مسجلة لهذا المعرض" }]);
-        XLSX.utils.book_append_sheet(wb, wsLeases, "عقد الإيجار");
+        XLSX.utils.book_append_sheet(wb, wsLeases, "عقود الإيجار");
 
         // Sheet 4: Fixed Assets
         const assetRows = (payload.assets || []).map(a => ({
-            "رقم الأصل": a.fixed_asset_number,
+            "رقم الأصل في النظام": a.fixed_asset_number,
             "اسم ووصف الأصل": a.name,
-            "مجموعة الأصول": a.fixed_asset_group_id || '—',
+            "التصنيف المحاسبي للأصل": a.fixed_asset_group_id || '—',
             "الموقع / المعرض": a.asset_location_name || a.asset_location_id || sh.branch_dimension,
-            "تاريخ الاقتناء": a.acquisition_date || '—',
-            "تكلفة الاقتناء": Number(a.acquisition_price || 0),
-            "صافي القيمة الدفترية": Number(a.net_book_value || 0)
+            "تاريخ الشراء / الاقتناء": a.acquisition_date || '—',
+            "تكلفة الشراء الأصلية": Number(a.acquisition_price || 0),
+            "القيمة الدفترية الصافية (NBV)": Number(a.net_book_value || 0)
         }));
         const wsAssets = XLSX.utils.json_to_sheet(assetRows.length ? assetRows : [{ "ملاحظة": "لا توجد أصول ثابتة مرتبطة بهذا المعرض" }]);
-        XLSX.utils.book_append_sheet(wb, wsAssets, "الأصول الثابتة");
+        XLSX.utils.book_append_sheet(wb, wsAssets, "الأصول الثابتة والممتلكات");
 
         // Sheet 5: Vendor Invoices
         const invRows = (payload.vendor_invoices || []).map(inv => ({
             "رقم الفاتورة": inv.invoice_id,
-            "كود المورد": inv.invoice_account,
+            "حساب المورد": inv.invoice_account,
             "اسم المورد / المقاول": inv.vendor_name,
             "تاريخ الفاتورة": inv.invoice_date,
-            "تاريخ الاستحقاق": inv.due_date || '—',
-            "أمر الشراء": inv.purchase_order_number || '—',
+            "موعد السداد (الاستحقاق)": inv.due_date || '—',
+            "أمر الشراء (التعميد)": inv.purchase_order_number || '—',
             "البيان / الوصف": inv.description || '—',
-            "المبلغ الموزع على المعرض": Number(inv.allocated_amount || 0),
-            "الضريبة الموزعة": Number(inv.allocated_tax_amount || 0),
+            "المبلغ المعتمد للفرع": Number(inv.allocated_amount || 0),
+            "ضريبة القيمة المضافة": Number(inv.allocated_tax_amount || 0),
             "الإجمالي شامل الضريبة": Number(inv.allocated_amount || 0) + Number(inv.allocated_tax_amount || 0)
         }));
         const wsInvs = XLSX.utils.json_to_sheet(invRows.length ? invRows : [{ "ملاحظة": "لا توجد فواتير موردين موزعة على هذا المعرض في الفترة" }]);
