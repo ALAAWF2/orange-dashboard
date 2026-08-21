@@ -24,6 +24,7 @@
     let currentShowroomPayload = null;
     let currentShowroomPnl = null;
     let chartInstances = {};
+    let appliedPeriod = { start: '', end: '', loadedAt: null };
 
     const sortState = {
         showrooms: { key: 'name', dir: 'asc' },
@@ -3532,9 +3533,36 @@
     async function load() {
         if (loading || !window.FinancePlatformApi) return;
         loading = true;
+
+        const startVal = element('financePlatformStart')?.value || '';
+        const endVal = element('financePlatformEnd')?.value || '';
+        const refreshBtn = element('financePlatformRefresh');
+        const applyBtn = element('financePlatformApplyPeriod');
+        const progressBar = element('financeTopProgressBar');
+        const tabContent = element('financeTabsContent');
+        const appliedBadge = element('financeAppliedPeriodBadge');
+        const warnBadge = element('financeDateChangeWarning');
+
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            const icon = refreshBtn.querySelector('i');
+            if (icon) icon.classList.add('fa-spin');
+        }
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> جـارٍ التحديث…';
+            applyBtn.classList.remove('is-pending-apply');
+        }
+        if (warnBadge) warnBadge.style.display = 'none';
+        if (progressBar) progressBar.style.display = 'block';
+        if (tabContent) tabContent.classList.add('finance-content-loading');
+
         setState('loading', 'جارٍ تحديث البيانات');
-        const button = element('financePlatformRefresh');
-        button.disabled = true;
+        if (appliedBadge) {
+            appliedBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2 fw-bold';
+            appliedBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> جـارٍ جلب بيانات الفترة: <strong>${startVal}</strong> إلى <strong>${endVal}</strong>…`;
+        }
+
         try {
             const params = periodParams();
             const [
@@ -3553,11 +3581,11 @@
                 window.FinancePlatformApi.vendorAnalytics({ vendor_limit: 50, invoice_limit: 50 })
                     .catch(() => ({ configured: false, vendors: [], open_invoices: [] })),
                 window.FinancePlatformApi.trialBalanceTrend({
-                    start: '2025-01-01', end: element('financePlatformEnd').value
+                    start: '2025-01-01', end: endVal || element('financePlatformEnd').value
                 }).catch(() => ({ state: 'unavailable', data: [] })),
                 window.FinancePlatformApi.additionalAnalytics({
-                    as_of: element('financePlatformEnd').value,
-                    month: element('financePlatformEnd').value.slice(0, 7)
+                    as_of: endVal || element('financePlatformEnd').value,
+                    month: (endVal || element('financePlatformEnd').value).slice(0, 7)
                 }).catch(() => ({ state: 'partial', sections: {} })),
                 window.FinancePlatformApi.fixedAssets()
                     .catch(() => ({ state: 'unavailable', data: [] })),
@@ -3574,6 +3602,13 @@
                 window.FinancePlatformApi.maintenanceAnalytics(params)
                     .catch(() => ({ state: 'unavailable', showrooms: [], contractors: [], monthly_trend: [], recent_invoices: [], summary: {} }))
             ]);
+
+            appliedPeriod = {
+                start: params.start || startVal,
+                end: params.end || endVal,
+                loadedAt: new Date()
+            };
+
             renderOverview(overview);
             renderOverviewCharts(overview, showrooms, additional, maintData);
             renderShowrooms(showrooms, overview.summary?.expense_scope_status);
@@ -3591,12 +3626,61 @@
             renderCashAndGateways(treasury);
             renderVatHub(taxHub);
             renderMaintenance(maintData);
+
+            if (appliedBadge) {
+                appliedBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fw-bold';
+                appliedBadge.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> البيانات المعروضة حالياً للفترة: <strong>${appliedPeriod.start}</strong> إلى <strong>${appliedPeriod.end}</strong> (محدثة ✓)`;
+            }
+            const updatedText = element('financeAppliedLastUpdatedText');
+            if (updatedText) {
+                const timeStr = appliedPeriod.loadedAt.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                updatedText.textContent = `آخر تحديث: ${timeStr}`;
+            }
         } catch (error) {
             renderError(error);
+            if (appliedBadge) {
+                appliedBadge.className = 'badge bg-danger-subtle text-danger border border-danger px-3 py-2 fw-bold';
+                appliedBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> تعذر تحديث بيانات الفترة (${error?.message || 'خطأ في الاتصال'})`;
+            }
         } finally {
             loading = false;
-            button.disabled = false;
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                const icon = refreshBtn.querySelector('i');
+                if (icon) icon.classList.remove('fa-spin');
+            }
+            if (applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = 'تطبيق الفترة';
+            }
+            if (progressBar) progressBar.style.display = 'none';
+            if (tabContent) tabContent.classList.remove('finance-content-loading');
+            checkDateInputsChanged();
         }
+    }
+
+    function checkDateInputsChanged() {
+        const startVal = element('financePlatformStart')?.value;
+        const endVal = element('financePlatformEnd')?.value;
+        const applyBtn = element('financePlatformApplyPeriod');
+        const warnBadge = element('financeDateChangeWarning');
+
+        if (!appliedPeriod.start || !appliedPeriod.end) return;
+
+        const isChanged = (startVal !== appliedPeriod.start || endVal !== appliedPeriod.end);
+
+        if (isChanged) {
+            if (applyBtn) applyBtn.classList.add('is-pending-apply');
+            if (warnBadge) warnBadge.style.display = 'inline-flex';
+        } else {
+            if (applyBtn) applyBtn.classList.remove('is-pending-apply');
+            if (warnBadge) warnBadge.style.display = 'none';
+        }
+    }
+
+    function applyCustomPeriod() {
+        document.querySelectorAll('.finance-preset-btn').forEach(btn => btn.classList.remove('active'));
+        load();
     }
 
     function switchSubtab(tabName) {
@@ -3939,11 +4023,33 @@
             });
         });
 
+        const startInput = element('financePlatformStart');
+        const endInput = element('financePlatformEnd');
+
+        if (startInput) {
+            startInput.addEventListener('input', checkDateInputsChanged);
+            startInput.addEventListener('change', checkDateInputsChanged);
+            startInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyCustomPeriod();
+                }
+            });
+        }
+
+        if (endInput) {
+            endInput.addEventListener('input', checkDateInputsChanged);
+            endInput.addEventListener('change', checkDateInputsChanged);
+            endInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyCustomPeriod();
+                }
+            });
+        }
+
         element('financePlatformRefresh').addEventListener('click', load);
-        element('financePlatformApplyPeriod').addEventListener('click', () => {
-            document.querySelectorAll('.finance-preset-btn').forEach(btn => btn.classList.remove('active'));
-            load();
-        });
+        element('financePlatformApplyPeriod').addEventListener('click', applyCustomPeriod);
         element('financeShowroomClose').addEventListener('click', closeShowroomDetail);
         element('financeShowroomBackdrop').addEventListener('click', closeShowroomDetail);
 
