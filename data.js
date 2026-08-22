@@ -5873,7 +5873,7 @@ const EMPLOYEES = [
         "name": "نوره الحربي",
         "startDate": "2026-02-15",
         "manager": "عبدالله السرداح",
-        "showroom": "1102-15-Riyadh Othaim Mall",
+        "showroom": "1102-15-Riyadh Othaim Mall و 2401-47-Al-Nakheel Plaza",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
@@ -5882,9 +5882,17 @@ const EMPLOYEES = [
                     "1102-C",
                     "1102-E"
                 ]
+            },
+            {
+                "name": "2401-47-Al-Nakheel Plaza",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "2401-C",
+                    "2401-E"
+                ]
             }
         ],
-        "addressBooks": "1102-C;1102-E"
+        "addressBooks": "1102-C;1102-E;2401-C;2401-E"
     },
     {
         "employeeId": "4879-سعيدة الفهمي",
