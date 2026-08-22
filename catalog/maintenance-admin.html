@@ -2444,7 +2444,10 @@
             <td>${daysBadge}</td>
             <td><span class="status-badge status-resolved">${escapeHtml(item.status || 'يعمل')}</span></td>
             <td>
-              <button onclick="deleteAcAsset('${item.id}', '${item.code}')" class="danger-btn" style="padding:4px 8px; font-size:11px; border-radius:6px;">حذف</button>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button onclick="openEditAcModal('${item.id}')" class="btn btn-accent" style="padding:4px 8px; font-size:11px; border-radius:6px;">تعديل</button>
+                <button onclick="deleteAcAsset('${item.id}', '${item.code}')" class="danger-btn" style="padding:4px 8px; font-size:11px; border-radius:6px;">حذف</button>
+              </div>
             </td>
           `;
           tbodyAssets.appendChild(tr);
@@ -2484,6 +2487,8 @@
       document.getElementById('newAcCapacity').value = '';
       document.getElementById('newAcGas').value = 'R410A';
       document.getElementById('newAcLoc').value = '';
+      document.getElementById('newAcLastMaint').value = '';
+      document.getElementById('newAcNextMaint').value = '';
       document.getElementById('addAcModal').style.display = 'flex';
     }
 
@@ -2517,6 +2522,54 @@
       await fetchAcDataFromSupabase();
     }
 
+    function openEditAcModal(id) {
+      const item = dbAcAssets.find(a => String(a.id) === String(id));
+      if (!item) return;
+
+      document.getElementById('editAcId').value = item.id;
+      document.getElementById('editAcCode').value = item.code || '';
+      document.getElementById('editAcMall').value = item.mall || '';
+      document.getElementById('editAcType').value = item.type || 'سبليت دكت';
+      document.getElementById('editAcBrand').value = item.brand || '';
+      document.getElementById('editAcCapacity').value = item.capacity || '';
+      document.getElementById('editAcGas').value = item.gas || 'R410A';
+      document.getElementById('editAcLastMaint').value = item.last_maintenance || '';
+      document.getElementById('editAcNextMaint').value = item.next_maintenance || '';
+      document.getElementById('editAcLoc').value = item.location || '';
+      document.getElementById('editAcModal').style.display = 'flex';
+    }
+
+    async function saveEditAcAsset() {
+      const id = document.getElementById('editAcId').value;
+      const code = document.getElementById('editAcCode').value.trim();
+      const mall = document.getElementById('editAcMall').value.trim();
+      const type = document.getElementById('editAcType').value;
+      const brand = document.getElementById('editAcBrand').value.trim();
+      const capacity = document.getElementById('editAcCapacity').value.trim();
+      const gas = document.getElementById('editAcGas').value.trim();
+      const location = document.getElementById('editAcLoc').value.trim();
+      const last_maintenance = document.getElementById('editAcLastMaint').value || null;
+      const next_maintenance = document.getElementById('editAcNextMaint').value || null;
+
+      if (!code || !mall) {
+        showToast('يرجى كتابة كود المكيف واسم المعرض', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('ac_assets').update({
+        code, mall, type, brand, capacity, gas, location, last_maintenance, next_maintenance
+      }).eq('id', id);
+
+      if (error) {
+        showToast('فشل تعديل المكيف: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('تم تحديث بيانات المكيف بنجاح في Supabase ✅', 'success');
+      closeModal('editAcModal');
+      await fetchAcDataFromSupabase();
+    }
+
     async function deleteAcAsset(id, code) {
       if (!confirm(`هل أنت متأكد من حذف المكيف (${code}) نهائياً من Supabase؟`)) return;
       const { error } = await supabaseClient.from('ac_assets').delete().eq('id', id);
@@ -2526,28 +2579,53 @@
     }
 
     function openAddAcVisitModal() {
-      const vNo = prompt('رقم الزيارة:');
-      if (!vNo) return;
-      const mall = prompt('اسم المعرض:');
-      if (!mall) return;
-      const comp = prompt('شركة الصيانة (درة المباني / حسن...):', 'درة المباني');
-      const amt = prompt('قيمة الفاتورة (ر.س):', '0');
-      const notes = prompt('الملاحظات والقطع المستبدلة:');
+      document.getElementById('newVisitNo').value = `V-${new Date().getFullYear()}-${Math.floor(Math.random() * 900 + 100)}`;
+      document.getElementById('newVisitDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('newVisitMall').value = '';
+      document.getElementById('newVisitCompany').value = 'درة المباني';
+      document.getElementById('newVisitAcCode').value = '';
+      document.getElementById('newVisitWorkType').value = 'صيانة دورية';
+      document.getElementById('newVisitInvoiceAmount').value = '';
+      document.getElementById('newVisitReplacedPart').value = '';
+      document.getElementById('newVisitNotes').value = '';
+      document.getElementById('addAcVisitModal').style.display = 'flex';
+    }
 
-      supabaseClient.from('ac_visits').insert([{
-        visit_no: vNo,
-        date: new Date().toISOString().split('T')[0],
-        mall: mall,
-        company: comp,
-        invoice_amount: parseFloat(amt) || 0,
-        notes: notes
-      }]).then(({ error }) => {
-        if (error) showToast('فشل التسجيل: ' + error.message, 'error');
-        else {
-          showToast('تم تسجيل زيارة الصيانة في Supabase ✅', 'success');
-          fetchAcDataFromSupabase();
-        }
-      });
+    async function saveNewAcVisit() {
+      const visit_no = document.getElementById('newVisitNo').value.trim();
+      const visit_date = document.getElementById('newVisitDate').value;
+      const mall = document.getElementById('newVisitMall').value.trim();
+      const company = document.getElementById('newVisitCompany').value.trim();
+      const ac_code = document.getElementById('newVisitAcCode').value.trim();
+      const work_type = document.getElementById('newVisitWorkType').value;
+      const invoice_amount = parseFloat(document.getElementById('newVisitInvoiceAmount').value) || 0;
+      const replaced_part = document.getElementById('newVisitReplacedPart').value.trim();
+      const notes = document.getElementById('newVisitNotes').value.trim();
+
+      if (!visit_no || !mall || !company) {
+        showToast('يرجى تعبئة رقم الزيارة والمعرض والشركة', 'error');
+        return;
+      }
+
+      // Insert parent visit
+      const { error: errVisit } = await supabaseClient.from('ac_visits').insert([{
+        visit_no, date: visit_date, mall, company, invoice_amount, notes
+      }]);
+
+      if (errVisit) {
+        showToast('فشل تسجيل الزيارة: ' + errVisit.message, 'error');
+        return;
+      }
+
+      // Insert detailed work item
+      await supabaseClient.from('ac_works').insert([{
+        visit_no, visit_date, ac_code, work_type, replaced_part: replaced_part || 'لا يوجد',
+        part_cost: 0, work_cost: invoice_amount, notes
+      }]);
+
+      showToast('تم تسجيل زيارة الصيانة في Supabase بنجاح ✅', 'success');
+      closeModal('addAcVisitModal');
+      await fetchAcDataFromSupabase();
     }
 
 
@@ -2945,6 +3023,7 @@
               <a href="tel:${c.phone}" class="btn btn-outline" style="flex:1; justify-content:center; font-size:0.85rem; padding:6px;">📞 اتصال</a>
               <a href="${waLink}" target="_blank" class="btn success-btn" style="flex:1; justify-content:center; font-size:0.85rem; padding:6px;">💬 واتساب</a>
             ` : `<span style="color:#aaa; font-size:0.85rem; margin:auto;">للتواصل عبر الإدارة</span>`}
+            <button onclick="openEditContractorModal('${c.id}')" class="btn btn-accent" style="padding:6px 10px; font-size:0.8rem; border-radius:6px;">تعديل</button>
             <button onclick="deleteContractor('${c.id}', '${c.name}')" class="danger-btn" style="padding:6px 10px; font-size:0.8rem; border-radius:6px;">حذف</button>
           </div>
         `;
@@ -2986,6 +3065,48 @@
 
       showToast('تمت إضافة المقاول بنجاح في Supabase ✅', 'success');
       closeModal('addContractorModal');
+      await fetchContractorsFromSupabase();
+    }
+
+    function openEditContractorModal(id) {
+      const item = dbContractors.find(c => String(c.id) === String(id));
+      if (!item) return;
+
+      document.getElementById('editContrId').value = item.id;
+      document.getElementById('editContrName').value = item.name || '';
+      document.getElementById('editContrSpec').value = item.specialty || '';
+      document.getElementById('editContrCity').value = item.city || 'جدة';
+      document.getElementById('editContrPerson').value = item.contact_person || '';
+      document.getElementById('editContrPhone').value = item.phone || '';
+      document.getElementById('editContrNotes').value = item.notes || '';
+      document.getElementById('editContractorModal').style.display = 'flex';
+    }
+
+    async function saveEditContractor() {
+      const id = document.getElementById('editContrId').value;
+      const name = document.getElementById('editContrName').value.trim();
+      const specialty = document.getElementById('editContrSpec').value.trim();
+      const city = document.getElementById('editContrCity').value.trim();
+      const contact_person = document.getElementById('editContrPerson').value.trim();
+      const phone = document.getElementById('editContrPhone').value.trim();
+      const notes = document.getElementById('editContrNotes').value.trim();
+
+      if (!name) {
+        showToast('يرجى كتابة اسم الشركة أو المقاول', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('maintenance_contractors').update({
+        name, specialty, city, contact_person, phone, notes
+      }).eq('id', id);
+
+      if (error) {
+        showToast('فشل تعديل بيانات المقاول: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('تم تعديل بيانات المقاول بنجاح في Supabase ✅', 'success');
+      closeModal('editContractorModal');
       await fetchContractorsFromSupabase();
     }
 
