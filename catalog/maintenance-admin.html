@@ -420,8 +420,31 @@
     .cat-closure { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .cat-construction { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
 
-    .collected-badge { background: #ecfdf5; color: #047857; font-weight: 800; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
-    .pending-badge { background: #fffbeb; color: #b45309; font-weight: 800; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+    .collected-badge, .pending-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .collected-badge { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .collected-badge:hover { background: #d1fae5; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(4,120,87,0.2); }
+    .pending-badge { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .pending-badge:hover { background: #fef3c7; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(180,83,9,0.2); }
+    .payment-badge-clickable {
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .payment-badge-clickable:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
 
     .status-select {
       padding: 0.35rem 0.65rem;
@@ -1173,6 +1196,10 @@
     </div>
   </div>
 
+  <!-- Datalists for Autocomplete -->
+  <datalist id="expMallsDatalist"></datalist>
+  <datalist id="expContractorsDatalist"></datalist>
+
   <!-- 2. Add Expense Modal -->
   <div class="modal-overlay" id="addExpenseModal">
     <div class="modal-content" style="max-width:600px;">
@@ -1185,7 +1212,7 @@
           <div style="display:flex; gap:10px;">
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الفرع *</label>
-              <input type="text" id="newExpMall" placeholder="مثال: 05-Haifa Mall" required>
+              <input type="text" id="newExpMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required>
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التاريخ *</label>
@@ -1204,7 +1231,7 @@
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المقاول / الشركة *</label>
-              <input type="text" id="newExpCompany" placeholder="مثال: الإنتاج الدائم" required>
+              <input type="text" id="newExpCompany" list="expContractorsDatalist" placeholder="مثال: الإنتاج الدائم" required>
             </div>
           </div>
           <div>
@@ -1230,14 +1257,102 @@
               </select>
             </div>
             <div style="flex:1;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات</label>
-              <input type="text" id="newExpNotes" placeholder="ملاحظات إضافية...">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">حالة الدفع</label>
+              <select id="newExpPaymentStatus">
+                <option value="تم الدفع">تم الدفع</option>
+                <option value="معلق">معلق</option>
+                <option value="آجل">آجل</option>
+                <option value="غير مدفوع">غير مدفوع</option>
+              </select>
             </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات</label>
+            <input type="text" id="newExpNotes" placeholder="ملاحظات إضافية...">
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button onclick="saveNewExpense()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ الفاتورة في Supabase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2.1 Edit Expense Modal -->
+  <div class="modal-overlay" id="editExpenseModal">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>✏️ تعديل الفاتورة / المصروف</h3>
+        <button class="modal-close" onclick="closeModal('editExpenseModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editExpId">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الفرع *</label>
+              <input type="text" id="editExpMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التاريخ *</label>
+              <input type="date" id="editExpDate" required>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التصنيف *</label>
+              <select id="editExpCategory">
+                <option value="صيانة">صيانة</option>
+                <option value="تطوير">تطوير</option>
+                <option value="اغلاق">إغلاق</option>
+                <option value="إنشاء">إنشاء</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المقاول / الشركة *</label>
+              <input type="text" id="editExpCompany" list="expContractorsDatalist" placeholder="مثال: الإنتاج الدائم" required>
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">بيان العمل المنفذ *</label>
+            <textarea id="editExpDesc" placeholder="تفاصيل الأعمال المنفذة..." style="min-height:70px;" required></textarea>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المبلغ (ر.س) *</label>
+              <input type="number" step="0.01" id="editExpAmount" placeholder="0.00" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">رقم الفاتورة</label>
+              <input type="text" id="editExpInvoiceNo" placeholder="اختياري">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">حالة الفاتورة</label>
+              <select id="editExpInvoiceStatus">
+                <option value="محصلة">محصلة ✅</option>
+                <option value="غير محصلة">غير محصلة ⏳</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">حالة الدفع</label>
+              <select id="editExpPaymentStatus">
+                <option value="تم الدفع">تم الدفع</option>
+                <option value="معلق">معلق</option>
+                <option value="آجل">آجل</option>
+                <option value="غير مدفوع">غير مدفوع</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات</label>
+            <input type="text" id="editExpNotes" placeholder="ملاحظات إضافية...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveEditExpense()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ التعديلات في Supabase</button>
       </div>
     </div>
   </div>
@@ -1309,6 +1424,141 @@
     </div>
   </div>
 
+  <!-- 3.1 Edit AC Asset Modal -->
+  <div class="modal-overlay" id="editAcModal">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>✏️ تعديل بيانات أصل المكيف</h3>
+        <button class="modal-close" onclick="closeModal('editAcModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editAcId">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">كود المكيف *</label>
+              <input type="text" id="editAcCode" placeholder="مثال: OR-HAIFA-07" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الموقع *</label>
+              <input type="text" id="editAcMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">نوع المكيف *</label>
+              <select id="editAcType">
+                <option value="سبليت دكت">سبليت دكت</option>
+                <option value="تشيلر">تشيلر</option>
+                <option value="سبليت جداري">سبليت جداري</option>
+                <option value="باكج">باكج</option>
+                <option value="كاسيت">كاسيت</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">الشركة المصنعة</label>
+              <input type="text" id="editAcBrand" placeholder="Carrier, Gree, York...">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">السعة (طن)</label>
+              <input type="text" id="editAcCapacity" placeholder="مثال: 5 طن">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">نوع الغاز</label>
+              <input type="text" id="editAcGas" placeholder="R410A, R22, R32...">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">تاريخ آخر صيانة</label>
+              <input type="date" id="editAcLastMaint">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">تاريخ الصيانة القادمة</label>
+              <input type="date" id="editAcNextMaint">
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">الموقع داخل المعرض</label>
+            <input type="text" id="editAcLoc" placeholder="مثال: الواجهة الرئيسية، قسم غرف النوم...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveEditAcAsset()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ التعديلات في Supabase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3.2 Add AC Visit Modal -->
+  <div class="modal-overlay" id="addAcVisitModal">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>🛠️ تسجيل زيارة صيانة تكييف</h3>
+        <button class="modal-close" onclick="closeModal('addAcVisitModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">رقم الزيارة / التقرير *</label>
+              <input type="text" id="newVisitNo" placeholder="مثال: V-2026-01" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">تاريخ الزيارة *</label>
+              <input type="date" id="newVisitDate" required>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الفرع *</label>
+              <input type="text" id="newVisitMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">شركة الصيانة / الفني *</label>
+              <input type="text" id="newVisitCompany" list="expContractorsDatalist" placeholder="درة المباني..." required>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">كود المكيف (اختياري)</label>
+              <input type="text" id="newVisitAcCode" placeholder="مثال: OR-HAIFA-01">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">نوع العمل</label>
+              <select id="newVisitWorkType">
+                <option value="صيانة دورية">صيانة دورية</option>
+                <option value="إصلاح عطل">إصلاح عطل</option>
+                <option value="تعبئة غاز">تعبئة غاز</option>
+                <option value="استبدال قطع">استبدال قطع</option>
+                <option value="غسيل وتنظيف فلاتر">غسيل وتنظيف فلاتر</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">مبلغ الفاتورة (ر.س)</label>
+              <input type="number" step="0.01" id="newVisitInvoiceAmount" placeholder="0.00">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">القطع المستبدلة</label>
+              <input type="text" id="newVisitReplacedPart" placeholder="لا يوجد / كابستور...">
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات الفني والتقرير</label>
+            <textarea id="newVisitNotes" placeholder="تقرير الزيارة وتوصيات الفني..." style="min-height:65px;"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveNewAcVisit()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 تسجيل الزيارة في Supabase</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 4. Add Contractor Modal -->
   <div class="modal-overlay" id="addContractorModal">
     <div class="modal-content" style="max-width:550px;">
@@ -1350,6 +1600,52 @@
       </div>
       <div class="modal-footer">
         <button onclick="saveNewContractor()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ المقاول في Supabase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4.1 Edit Contractor Modal -->
+  <div class="modal-overlay" id="editContractorModal">
+    <div class="modal-content" style="max-width:550px;">
+      <div class="modal-header">
+        <h3>✏️ تعديل بيانات المقاول / الشركة</h3>
+        <button class="modal-close" onclick="closeModal('editContractorModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editContrId">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">اسم الشركة / المقاول *</label>
+            <input type="text" id="editContrName" placeholder="مثال: شركة الإنتاج الدائم" required>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التخصص *</label>
+              <input type="text" id="editContrSpec" placeholder="مقاولات عامة، تكييف، كاميرات..." required>
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المدينة</label>
+              <input type="text" id="editContrCity" placeholder="جدة، الرياض، الدمام...">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">اسم المسؤول</label>
+              <input type="text" id="editContrPerson" placeholder="الاسم...">
+            </div>
+            <div style="flex:1;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">رقم الجوال</label>
+              <input type="text" id="editContrPhone" placeholder="05xxxxxxxx">
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">ملاحظات ونطاق العمل</label>
+            <textarea id="editContrNotes" placeholder="أعمال تم تنفيذها مسبقاً أو شروط التعاقد..." style="min-height:70px;"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="saveEditContractor()" class="btn btn-primary" style="width:100%; justify-content:center;">💾 حفظ التعديلات في Supabase</button>
       </div>
     </div>
   </div>
@@ -2279,7 +2575,9 @@
     function populateExpensesDropdowns() {
       const compSel = document.getElementById('expCompanyFilter');
       compSel.innerHTML = '<option value="all">كافة المقاولين والشركات</option>';
-      const companies = [...new Set(dbExpenses.map(e => e.company).filter(Boolean))].sort();
+      const contractorNames = (dbContractors || []).map(c => c.name).filter(Boolean);
+      const expenseCompanies = dbExpenses.map(e => e.company).filter(Boolean);
+      const companies = [...new Set([...contractorNames, ...expenseCompanies])].sort();
       companies.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c;
@@ -2289,13 +2587,23 @@
 
       const mallSel = document.getElementById('expMallFilter');
       mallSel.innerHTML = '<option value="all">كافة المعارض</option>';
-      const malls = [...new Set(dbExpenses.map(e => e.mall).filter(Boolean))].sort();
-      malls.forEach(m => {
+      const allMalls = [...new Set([...(mallsList || []), ...dbExpenses.map(e => e.mall).filter(Boolean)])].sort();
+      allMalls.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m;
         opt.textContent = m;
         mallSel.appendChild(opt);
       });
+
+      // Populate datalists for add/edit autocomplete
+      const mallDatalist = document.getElementById('expMallsDatalist');
+      if (mallDatalist) {
+        mallDatalist.innerHTML = allMalls.map(m => `<option value="${escapeHtml(m)}"></option>`).join('');
+      }
+      const compDatalist = document.getElementById('expContractorsDatalist');
+      if (compDatalist) {
+        compDatalist.innerHTML = companies.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+      }
     }
 
     function updateExpensesKPIs() {
@@ -2357,9 +2665,14 @@
                            item.category === 'تطوير' ? 'cat-renovation' :
                            item.category === 'اغلاق' ? 'cat-closure' : 'cat-construction';
 
-          const invStatusBadge = (item.invoice_status || '').includes('محصلة') && !(item.invoice_status || '').includes('غير') ?
-                                 `<span class="collected-badge">محصلة ✅</span>` :
-                                 `<span class="pending-badge">غير محصلة ⏳</span>`;
+          const isColl = (item.invoice_status || '').includes('محصلة') && !(item.invoice_status || '').includes('غير');
+          const invStatusBadge = isColl ?
+                                 `<span class="collected-badge" onclick="toggleExpenseInvoiceStatus(${item.id})" title="انقر للتحويل إلى غير محصلة ⏳">محصلة ✅</span>` :
+                                 `<span class="pending-badge" onclick="toggleExpenseInvoiceStatus(${item.id})" title="انقر للتحويل إلى محصلة ✅">غير محصلة ⏳</span>`;
+
+          const isPaid = (item.payment_status || 'تم الدفع') === 'تم الدفع';
+          const payBadgeClass = isPaid ? 'status-resolved' : 'status-waiting';
+          const payBadge = `<span class="status-badge ${payBadgeClass} payment-badge-clickable" onclick="toggleExpensePaymentStatus(${item.id})" title="انقر للتبديل بين تم الدفع ومعلق">${escapeHtml(item.payment_status || 'تم الدفع')}</span>`;
 
           const amt = parseFloat(item.amount) || 0;
 
@@ -2373,11 +2686,14 @@
             <td>${escapeHtml(item.description)}</td>
             <td><code>${escapeHtml(item.invoice_no || '—')}</code></td>
             <td style="font-weight:900; color:var(--primary); font-size:1em;">${amt.toLocaleString(undefined, {minimumFractionDigits:2})} ر.س</td>
-            <td><span class="status-badge status-resolved">${escapeHtml(item.payment_status || 'تم الدفع')}</span></td>
+            <td>${payBadge}</td>
             <td>${invStatusBadge}</td>
             <td style="font-size:0.85em; color:var(--text-muted);">${escapeHtml(item.notes || '—')}</td>
             <td>
-              <button onclick="deleteExpenseRow(${item.id})" class="danger-btn" style="padding:4px 8px; font-size:11px; border-radius:6px;">حذف</button>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button onclick="openEditExpenseModal(${item.id})" class="btn btn-accent" style="padding:4px 8px; font-size:11px; border-radius:6px;">تعديل</button>
+                <button onclick="deleteExpenseRow(${item.id})" class="danger-btn" style="padding:4px 8px; font-size:11px; border-radius:6px;">حذف</button>
+              </div>
             </td>
           `;
           tbody.appendChild(tr);
@@ -2406,6 +2722,48 @@
       });
     }
 
+    async function toggleExpenseInvoiceStatus(id) {
+      const item = dbExpenses.find(e => e.id === id);
+      if (!item) return;
+      const isColl = (item.invoice_status || '').includes('محصلة') && !(item.invoice_status || '').includes('غير');
+      const newStatus = isColl ? 'غير محصلة' : 'محصلة';
+
+      const { error } = await supabaseClient
+        .from('maintenance_expenses')
+        .update({ invoice_status: newStatus })
+        .eq('id', id);
+
+      if (error) {
+        showToast('فشل تحديث حالة الفاتورة: ' + error.message, 'error');
+        return;
+      }
+
+      item.invoice_status = newStatus;
+      showToast(`تم تحويل حالة الفاتورة #${id} إلى "${newStatus}" بنجاح ✅`, 'success');
+      updateExpensesKPIs();
+      renderExpensesTable();
+    }
+
+    async function toggleExpensePaymentStatus(id) {
+      const item = dbExpenses.find(e => e.id === id);
+      if (!item) return;
+      const newStatus = item.payment_status === 'تم الدفع' ? 'معلق' : 'تم الدفع';
+
+      const { error } = await supabaseClient
+        .from('maintenance_expenses')
+        .update({ payment_status: newStatus })
+        .eq('id', id);
+
+      if (error) {
+        showToast('فشل تحديث حالة الدفع: ' + error.message, 'error');
+        return;
+      }
+
+      item.payment_status = newStatus;
+      showToast(`تم تحديث حالة الدفع إلى "${newStatus}" ✅`, 'success');
+      renderExpensesTable();
+    }
+
     function openAddExpenseModal() {
       document.getElementById('newExpMall').value = '';
       document.getElementById('newExpDate').value = new Date().toISOString().split('T')[0];
@@ -2414,6 +2772,8 @@
       document.getElementById('newExpAmount').value = '';
       document.getElementById('newExpInvoiceNo').value = '';
       document.getElementById('newExpNotes').value = '';
+      document.getElementById('newExpInvoiceStatus').value = 'محصلة';
+      document.getElementById('newExpPaymentStatus').value = 'تم الدفع';
       document.getElementById('addExpenseModal').style.display = 'flex';
     }
 
@@ -2426,6 +2786,7 @@
       const amount = parseFloat(document.getElementById('newExpAmount').value);
       const invoice_no = document.getElementById('newExpInvoiceNo').value.trim();
       const invoice_status = document.getElementById('newExpInvoiceStatus').value;
+      const payment_status = document.getElementById('newExpPaymentStatus').value;
       const notes = document.getElementById('newExpNotes').value.trim();
 
       if (!mall || !description || isNaN(amount) || amount <= 0 || !company) {
@@ -2434,7 +2795,7 @@
       }
 
       const { error } = await supabaseClient.from('maintenance_expenses').insert([{
-        mall, date, category, company, description, amount, invoice_no, invoice_status, notes, payment_status: 'تم الدفع'
+        mall, date, category, company, description, amount, invoice_no, invoice_status, notes, payment_status
       }]);
 
       if (error) {
@@ -2444,6 +2805,59 @@
 
       showToast('تم حفظ الفاتورة بنجاح في Supabase ✅', 'success');
       closeModal('addExpenseModal');
+      await fetchExpensesFromSupabase();
+      renderAnalytics();
+    }
+
+    function openEditExpenseModal(id) {
+      const item = dbExpenses.find(e => e.id === id);
+      if (!item) return;
+
+      document.getElementById('editExpId').value = item.id;
+      document.getElementById('editExpMall').value = item.mall || '';
+      document.getElementById('editExpDate').value = item.date || new Date().toISOString().split('T')[0];
+      document.getElementById('editExpCategory').value = item.category || 'صيانة';
+      document.getElementById('editExpCompany').value = item.company || '';
+      document.getElementById('editExpDesc').value = item.description || '';
+      document.getElementById('editExpAmount').value = item.amount || '';
+      document.getElementById('editExpInvoiceNo').value = item.invoice_no || '';
+      document.getElementById('editExpInvoiceStatus').value = (item.invoice_status || '').includes('غير') ? 'غير محصلة' : 'محصلة';
+      document.getElementById('editExpPaymentStatus').value = item.payment_status || 'تم الدفع';
+      document.getElementById('editExpNotes').value = item.notes || '';
+      document.getElementById('editExpenseModal').style.display = 'flex';
+    }
+
+    async function saveEditExpense() {
+      const id = parseInt(document.getElementById('editExpId').value, 10);
+      if (!id) return;
+
+      const mall = document.getElementById('editExpMall').value.trim();
+      const date = document.getElementById('editExpDate').value;
+      const category = document.getElementById('editExpCategory').value;
+      const company = document.getElementById('editExpCompany').value.trim();
+      const description = document.getElementById('editExpDesc').value.trim();
+      const amount = parseFloat(document.getElementById('editExpAmount').value);
+      const invoice_no = document.getElementById('editExpInvoiceNo').value.trim();
+      const invoice_status = document.getElementById('editExpInvoiceStatus').value;
+      const payment_status = document.getElementById('editExpPaymentStatus').value;
+      const notes = document.getElementById('editExpNotes').value.trim();
+
+      if (!mall || !description || isNaN(amount) || amount <= 0 || !company) {
+        showToast('يرجى تعبئة كافة الحقول المطلوبة والمبلغ بشكل صحيح', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('maintenance_expenses').update({
+        mall, date, category, company, description, amount, invoice_no, invoice_status, payment_status, notes
+      }).eq('id', id);
+
+      if (error) {
+        showToast('فشل تعديل المصروف: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('تم تعديل بيانات الفاتورة بنجاح في Supabase ✅', 'success');
+      closeModal('editExpenseModal');
       await fetchExpensesFromSupabase();
       renderAnalytics();
     }
