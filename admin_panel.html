@@ -8601,7 +8601,22 @@
         // ==========================================
         // BIOMETRIC ATTENDANCE HUB (BioTime 8.5)
         // ==========================================
-        let attCurrentDate = new Date().toISOString().slice(0, 10);
+        function getShiftBusinessDateString(offsetDays = 0) {
+            // Retail showroom shifts closing past midnight (< 05:00 AM) belong to previous calendar day
+            const now = new Date();
+            if (now.getHours() < 5) {
+                now.setDate(now.getDate() - 1);
+            }
+            if (offsetDays !== 0) {
+                now.setDate(now.getDate() + offsetDays);
+            }
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        let attCurrentDate = getShiftBusinessDateString();
         let attLogsCache = [];
         let attSummaryCache = null;
         let attMatchingCache = null;
@@ -8611,15 +8626,14 @@
         let attCurrentFilterTab = 'all';
 
         function setAttDateToday() {
-            const todayStr = new Date().toISOString().slice(0, 10);
+            const todayStr = getShiftBusinessDateString(0);
             document.getElementById('attDateFilter').value = todayStr;
             loadAttendanceData(true);
         }
 
         function setAttDateYesterday() {
-            const d = new Date();
-            d.setDate(d.getDate() - 1);
-            document.getElementById('attDateFilter').value = d.toISOString().slice(0, 10);
+            const yestStr = getShiftBusinessDateString(-1);
+            document.getElementById('attDateFilter').value = yestStr;
             loadAttendanceData(true);
         }
 
@@ -8658,9 +8672,9 @@
         async function loadAttendanceData(forceRefresh = false) {
             let dateInput = document.getElementById('attDateFilter');
             if (dateInput && !dateInput.value) {
-                dateInput.value = new Date().toISOString().slice(0, 10);
+                dateInput.value = getShiftBusinessDateString();
             }
-            const selectedDate = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
+            const selectedDate = dateInput ? dateInput.value : getShiftBusinessDateString();
             attCurrentDate = selectedDate;
 
             // 0. Check BioTime Server status and outage
