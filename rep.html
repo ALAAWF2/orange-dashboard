@@ -1655,6 +1655,7 @@
 
             try {
                 let itemAgg = {};
+                let allRecords = [];
                 window.CURRENT_ALL_RECORDS = []; // Reset for every new search
 
                 if (searchType === 'sales_stock') {
@@ -1668,7 +1669,6 @@
                     }
 
                     // Load all needed months
-                    let allRecords = [];
                     for (const m of requiredMonths) {
                         const records = await loadSalesMonth(m);
                         allRecords = allRecords.concat(records);
@@ -2028,7 +2028,7 @@
             CURRENT_RESULTS.sort((a, b) => {
                 let va, vb;
                 if (isByStore) {
-                    // Columns: 0=#, 1=معرض, 2=Alias, 3=اسم, 4=فئة, 5=سعر اللصاقة, 6=سعر البيع, 7=كمية, 8=مبيعات, 9=ستوك
+                    // Columns: 0=#, 1=معرض, 2=Alias, 3=اسم, 4=فئة, 5=سعر اللصاقة, 6=سعر اليوم, 7=سعر البيع, 8=كمية, 9=مبيعات, 10=ستوك
                     switch (col) {
                         case 0: return 0;
                         case 1: va = a.store_name || ''; vb = b.store_name || ''; break;
@@ -2036,10 +2036,11 @@
                         case 3: va = a.name; vb = b.name; break;
                         case 4: va = a.category; vb = b.category; break;
                         case 5: va = a.price; vb = b.price; break;
-                        case 6: va = a.selling_price; vb = b.selling_price; break;
-                        case 7: va = a.qty; vb = b.qty; break;
-                        case 8: va = a.amount; vb = b.amount; break;
-                        case 9: va = a.stock_total; vb = b.stock_total; break;
+                        case 6: va = a.today_price; vb = b.today_price; break;
+                        case 7: va = a.selling_price; vb = b.selling_price; break;
+                        case 8: va = a.qty; vb = b.qty; break;
+                        case 9: va = a.amount; vb = b.amount; break;
+                        case 10: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
                 } else if (isByMonth || isByWeek || isByDay) {
@@ -2050,25 +2051,27 @@
                         case 3: va = a.name; vb = b.name; break;
                         case 4: va = a.category; vb = b.category; break;
                         case 5: va = a.price; vb = b.price; break;
-                        case 6: va = a.selling_price; vb = b.selling_price; break;
-                        case 7: va = a.qty; vb = b.qty; break;
-                        case 8: va = a.amount; vb = b.amount; break;
-                        case 9: va = a.stock_total; vb = b.stock_total; break;
+                        case 6: va = a.today_price; vb = b.today_price; break;
+                        case 7: va = a.selling_price; vb = b.selling_price; break;
+                        case 8: va = a.qty; vb = b.qty; break;
+                        case 9: va = a.amount; vb = b.amount; break;
+                        case 10: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
                 } else {
                     // Default by_item:
-                    // Columns: 0=#, 1=Alias, 2=اسم, 3=فئة, 4=سعر اللصاقة, 5=سعر البيع, 6=كمية, 7=مبيعات, 8=ستوك
+                    // Columns: 0=#, 1=Alias, 2=اسم, 3=فئة, 4=سعر اللصاقة, 5=سعر اليوم, 6=سعر البيع, 7=كمية, 8=مبيعات, 9=ستوك
                     switch (col) {
                         case 0: return 0;
                         case 1: va = a.alias; vb = b.alias; break;
                         case 2: va = a.name; vb = b.name; break;
                         case 3: va = a.category; vb = b.category; break;
                         case 4: va = a.price; vb = b.price; break;
-                        case 5: va = a.selling_price; vb = b.selling_price; break;
-                        case 6: va = a.qty; vb = b.qty; break;
-                        case 7: va = a.amount; vb = b.amount; break;
-                        case 8: va = a.stock_total; vb = b.stock_total; break;
+                        case 5: va = a.today_price; vb = b.today_price; break;
+                        case 6: va = a.selling_price; vb = b.selling_price; break;
+                        case 7: va = a.qty; vb = b.qty; break;
+                        case 8: va = a.amount; vb = b.amount; break;
+                        case 9: va = a.stock_total; vb = b.stock_total; break;
                         default: return 0;
                     }
                 }
@@ -2121,10 +2124,11 @@
                     <th onclick="sortTable(3)">اسم المنتج<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(4)">الفئة<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(5)">سعر اللصاقة<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(6)">سعر البيع<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(7)">الكمية المباعة<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(8)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(9)">ستوك المعرض<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">سعر اليوم<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">سعر البيع<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(8)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(9)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(10)">ستوك المعرض<span class="sort-icon">▼</span></th>
                 `;
             } else if (isByMonth || isByWeek || isByDay) {
                 const label = isByMonth ? 'الشهر' : (isByWeek ? 'الاسبوع' : 'اليوم');
@@ -2135,10 +2139,11 @@
                     <th onclick="sortTable(3)">اسم المنتج<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(4)">الفئة<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(5)">سعر اللصاقة<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(6)">سعر البيع<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(7)">الكمية المباعة<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(8)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(9)">الستوك الحالي<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">سعر اليوم<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">سعر البيع<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(8)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(9)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(10)">الستوك الحالي<span class="sort-icon">▼</span></th>
                 `;
             } else {
                 thead.innerHTML = `
@@ -2147,10 +2152,11 @@
                     <th onclick="sortTable(2)">اسم المنتج<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(3)">الفئة<span class="sort-icon">▼</span></th>
                     <th onclick="sortTable(4)">سعر اللصاقة<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(5)">سعر البيع<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(6)">الكمية المباعة<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(7)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
-                    <th onclick="sortTable(8)">الستوك الحالي<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(5)">سعر اليوم<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(6)">سعر البيع<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(7)">الكمية المباعة<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(8)">إجمالي المبيعات<span class="sort-icon">▼</span></th>
+                    <th onclick="sortTable(9)">الستوك الحالي<span class="sort-icon">▼</span></th>
                 `;
             }
 
@@ -2268,11 +2274,14 @@
             let html = '';
             const maxRender = 5000;
             const renderCount = Math.min(results.length, maxRender);
-            const colSpan = (isByStore || isByMonth || isByWeek || isByDay) ? 10 : 9;
+            const colSpan = (isByStore || isByMonth || isByWeek || isByDay) ? 11 : 10;
 
             for (let i = 0; i < renderCount; i++) {
                 const r = results[i];
                 const stockClass = r.stock_total > 10 ? 'stock-ok' : r.stock_total > 0 ? 'stock-low' : 'stock-zero';
+                const todayPriceHtml = (r.today_price && r.today_price < r.price)
+                    ? `<span style="font-weight:700;color:var(--orange, #e67e22);" title="سعر العرض الساري">${r.today_price.toLocaleString('en-US')}</span>`
+                    : `<span style="font-weight:600;color:#2c3e50;">${r.today_price ? r.today_price.toLocaleString('en-US') : '-'}</span>`;
 
                 if (isByStore) {
                     // Per-store row: no tooltip needed
@@ -2283,6 +2292,7 @@
                     <td>${r.name}</td>
                     <td>${r.category}</td>
                     <td style="color:#7f8c8d;">${r.price.toLocaleString('en-US')}</td>
+                    <td>${todayPriceHtml}</td>
                     <td style="font-weight:700;color:#2c3e50;">${r.selling_price ? r.selling_price.toLocaleString('en-US') : '-'}</td>
                     <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
                     <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
@@ -2298,21 +2308,7 @@
                     <td>${r.name}</td>
                     <td>${r.category}</td>
                     <td style="color:#7f8c8d;">${r.price.toLocaleString('en-US')}</td>
-                    <td style="font-weight:700;color:#2c3e50;">${r.selling_price ? r.selling_price.toLocaleString('en-US') : '-'}</td>
-                    <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
-                    <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
-                    <td class="stock-cell">
-                        <span class="stock-badge ${stockClass}">${r.stock_total.toLocaleString('en-US')}</span>
-                    </td>
-                </tr>`;
-                } else if (isByMonth) {
-                    html += `<tr>
-                    <td>${i + 1}</td>
-                    <td style="font-weight:600;white-space:nowrap;color:#2980b9;">${r.month || ''}</td>
-                    <td style="font-family:monospace;font-weight:700">${r.alias}</td>
-                    <td>${r.name}</td>
-                    <td>${r.category}</td>
-                    <td style="color:#7f8c8d;">${r.price.toLocaleString('en-US')}</td>
+                    <td>${todayPriceHtml}</td>
                     <td style="font-weight:700;color:#2c3e50;">${r.selling_price ? r.selling_price.toLocaleString('en-US') : '-'}</td>
                     <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
                     <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
@@ -2344,6 +2340,7 @@
                     <td>${r.name}</td>
                     <td>${r.category}</td>
                     <td style="color:#7f8c8d;">${r.price.toLocaleString('en-US')}</td>
+                    <td>${todayPriceHtml}</td>
                     <td style="font-weight:700;color:#2c3e50;">${r.selling_price ? r.selling_price.toLocaleString('en-US') : '-'}</td>
                     <td style="font-weight:700">${r.qty.toLocaleString('en-US')}</td>
                     <td style="font-weight:700;color:var(--orange)">${r.amount.toLocaleString('en-US')}</td>
@@ -2400,6 +2397,7 @@
                         row['اسم المنتج'] = r.name;
                         row['الفئة'] = r.category;
                         row['سعر اللصاقة'] = r.price;
+                        row['سعر اليوم'] = r.today_price;
                         row['سعر البيع'] = r.selling_price;
                         row['الكمية المباعة'] = r.qty;
                         row['إجمالي المبيعات'] = r.amount;
@@ -2415,6 +2413,7 @@
                         'اسم المنتج': `الفترة: ${dateFrom} إلى ${dateTo}`,
                         'الفئة': `المعرض: ${storeName}`,
                         'سعر اللصاقة': '',
+                        'سعر اليوم': '',
                         'سعر البيع': '',
                         'الكمية المباعة': CURRENT_RESULTS.reduce((s, r) => s + r.qty, 0),
                         'إجمالي المبيعات': CURRENT_RESULTS.reduce((s, r) => s + r.amount, 0),
@@ -2434,6 +2433,7 @@
                         { wch: 45 },  // Name
                         { wch: 18 },  // Category
                         { wch: 12 },  // MRP
+                        { wch: 12 },  // Today's Price
                         { wch: 12 },  // Selling Price
                         { wch: 14 },  // Qty
                         { wch: 16 },  // Amount
@@ -2483,6 +2483,7 @@
                             name: r.name,
                             alias: r.alias,
                             price: r.price,
+                            today_price: r.today_price,
                             selling_price: r.selling_price,
                             stock_total: r.stock_total,
                             store_name: r.store_name || ''
@@ -2523,6 +2524,7 @@
                         row['اسم المنتج'] = info.name;
                         row['الفئة'] = info.category;
                         row['سعر اللصاقة'] = info.price;
+                        row['سعر اليوم'] = info.today_price;
                         row['سعر البيع'] = daySellingPrice;
                         row['الكمية المباعة'] = r.qty;
                         row['إجمالي المبيعات'] = Math.round(r.amount * 100) / 100;
@@ -2537,6 +2539,7 @@
                         'اسم المنتج': `الفترة: ${dateFrom} إلى ${dateTo}`,
                         'الفئة': `المعرض: ${storeName}`,
                         'سعر اللصاقة': '',
+                        'سعر اليوم': '',
                         'سعر البيع': '',
                         'الكمية المباعة': dailyResults.reduce((s, r) => s + r.qty, 0),
                         'إجمالي المبيعات': Math.round(dailyResults.reduce((s, r) => s + r.amount, 0) * 100) / 100,
@@ -2555,6 +2558,7 @@
                         { wch: 12 },
                         { wch: 45 },
                         { wch: 18 },
+                        { wch: 12 },
                         { wch: 12 },
                         { wch: 12 },
                         { wch: 14 },
@@ -3757,6 +3761,7 @@
                             r.name,
                             r.category,
                             r.price.toLocaleString('en-US'),
+                            (r.today_price ? r.today_price.toLocaleString('en-US') : '-'),
                             (r.selling_price ? r.selling_price.toLocaleString('en-US') : '-'),
                             r.qty.toLocaleString('en-US'),
                             r.amount.toLocaleString('en-US'),
@@ -3772,7 +3777,7 @@
                     const sumAmt = CURRENT_RESULTS.reduce((s, r) => s + r.amount, 0);
                     const sumStk = CURRENT_RESULTS.reduce((s, r) => s + r.stock_total, 0);
                     const sumRow = [
-                        '', 'الإجمالي', '-', '-', '-', '-',
+                        '', 'الإجمالي', '-', '-', '-', '-', '-',
                         sumQty.toLocaleString('en-US'),
                         sumAmt.toLocaleString('en-US'),
                         sumStk.toLocaleString('en-US')
@@ -3780,7 +3785,7 @@
                     if (isByStore || isByMonth) sumRow.splice(1, 0, '-');
                     tableData.push(sumRow);
                     
-                    let headerRow = ['#', 'Alias', 'اسم المنتج', 'الفئة', 'سعر اللصاقة', 'سعر البيع', 'الكمية', 'المبيعات', 'الستوك'];
+                    let headerRow = ['#', 'Alias', 'اسم المنتج', 'الفئة', 'سعر اللصاقة', 'سعر اليوم', 'سعر البيع', 'الكمية', 'المبيعات', 'الستوك'];
                     if (isByStore) headerRow.splice(1, 0, 'المعرض');
                     else if (isByMonth) headerRow.splice(1, 0, 'الشهر');
 
