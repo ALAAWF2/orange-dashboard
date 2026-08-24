@@ -1139,19 +1139,13 @@
         let CURRENT_SORT = { col: 8, asc: false }; // default sort by amount desc
 
         // Helper to get Today's Price / Active Offer Deal Price
-        function getTodayPrice(pid, prod, itemLatestSale) {
+        function getTodayPrice(pid, prod) {
             if (ACTIVE_OFFERS && ACTIVE_OFFERS.items) {
                 const itemOffer = ACTIVE_OFFERS.items[pid] || 
                                   ACTIVE_OFFERS.items[pid.replace('KIT-', '')] || 
                                   ACTIVE_OFFERS.items['KIT-' + pid];
                 if (itemOffer && itemOffer.deal_price) {
                     return itemOffer.deal_price;
-                }
-            }
-            if (itemLatestSale) {
-                const sale = itemLatestSale[pid] || itemLatestSale[pid.replace('KIT-', '')] || itemLatestSale['KIT-' + pid];
-                if (sale && sale.price) {
-                    return sale.price;
                 }
             }
             return prod ? (prod.price || 0) : 0;
@@ -1749,19 +1743,6 @@
                     }
                 }
 
-                // Map to track latest sale unit price for each item
-                const itemLatestSale = {};
-                if (allRecords && allRecords.length) {
-                    for (const r of allRecords) {
-                        if (r.q > 0 && r.a > 0) {
-                            const uPrice = Math.round((r.a / r.q) * 100) / 100;
-                            if (!itemLatestSale[r.i] || r.d > itemLatestSale[r.i].date) {
-                                itemLatestSale[r.i] = { date: r.d, price: uPrice };
-                            }
-                        }
-                    }
-                }
-
                 // 5. Build results with product info + apply filters
                 const results = [];
 
@@ -1791,7 +1772,7 @@
                         if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
 
                         const unitSellingPrice = agg.qty > 0 ? Math.round((agg.amount / agg.qty) * 100) / 100 : (prod.price || 0);
-                        const todayPrice = getTodayPrice(pid, prod, itemLatestSale);
+                        const todayPrice = getTodayPrice(pid, prod);
 
                         results.push({
                             item_id: pid,
@@ -1842,7 +1823,7 @@
                         if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
 
                         const unitSellingPrice = agg.qty > 0 ? Math.round((agg.amount / agg.qty) * 100) / 100 : (prod.price || 0);
-                        const todayPrice = getTodayPrice(pid, prod, itemLatestSale);
+                        const todayPrice = getTodayPrice(pid, prod);
 
                         results.push({
                             item_id: pid,
@@ -1889,7 +1870,7 @@
                         if (stockFilter === 'low_stock' && (totalStock <= 0 || totalStock > 10)) continue;
 
                         const unitSellingPrice = agg.qty > 0 ? Math.round((agg.amount / agg.qty) * 100) / 100 : (prod.price || 0);
-                        const todayPrice = getTodayPrice(pid, prod, itemLatestSale);
+                        const todayPrice = getTodayPrice(pid, prod);
 
                         results.push({
                             item_id: pid,
@@ -1918,7 +1899,7 @@
                         if (!matchPriceFilter(prod.price || 0, priceTier, priceMinVal, priceMaxVal)) continue;
                         if (!matchConditions(prod, conditions)) continue;
 
-                        const todayPrice = getTodayPrice(pid, prod, itemLatestSale);
+                        const todayPrice = getTodayPrice(pid, prod);
 
                         if (viewMode === 'by_store' && searchType === 'stock_only') {
                             let storesToProcess = [];
