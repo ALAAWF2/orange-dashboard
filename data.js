@@ -5930,25 +5930,6 @@ const EMPLOYEES = [
         "addressBooks": "1201-C;1201-E;1202-C;1202-E"
     },
     {
-        "employeeId": "4882-سديم الشهراني",
-        "personnelNumber": "4882",
-        "name": "سديم الشهراني",
-        "startDate": "2026-02-17",
-        "manager": "محمدكلو",
-        "showroom": "1110-45- Riyadh Gallery Mall",
-        "showroomDetails": [
-            {
-                "name": "1110-45- Riyadh Gallery Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1110-C",
-                    "1110-E"
-                ]
-            }
-        ],
-        "addressBooks": "1110-C;1110-E"
-    },
-    {
         "employeeId": "4883-خفره سعد الدوسري",
         "personnelNumber": "4883",
         "name": "خفره سعد الدوسري",
