@@ -919,6 +919,7 @@
             </button>
             <button class="btn-excel" id="btnExcel" onclick="exportExcel()" disabled>📊 تصدير Excel</button>
             <button class="btn-excel" id="btnExcelDaily" onclick="exportExcelDaily()" disabled style="background:#27ae60;">📊 تصدير يومي</button>
+            <button class="btn-excel" id="btnCatComp" onclick="openCatCompModal()" style="background:#e67e22; font-weight:700;">📑 مقارنة فئات (2025 - 2026)</button>
             <button class="btn-excel" id="btnTopExcel" onclick="exportTopExcel()"
                 style="display:none; background:#d35400;">📥 تصدير الأكثر مبيعاً</button>
             <button class="btn-excel" id="btnTopCategoryExcel" onclick="exportTopCategoryExcel()"
@@ -1115,6 +1116,76 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Comparison Modal (مقارنة فئات 2025 - 2026) -->
+    <div class="modal-overlay" id="catCompModal">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h5>📑 تقرير مقارنة الفئات (2025 vs 2026)</h5>
+                <button class="btn-close" onclick="closeCatCompModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <!-- 1. Price Basis Option -->
+                <div style="margin-bottom: 16px; background: #fdfefe; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; box-shadow: var(--shadow);">
+                    <label style="font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 10px; font-size: 0.92rem;">
+                        🎯 معيار تصنيف الفئات السعرية للحافات:
+                    </label>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                            <input type="radio" name="catCompPriceBasis" value="selling_price" checked style="accent-color: var(--orange); transform: scale(1.15);">
+                            سعر البيع (متوسط سعر البيع الفعلي بالفترة)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                            <input type="radio" name="catCompPriceBasis" value="today_price" style="accent-color: var(--orange); transform: scale(1.15);">
+                            سعر اليوم (السعر الحالي / عروض اليوم)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 2. Months Selection -->
+                <div style="margin-bottom: 16px; background: #fdfefe; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; box-shadow: var(--shadow);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <label style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem; margin: 0;">
+                            📅 اختيار الأشهر للمقارنة:
+                        </label>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="setCatCompMonths('all')" style="background:#2c3e50; color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;">تحديد الكل</button>
+                            <button type="button" onclick="setCatCompMonths('ytd')" style="background:var(--orange); color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;">الأشهر المتاحة (1-8)</button>
+                            <button type="button" onclick="setCatCompMonths('none')" style="background:#95a5a6; color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;">إلغاء التحديد</button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px;" id="catCompMonthsGrid">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- 3. Additional Sheets Options -->
+                <div style="margin-bottom: 20px; background: #fdfefe; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; box-shadow: var(--shadow);">
+                    <label style="font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 8px; font-size: 0.92rem;">
+                        📋 خيارات الشيتات في ملف Excel:
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                            <input type="checkbox" id="catCompIncludeYtd" checked style="accent-color: var(--orange); transform: scale(1.15);">
+                            تضمين شيت الإجمالي (مقارنة الفترة / من بداية السنة)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                            <input type="checkbox" id="catCompIncludeRaw" checked style="accent-color: var(--orange); transform: scale(1.15);">
+                            تضمين شيت البيانات الخام التفصيلية (Sheet1)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 4. Action Buttons -->
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" onclick="closeCatCompModal()" style="background:#e0e0e0; color:#333; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                    <button type="button" onclick="executeCategoryComparisonExport()" style="background:linear-gradient(135deg, #fe7900, #e67e22); color:#fff; border:none; padding:8px 22px; border-radius:8px; font-weight:700; font-size:0.95rem; cursor:pointer; box-shadow: var(--shadow);">
+                        📊 إنشاء وتصدير ملف Excel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -3689,11 +3760,391 @@
             document.getElementById('analysisModal').style.display = 'none';
         }
 
+        // =====================
+        // CATEGORY COMPARISON (2025 vs 2026)
+        // =====================
+        const MONTH_NAMES_AR = {
+            1: 'يناير', 2: 'فبراير', 3: 'مارس', 4: 'أبريل',
+            5: 'مايو', 6: 'يونيو', 7: 'يوليو', 8: 'أغسطس',
+            9: 'سبتمبر', 10: 'أكتوبر', 11: 'نوفمبر', 12: 'ديسمبر'
+        };
+
+        function renderCatCompMonthsGrid() {
+            const grid = document.getElementById('catCompMonthsGrid');
+            if (!grid || grid.children.length > 0) return;
+            let html = '';
+            for (let m = 1; m <= 12; m++) {
+                const padM = String(m).padStart(2, '0');
+                const name = MONTH_NAMES_AR[m];
+                const checked = m <= 8 ? 'checked' : '';
+                html += `
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.84rem; background: #fff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <input type="checkbox" class="cat-comp-month-cb" value="${padM}" ${checked} style="accent-color: var(--orange);">
+                        <span>${padM} ${name}</span>
+                    </label>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        function openCatCompModal() {
+            renderCatCompMonthsGrid();
+            document.getElementById('catCompModal').style.display = 'block';
+        }
+
+        function closeCatCompModal() {
+            document.getElementById('catCompModal').style.display = 'none';
+        }
+
+        function setCatCompMonths(type) {
+            const cbs = document.querySelectorAll('.cat-comp-month-cb');
+            cbs.forEach(cb => {
+                const m = parseInt(cb.value, 10);
+                if (type === 'all') cb.checked = true;
+                else if (type === 'none') cb.checked = false;
+                else if (type === 'ytd') cb.checked = (m <= 8);
+            });
+        }
+
+        async function executeCategoryComparisonExport() {
+            if (!PRODUCTS) {
+                alert('يرجى الانتظار حتى يتم تحميل بيانات المنتجات.');
+                return;
+            }
+
+            const priceBasisInput = document.querySelector('input[name="catCompPriceBasis"]:checked');
+            const priceBasis = priceBasisInput ? priceBasisInput.value : 'selling_price';
+            const isSellingPriceBasis = (priceBasis === 'selling_price');
+            const priceBasisLabel = isSellingPriceBasis ? 'سعر البيع' : 'سعر اليوم';
+
+            const selectedMonths = Array.from(document.querySelectorAll('.cat-comp-month-cb:checked')).map(cb => cb.value).sort();
+            if (selectedMonths.length === 0) {
+                alert('يرجى اختيار شهر واحد على الأقل للمقارنة.');
+                return;
+            }
+
+            const includeYtd = document.getElementById('catCompIncludeYtd').checked;
+            const includeRaw = document.getElementById('catCompIncludeRaw').checked;
+
+            closeCatCompModal();
+            showLoading('جاري جلب بيانات المبيعات وحساب مقارنة الفئات...');
+
+            try {
+                // 1. Fetch sales files for selected months for both 2025 and 2026
+                const allMonthsToFetch = [];
+                selectedMonths.forEach(m => {
+                    allMonthsToFetch.push(`2025-${m}`);
+                    allMonthsToFetch.push(`2026-${m}`);
+                });
+
+                for (const mStr of allMonthsToFetch) {
+                    try {
+                        await loadSalesMonth(mStr);
+                    } catch (e) {
+                        console.warn(`Could not load sales for ${mStr}:`, e);
+                    }
+                }
+
+                // 2. Build raw records: aggregate by month + item
+                const rawRecords = [];
+                const quiltBrackets = ['001-199', '200-299', '300-399', '400-499', '500-599', '600-699', '700-799', '800-899', '900-999', '1000+'];
+
+                function getQuiltTier(p) {
+                    const val = Number(p || 0);
+                    if (val < 200) return '001-199';
+                    else if (val < 300) return '200-299';
+                    else if (val < 400) return '300-399';
+                    else if (val < 500) return '400-499';
+                    else if (val < 600) return '500-599';
+                    else if (val < 700) return '600-699';
+                    else if (val < 800) return '700-799';
+                    else if (val < 900) return '800-899';
+                    else if (val < 1000) return '900-999';
+                    else return '1000+';
+                }
+
+                for (const mStr of allMonthsToFetch) {
+                    const recs = SALES_CACHE[mStr] || [];
+                    const itemMAgg = {};
+
+                    for (const r of recs) {
+                        let pid = r.i;
+                        const kitPid = 'KIT-' + pid;
+                        if (PRODUCTS[kitPid]) {
+                            pid = kitPid;
+                        }
+                        if (!itemMAgg[pid]) itemMAgg[pid] = { q: 0, a: 0 };
+                        itemMAgg[pid].q += (r.q || 0);
+                        itemMAgg[pid].a += (r.a || 0);
+                    }
+
+                    for (const pid in itemMAgg) {
+                        const prod = PRODUCTS[pid];
+                        if (!prod || prod.hasKitCounterpart) continue;
+                        const q = itemMAgg[pid].q;
+                        const a = itemMAgg[pid].a;
+                        const unitPrice = q > 0 ? parseFloat((a / q).toFixed(2)) : (prod.price || 0);
+                        const todayPrice = getTodayPrice(pid, prod);
+                        const mrp = prod.price || 0;
+                        const mappedCat = CATEGORY_MAP[prod.alias] || CATEGORY_MAP[pid] || prod.category || 'غير مصنف';
+                        const stockTotal = (prod.stock && prod.stock.total) ? prod.stock.total : 0;
+
+                        rawRecords.push({
+                            month: mStr,
+                            alias: prod.alias || '',
+                            name: prod.name || '',
+                            category: mappedCat,
+                            price: mrp,
+                            today_price: todayPrice,
+                            selling_price: unitPrice,
+                            qty: q,
+                            amount: parseFloat(a.toFixed(2)),
+                            stock: stockTotal
+                        });
+                    }
+                }
+
+                // Sort raw records by month, then by amount desc
+                rawRecords.sort((a, b) => {
+                    if (a.month !== b.month) return a.month.localeCompare(b.month);
+                    return b.amount - a.amount;
+                });
+
+                // Collect all unique categories across all records
+                const categorySalesSum = {};
+                rawRecords.forEach(r => {
+                    categorySalesSum[r.category] = (categorySalesSum[r.category] || 0) + r.amount;
+                });
+                const allCategories = Object.keys(categorySalesSum).sort((a, b) => categorySalesSum[b] - categorySalesSum[a]);
+
+                const wb = XLSX.utils.book_new();
+
+                // 3. Helper to build a comparison table (Category + King Quilts + Full Quilts)
+                function buildComparisonAoA(titleText, filterMonth2025, filterMonth2026, isYtd) {
+                    const recs2025 = rawRecords.filter(r => {
+                        if (isYtd) return r.month >= '2025-01' && r.month <= ('2025-' + selectedMonths[selectedMonths.length - 1]);
+                        return r.month === filterMonth2025;
+                    });
+                    const recs2026 = rawRecords.filter(r => {
+                        if (isYtd) return r.month >= '2026-01' && r.month <= ('2026-' + selectedMonths[selectedMonths.length - 1]);
+                        return r.month === filterMonth2026;
+                    });
+
+                    const aoa = [];
+
+                    // Row 1: Title
+                    aoa.push([titleText, null, null, null, null, null, null]);
+                    aoa.push([]);
+                    aoa.push([]);
+
+                    // Section 1: Categories
+                    aoa.push([' مقارنة المبيعات حسب الفئة', null, null, null, null, null, null]);
+                    aoa.push(['الفئة', 'الكمية 2025', 'الكمية 2026', 'فرق الكمية', 'المبيعات 2025', 'المبيعات 2026', 'فرق المبيعات']);
+
+                    let totalQ25 = 0, totalQ26 = 0, totalA25 = 0, totalA26 = 0;
+
+                    allCategories.forEach(cat => {
+                        const q25 = recs2025.filter(r => r.category === cat).reduce((s, r) => s + r.qty, 0);
+                        const q26 = recs2026.filter(r => r.category === cat).reduce((s, r) => s + r.qty, 0);
+                        const a25 = recs2025.filter(r => r.category === cat).reduce((s, r) => s + r.amount, 0);
+                        const a26 = recs2026.filter(r => r.category === cat).reduce((s, r) => s + r.amount, 0);
+
+                        if (q25 > 0 || q26 > 0 || a25 > 0 || a26 > 0) {
+                            totalQ25 += q25;
+                            totalQ26 += q26;
+                            totalA25 += a25;
+                            totalA26 += a26;
+                            aoa.push([
+                                cat,
+                                q25,
+                                q26,
+                                q26 - q25,
+                                parseFloat(a25.toFixed(2)),
+                                parseFloat(a26.toFixed(2)),
+                                parseFloat((a26 - a25).toFixed(2))
+                            ]);
+                        }
+                    });
+
+                    aoa.push([
+                        'الإجمالي',
+                        totalQ25,
+                        totalQ26,
+                        totalQ26 - totalQ25,
+                        parseFloat(totalA25.toFixed(2)),
+                        parseFloat(totalA26.toFixed(2)),
+                        parseFloat((totalA26 - totalA25).toFixed(2))
+                    ]);
+
+                    aoa.push([]);
+                    aoa.push([]);
+
+                    // Section 2: King Quilts by Price Bracket
+                    aoa.push([`مقارنة لحافات كينغ حسب الفئة السعرية (${priceBasisLabel})`, null, null, null, null, null, null]);
+                    aoa.push(['الفئة السعرية', 'الكمية 2025', 'الكمية 2026', 'فرق الكمية', 'المبيعات 2025', 'المبيعات 2026', 'فرق المبيعات']);
+
+                    const king25 = recs2025.filter(r => r.category === 'لحافات كينغ' || r.category === 'لحافات كينج');
+                    const king26 = recs2026.filter(r => r.category === 'لحافات كينغ' || r.category === 'لحافات كينج');
+
+                    let kTotQ25 = 0, kTotQ26 = 0, kTotA25 = 0, kTotA26 = 0;
+
+                    quiltBrackets.forEach(b => {
+                        const q25 = king25.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.qty, 0);
+                        const q26 = king26.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.qty, 0);
+                        const a25 = king25.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.amount, 0);
+                        const a26 = king26.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.amount, 0);
+
+                        kTotQ25 += q25;
+                        kTotQ26 += q26;
+                        kTotA25 += a25;
+                        kTotA26 += a26;
+
+                        aoa.push([
+                            b,
+                            q25,
+                            q26,
+                            q26 - q25,
+                            parseFloat(a25.toFixed(2)),
+                            parseFloat(a26.toFixed(2)),
+                            parseFloat((a26 - a25).toFixed(2))
+                        ]);
+                    });
+
+                    aoa.push([
+                        'الإجمالي',
+                        kTotQ25,
+                        kTotQ26,
+                        kTotQ26 - kTotQ25,
+                        parseFloat(kTotA25.toFixed(2)),
+                        parseFloat(kTotA26.toFixed(2)),
+                        parseFloat((kTotA26 - kTotA25).toFixed(2))
+                    ]);
+
+                    aoa.push([]);
+                    aoa.push([]);
+
+                    // Section 3: Full Quilts by Price Bracket
+                    aoa.push([`مقارنة لحافات فل حسب الفئة السعرية (${priceBasisLabel})`, null, null, null, null, null, null]);
+                    aoa.push(['الفئة السعرية', 'الكمية 2025', 'الكمية 2026', 'فرق الكمية', 'المبيعات 2025', 'المبيعات 2026', 'فرق المبيعات']);
+
+                    const full25 = recs2025.filter(r => r.category === 'لحافات فل');
+                    const full26 = recs2026.filter(r => r.category === 'لحافات فل');
+
+                    let fTotQ25 = 0, fTotQ26 = 0, fTotA25 = 0, fTotA26 = 0;
+
+                    quiltBrackets.forEach(b => {
+                        const q25 = full25.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.qty, 0);
+                        const q26 = full26.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.qty, 0);
+                        const a25 = full25.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.amount, 0);
+                        const a26 = full26.filter(r => getQuiltTier(isSellingPriceBasis ? r.selling_price : r.today_price) === b).reduce((s, r) => s + r.amount, 0);
+
+                        fTotQ25 += q25;
+                        fTotQ26 += q26;
+                        fTotA25 += a25;
+                        fTotA26 += a26;
+
+                        aoa.push([
+                            b,
+                            q25,
+                            q26,
+                            q26 - q25,
+                            parseFloat(a25.toFixed(2)),
+                            parseFloat(a26.toFixed(2)),
+                            parseFloat((a26 - a25).toFixed(2))
+                        ]);
+                    });
+
+                    aoa.push([
+                        'الإجمالي',
+                        fTotQ25,
+                        fTotQ26,
+                        fTotQ26 - fTotQ25,
+                        parseFloat(fTotA25.toFixed(2)),
+                        parseFloat(fTotA26.toFixed(2)),
+                        parseFloat((fTotA26 - fTotA25).toFixed(2))
+                    ]);
+
+                    return aoa;
+                }
+
+                // 4. Create Sheet1 (Raw data) if requested
+                if (includeRaw) {
+                    const rawSheetData = rawRecords.map(r => ({
+                        'الشهر': r.month,
+                        'Alias': r.alias,
+                        'اسم المنتج': r.name,
+                        'الفئة': r.category,
+                        'سعر اللصاقة': r.price,
+                        'سعر اليوم': r.today_price,
+                        'سعر البيع': r.selling_price,
+                        'الكمية المباعة': r.qty,
+                        'إجمالي المبيعات': r.amount,
+                        'الستوك الحالي': r.stock
+                    }));
+                    const wsRaw = XLSX.utils.json_to_sheet(rawSheetData);
+                    wsRaw['!cols'] = [
+                        { wch: 12 }, { wch: 14 }, { wch: 45 }, { wch: 22 },
+                        { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
+                        { wch: 16 }, { wch: 14 }
+                    ];
+                    wsRaw['!views'] = [{ RTL: true }];
+                    XLSX.utils.book_append_sheet(wb, wsRaw, 'Sheet1');
+                }
+
+                // 5. Create Monthly Comparison Sheets
+                selectedMonths.forEach(m => {
+                    const mNum = parseInt(m, 10);
+                    const mName = MONTH_NAMES_AR[mNum] || m;
+                    const sheetName = `مقارنة ${m} ${mName}`;
+                    const title = `مقارنة مبيعات شهر ${mName} — 2025 - 2026`;
+
+                    const aoa = buildComparisonAoA(title, `2025-${m}`, `2026-${m}`, false);
+                    const ws = XLSX.utils.aoa_to_sheet(aoa);
+                    ws['!cols'] = [
+                        { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+                        { wch: 18 }, { wch: 18 }, { wch: 18 }
+                    ];
+                    ws['!views'] = [{ RTL: true }];
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+                });
+
+                // 6. Create YTD / Period Summary Sheet
+                if (includeYtd) {
+                    const startMName = MONTH_NAMES_AR[parseInt(selectedMonths[0], 10)];
+                    const endMName = MONTH_NAMES_AR[parseInt(selectedMonths[selectedMonths.length - 1], 10)];
+                    const ytdTitle = `مقارنة المبيعات من بداية السنة (${startMName} - ${endMName}) — 2025 - 2026`;
+
+                    const aoaYtd = buildComparisonAoA(ytdTitle, null, null, true);
+                    const wsYtd = XLSX.utils.aoa_to_sheet(aoaYtd);
+                    wsYtd['!cols'] = [
+                        { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+                        { wch: 18 }, { wch: 18 }, { wch: 18 }
+                    ];
+                    wsYtd['!views'] = [{ RTL: true }];
+                    XLSX.utils.book_append_sheet(wb, wsYtd, 'مقارنة من بداية السنة');
+                }
+
+                // 7. Download Excel
+                const todayStr = new Date().toISOString().split('T')[0];
+                const fileName = `Category_Comparison_2025_2026_${priceBasis}_${todayStr}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+
+            } catch (err) {
+                console.error('Category comparison error:', err);
+                alert('حدث خطأ أثناء إعداد تقرير مقارنة الفئات: ' + err.message);
+            }
+            hideLoading();
+        }
+
         // Close modal when clicking outside
         window.onclick = function (event) {
             const modal = document.getElementById('analysisModal');
             if (event.target === modal) {
                 closeAnalysisModal();
+            }
+            const catModal = document.getElementById('catCompModal');
+            if (event.target === catModal) {
+                closeCatCompModal();
             }
         }
 
