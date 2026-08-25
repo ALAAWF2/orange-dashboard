@@ -54,6 +54,7 @@
 
         button {
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         button:focus-visible,
@@ -67,6 +68,21 @@
             width: min(1540px, 100%);
             margin: 0 auto;
             padding: 22px clamp(14px, 2vw, 30px) 46px;
+        }
+
+        .skip-link {
+            position: fixed;
+            z-index: 200;
+            top: 10px;
+            right: 10px;
+            padding: 10px 14px;
+            color: #fff;
+            background: var(--blue);
+            transform: translateY(-160%);
+        }
+
+        .skip-link:focus-visible {
+            transform: translateY(0);
         }
 
         .hero {
@@ -132,6 +148,7 @@
             font-weight: 900;
             line-height: 1.02;
             letter-spacing: -0.045em;
+            text-wrap: balance;
         }
 
         .hero-subtitle {
@@ -428,6 +445,11 @@
             margin-top: 14px;
         }
 
+        .insight-grid > *,
+        .chart-panel {
+            min-width: 0;
+        }
+
         .panel {
             position: relative;
             border: 1px solid var(--line);
@@ -484,8 +506,10 @@
         .chart-scroll {
             position: relative;
             overflow-x: auto;
+            max-width: 100%;
             min-height: 390px;
             padding: 8px 12px 0;
+            overscroll-behavior-inline: contain;
         }
 
         .chart-scroll svg {
@@ -760,7 +784,8 @@
     </style>
 </head>
 <body>
-    <main class="page-shell">
+    <a class="skip-link" href="#mainContent">تجاوز أدوات التصفية إلى النتائج</a>
+    <main class="page-shell" id="mainContent" tabindex="-1">
         <header class="hero">
             <div class="hero-grid">
                 <div>
@@ -872,8 +897,8 @@
                             <h3 class="panel-title" id="chartTitle">المبيعات شهراً بشهر</h3>
                         </div>
                         <div class="chart-legend" aria-label="مفتاح ألوان الرسم">
-                            <span class="legend-item"><span class="legend-swatch"></span><span id="legendCurrent">السنة الحالية</span></span>
-                            <span class="legend-item"><span class="legend-swatch prior"></span><span id="legendPrior">السنة السابقة</span></span>
+                            <span class="legend-item"><span class="legend-swatch" aria-hidden="true"></span><span id="legendCurrent">السنة الحالية</span></span>
+                            <span class="legend-item"><span class="legend-swatch prior" aria-hidden="true"></span><span id="legendPrior">السنة السابقة</span></span>
                         </div>
                     </div>
                     <div class="chart-scroll" id="chartScroll">
@@ -958,6 +983,20 @@
             const ONLINE_TYPE = 'online';
             const ALL = '__all__';
             const METRICS = ['sales', 'visitors', 'transactions'];
+            const DATE_FORMATTER = new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                timeZone: 'Asia/Riyadh'
+            });
+            const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Asia/Riyadh'
+            });
 
             const state = {
                 raw: null,
@@ -1046,6 +1085,16 @@
                 const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
                 if (!match) return null;
                 return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+            }
+
+            function formatOperationalDate(value, includeTime = false) {
+                const raw = String(value || '').trim();
+                const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2})?)?$/.exec(raw);
+                if (!match) return raw || 'غير محدد';
+                const iso = `${match[1]}-${match[2]}-${match[3]}T${match[4] || '00'}:${match[5] || '00'}:00+03:00`;
+                const date = new Date(iso);
+                if (Number.isNaN(date.getTime())) return raw;
+                return (includeTime ? DATE_TIME_FORMATTER : DATE_FORMATTER).format(date);
             }
 
             function setStatus(status, title, copy) {
@@ -1669,8 +1718,10 @@
 
             function updateMetadata() {
                 const generated = state.raw?.metadata?.generated_at || state.raw?.metadata?.last_updated;
-                dom.dataStamp.textContent = generated ? `آخر تحديث للبيانات: ${generated}` : 'آخر تحديث غير محدد';
-                dom.footerCoverage.textContent = `نطاق المبيعات: ${state.minSalesDate} — ${state.maxSalesDate}`;
+                dom.dataStamp.textContent = generated
+                    ? `آخر تحديث للبيانات: ${formatOperationalDate(generated, true)}`
+                    : 'آخر تحديث غير محدد';
+                dom.footerCoverage.textContent = `نطاق المبيعات: ${formatOperationalDate(state.minSalesDate)} — ${formatOperationalDate(state.maxSalesDate)}`;
             }
 
             async function loadData() {
