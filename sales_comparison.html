@@ -1,0 +1,1703 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#fe7900">
+    <title>مقارنة أداء المبيعات | Orange</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --orange: #fe7900;
+            --orange-deep: #c84f00;
+            --orange-soft: #fff0e2;
+            --ink: #1c252b;
+            --ink-soft: #52616a;
+            --canvas: #f2eee8;
+            --paper: #fffdfa;
+            --paper-strong: #ffffff;
+            --line: #d9d1c8;
+            --blue: #147ad6;
+            --blue-soft: #dcecff;
+            --green: #16845b;
+            --red: #c33f3f;
+            --shadow: 0 18px 44px rgba(45, 34, 25, 0.09);
+            --cut: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-width: 320px;
+            background:
+                linear-gradient(90deg, rgba(28, 37, 43, 0.035) 1px, transparent 1px) 0 0 / 36px 36px,
+                var(--canvas);
+            color: var(--ink);
+            font-family: "Tajawal", sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+
+        button,
+        select {
+            font: inherit;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:focus-visible,
+        select:focus-visible,
+        [tabindex="0"]:focus-visible {
+            outline: 3px solid rgba(20, 122, 214, 0.45);
+            outline-offset: 3px;
+        }
+
+        .page-shell {
+            width: min(1540px, 100%);
+            margin: 0 auto;
+            padding: 22px clamp(14px, 2vw, 30px) 46px;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            min-height: 188px;
+            padding: clamp(24px, 4vw, 48px);
+            color: #fff;
+            background: var(--ink);
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 26px), calc(100% - 26px) 100%, 0 100%);
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: clamp(18px, 2.8vw, 44px);
+            background: var(--orange);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            left: 8%;
+            top: -146px;
+            border: 42px solid rgba(254, 121, 0, 0.16);
+            border-radius: 50%;
+        }
+
+        .hero-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: end;
+            gap: 24px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 12px;
+            color: #ffbd82;
+            font-size: 0.84rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 34px;
+            height: 4px;
+            background: var(--orange);
+        }
+
+        h1 {
+            margin: 0;
+            max-width: 860px;
+            font-size: clamp(2rem, 4vw, 4.25rem);
+            font-weight: 900;
+            line-height: 1.02;
+            letter-spacing: -0.045em;
+        }
+
+        .hero-subtitle {
+            margin: 14px 0 0;
+            color: #cfd7db;
+            font-size: clamp(0.95rem, 1.5vw, 1.14rem);
+        }
+
+        .year-control {
+            display: grid;
+            gap: 8px;
+            min-width: 172px;
+        }
+
+        .year-control label {
+            color: #bbc6cc;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .year-control select {
+            width: 100%;
+            min-height: 48px;
+            padding: 0 14px;
+            border: 1px solid rgba(255,255,255,0.26);
+            border-radius: 0;
+            color: #fff;
+            background: #2a363d;
+            cursor: pointer;
+        }
+
+        .data-stamp {
+            margin-top: 8px;
+            color: #98a7af;
+            font-size: 0.72rem;
+        }
+
+        .control-deck {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            margin-top: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255, 253, 250, 0.96);
+            box-shadow: 0 10px 26px rgba(45, 34, 25, 0.07);
+            backdrop-filter: blur(12px);
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: 120px minmax(0, 1fr);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .control-row:last-child {
+            border-bottom: 0;
+        }
+
+        .control-label {
+            display: flex;
+            align-items: center;
+            padding: 13px 16px;
+            border-left: 1px solid var(--line);
+            color: var(--ink-soft);
+            background: #f7f2eb;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .chip-rail {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 12px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--orange) transparent;
+        }
+
+        .chip {
+            flex: 0 0 auto;
+            min-height: 38px;
+            padding: 7px 16px;
+            border: 1px solid #c8c0b7;
+            color: #35434a;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 160ms ease;
+        }
+
+        .chip:hover {
+            border-color: var(--orange);
+            color: var(--orange-deep);
+            transform: translateY(-1px);
+        }
+
+        .chip[aria-pressed="true"] {
+            border-color: var(--ink);
+            color: #fff;
+            background: var(--ink);
+            box-shadow: inset 0 -4px 0 var(--orange);
+        }
+
+        .chip.period-chip[aria-pressed="true"] {
+            border-color: var(--orange);
+            background: var(--orange);
+            box-shadow: none;
+        }
+
+        .scope-bar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: center;
+            margin: 22px 0 14px;
+        }
+
+        .scope-title {
+            margin: 0;
+            font-size: clamp(1.35rem, 2vw, 2rem);
+            font-weight: 900;
+        }
+
+        .scope-meta {
+            margin-top: 4px;
+            color: var(--ink-soft);
+            font-size: 0.86rem;
+        }
+
+        .scope-badge {
+            padding: 10px 15px;
+            border-right: 5px solid var(--orange);
+            color: var(--ink);
+            background: var(--orange-soft);
+            font-weight: 800;
+        }
+
+        .status-panel {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-height: 260px;
+            margin-top: 18px;
+            padding: 28px;
+            border: 1px dashed #bcb1a6;
+            text-align: center;
+            background: rgba(255,255,255,0.55);
+        }
+
+        .status-panel.is-visible {
+            display: flex;
+        }
+
+        .status-card {
+            max-width: 560px;
+        }
+
+        .status-mark {
+            width: 46px;
+            height: 46px;
+            margin: 0 auto 14px;
+            border: 4px solid #d9d1c8;
+            border-top-color: var(--orange);
+            border-radius: 50%;
+            animation: spin 850ms linear infinite;
+        }
+
+        .status-panel[data-state="error"] .status-mark,
+        .status-panel[data-state="empty"] .status-mark {
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 0;
+            color: #fff;
+            background: var(--red);
+            animation: none;
+        }
+
+        .status-panel[data-state="error"] .status-mark::after {
+            content: "!";
+            font-size: 1.5rem;
+            font-weight: 900;
+        }
+
+        .status-panel[data-state="empty"] .status-mark {
+            background: var(--ink-soft);
+        }
+
+        .status-panel[data-state="empty"] .status-mark::after {
+            content: "—";
+            font-size: 1.5rem;
+            font-weight: 900;
+        }
+
+        .status-title {
+            margin: 0 0 8px;
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+
+        .status-copy {
+            margin: 0;
+            color: var(--ink-soft);
+            line-height: 1.8;
+        }
+
+        .retry-button {
+            display: none;
+            margin: 18px auto 0;
+            padding: 10px 20px;
+            border: 0;
+            color: #fff;
+            background: var(--ink);
+            cursor: pointer;
+        }
+
+        .status-panel[data-state="error"] .retry-button {
+            display: inline-block;
+        }
+
+        .dashboard-content[hidden] {
+            display: none;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .kpi-card {
+            position: relative;
+            min-height: 142px;
+            padding: 18px 18px 17px;
+            border: 1px solid var(--line);
+            background: var(--paper-strong);
+            clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+            box-shadow: var(--shadow);
+        }
+
+        .kpi-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto;
+            height: 5px;
+            background: var(--orange);
+        }
+
+        .kpi-card.is-prior::after {
+            background: var(--blue);
+        }
+
+        .kpi-card.is-positive::after {
+            background: var(--green);
+        }
+
+        .kpi-card.is-negative::after {
+            background: var(--red);
+        }
+
+        .kpi-label {
+            color: var(--ink-soft);
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .kpi-value {
+            margin-top: 12px;
+            direction: ltr;
+            text-align: right;
+            font-size: clamp(1.55rem, 2.6vw, 2.5rem);
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.035em;
+        }
+
+        .kpi-sub {
+            margin-top: 9px;
+            color: #7c888e;
+            font-size: 0.75rem;
+        }
+
+        .kpi-value.positive {
+            color: var(--green);
+        }
+
+        .kpi-value.negative {
+            color: var(--red);
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.8fr) minmax(310px, 0.75fr);
+            gap: 14px;
+            margin-top: 14px;
+        }
+
+        .panel {
+            position: relative;
+            border: 1px solid var(--line);
+            background: var(--paper);
+            box-shadow: var(--shadow);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 19px 21px 15px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .panel-kicker {
+            color: var(--orange-deep);
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+
+        .panel-title {
+            margin: 4px 0 0;
+            font-size: 1.12rem;
+            font-weight: 900;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            color: var(--ink-soft);
+            font-size: 0.76rem;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+            background: var(--orange);
+        }
+
+        .legend-swatch.prior {
+            background: var(--blue);
+        }
+
+        .chart-scroll {
+            position: relative;
+            overflow-x: auto;
+            min-height: 390px;
+            padding: 8px 12px 0;
+        }
+
+        .chart-scroll svg {
+            display: block;
+            width: 100%;
+            min-width: 760px;
+            height: 370px;
+            overflow: visible;
+        }
+
+        .chart-tooltip {
+            position: fixed;
+            z-index: 100;
+            display: none;
+            min-width: 174px;
+            padding: 10px 12px;
+            border-right: 4px solid var(--orange);
+            color: #fff;
+            background: rgba(28, 37, 43, 0.96);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+            pointer-events: none;
+            font-size: 0.76rem;
+            line-height: 1.7;
+        }
+
+        .summary-panel {
+            display: grid;
+            align-content: start;
+        }
+
+        .summary-stack {
+            display: grid;
+            gap: 13px;
+            padding: 18px;
+        }
+
+        .target-block {
+            padding: 16px;
+            border: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .target-heading {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--ink-soft);
+            font-size: 0.77rem;
+            font-weight: 800;
+        }
+
+        .target-value {
+            margin-top: 8px;
+            direction: ltr;
+            text-align: right;
+            font-size: 1.52rem;
+            font-weight: 900;
+        }
+
+        .progress-track {
+            position: relative;
+            overflow: hidden;
+            height: 12px;
+            margin-top: 12px;
+            background: #e8e2db;
+        }
+
+        .progress-fill {
+            width: 0;
+            height: 100%;
+            background: var(--orange);
+            transition: width 360ms ease;
+        }
+
+        .progress-fill.good {
+            background: var(--green);
+        }
+
+        .target-foot {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 8px;
+            color: #728087;
+            font-size: 0.72rem;
+        }
+
+        .ratio-block {
+            padding: 16px;
+            color: #fff;
+            background: var(--ink);
+        }
+
+        .ratio-title {
+            color: #bdc8cd;
+            font-size: 0.77rem;
+            font-weight: 800;
+        }
+
+        .ratio-track {
+            display: flex;
+            overflow: hidden;
+            height: 22px;
+            margin-top: 13px;
+            background: #35434a;
+        }
+
+        .ratio-online {
+            width: 0;
+            background: var(--orange);
+            transition: width 360ms ease;
+        }
+
+        .ratio-offline {
+            flex: 1;
+            background: var(--blue);
+        }
+
+        .ratio-values {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            margin-top: 9px;
+            font-size: 0.76rem;
+        }
+
+        .data-note {
+            padding: 12px 14px;
+            border-right: 4px solid #b98a58;
+            color: #69533e;
+            background: #f8eadb;
+            font-size: 0.74rem;
+            line-height: 1.7;
+        }
+
+        .footer-note {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 18px;
+            padding-top: 13px;
+            border-top: 1px solid rgba(82, 97, 106, 0.25);
+            color: #6a777e;
+            font-size: 0.72rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1180px) {
+            .kpi-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .insight-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-stack {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .ratio-block,
+            .data-note {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .page-shell {
+                padding: 0 0 30px;
+            }
+
+            .hero {
+                min-height: 220px;
+                padding: 28px 24px 34px 42px;
+                clip-path: none;
+            }
+
+            .hero-grid {
+                grid-template-columns: 1fr;
+                align-items: start;
+            }
+
+            .year-control {
+                width: min(100%, 230px);
+            }
+
+            .control-deck {
+                position: static;
+                margin-top: 0;
+                border-right: 0;
+                border-left: 0;
+            }
+
+            .control-row {
+                grid-template-columns: 1fr;
+            }
+
+            .control-label {
+                padding: 8px 14px 5px;
+                border-left: 0;
+                background: #fff;
+            }
+
+            .scope-bar,
+            .dashboard-content,
+            .status-panel,
+            .footer-note {
+                margin-right: 14px;
+                margin-left: 14px;
+            }
+
+            .scope-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .scope-badge {
+                justify-self: start;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .kpi-card {
+                min-height: 128px;
+                padding: 16px 14px;
+            }
+
+            .summary-stack {
+                grid-template-columns: 1fr;
+            }
+
+            .ratio-block,
+            .data-note {
+                grid-column: auto;
+            }
+
+            .panel-header {
+                display: grid;
+            }
+
+            .footer-note {
+                display: grid;
+            }
+        }
+
+        @media (max-width: 460px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-card {
+                min-height: 116px;
+            }
+
+            .kpi-value {
+                font-size: 2rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page-shell">
+        <header class="hero">
+            <div class="hero-grid">
+                <div>
+                    <div class="eyebrow">ORANGE PERFORMANCE CONTROL</div>
+                    <h1>مقارنة أداء المبيعات</h1>
+                    <p class="hero-subtitle">من الشركة إلى المنطقة ثم المعرض — قراءة سنوية وشهرية تتفاعل مع كل اختيار.</p>
+                </div>
+                <div class="year-control">
+                    <label for="yearSelect">سنة المقارنة الأساسية</label>
+                    <select id="yearSelect" aria-label="اختر سنة المقارنة"></select>
+                    <div class="data-stamp" id="dataStamp" aria-live="polite">جاري قراءة آخر تحديث…</div>
+                </div>
+            </div>
+        </header>
+
+        <section class="control-deck" aria-label="عناصر تصفية التقرير">
+            <div class="control-row">
+                <div class="control-label">الفترة</div>
+                <div class="chip-rail" id="periodRail" role="group" aria-label="اختر الفترة">
+                    <button class="chip period-chip" id="periodYear" type="button" data-mode="year" aria-pressed="true">سنوي</button>
+                </div>
+            </div>
+            <div class="control-row">
+                <div class="control-label">المدير / المنطقة</div>
+                <div class="chip-rail" id="areaRail" role="group" aria-label="اختر المدير أو المنطقة"></div>
+            </div>
+            <div class="control-row">
+                <div class="control-label">المعرض</div>
+                <div class="chip-rail" id="storeRail" role="group" aria-label="اختر المعرض"></div>
+            </div>
+        </section>
+
+        <section class="scope-bar" aria-live="polite">
+            <div>
+                <h2 class="scope-title" id="scopeTitle">كل الشركة</h2>
+                <div class="scope-meta" id="scopeMeta">جاري تجهيز المقارنة…</div>
+            </div>
+            <div class="scope-badge" id="periodBadge">سنوي</div>
+        </section>
+
+        <section class="status-panel is-visible" id="statusPanel" data-state="loading" aria-live="polite">
+            <div class="status-card">
+                <div class="status-mark" aria-hidden="true"></div>
+                <h2 class="status-title" id="statusTitle">نجهّز لوحة المقارنة</h2>
+                <p class="status-copy" id="statusCopy">تتم فهرسة بيانات المبيعات والزوار والفواتير لتصبح التصفية فورية.</p>
+                <button class="retry-button" id="retryButton" type="button">إعادة المحاولة</button>
+            </div>
+        </section>
+
+        <section class="dashboard-content" id="dashboardContent" hidden>
+            <div class="kpi-grid" id="kpiGrid">
+                <article class="kpi-card">
+                    <div class="kpi-label" id="salesCurrentLabel">مبيعات السنة</div>
+                    <div class="kpi-value" id="salesCurrent" data-testid="sales-current">0</div>
+                    <div class="kpi-sub" id="salesCurrentSub">الفترة الحالية</div>
+                </article>
+                <article class="kpi-card is-prior">
+                    <div class="kpi-label" id="salesPriorLabel">مبيعات السنة السابقة</div>
+                    <div class="kpi-value" id="salesPrior" data-testid="sales-prior">0</div>
+                    <div class="kpi-sub">نفس الفترة للمقارنة</div>
+                </article>
+                <article class="kpi-card" id="growthCard">
+                    <div class="kpi-label">نمو المبيعات</div>
+                    <div class="kpi-value" id="growthPercent" data-testid="growth-percent">0%</div>
+                    <div class="kpi-sub" id="growthAmount">فرق 0 ر.س</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-label">الزوار</div>
+                    <div class="kpi-value" id="visitorsValue">0</div>
+                    <div class="kpi-sub" id="visitorsSub">للفترة الحالية</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-label">نسبة التحويل</div>
+                    <div class="kpi-value" id="conversionValue">0%</div>
+                    <div class="kpi-sub">عدد الفواتير ÷ الزوار</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-label">عدد الفواتير</div>
+                    <div class="kpi-value" id="transactionsValue">0</div>
+                    <div class="kpi-sub">الفواتير المسجلة</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-label">متوسط الفاتورة</div>
+                    <div class="kpi-value" id="averageBillValue">0</div>
+                    <div class="kpi-sub">المبيعات ÷ الفواتير</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-label">قيمة الزائر</div>
+                    <div class="kpi-value" id="visitorValue">0</div>
+                    <div class="kpi-sub">المبيعات ÷ الزوار</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-label" id="targetKpiLabel">المستهدف المسجل</div>
+                    <div class="kpi-value" id="targetValue">0</div>
+                    <div class="kpi-sub" id="targetKpiSub">حسب المستهدفات المتوفرة</div>
+                </article>
+                <article class="kpi-card" id="achievementCard">
+                    <div class="kpi-label">تحقيق المستهدف</div>
+                    <div class="kpi-value" id="achievementValue">0%</div>
+                    <div class="kpi-sub">مقابل المستهدف حتى التاريخ</div>
+                </article>
+            </div>
+
+            <div class="insight-grid">
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-kicker">COMPARATIVE PULSE</div>
+                            <h3 class="panel-title" id="chartTitle">المبيعات شهراً بشهر</h3>
+                        </div>
+                        <div class="chart-legend" aria-label="مفتاح ألوان الرسم">
+                            <span class="legend-item"><span class="legend-swatch"></span><span id="legendCurrent">السنة الحالية</span></span>
+                            <span class="legend-item"><span class="legend-swatch prior"></span><span id="legendPrior">السنة السابقة</span></span>
+                        </div>
+                    </div>
+                    <div class="chart-scroll" id="chartScroll">
+                        <svg id="salesChart" data-testid="sales-chart" role="img" aria-labelledby="chartSvgTitle chartSvgDesc"></svg>
+                    </div>
+                </article>
+
+                <aside class="panel summary-panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-kicker">TARGET & CHANNEL MIX</div>
+                            <h3 class="panel-title">المستهدف وتوزيع القنوات</h3>
+                        </div>
+                    </div>
+                    <div class="summary-stack">
+                        <section class="target-block">
+                            <div class="target-heading">
+                                <span id="fullTargetLabel">المستهدف المسجل</span>
+                                <span id="fullAchievement">0%</span>
+                            </div>
+                            <div class="target-value" id="fullTargetValue">0</div>
+                            <div class="progress-track" aria-hidden="true">
+                                <div class="progress-fill" id="fullTargetProgress"></div>
+                            </div>
+                            <div class="target-foot">
+                                <span>المبيعات المحققة</span>
+                                <span id="fullTargetSales">0</span>
+                            </div>
+                        </section>
+
+                        <section class="target-block">
+                            <div class="target-heading">
+                                <span id="toDateTargetLabel">المستهدف حتى التاريخ</span>
+                                <span id="toDateAchievement">0%</span>
+                            </div>
+                            <div class="target-value" id="toDateTargetValue">0</div>
+                            <div class="progress-track" aria-hidden="true">
+                                <div class="progress-fill" id="toDateTargetProgress"></div>
+                            </div>
+                            <div class="target-foot">
+                                <span>نطاق الاحتساب</span>
+                                <span id="targetCoverage">—</span>
+                            </div>
+                        </section>
+
+                        <section class="ratio-block">
+                            <div class="ratio-title">نسبة مبيعات Online / Showrooms</div>
+                            <div class="ratio-track" aria-hidden="true">
+                                <div class="ratio-online" id="ratioOnline"></div>
+                                <div class="ratio-offline"></div>
+                            </div>
+                            <div class="ratio-values">
+                                <span id="onlineRatioLabel">Online 0%</span>
+                                <span id="offlineRatioLabel">Showrooms 0%</span>
+                            </div>
+                        </section>
+
+                        <div class="data-note" id="dataNote">
+                            المستهدفات تُقرأ كما هي من الملف التشغيلي. عند عدم توفر مستهدف لا يتم افتراض قيمة بديلة.
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <footer class="footer-note">
+            <span>صفحة مستقلة للقراءة فقط — لا تعدّل قاعدة البيانات أو ملفات التوليد.</span>
+            <span id="footerCoverage">نطاق البيانات: —</span>
+        </footer>
+    </main>
+
+    <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite"></div>
+
+    <script>
+        (() => {
+            'use strict';
+
+            const MONTHS_AR = [
+                'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+            ];
+            const ONLINE_TYPE = 'online';
+            const ALL = '__all__';
+            const METRICS = ['sales', 'visitors', 'transactions'];
+
+            const state = {
+                raw: null,
+                metricMaps: {},
+                targetMap: new Map(),
+                stores: new Map(),
+                years: [],
+                yearMaxDates: new Map(),
+                minSalesDate: null,
+                maxSalesDate: null,
+                maxTargetMonth: null,
+                year: null,
+                mode: 'year',
+                month: 1,
+                area: ALL,
+                store: ALL
+            };
+
+            const dom = {};
+
+            function cacheDom() {
+                const ids = [
+                    'yearSelect', 'dataStamp', 'periodRail', 'periodYear', 'areaRail', 'storeRail',
+                    'scopeTitle', 'scopeMeta', 'periodBadge', 'statusPanel', 'statusTitle', 'statusCopy',
+                    'retryButton', 'dashboardContent', 'salesCurrentLabel', 'salesCurrent', 'salesCurrentSub',
+                    'salesPriorLabel', 'salesPrior', 'growthCard', 'growthPercent', 'growthAmount',
+                    'visitorsValue', 'visitorsSub', 'conversionValue', 'transactionsValue', 'averageBillValue',
+                    'visitorValue', 'targetKpiLabel', 'targetValue', 'targetKpiSub', 'achievementCard',
+                    'achievementValue', 'chartTitle', 'legendCurrent', 'legendPrior', 'salesChart',
+                    'fullTargetLabel', 'fullAchievement', 'fullTargetValue', 'fullTargetProgress',
+                    'fullTargetSales', 'toDateTargetLabel', 'toDateAchievement', 'toDateTargetValue',
+                    'toDateTargetProgress', 'targetCoverage', 'ratioOnline', 'onlineRatioLabel',
+                    'offlineRatioLabel', 'dataNote', 'footerCoverage', 'chartTooltip'
+                ];
+                ids.forEach((id) => {
+                    dom[id] = document.getElementById(id);
+                });
+            }
+
+            function formatNumber(value, digits = 0) {
+                const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+                return safeValue.toLocaleString('en-US', {
+                    minimumFractionDigits: digits,
+                    maximumFractionDigits: digits
+                });
+            }
+
+            function formatCompact(value) {
+                const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+                const abs = Math.abs(safeValue);
+                if (abs >= 1_000_000_000) return `${formatNumber(safeValue / 1_000_000_000, 1)}B`;
+                if (abs >= 1_000_000) return `${formatNumber(safeValue / 1_000_000, 1)}M`;
+                if (abs >= 1_000) return `${formatNumber(safeValue / 1_000, 0)}K`;
+                return formatNumber(safeValue, 0);
+            }
+
+            function formatCurrency(value) {
+                return `${formatNumber(value, 0)} ر.س`;
+            }
+
+            function safeRatio(numerator, denominator) {
+                if (!denominator || !Number.isFinite(denominator)) return null;
+                const result = numerator / denominator;
+                return Number.isFinite(result) ? result : null;
+            }
+
+            function percentText(value, digits = 1, signed = false) {
+                if (value === null || !Number.isFinite(value)) return 'غير متوفر';
+                const sign = signed && value > 0 ? '+' : '';
+                return `${sign}${formatNumber(value, digits)}%`;
+            }
+
+            function dateKey(year, month, day) {
+                return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
+            function monthKey(year, month) {
+                return `${year}-${String(month).padStart(2, '0')}`;
+            }
+
+            function daysInMonth(year, month) {
+                return new Date(year, month, 0).getDate();
+            }
+
+            function parseDateParts(value) {
+                const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+                if (!match) return null;
+                return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+            }
+
+            function setStatus(status, title, copy) {
+                dom.statusPanel.dataset.state = status;
+                dom.statusPanel.classList.add('is-visible');
+                dom.statusTitle.textContent = title;
+                dom.statusCopy.textContent = copy;
+                dom.dashboardContent.hidden = true;
+            }
+
+            function hideStatus() {
+                dom.statusPanel.classList.remove('is-visible');
+                dom.dashboardContent.hidden = false;
+            }
+
+            function addMetricRow(metricMap, row) {
+                if (!Array.isArray(row) || row.length < 3) return;
+                const [date, rawStoreId, rawValue] = row;
+                const storeId = String(rawStoreId);
+                const value = Number(rawValue) || 0;
+                if (!metricMap.has(date)) metricMap.set(date, new Map());
+                const storeMap = metricMap.get(date);
+                storeMap.set(storeId, (storeMap.get(storeId) || 0) + value);
+            }
+
+            function buildIndexes(raw) {
+                state.raw = raw;
+                state.metricMaps = {};
+                METRICS.forEach((metric) => {
+                    const metricMap = new Map();
+                    (raw[metric] || []).forEach((row) => addMetricRow(metricMap, row));
+                    state.metricMaps[metric] = metricMap;
+                });
+
+                state.targetMap = new Map();
+                (raw.targets || []).forEach((row) => {
+                    if (!Array.isArray(row) || row.length < 3) return;
+                    const month = String(row[0]).slice(0, 7);
+                    const storeId = String(row[1]);
+                    const value = Number(row[2]) || 0;
+                    if (!state.targetMap.has(month)) state.targetMap.set(month, new Map());
+                    const storeMap = state.targetMap.get(month);
+                    storeMap.set(storeId, (storeMap.get(storeId) || 0) + value);
+                });
+
+                state.stores = new Map();
+                Object.entries(raw.stores || {}).forEach(([id, name]) => {
+                    const meta = (raw.store_meta || {})[id] || {};
+                    state.stores.set(String(id), {
+                        id: String(id),
+                        name: String(name || meta.name || id),
+                        area: String((raw.areas || {})[id] || meta.manager || 'غير محدد'),
+                        type: String(meta.type || 'Showroom')
+                    });
+                });
+
+                const salesDates = Array.from(state.metricMaps.sales.keys()).sort();
+                if (!salesDates.length) throw new Error('لا توجد سجلات مبيعات في ملف البيانات.');
+                state.minSalesDate = salesDates[0];
+                state.maxSalesDate = salesDates[salesDates.length - 1];
+                state.maxTargetMonth = Array.from(state.targetMap.keys()).sort().at(-1) || null;
+
+                const yearsSet = new Set();
+                state.yearMaxDates = new Map();
+                salesDates.forEach((date) => {
+                    const year = Number(date.slice(0, 4));
+                    yearsSet.add(year);
+                    state.yearMaxDates.set(year, date);
+                });
+                state.years = Array.from(yearsSet).filter((year) => yearsSet.has(year - 1)).sort((a, b) => b - a);
+                if (!state.years.length) {
+                    state.years = Array.from(yearsSet).sort((a, b) => b - a);
+                }
+                state.year = state.years[0];
+                const maxParts = parseDateParts(state.yearMaxDates.get(state.year));
+                state.month = maxParts ? maxParts.month : 1;
+            }
+
+            function populateYearSelect() {
+                dom.yearSelect.replaceChildren();
+                state.years.forEach((year) => {
+                    const option = document.createElement('option');
+                    option.value = String(year);
+                    option.textContent = `${year} مقابل ${year - 1}`;
+                    option.selected = year === state.year;
+                    dom.yearSelect.append(option);
+                });
+            }
+
+            function createChip(label, options = {}) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `chip${options.period ? ' period-chip' : ''}`;
+                button.textContent = label;
+                button.dataset.value = options.value;
+                if (options.month) button.dataset.month = String(options.month);
+                if (options.area) button.dataset.area = options.value;
+                if (options.store) button.dataset.store = options.value;
+                button.setAttribute('aria-pressed', options.active ? 'true' : 'false');
+                return button;
+            }
+
+            function populatePeriodRail() {
+                dom.periodRail.querySelectorAll('[data-month]').forEach((node) => node.remove());
+                MONTHS_AR.forEach((name, index) => {
+                    const button = createChip(name, {
+                        value: String(index + 1),
+                        month: index + 1,
+                        period: true,
+                        active: state.mode === 'month' && state.month === index + 1
+                    });
+                    dom.periodRail.append(button);
+                });
+                syncPressedStates();
+            }
+
+            function areaValues() {
+                return Array.from(new Set(Array.from(state.stores.values()).map((store) => store.area)))
+                    .sort((a, b) => a.localeCompare(b, 'ar'));
+            }
+
+            function populateAreaRail() {
+                dom.areaRail.replaceChildren();
+                dom.areaRail.append(createChip('كل الشركة', { value: ALL, area: true, active: state.area === ALL }));
+                areaValues().forEach((area) => {
+                    dom.areaRail.append(createChip(area, { value: area, area: true, active: state.area === area }));
+                });
+            }
+
+            function visibleStores() {
+                return Array.from(state.stores.values())
+                    .filter((store) => state.area === ALL || store.area === state.area)
+                    .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+            }
+
+            function populateStoreRail() {
+                const stores = visibleStores();
+                if (state.store !== ALL && !stores.some((store) => store.id === state.store)) {
+                    state.store = ALL;
+                }
+                dom.storeRail.replaceChildren();
+                dom.storeRail.append(createChip(state.area === ALL ? 'كل المعارض' : 'كل معارض المجموعة', {
+                    value: ALL,
+                    store: true,
+                    active: state.store === ALL
+                }));
+                stores.forEach((store) => {
+                    dom.storeRail.append(createChip(store.name, {
+                        value: store.id,
+                        store: true,
+                        active: state.store === store.id
+                    }));
+                });
+            }
+
+            function syncPressedStates() {
+                dom.periodYear.setAttribute('aria-pressed', state.mode === 'year' ? 'true' : 'false');
+                dom.periodRail.querySelectorAll('[data-month]').forEach((button) => {
+                    const active = state.mode === 'month' && Number(button.dataset.month) === state.month;
+                    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+                });
+                dom.areaRail.querySelectorAll('[data-area]').forEach((button) => {
+                    button.setAttribute('aria-pressed', button.dataset.area === state.area ? 'true' : 'false');
+                });
+                dom.storeRail.querySelectorAll('[data-store]').forEach((button) => {
+                    button.setAttribute('aria-pressed', button.dataset.store === state.store ? 'true' : 'false');
+                });
+            }
+
+            function activeStoreIds() {
+                if (state.store !== ALL) return new Set([state.store]);
+                return new Set(visibleStores().map((store) => store.id));
+            }
+
+            function comparisonCutoff(year) {
+                const maxDate = state.yearMaxDates.get(year) || `${year}-12-31`;
+                const parts = parseDateParts(maxDate);
+                if (!parts) return { month: 12, day: 31 };
+                return { month: parts.month, day: parts.day };
+            }
+
+            function aggregateDate(metric, year, month, day, storeIds) {
+                const storeMap = state.metricMaps[metric].get(dateKey(year, month, day));
+                if (!storeMap) return 0;
+                let total = 0;
+                storeIds.forEach((storeId) => {
+                    total += storeMap.get(storeId) || 0;
+                });
+                return total;
+            }
+
+            function aggregateBucket(metric, year, month, endDay, storeIds) {
+                let total = 0;
+                for (let day = 1; day <= endDay; day += 1) {
+                    total += aggregateDate(metric, year, month, day, storeIds);
+                }
+                return total;
+            }
+
+            function getPeriodBuckets(year, storeIds) {
+                const priorYear = year - 1;
+                const cutoff = comparisonCutoff(year);
+                const buckets = [];
+
+                if (state.mode === 'year') {
+                    for (let month = 1; month <= 12; month += 1) {
+                        const currentEnd = month < cutoff.month
+                            ? daysInMonth(year, month)
+                            : (month === cutoff.month ? cutoff.day : 0);
+                        const priorEnd = currentEnd > 0
+                            ? Math.min(currentEnd, daysInMonth(priorYear, month))
+                            : 0;
+                        buckets.push({
+                            label: MONTHS_AR[month - 1],
+                            current: currentEnd > 0 ? aggregateBucket('sales', year, month, currentEnd, storeIds) : 0,
+                            prior: priorEnd > 0 ? aggregateBucket('sales', priorYear, month, priorEnd, storeIds) : 0,
+                            currentEnd,
+                            priorEnd,
+                            month
+                        });
+                    }
+                    return buckets;
+                }
+
+                const monthDays = daysInMonth(year, state.month);
+                const currentMonthEnd = state.month < cutoff.month
+                    ? monthDays
+                    : (state.month === cutoff.month ? cutoff.day : 0);
+                for (let day = 1; day <= monthDays; day += 1) {
+                    const priorDayAvailable = day <= daysInMonth(priorYear, state.month);
+                    buckets.push({
+                        label: String(day),
+                        current: day <= currentMonthEnd ? aggregateDate('sales', year, state.month, day, storeIds) : 0,
+                        prior: day <= currentMonthEnd && priorDayAvailable
+                            ? aggregateDate('sales', priorYear, state.month, day, storeIds)
+                            : 0,
+                        currentEnd: day <= currentMonthEnd ? day : 0,
+                        priorEnd: day <= currentMonthEnd && priorDayAvailable ? day : 0,
+                        month: state.month
+                    });
+                }
+                return buckets;
+            }
+
+            function aggregateMetricForPeriod(metric, year, storeIds) {
+                const cutoff = comparisonCutoff(state.year);
+                const currentYear = year === state.year;
+                let total = 0;
+
+                if (state.mode === 'year') {
+                    const lastMonth = cutoff.month;
+                    for (let month = 1; month <= lastMonth; month += 1) {
+                        const dayLimit = month === lastMonth
+                            ? Math.min(cutoff.day, daysInMonth(year, month))
+                            : daysInMonth(year, month);
+                        total += aggregateBucket(metric, year, month, dayLimit, storeIds);
+                    }
+                    return total;
+                }
+
+                const maxDay = state.month < cutoff.month
+                    ? daysInMonth(year, state.month)
+                    : (state.month === cutoff.month ? Math.min(cutoff.day, daysInMonth(year, state.month)) : 0);
+                if (!currentYear && maxDay === 0) return 0;
+                return maxDay > 0 ? aggregateBucket(metric, year, state.month, maxDay, storeIds) : 0;
+            }
+
+            function sumTargetMonth(year, month, storeIds) {
+                const storeMap = state.targetMap.get(monthKey(year, month));
+                if (!storeMap) return 0;
+                let total = 0;
+                storeIds.forEach((storeId) => {
+                    total += storeMap.get(storeId) || 0;
+                });
+                return total;
+            }
+
+            function targetSummary(year, storeIds) {
+                const cutoff = comparisonCutoff(year);
+                if (state.mode === 'month') {
+                    const full = sumTargetMonth(year, state.month, storeIds);
+                    let elapsedDays = 0;
+                    if (state.month < cutoff.month) elapsedDays = daysInMonth(year, state.month);
+                    if (state.month === cutoff.month) elapsedDays = cutoff.day;
+                    const toDate = full > 0
+                        ? full * (elapsedDays / daysInMonth(year, state.month))
+                        : 0;
+                    return { full, toDate, elapsedDays, totalDays: daysInMonth(year, state.month) };
+                }
+
+                let full = 0;
+                let toDate = 0;
+                let coveredMonths = 0;
+                for (let month = 1; month <= 12; month += 1) {
+                    const monthly = sumTargetMonth(year, month, storeIds);
+                    if (monthly > 0) coveredMonths = month;
+                    full += monthly;
+                    if (month < cutoff.month) toDate += monthly;
+                    if (month === cutoff.month) {
+                        toDate += monthly * (cutoff.day / daysInMonth(year, month));
+                    }
+                }
+                return { full, toDate, coveredMonths, cutoff };
+            }
+
+            function channelSales(year, storeIds) {
+                let online = 0;
+                let showroom = 0;
+                storeIds.forEach((storeId) => {
+                    const storeSet = new Set([storeId]);
+                    const sales = aggregateMetricForPeriod('sales', year, storeSet);
+                    const store = state.stores.get(storeId);
+                    if (String(store?.type || '').toLowerCase() === ONLINE_TYPE) online += sales;
+                    else showroom += sales;
+                });
+                return { online, showroom };
+            }
+
+            function scopeName() {
+                if (state.store !== ALL) return state.stores.get(state.store)?.name || state.store;
+                if (state.area !== ALL) return state.area;
+                return 'كل الشركة';
+            }
+
+            function periodName() {
+                if (state.mode === 'year') return `السنة ${state.year}`;
+                return `${MONTHS_AR[state.month - 1]} ${state.year}`;
+            }
+
+            function updateScopeText(storeIds) {
+                const prior = state.year - 1;
+                dom.scopeTitle.textContent = scopeName();
+                dom.periodBadge.textContent = state.mode === 'year' ? 'سنوي' : MONTHS_AR[state.month - 1];
+                dom.scopeMeta.textContent = `${periodName()} مقابل ${prior} · ${storeIds.size} موقع ضمن الاختيار`;
+            }
+
+            function setGrowthStyling(growth) {
+                dom.growthCard.classList.remove('is-positive', 'is-negative');
+                dom.growthPercent.classList.remove('positive', 'negative');
+                if (growth === null) return;
+                const positive = growth >= 0;
+                dom.growthCard.classList.add(positive ? 'is-positive' : 'is-negative');
+                dom.growthPercent.classList.add(positive ? 'positive' : 'negative');
+            }
+
+            function setAchievementStyling(achievement) {
+                dom.achievementCard.classList.remove('is-positive', 'is-negative');
+                dom.achievementValue.classList.remove('positive', 'negative');
+                if (achievement === null) return;
+                const positive = achievement >= 100;
+                dom.achievementCard.classList.add(positive ? 'is-positive' : 'is-negative');
+                dom.achievementValue.classList.add(positive ? 'positive' : 'negative');
+            }
+
+            function setProgress(element, achievement) {
+                const width = achievement === null ? 0 : Math.min(Math.max(achievement, 0), 100);
+                element.style.width = `${width}%`;
+                element.classList.toggle('good', achievement !== null && achievement >= 100);
+            }
+
+            function renderKpis(storeIds) {
+                const year = state.year;
+                const priorYear = year - 1;
+                const sales = aggregateMetricForPeriod('sales', year, storeIds);
+                const priorSales = aggregateMetricForPeriod('sales', priorYear, storeIds);
+                const visitors = aggregateMetricForPeriod('visitors', year, storeIds);
+                const transactions = aggregateMetricForPeriod('transactions', year, storeIds);
+                const growthRatio = priorSales > 0 ? ((sales - priorSales) / priorSales) * 100 : null;
+                const conversion = safeRatio(transactions * 100, visitors);
+                const averageBill = safeRatio(sales, transactions);
+                const valuePerVisitor = safeRatio(sales, visitors);
+                const targets = targetSummary(year, storeIds);
+                const achievement = safeRatio(sales * 100, targets.toDate);
+                const channel = channelSales(year, storeIds);
+                const onlineShare = safeRatio(channel.online * 100, channel.online + channel.showroom) || 0;
+
+                dom.salesCurrentLabel.textContent = `مبيعات ${year}`;
+                dom.salesPriorLabel.textContent = `مبيعات ${priorYear}`;
+                dom.salesCurrent.textContent = formatNumber(sales);
+                dom.salesPrior.textContent = formatNumber(priorSales);
+                dom.salesCurrentSub.textContent = periodName();
+                dom.growthPercent.textContent = percentText(growthRatio, 1, true);
+                dom.growthAmount.textContent = `فرق ${formatCurrency(sales - priorSales)}`;
+                dom.visitorsValue.textContent = visitors > 0 ? formatNumber(visitors) : 'غير متوفر';
+                dom.visitorsSub.textContent = visitors > 0 ? 'للفترة الحالية' : 'لا توجد بيانات زوار للاختيار';
+                dom.conversionValue.textContent = percentText(conversion, 1);
+                dom.transactionsValue.textContent = formatNumber(transactions);
+                dom.averageBillValue.textContent = averageBill === null ? 'غير متوفر' : formatNumber(averageBill);
+                dom.visitorValue.textContent = valuePerVisitor === null ? 'غير متوفر' : formatNumber(valuePerVisitor);
+                dom.targetValue.textContent = targets.toDate > 0 ? formatNumber(targets.toDate) : 'غير متوفر';
+                dom.achievementValue.textContent = percentText(achievement, 1);
+
+                if (state.mode === 'year') {
+                    dom.targetKpiLabel.textContent = 'المستهدف حتى التاريخ';
+                    dom.targetKpiSub.textContent = targets.coveredMonths
+                        ? `المستهدفات المسجلة حتى ${MONTHS_AR[targets.coveredMonths - 1]}`
+                        : 'لا توجد مستهدفات مسجلة';
+                    dom.fullTargetLabel.textContent = 'المستهدف السنوي المسجل';
+                    dom.toDateTargetLabel.textContent = 'المستهدف حتى التاريخ';
+                    dom.targetCoverage.textContent = targets.coveredMonths ? `حتى ${MONTHS_AR[targets.coveredMonths - 1]}` : 'غير متوفر';
+                } else {
+                    dom.targetKpiLabel.textContent = 'المستهدف حتى اليوم';
+                    dom.targetKpiSub.textContent = `${targets.elapsedDays} من ${targets.totalDays} يوم`;
+                    dom.fullTargetLabel.textContent = 'مستهدف الشهر';
+                    dom.toDateTargetLabel.textContent = 'المستهدف حتى اليوم';
+                    dom.targetCoverage.textContent = `${targets.elapsedDays} / ${targets.totalDays} يوم`;
+                }
+
+                const fullAchievement = safeRatio(sales * 100, targets.full);
+                dom.fullTargetValue.textContent = targets.full > 0 ? formatNumber(targets.full) : 'غير متوفر';
+                dom.fullAchievement.textContent = percentText(fullAchievement, 1);
+                dom.fullTargetSales.textContent = formatNumber(sales);
+                dom.toDateTargetValue.textContent = targets.toDate > 0 ? formatNumber(targets.toDate) : 'غير متوفر';
+                dom.toDateAchievement.textContent = percentText(achievement, 1);
+                setProgress(dom.fullTargetProgress, fullAchievement);
+                setProgress(dom.toDateTargetProgress, achievement);
+
+                dom.ratioOnline.style.width = `${Math.min(Math.max(onlineShare, 0), 100)}%`;
+                dom.onlineRatioLabel.textContent = `Online ${formatNumber(onlineShare, 1)}%`;
+                dom.offlineRatioLabel.textContent = `Showrooms ${formatNumber(100 - onlineShare, 1)}%`;
+
+                dom.dataNote.textContent = targets.full > 0
+                    ? 'المستهدفات تُقرأ كما هي من الملف التشغيلي، ويُحتسب مستهدف الفترة الحالية بنسبة الأيام المنقضية.'
+                    : 'لا توجد مستهدفات مسجلة لهذا الاختيار؛ لذلك لم يتم افتراض قيمة بديلة أو احتساب نسبة تحقيق وهمية.';
+
+                setGrowthStyling(growthRatio);
+                setAchievementStyling(achievement);
+                return { sales, priorSales };
+            }
+
+            function svgElement(name, attributes = {}) {
+                const element = document.createElementNS('http://www.w3.org/2000/svg', name);
+                Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, String(value)));
+                return element;
+            }
+
+            function showTooltip(event, bucket) {
+                dom.chartTooltip.innerHTML = `
+                    <strong>${bucket.label}</strong><br>
+                    ${state.year}: ${formatCurrency(bucket.current)}<br>
+                    ${state.year - 1}: ${formatCurrency(bucket.prior)}
+                `;
+                dom.chartTooltip.style.display = 'block';
+                const x = Math.min(event.clientX + 14, window.innerWidth - 210);
+                const y = Math.min(event.clientY + 14, window.innerHeight - 120);
+                dom.chartTooltip.style.left = `${Math.max(8, x)}px`;
+                dom.chartTooltip.style.top = `${Math.max(8, y)}px`;
+            }
+
+            function hideTooltip() {
+                dom.chartTooltip.style.display = 'none';
+            }
+
+            function attachBarInteraction(rect, bucket) {
+                rect.setAttribute('tabindex', '0');
+                rect.setAttribute('aria-label', `${bucket.label}: ${formatCurrency(bucket.current)} في ${state.year}، ${formatCurrency(bucket.prior)} في ${state.year - 1}`);
+                rect.addEventListener('mouseenter', (event) => showTooltip(event, bucket));
+                rect.addEventListener('mousemove', (event) => showTooltip(event, bucket));
+                rect.addEventListener('mouseleave', hideTooltip);
+                rect.addEventListener('focus', () => {
+                    const box = rect.getBoundingClientRect();
+                    showTooltip({ clientX: box.left + box.width / 2, clientY: box.top }, bucket);
+                });
+                rect.addEventListener('blur', hideTooltip);
+            }
+
+            function renderChart(buckets) {
+                const svg = dom.salesChart;
+                svg.replaceChildren();
+                const isMonthly = state.mode === 'month';
+                const width = Math.max(isMonthly ? 1120 : 820, buckets.length * (isMonthly ? 38 : 66));
+                const height = 370;
+                const margin = { top: 28, right: 18, bottom: 55, left: 68 };
+                const plotWidth = width - margin.left - margin.right;
+                const plotHeight = height - margin.top - margin.bottom;
+                const maxValue = Math.max(1, ...buckets.flatMap((bucket) => [bucket.current, bucket.prior]));
+                const step = plotWidth / buckets.length;
+                const barWidth = Math.min(isMonthly ? 11 : 20, step * 0.34);
+
+                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                svg.style.minWidth = `${width}px`;
+                const title = svgElement('title', { id: 'chartSvgTitle' });
+                title.textContent = state.mode === 'year' ? 'مقارنة المبيعات حسب الشهر' : 'مقارنة المبيعات حسب اليوم';
+                const desc = svgElement('desc', { id: 'chartSvgDesc' });
+                desc.textContent = `أعمدة تقارن ${state.year} مع ${state.year - 1} لنطاق ${scopeName()}.`;
+                svg.append(title, desc);
+
+                for (let line = 0; line <= 4; line += 1) {
+                    const ratio = line / 4;
+                    const y = margin.top + plotHeight - (plotHeight * ratio);
+                    const gridLine = svgElement('line', {
+                        x1: margin.left,
+                        y1: y,
+                        x2: width - margin.right,
+                        y2: y,
+                        stroke: '#ddd5cc',
+                        'stroke-width': 1
+                    });
+                    const label = svgElement('text', {
+                        x: margin.left - 10,
+                        y: y + 4,
+                        'text-anchor': 'end',
+                        fill: '#718087',
+                        'font-family': 'Tajawal, sans-serif',
+                        'font-size': 11
+                    });
+                    label.textContent = formatCompact(maxValue * ratio);
+                    svg.append(gridLine, label);
+                }
+
+                buckets.forEach((bucket, index) => {
+                    const center = margin.left + step * index + step / 2;
+                    const currentHeight = (bucket.current / maxValue) * plotHeight;
+                    const priorHeight = (bucket.prior / maxValue) * plotHeight;
+                    const currentRect = svgElement('rect', {
+                        x: center - barWidth - 2,
+                        y: margin.top + plotHeight - currentHeight,
+                        width: barWidth,
+                        height: Math.max(currentHeight, bucket.current > 0 ? 1 : 0),
+                        fill: '#fe7900'
+                    });
+                    const priorRect = svgElement('rect', {
+                        x: center + 2,
+                        y: margin.top + plotHeight - priorHeight,
+                        width: barWidth,
+                        height: Math.max(priorHeight, bucket.prior > 0 ? 1 : 0),
+                        fill: '#147ad6'
+                    });
+                    const xLabel = svgElement('text', {
+                        x: center,
+                        y: height - 24,
+                        'text-anchor': 'middle',
+                        fill: '#3f4e55',
+                        'font-family': 'Tajawal, sans-serif',
+                        'font-size': isMonthly ? 10 : 12,
+                        'font-weight': isMonthly ? 500 : 700
+                    });
+                    xLabel.textContent = bucket.label;
+                    attachBarInteraction(currentRect, bucket);
+                    attachBarInteraction(priorRect, bucket);
+                    svg.append(currentRect, priorRect, xLabel);
+                });
+
+                const baseLine = svgElement('line', {
+                    x1: margin.left,
+                    y1: margin.top + plotHeight,
+                    x2: width - margin.right,
+                    y2: margin.top + plotHeight,
+                    stroke: '#7d888e',
+                    'stroke-width': 1.2
+                });
+                svg.append(baseLine);
+
+                dom.chartTitle.textContent = state.mode === 'year'
+                    ? 'المبيعات شهراً بشهر'
+                    : `مبيعات ${MONTHS_AR[state.month - 1]} يوماً بيوم`;
+                dom.legendCurrent.textContent = String(state.year);
+                dom.legendPrior.textContent = String(state.year - 1);
+            }
+
+            function render() {
+                if (!state.raw) return;
+                syncPressedStates();
+                const storeIds = activeStoreIds();
+                updateScopeText(storeIds);
+                const buckets = getPeriodBuckets(state.year, storeIds);
+                const totals = renderKpis(storeIds);
+                const hasData = totals.sales !== 0 || totals.priorSales !== 0;
+
+                if (!hasData) {
+                    setStatus('empty', 'لا توجد بيانات لهذا الاختيار', 'جرّب فترة أو مديراً أو معرضاً مختلفاً. لم يتم استبدال النتيجة الصفرية ببيانات من نطاق آخر.');
+                    return;
+                }
+
+                hideStatus();
+                renderChart(buckets);
+            }
+
+            function wireEvents() {
+                dom.yearSelect.addEventListener('change', () => {
+                    state.year = Number(dom.yearSelect.value);
+                    const cutoff = comparisonCutoff(state.year);
+                    if (state.mode === 'month' && state.month > cutoff.month) state.month = cutoff.month;
+                    render();
+                });
+
+                dom.periodRail.addEventListener('click', (event) => {
+                    const button = event.target.closest('button');
+                    if (!button) return;
+                    if (button.dataset.mode === 'year') {
+                        state.mode = 'year';
+                    } else if (button.dataset.month) {
+                        state.mode = 'month';
+                        state.month = Number(button.dataset.month);
+                    }
+                    render();
+                });
+
+                dom.areaRail.addEventListener('click', (event) => {
+                    const button = event.target.closest('[data-area]');
+                    if (!button) return;
+                    state.area = button.dataset.area;
+                    state.store = ALL;
+                    populateAreaRail();
+                    populateStoreRail();
+                    render();
+                });
+
+                dom.storeRail.addEventListener('click', (event) => {
+                    const button = event.target.closest('[data-store]');
+                    if (!button) return;
+                    state.store = button.dataset.store;
+                    populateStoreRail();
+                    render();
+                });
+
+                dom.retryButton.addEventListener('click', loadData);
+                window.addEventListener('scroll', hideTooltip, { passive: true });
+                window.addEventListener('resize', hideTooltip);
+            }
+
+            function updateMetadata() {
+                const generated = state.raw?.metadata?.generated_at || state.raw?.metadata?.last_updated;
+                dom.dataStamp.textContent = generated ? `آخر تحديث للبيانات: ${generated}` : 'آخر تحديث غير محدد';
+                dom.footerCoverage.textContent = `نطاق المبيعات: ${state.minSalesDate} — ${state.maxSalesDate}`;
+            }
+
+            async function loadData() {
+                setStatus('loading', 'نجهّز لوحة المقارنة', 'تتم فهرسة بيانات المبيعات والزوار والفواتير لتصبح التصفية فورية.');
+                try {
+                    const response = await fetch('management_data.json', { cache: 'no-cache' });
+                    if (!response.ok) throw new Error(`تعذر تحميل البيانات (${response.status})`);
+                    const raw = await response.json();
+                    buildIndexes(raw);
+                    populateYearSelect();
+                    populatePeriodRail();
+                    populateAreaRail();
+                    populateStoreRail();
+                    updateMetadata();
+                    render();
+                } catch (error) {
+                    console.error('Sales comparison initialization failed:', error);
+                    setStatus('error', 'تعذر فتح بيانات المقارنة', `${error.message || error}. تأكد أن الصفحة تعمل من خادم محلي أو من موقع الداشبورد وأن management_data.json متاح بجانبها.`);
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                cacheDom();
+                wireEvents();
+                loadData();
+            });
+        })();
+    </script>
+</body>
+</html>
