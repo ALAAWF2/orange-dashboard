@@ -1009,7 +1009,7 @@ const EMPLOYEES = [
         "name": "فدوى الدوسري",
         "startDate": "2021-02-27",
         "manager": "جهاد ايوبي",
-        "showroom": "2101-27-Dhahran Mall khobar",
+        "showroom": "2101-27-Dhahran Mall khobar و 2103-42-Dareen Mall Dammam",
         "showroomDetails": [
             {
                 "name": "2101-27-Dhahran Mall khobar",
@@ -1018,9 +1018,17 @@ const EMPLOYEES = [
                     "2101-C",
                     "2101-E"
                 ]
+            },
+            {
+                "name": "2103-42-Dareen Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2103-C",
+                    "2103-E"
+                ]
             }
         ],
-        "addressBooks": "2101-C;2101-E"
+        "addressBooks": "2101-C;2101-E;2103-C;2103-E"
     },
     {
         "employeeId": "1342-فراس رتعان الحسن",
