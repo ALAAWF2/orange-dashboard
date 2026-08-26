@@ -33,6 +33,7 @@ async function initNavbar() {
     else if (path.includes('yoy_report.html')) pageTitle = "YoY REPORT";
     else if (path.includes('booff_report.html')) pageTitle = "YEARS REPORT";
     else if (path.includes('a3_comparison.html')) pageTitle = "A3 REPORT";
+    else if (path.includes('sales_comparison.html')) pageTitle = "SALES COMPARISON";
     else if (path.includes('crm.html')) pageTitle = "CRM";
 
     // 1. Create Stall Warning Bar (prepended to body)
@@ -67,6 +68,7 @@ async function initNavbar() {
 
     const isAlaa = (rawName === 'علاء' || nameLower === 'alaa' || nameLower === 'alaa-orange');
     const isSalesManager = (nameLower === 'sales manager' || roleLower === 'sales manager' || roleLower === 'sales_manager');
+    const isSalesComparisonUser = (isAlaa || isSalesManager);
     const isFinanceUser = (isAlaa || isSalesManager);
     const isCrmOnly = (role === 'CRM');
     const isManager = (role === 'Manager' || role === 'Admin' || isSalesManager || isAlaa);
@@ -151,6 +153,9 @@ async function initNavbar() {
                     </button>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="widget.html">📱 شاشة متابعة مبيعات اليوم</a></li>
+                        ${isSalesComparisonUser ? `
+                        <li><a class="dropdown-item fw-bold text-primary" href="sales_comparison.html">📊 مقارنة أداء المبيعات (Power BI)</a></li>
+                        ` : ''}
                         <li><a class="dropdown-item" href="a3_comparison.html">🖨️ تقرير مقارنة A3</a></li>
                         ${isFinanceUser ? `
                         <li><a class="dropdown-item fw-bold text-primary" href="finance_dashboard.html">💼 لوحة التحكم والتحليلات المالية</a></li>

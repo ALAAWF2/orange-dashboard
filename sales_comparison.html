@@ -124,6 +124,29 @@
             flex-wrap: wrap;
         }
 
+        .home-nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 11px;
+            background: #ffffff;
+            border: 1.5px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            color: var(--ink);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-decoration: none;
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .home-nav-btn:hover {
+            color: var(--orange);
+            border-color: var(--orange);
+            background: var(--orange-soft);
+            transform: translateY(-1px);
+        }
+
         .brand-dot {
             width: 10px;
             height: 10px;
@@ -1357,6 +1380,7 @@
         <!-- Minimal Executive Top Bar -->
         <header class="top-bar">
             <div class="top-bar-brand">
+                <a href="index.html" class="home-nav-btn" title="العودة للوحة التحكم الرئيسية">🏠 الرئيسية</a>
                 <span class="brand-dot" aria-hidden="true"></span>
                 <h1>مقارنة أداء المبيعات</h1>
                 <span class="top-data-stamp" id="dataStamp">جاري فحص حالة التحديث…</span>
@@ -3348,7 +3372,28 @@
                 }
             }
 
+            function checkAccessPermission() {
+                try {
+                    const userStr = localStorage.getItem('currentUser');
+                    if (userStr) {
+                        const user = JSON.parse(userStr);
+                        const uName = (user.name || '').trim().toLowerCase();
+                        const uRole = (user.role || '').trim().toLowerCase();
+                        const isAlaa = (user.name === 'علاء' || uName === 'alaa' || uName === 'alaa-orange');
+                        const isSalesManager = (uName === 'sales manager' || uRole === 'sales manager' || uRole === 'sales_manager' || uRole === 'admin');
+                        if (!isAlaa && !isSalesManager) {
+                            window.location.replace('index.html');
+                            return false;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Access check error:', e);
+                }
+                return true;
+            }
+
             document.addEventListener('DOMContentLoaded', () => {
+                if (!checkAccessPermission()) return;
                 cacheDom();
                 wireEvents();
                 loadData();
