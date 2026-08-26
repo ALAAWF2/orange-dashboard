@@ -1980,6 +1980,24 @@
                     });
                 });
 
+                // Ensure any store present in sales or transactions is included
+                METRICS.forEach((metric) => {
+                    (raw[metric] || []).forEach((row) => {
+                        if (Array.isArray(row) && row.length >= 2) {
+                            const storeId = String(row[1]);
+                            if (!state.stores.has(storeId)) {
+                                const meta = (raw.store_meta || {})[storeId] || {};
+                                state.stores.set(storeId, {
+                                    id: storeId,
+                                    name: String(meta.name || `معرض ${storeId}`),
+                                    area: String((raw.areas || {})[storeId] || meta.manager || 'غير محدد'),
+                                    type: String(meta.type || 'Showroom')
+                                });
+                            }
+                        }
+                    });
+                });
+
                 const salesDates = Array.from(state.metricMaps.sales.keys()).sort();
                 if (!salesDates.length) throw new Error('لا توجد سجلات مبيعات في ملف البيانات.');
                 state.minSalesDate = salesDates[0];
