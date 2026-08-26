@@ -7488,7 +7488,7 @@ const EMPLOYEES = [
         "employeeId": "5012-Waad Riyad",
         "personnelNumber": "5012",
         "name": "Waad Riyad",
-        "startDate": "2026-08-19",
+        "startDate": "2026-08-20",
         "manager": "محمدكلو",
         "showroom": "1110-45- Riyadh Gallery Mall",
         "showroomDetails": [
