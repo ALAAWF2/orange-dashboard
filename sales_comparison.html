@@ -360,6 +360,39 @@
             box-shadow: 0 2px 10px var(--orange-glow);
         }
 
+        #areaRail .chip[aria-pressed="true"]:not([data-area="__all__"]),
+        #storeRail .chip[aria-pressed="true"]:not([data-store="__all__"]) {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #ffffff;
+            box-shadow: 0 2px 10px var(--orange-glow);
+        }
+
+        #areaRail .chip[aria-pressed="true"]:not([data-area="__all__"])::before,
+        #storeRail .chip[aria-pressed="true"]:not([data-store="__all__"])::before {
+            content: "✓";
+            font-weight: 900;
+        }
+
+        .selection-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding-inline: 6px;
+            border-radius: 9999px;
+            background: var(--orange);
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 900;
+            box-shadow: 0 2px 8px var(--orange-glow);
+        }
+
+        .selection-count[hidden] {
+            display: none;
+        }
+
         /* Showroom Search Row */
         .search-container {
             display: flex;
@@ -700,6 +733,24 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }
+
+        .kpi-sub.is-stacked {
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 3px;
+        }
+
+        .kpi-previous {
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .kpi-formula {
+            color: var(--ink-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
         }
 
         /* Analytics Workspace (Chart & Aside) */
@@ -1584,6 +1635,7 @@
                 <div class="control-label">
                     <span>📍</span>
                     <span>المنطقة / المدير</span>
+                    <span class="selection-count" id="areaSelectionCount" hidden>0</span>
                 </div>
                 <div class="chip-rail" id="areaRail" role="group" aria-label="اختر المنطقة أو المدير"></div>
             </div>
@@ -1593,6 +1645,7 @@
                 <div class="control-label">
                     <span>🏪</span>
                     <span>المعرض</span>
+                    <span class="selection-count" id="storeSelectionCount" hidden>0</span>
                 </div>
                 <div class="search-container">
                     <div class="search-input-wrap">
@@ -1679,8 +1732,9 @@
                         <span class="kpi-badge" id="targetStatusBadge">المستهدف</span>
                     </div>
                     <div class="kpi-value" id="achievementValue">0%</div>
-                    <div class="kpi-sub">
+                    <div class="kpi-sub is-stacked">
                         <span id="targetToDateValue">مقابل 0 ر.س</span>
+                        <span class="kpi-previous" id="achievementPrior">الفترة السابقة: غير متوفر</span>
                     </div>
                 </article>
 
@@ -1703,8 +1757,9 @@
                         <span class="kpi-badge">ر.س / فاتورة</span>
                     </div>
                     <div class="kpi-value" id="averageBillValue">0</div>
-                    <div class="kpi-sub">
-                        <span>المبيعات ÷ الفواتير</span>
+                    <div class="kpi-sub is-stacked">
+                        <span class="kpi-previous" id="averageBillPrior">الفترة السابقة: 0 ر.س</span>
+                        <span class="kpi-formula">المبيعات ÷ الفواتير</span>
                     </div>
                 </article>
 
@@ -1716,7 +1771,7 @@
                     </div>
                     <div class="kpi-value" id="visitorsValue">0</div>
                     <div class="kpi-sub">
-                        <span id="visitorsSub">للفترة الحالية</span>
+                        <span class="kpi-previous" id="visitorsPrior">الفترة السابقة: 0</span>
                     </div>
                 </article>
 
@@ -1727,8 +1782,9 @@
                         <span class="kpi-badge">Conversion</span>
                     </div>
                     <div class="kpi-value" id="conversionValue">0%</div>
-                    <div class="kpi-sub">
-                        <span>الفواتير ÷ الزوار</span>
+                    <div class="kpi-sub is-stacked">
+                        <span class="kpi-previous" id="conversionPrior">الفترة السابقة: 0%</span>
+                        <span class="kpi-formula">الفواتير ÷ الزوار</span>
                     </div>
                 </article>
 
@@ -1739,8 +1795,9 @@
                         <span class="kpi-badge">ر.س / زائر</span>
                     </div>
                     <div class="kpi-value" id="visitorValue">0</div>
-                    <div class="kpi-sub">
-                        <span>المبيعات ÷ الزوار</span>
+                    <div class="kpi-sub is-stacked">
+                        <span class="kpi-previous" id="visitorValuePrior">الفترة السابقة: 0 ر.س</span>
+                        <span class="kpi-formula">المبيعات ÷ الزوار</span>
                     </div>
                 </article>
 
@@ -1751,8 +1808,9 @@
                         <span class="kpi-badge">المخطط</span>
                     </div>
                     <div class="kpi-value" id="fullTargetValue">0</div>
-                    <div class="kpi-sub">
+                    <div class="kpi-sub is-stacked">
                         <span id="fullTargetSub">إجمالي المستهدف</span>
+                        <span class="kpi-previous" id="fullTargetPrior">الفترة السابقة: غير متوفر</span>
                     </div>
                 </article>
             </section>
@@ -2097,7 +2155,6 @@
                 channelFilter: 'all', // 'all' | 'showroom' | 'online'
                 searchQuery: '',
                 activeChartMetric: 'sales', // 'sales' | 'transactions' | 'visitors'
-                isMultiSelectMode: false,
                 sortCol: 'sales',
                 sortAsc: false,
                 stores: new Map(),
@@ -2124,6 +2181,8 @@
                 dom.channelRail = document.getElementById('channelRail');
                 dom.areaRail = document.getElementById('areaRail');
                 dom.storeRail = document.getElementById('storeRail');
+                dom.areaSelectionCount = document.getElementById('areaSelectionCount');
+                dom.storeSelectionCount = document.getElementById('storeSelectionCount');
                 dom.storeSearchInput = document.getElementById('storeSearchInput');
                 dom.searchClearBtn = document.getElementById('searchClearBtn');
 
@@ -2158,17 +2217,22 @@
                 dom.targetStatusBadge = document.getElementById('targetStatusBadge');
                 dom.achievementValue = document.getElementById('achievementValue');
                 dom.targetToDateValue = document.getElementById('targetToDateValue');
+                dom.achievementPrior = document.getElementById('achievementPrior');
 
                 dom.transactionsValue = document.getElementById('transactionsValue');
                 dom.transactionsGrowth = document.getElementById('transactionsGrowth');
                 dom.averageBillValue = document.getElementById('averageBillValue');
+                dom.averageBillPrior = document.getElementById('averageBillPrior');
                 dom.visitorsValue = document.getElementById('visitorsValue');
-                dom.visitorsSub = document.getElementById('visitorsSub');
+                dom.visitorsPrior = document.getElementById('visitorsPrior');
                 dom.conversionValue = document.getElementById('conversionValue');
+                dom.conversionPrior = document.getElementById('conversionPrior');
                 dom.visitorValue = document.getElementById('visitorValue');
+                dom.visitorValuePrior = document.getElementById('visitorValuePrior');
                 dom.fullTargetLabel = document.getElementById('fullTargetLabel');
                 dom.fullTargetValue = document.getElementById('fullTargetValue');
                 dom.fullTargetSub = document.getElementById('fullTargetSub');
+                dom.fullTargetPrior = document.getElementById('fullTargetPrior');
 
                 dom.chartTitle = document.getElementById('chartTitle');
                 dom.chartSvg = document.getElementById('salesChart') || document.getElementById('chartSvg');
@@ -2497,6 +2561,13 @@
                     const isPressed = id === ALL ? state.selectedStores.size === 0 : state.selectedStores.has(id);
                     btn.setAttribute('aria-pressed', String(isPressed));
                 });
+
+                dom.areaSelectionCount.textContent = String(state.selectedAreas.size);
+                dom.areaSelectionCount.hidden = state.selectedAreas.size === 0;
+                dom.areaSelectionCount.setAttribute('aria-label', `${state.selectedAreas.size} مناطق أو مديرين محددين`);
+                dom.storeSelectionCount.textContent = String(state.selectedStores.size);
+                dom.storeSelectionCount.hidden = state.selectedStores.size === 0;
+                dom.storeSelectionCount.setAttribute('aria-label', `${state.selectedStores.size} معارض محددة`);
             }
 
             function populateYearSelect() {
@@ -2551,6 +2622,7 @@
                     btn.type = 'button';
                     btn.dataset.area = area;
                     btn.textContent = area;
+                    btn.title = 'انقر لإضافة أو إزالة المدير من التحديد';
                     dom.areaRail.appendChild(btn);
                 });
             }
@@ -2571,6 +2643,7 @@
                     btn.type = 'button';
                     btn.dataset.store = store.id;
                     btn.textContent = store.name;
+                    btn.title = 'انقر لإضافة أو إزالة المعرض من التحديد';
                     dom.storeRail.appendChild(btn);
                 });
             }
@@ -2710,9 +2783,13 @@
                 const priorVisitors = computeMetricForPeriod('visitors', state.year - 1, storeIds, period);
                 let target = 0;
                 let fullTarget = 0;
+                let priorTarget = 0;
+                let priorFullTarget = 0;
                 storeIds.forEach((storeId) => {
                     target += computeStoreTargetForPeriod(storeId, state.year, period);
                     fullTarget += computeFullTargetForPeriod(storeId, state.year, period);
+                    priorTarget += computeStoreTargetForPeriod(storeId, state.year - 1, period);
+                    priorFullTarget += computeFullTargetForPeriod(storeId, state.year - 1, period);
                 });
                 const growthDiff = sales - priorSales;
                 return {
@@ -2723,13 +2800,19 @@
                     target,
                     achievementPct: target > 0 ? (sales / target) * 100 : 0,
                     fullTarget,
+                    priorTarget,
+                    priorAchievementPct: priorTarget > 0 ? (priorSales / priorTarget) * 100 : 0,
+                    priorFullTarget,
                     transactions,
                     priorTransactions,
                     averageBill: transactions > 0 ? sales / transactions : 0,
+                    priorAverageBill: priorTransactions > 0 ? priorSales / priorTransactions : 0,
                     visitors,
                     priorVisitors,
                     conversionPct: visitors > 0 ? (transactions / visitors) * 100 : 0,
-                    visitorValue: visitors > 0 ? sales / visitors : 0
+                    priorConversionPct: priorVisitors > 0 ? (priorTransactions / priorVisitors) * 100 : 0,
+                    visitorValue: visitors > 0 ? sales / visitors : 0,
+                    priorVisitorValue: priorVisitors > 0 ? priorSales / priorVisitors : 0
                 };
             }
 
@@ -2824,6 +2907,9 @@
 
                 dom.achievementValue.textContent = `${metrics.achievementPct.toFixed(1)}%`;
                 dom.targetToDateValue.textContent = `المستهدف: ${fmtNum(metrics.target)} ر.س`;
+                dom.achievementPrior.textContent = metrics.priorTarget > 0
+                    ? `الفترة السابقة: ${metrics.priorAchievementPct.toFixed(1)}%`
+                    : 'الفترة السابقة: غير متوفر';
 
                 dom.achievementCard.className = 'kpi-card';
                 if (metrics.achievementPct >= 100) dom.achievementCard.classList.add('is-positive');
@@ -2835,13 +2921,20 @@
                 const txnPct = metrics.priorTransactions > 0 ? (txnDiff / metrics.priorTransactions) * 100 : 0;
                 dom.transactionsGrowth.textContent = `${state.year - 1}: ${fmtNum(metrics.priorTransactions)} (${fmtPct(txnPct)})`;
                 dom.averageBillValue.textContent = `${fmtNum(metrics.averageBill, 1)} ر.س`;
+                dom.averageBillPrior.textContent = `الفترة السابقة: ${fmtNum(metrics.priorAverageBill, 1)} ر.س`;
                 dom.visitorsValue.textContent = fmtNum(metrics.visitors);
+                dom.visitorsPrior.textContent = `الفترة السابقة: ${fmtNum(metrics.priorVisitors)}`;
                 dom.conversionValue.textContent = `${metrics.conversionPct.toFixed(1)}%`;
+                dom.conversionPrior.textContent = `الفترة السابقة: ${metrics.priorConversionPct.toFixed(1)}%`;
                 dom.visitorValue.textContent = `${fmtNum(metrics.visitorValue, 1)} ر.س`;
+                dom.visitorValuePrior.textContent = `الفترة السابقة: ${fmtNum(metrics.priorVisitorValue, 1)} ر.س`;
 
                 dom.fullTargetValue.textContent = `${fmtNum(metrics.fullTarget)} ر.س`;
                 const fullAchievePct = metrics.fullTarget > 0 ? (metrics.sales / metrics.fullTarget) * 100 : 0;
                 dom.fullTargetSub.textContent = `المحقق منه: ${fullAchievePct.toFixed(1)}%`;
+                dom.fullTargetPrior.textContent = metrics.priorFullTarget > 0
+                    ? `الفترة السابقة: ${fmtNum(metrics.priorFullTarget)} ر.س`
+                    : 'الفترة السابقة: غير متوفر';
 
                 // Aside targets
                 dom.sideToDateTitle.textContent = state.mode === 'year' ? `المستهدف حتى اليوم في ${state.year}` : `المستهدف حتى تاريخ ${range.endDay} ${MONTHS_AR[state.month - 1]}`;
@@ -3202,10 +3295,7 @@
 
                     tr.addEventListener('click', () => {
                         if (state.selectedStores.has(r.id)) state.selectedStores.delete(r.id);
-                        else {
-                            state.selectedStores.clear();
-                            state.selectedStores.add(r.id);
-                        }
+                        else state.selectedStores.add(r.id);
                         render();
                     });
 
@@ -3540,6 +3630,7 @@
                         const btn = e.target.closest('button');
                         if (!btn) return;
                         state.channelFilter = btn.dataset.channel;
+                        state.selectedStores.clear();
                         populateStoreRail();
                         render();
                     });
@@ -3553,10 +3644,7 @@
                         state.selectedAreas.clear();
                     } else {
                         if (state.selectedAreas.has(area)) state.selectedAreas.delete(area);
-                        else {
-                            state.selectedAreas.clear();
-                            state.selectedAreas.add(area);
-                        }
+                        else state.selectedAreas.add(area);
                     }
                     state.selectedStores.clear();
                     populateStoreRail();
@@ -3571,10 +3659,7 @@
                         state.selectedStores.clear();
                     } else {
                         if (state.selectedStores.has(id)) state.selectedStores.delete(id);
-                        else {
-                            state.selectedStores.clear();
-                            state.selectedStores.add(id);
-                        }
+                        else state.selectedStores.add(id);
                     }
                     render();
                 });
@@ -3583,6 +3668,7 @@
                     state.searchQuery = dom.storeSearchInput.value;
                     dom.searchClearBtn.classList.toggle('is-visible', Boolean(state.searchQuery));
                     populateStoreRail();
+                    syncPressedStates();
                 });
 
                 dom.searchClearBtn.addEventListener('click', () => {
@@ -3590,6 +3676,7 @@
                     state.searchQuery = '';
                     dom.searchClearBtn.classList.remove('is-visible');
                     populateStoreRail();
+                    syncPressedStates();
                 });
 
                 dom.drilldownResetBtn.addEventListener('click', () => {
