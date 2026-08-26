@@ -1749,12 +1749,12 @@
                             <h3 class="panel-title" id="chartTitle">مقارنة المبيعات شهراً بشهر</h3>
                         </div>
                         <!-- Metric Switcher -->
-                        <div class="metric-switcher" role="tablist" aria-label="اختر مؤشر الرسم">
-                            <button type="button" class="metric-btn" data-metric="sales" aria-selected="true">💰 المبيعات</button>
-                            <button type="button" class="metric-btn" data-metric="transactions" aria-selected="false">🧾 الفواتير</button>
-                            <button type="button" class="metric-btn" data-metric="avg_bill" aria-selected="false">💳 متوسط الفاتورة</button>
-                            <button type="button" class="metric-btn" data-metric="visitors" aria-selected="false">👥 الزوار</button>
-                            <button type="button" class="metric-btn" data-metric="conversion" aria-selected="false">🎯 التحويل</button>
+                        <div class="metric-switcher" id="metricSwitcher" role="group" aria-label="اختر مؤشر الرسم">
+                            <button type="button" class="metric-btn" data-metric="sales" aria-pressed="true">💰 المبيعات</button>
+                            <button type="button" class="metric-btn" data-metric="transactions" aria-pressed="false">🧾 الفواتير</button>
+                            <button type="button" class="metric-btn" data-metric="avg_bill" aria-pressed="false">💳 متوسط الفاتورة</button>
+                            <button type="button" class="metric-btn" data-metric="visitors" aria-pressed="false">👥 الزوار</button>
+                            <button type="button" class="metric-btn" data-metric="conversion" aria-pressed="false">🎯 التحويل</button>
                         </div>
                     </div>
 
@@ -1874,14 +1874,16 @@
                             <tr>
                                 <th style="width: 50px;">#</th>
                                 <th>المعرض</th>
-                                <th>المنطقة</th>
+                                <th>القناة</th>
                                 <th>مبيعات الحالية</th>
                                 <th>مبيعات السابقة</th>
                                 <th>نسبة النمو YoY</th>
+                                <th>المستهدف</th>
+                                <th>نسبة الإنجاز</th>
                                 <th>الفواتير</th>
                                 <th>متوسط الفاتورة</th>
                                 <th>الزوار</th>
-                                <th>نسبة الإنجاز</th>
+                                <th>نسبة التحويل</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboardBody"></tbody>
@@ -1930,7 +1932,7 @@
                         <label class="export-option-card">
                             <input type="radio" name="exportTimeGranularity" value="monthly_breakdown">
                             <span class="export-option-label">التفصيل الشهري (12 شهراً)</span>
-                            <span class="export-option-desc">مصفوفة شهرية كاملة (يناير – ديسمبر) في ورقتي عمل للمبيعات والمستهدف.</span>
+                            <span class="export-option-desc">تفصيل يناير – ديسمبر بجميع المؤشرات المختارة، مع صف إجمالي وتحليل المناطق حسب الخيارات.</span>
                         </label>
                         <label class="export-option-card">
                             <input type="radio" name="exportTimeGranularity" value="daily_breakdown">
@@ -2099,6 +2101,7 @@
             function cacheDom() {
                 dom.yearSelect = document.getElementById('yearSelect');
                 dom.dataStamp = document.getElementById('dataStamp');
+                dom.footerCoverage = document.getElementById('footerCoverage');
                 dom.periodRail = document.getElementById('periodRail');
                 dom.channelRail = document.getElementById('channelRail');
                 dom.areaRail = document.getElementById('areaRail');
@@ -2201,6 +2204,15 @@
                 if (value === null || value === undefined || Number.isNaN(value)) return '—';
                 const sign = withSign && value > 0 ? '+' : '';
                 return `${sign}${value.toFixed(1)}%`;
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
             }
 
             function parseDateParts(dateStr) {
@@ -2545,17 +2557,41 @@
                 });
             }
 
-            function computeMetricTotal(metric, year, storeIds, startDay, endDay, specificMonth = null) {
+            function getYearPeriod() {
+                return { mode: 'year', cutoff: comparisonCutoff(state.year) };
+            }
+
+            function getMonthPeriod(month, startDay, endDay) {
+                const totalDays = daysInMonth(state.year, month);
+                const normalizedStart = startDay === null || startDay === undefined ? 1 : Number(startDay);
+                const normalizedEnd = endDay === null || endDay === undefined ? totalDays : Number(endDay);
+                return {
+                    mode: 'month',
+                    month,
+                    startDay: Math.max(1, normalizedStart),
+                    endDay: Math.min(totalDays, normalizedEnd),
+                    totalDays
+                };
+            }
+
+            function getActivePeriod() {
+                if (state.mode === 'year') return getYearPeriod();
+                const range = getDayRange();
+                return getMonthPeriod(state.month, range.startDay, range.endDay);
+            }
+
+            function computeMetricForPeriod(metric, year, storeIds, period) {
                 const yearMap = state.metricMaps[metric] ? state.metricMaps[metric][year] : null;
                 if (!yearMap) return 0;
 
                 let total = 0;
 
-                if (specificMonth !== null && specificMonth !== undefined) {
-                    const m = Number(specificMonth);
+                if (period.mode === 'month') {
+                    const m = Number(period.month);
                     const mStr = String(m).padStart(2, '0');
-                    const sD = (startDay !== null && startDay !== undefined) ? startDay : 1;
-                    const eD = (endDay !== null && endDay !== undefined) ? endDay : daysInMonth(year, m);
+                    const sD = Math.max(1, period.startDay === null || period.startDay === undefined ? 1 : Number(period.startDay));
+                    const eD = Math.min(daysInMonth(year, m), period.endDay === null || period.endDay === undefined ? daysInMonth(year, m) : Number(period.endDay));
+                    if (eD < sD) return 0;
 
                     for (let s = 0; s < storeIds.length; s += 1) {
                         const sid = storeIds[s];
@@ -2571,77 +2607,76 @@
                     return total;
                 }
 
-                if (state.mode === 'year') {
-                    const cutoff = comparisonCutoff(year);
-                    for (let s = 0; s < storeIds.length; s += 1) {
-                        const sid = storeIds[s];
-                        const storeData = yearMap[sid];
-                        if (!storeData) continue;
-
-                        for (let m = 1; m <= cutoff.month; m += 1) {
-                            const curMStr = String(m).padStart(2, '0');
-                            const maxD = (m === cutoff.month) ? cutoff.day : daysInMonth(year, m);
-                            for (let d = 1; d <= maxD; d += 1) {
-                                const dStr = String(d).padStart(2, '0');
-                                const dtKey = `${year}-${curMStr}-${dStr}`;
-                                total += storeData[dtKey] || 0;
-                            }
-                        }
-                    }
-                    return total;
-                }
-
-                const mStr = String(state.month).padStart(2, '0');
-                const sD = (startDay !== null && startDay !== undefined) ? startDay : 1;
-                const eD = (endDay !== null && endDay !== undefined) ? endDay : daysInMonth(year, state.month);
-
+                const cutoff = period.cutoff || comparisonCutoff(state.year);
                 for (let s = 0; s < storeIds.length; s += 1) {
                     const sid = storeIds[s];
                     const storeData = yearMap[sid];
                     if (!storeData) continue;
 
-                    for (let d = sD; d <= eD; d += 1) {
-                        const dStr = String(d).padStart(2, '0');
-                        const dtKey = `${year}-${mStr}-${dStr}`;
-                        total += storeData[dtKey] || 0;
+                    for (let m = 1; m <= cutoff.month; m += 1) {
+                        const mStr = String(m).padStart(2, '0');
+                        const maxDay = m === cutoff.month
+                            ? Math.min(cutoff.day, daysInMonth(year, m))
+                            : daysInMonth(year, m);
+                        for (let d = 1; d <= maxDay; d += 1) {
+                            const dStr = String(d).padStart(2, '0');
+                            total += storeData[`${year}-${mStr}-${dStr}`] || 0;
+                        }
                     }
                 }
                 return total;
+            }
+
+            function computeMetricTotal(metric, year, storeIds, startDay, endDay, specificMonth = null) {
+                const period = specificMonth !== null && specificMonth !== undefined
+                    ? getMonthPeriod(Number(specificMonth), startDay, endDay)
+                    : getActivePeriod();
+                return computeMetricForPeriod(metric, year, storeIds, period);
             }
 
             function computeStoreMetric(metric, year, storeId, startDay, endDay, specificMonth = null) {
                 return computeMetricTotal(metric, year, [storeId], startDay, endDay, specificMonth);
             }
 
-            function computeStoreTarget(storeId, year, month, startDay, endDay, totalDaysInMonth) {
-                if (state.mode === 'year') {
-                    let fullYearTarget = 0;
-                    const cutoff = comparisonCutoff(year);
+            function computeStoreTargetForPeriod(storeId, year, period) {
+                if (period.mode === 'year') {
+                    let targetToDate = 0;
+                    const cutoff = period.cutoff || comparisonCutoff(state.year);
                     for (let m = 1; m <= cutoff.month; m += 1) {
                         const mStr = String(m).padStart(2, '0');
-                        const key = `${year}-${mStr}-${storeId}`;
-                        const mTarget = state.targetMap.get(key) || 0;
+                        const monthlyTarget = state.targetMap.get(`${year}-${mStr}-${storeId}`) || 0;
                         if (m < cutoff.month) {
-                            fullYearTarget += mTarget;
+                            targetToDate += monthlyTarget;
                         } else {
-                            const mDays = daysInMonth(year, m);
-                            fullYearTarget += (mTarget * (cutoff.day / mDays));
+                            targetToDate += monthlyTarget * (
+                                Math.min(cutoff.day, daysInMonth(year, m)) / daysInMonth(year, m)
+                            );
                         }
                     }
-                    return fullYearTarget;
+                    return targetToDate;
                 }
 
+                const month = Number(period.month);
                 const mStr = String(month).padStart(2, '0');
                 const key = `${year}-${mStr}-${storeId}`;
                 const monthlyTarget = state.targetMap.get(key) || 0;
                 if (monthlyTarget === 0) return 0;
 
-                const daysPortion = (endDay - startDay + 1) / totalDaysInMonth;
+                const totalDays = daysInMonth(year, month);
+                const startDay = Math.max(1, period.startDay === null || period.startDay === undefined ? 1 : Number(period.startDay));
+                const endDay = Math.min(totalDays, period.endDay === null || period.endDay === undefined ? totalDays : Number(period.endDay));
+                if (endDay < startDay) return 0;
+                const daysPortion = (endDay - startDay + 1) / totalDays;
                 return monthlyTarget * daysPortion;
             }
 
-            function computeFullMonthOrYearTarget(storeId, year, month) {
-                if (state.mode === 'year') {
+            function computeStoreTarget(storeId, year, month, startDay, endDay, _totalDaysInMonth, periodOverride = null) {
+                const period = periodOverride || getActivePeriod();
+                return computeStoreTargetForPeriod(storeId, year, period);
+            }
+
+            function computeFullTargetForPeriod(storeId, year, period) {
+                if (period.mode === 'year') {
                     let total = 0;
                     for (let m = 1; m <= 12; m += 1) {
                         const mStr = String(m).padStart(2, '0');
@@ -2649,8 +2684,44 @@
                     }
                     return total;
                 }
-                const mStr = String(month).padStart(2, '0');
+                const mStr = String(period.month).padStart(2, '0');
                 return state.targetMap.get(`${year}-${mStr}-${storeId}`) || 0;
+            }
+
+            function computeFullMonthOrYearTarget(storeId, year, _month) {
+                return computeFullTargetForPeriod(storeId, year, getActivePeriod());
+            }
+
+            function computeScopeMetrics(storeIds, period) {
+                const sales = computeMetricForPeriod('sales', state.year, storeIds, period);
+                const priorSales = computeMetricForPeriod('sales', state.year - 1, storeIds, period);
+                const transactions = computeMetricForPeriod('transactions', state.year, storeIds, period);
+                const priorTransactions = computeMetricForPeriod('transactions', state.year - 1, storeIds, period);
+                const visitors = computeMetricForPeriod('visitors', state.year, storeIds, period);
+                const priorVisitors = computeMetricForPeriod('visitors', state.year - 1, storeIds, period);
+                let target = 0;
+                let fullTarget = 0;
+                storeIds.forEach((storeId) => {
+                    target += computeStoreTargetForPeriod(storeId, state.year, period);
+                    fullTarget += computeFullTargetForPeriod(storeId, state.year, period);
+                });
+                const growthDiff = sales - priorSales;
+                return {
+                    sales,
+                    priorSales,
+                    growthDiff,
+                    growthPct: priorSales > 0 ? (growthDiff / priorSales) * 100 : (sales > 0 ? 100 : 0),
+                    target,
+                    achievementPct: target > 0 ? (sales / target) * 100 : 0,
+                    fullTarget,
+                    transactions,
+                    priorTransactions,
+                    averageBill: transactions > 0 ? sales / transactions : 0,
+                    visitors,
+                    priorVisitors,
+                    conversionPct: visitors > 0 ? (transactions / visitors) * 100 : 0,
+                    visitorValue: visitors > 0 ? sales / visitors : 0
+                };
             }
 
             function getDayRange() {
@@ -2727,83 +2798,59 @@
 
             function renderKpis(storeIds) {
                 const range = getDayRange();
-                const currentSales = computeMetricTotal('sales', state.year, storeIds, range.startDay, range.endDay);
-                const priorSales = computeMetricTotal('sales', state.year - 1, storeIds, range.startDay, range.endDay);
+                const metrics = computeScopeMetrics(storeIds, getActivePeriod());
 
-                const currentTxn = computeMetricTotal('transactions', state.year, storeIds, range.startDay, range.endDay);
-                const priorTxn = computeMetricTotal('transactions', state.year - 1, storeIds, range.startDay, range.endDay);
-
-                const currentVis = computeMetricTotal('visitors', state.year, storeIds, range.startDay, range.endDay);
-                const priorVis = computeMetricTotal('visitors', state.year - 1, storeIds, range.startDay, range.endDay);
-
-                let toDateTarget = 0;
-                let fullTarget = 0;
-                for (let i = 0; i < storeIds.length; i += 1) {
-                    const sid = storeIds[i];
-                    toDateTarget += computeStoreTarget(sid, state.year, state.month, range.startDay, range.endDay, range.totalDays);
-                    fullTarget += computeFullMonthOrYearTarget(sid, state.year, state.month);
-                }
-
-                dom.salesCurrent.textContent = `${fmtNum(currentSales)} ر.س`;
-                dom.salesPrior.textContent = `${fmtNum(priorSales)} ر.س`;
+                dom.salesCurrent.textContent = `${fmtNum(metrics.sales)} ر.س`;
+                dom.salesPrior.textContent = `${fmtNum(metrics.priorSales)} ر.س`;
                 dom.salesPeriodBadge.textContent = state.mode === 'year' ? `سنة ${state.year}` : `${MONTHS_AR[state.month - 1]} ${state.year}`;
                 dom.salesPriorLabel.textContent = `سنة ${state.year - 1}:`;
 
-                const growthDiff = currentSales - priorSales;
-                const growthPct = priorSales > 0 ? (growthDiff / priorSales) * 100 : (currentSales > 0 ? 100 : 0);
-                dom.growthPercent.textContent = fmtPct(growthPct);
-                dom.growthBadge.textContent = fmtPct(growthPct);
-                dom.growthAmount.textContent = `فرق ${growthDiff >= 0 ? '+' : ''}${fmtNum(growthDiff)} ر.س`;
+                dom.growthPercent.textContent = fmtPct(metrics.growthPct);
+                dom.growthBadge.textContent = fmtPct(metrics.growthPct);
+                dom.growthAmount.textContent = `فرق ${metrics.growthDiff >= 0 ? '+' : ''}${fmtNum(metrics.growthDiff)} ر.س`;
 
                 dom.growthCard.className = 'kpi-card';
-                if (growthDiff >= 0) dom.growthCard.classList.add('is-positive');
+                if (metrics.growthDiff >= 0) dom.growthCard.classList.add('is-positive');
                 else dom.growthCard.classList.add('is-negative');
 
-                const achievePct = toDateTarget > 0 ? (currentSales / toDateTarget) * 100 : 0;
-                dom.achievementValue.textContent = `${achievePct.toFixed(1)}%`;
-                dom.targetToDateValue.textContent = `المستهدف: ${fmtNum(toDateTarget)} ر.س`;
+                dom.achievementValue.textContent = `${metrics.achievementPct.toFixed(1)}%`;
+                dom.targetToDateValue.textContent = `المستهدف: ${fmtNum(metrics.target)} ر.س`;
 
                 dom.achievementCard.className = 'kpi-card';
-                if (achievePct >= 100) dom.achievementCard.classList.add('is-positive');
-                else if (achievePct >= 80) dom.achievementCard.classList.add('is-prior');
+                if (metrics.achievementPct >= 100) dom.achievementCard.classList.add('is-positive');
+                else if (metrics.achievementPct >= 80) dom.achievementCard.classList.add('is-prior');
                 else dom.achievementCard.classList.add('is-negative');
 
-                dom.transactionsValue.textContent = fmtNum(currentTxn);
-                const txnDiff = currentTxn - priorTxn;
-                const txnPct = priorTxn > 0 ? (txnDiff / priorTxn) * 100 : 0;
-                dom.transactionsGrowth.textContent = `${state.year - 1}: ${fmtNum(priorTxn)} (${fmtPct(txnPct)})`;
+                dom.transactionsValue.textContent = fmtNum(metrics.transactions);
+                const txnDiff = metrics.transactions - metrics.priorTransactions;
+                const txnPct = metrics.priorTransactions > 0 ? (txnDiff / metrics.priorTransactions) * 100 : 0;
+                dom.transactionsGrowth.textContent = `${state.year - 1}: ${fmtNum(metrics.priorTransactions)} (${fmtPct(txnPct)})`;
+                dom.averageBillValue.textContent = `${fmtNum(metrics.averageBill, 1)} ر.س`;
+                dom.visitorsValue.textContent = fmtNum(metrics.visitors);
+                dom.conversionValue.textContent = `${metrics.conversionPct.toFixed(1)}%`;
+                dom.visitorValue.textContent = `${fmtNum(metrics.visitorValue, 1)} ر.س`;
 
-                const avgBill = currentTxn > 0 ? currentSales / currentTxn : 0;
-                dom.averageBillValue.textContent = `${fmtNum(avgBill, 1)} ر.س`;
-
-                dom.visitorsValue.textContent = fmtNum(currentVis);
-                const conv = currentVis > 0 ? (currentTxn / currentVis) * 100 : 0;
-                dom.conversionValue.textContent = `${conv.toFixed(1)}%`;
-
-                const valPerVis = currentVis > 0 ? currentSales / currentVis : 0;
-                dom.visitorValue.textContent = `${fmtNum(valPerVis, 1)} ر.س`;
-
-                dom.fullTargetValue.textContent = `${fmtNum(fullTarget)} ر.س`;
-                const fullAchievePct = fullTarget > 0 ? (currentSales / fullTarget) * 100 : 0;
+                dom.fullTargetValue.textContent = `${fmtNum(metrics.fullTarget)} ر.س`;
+                const fullAchievePct = metrics.fullTarget > 0 ? (metrics.sales / metrics.fullTarget) * 100 : 0;
                 dom.fullTargetSub.textContent = `المحقق منه: ${fullAchievePct.toFixed(1)}%`;
 
                 // Aside targets
                 dom.sideToDateTitle.textContent = state.mode === 'year' ? `المستهدف حتى اليوم في ${state.year}` : `المستهدف حتى تاريخ ${range.endDay} ${MONTHS_AR[state.month - 1]}`;
-                dom.sideToDatePercent.textContent = `${achievePct.toFixed(1)}%`;
-                dom.sideToDateTarget.textContent = `${fmtNum(toDateTarget)} ر.س`;
-                dom.sideToDateProgress.style.width = `${Math.min(achievePct, 100)}%`;
-                dom.sideToDateAchieved.textContent = `${fmtNum(currentSales)} ر.س`;
+                dom.sideToDatePercent.textContent = `${metrics.achievementPct.toFixed(1)}%`;
+                dom.sideToDateTarget.textContent = `${fmtNum(metrics.target)} ر.س`;
+                dom.sideToDateProgress.style.width = `${Math.min(metrics.achievementPct, 100)}%`;
+                dom.sideToDateAchieved.textContent = `${fmtNum(metrics.sales)} ر.س`;
                 dom.sideToDateDays.textContent = state.mode === 'year' ? `تراكمي سنة ${state.year}` : `أيام التغطية: ${range.endDay} يوم`;
 
                 dom.sideFullTitle.textContent = state.mode === 'year' ? `المستهدف السنوي المسجل بالكامل` : `المستهدف الكامل لشهر ${MONTHS_AR[state.month - 1]}`;
                 dom.sideFullPercent.textContent = `${fullAchievePct.toFixed(1)}%`;
-                dom.sideFullTarget.textContent = `${fmtNum(fullTarget)} ر.س`;
+                dom.sideFullTarget.textContent = `${fmtNum(metrics.fullTarget)} ر.س`;
                 dom.sideFullProgress.style.width = `${Math.min(fullAchievePct, 100)}%`;
                 dom.sideFullCoverage.textContent = state.mode === 'year' ? 'مستهدف السنة المالية' : `مستهدف كامل الـ ${range.totalDays} يوماً`;
 
                 renderChannelMix(storeIds, range);
 
-                return { sales: currentSales, priorSales, growthPct, toDateTarget, achievePct };
+                return metrics;
             }
 
             function renderChannelMix(storeIds, range) {
@@ -3081,40 +3128,28 @@
                 dom.leaderboardBody.innerHTML = '';
                 dom.leaderboardCount.textContent = fmtNum(candidates.length);
 
-                const range = getDayRange();
+                const period = getActivePeriod();
                 const rows = [];
 
                 candidates.forEach((sid) => {
                     const s = state.stores.get(sid) || { id: sid, name: `معرض ${sid}`, area: 'غير محدد', type: 'showroom' };
-                    const currentSales = computeStoreMetric('sales', state.year, sid, range.startDay, range.endDay);
-                    const priorSales = computeStoreMetric('sales', state.year - 1, sid, range.startDay, range.endDay);
-                    const growthDiff = currentSales - priorSales;
-                    const growthPct = priorSales > 0 ? (growthDiff / priorSales) * 100 : (currentSales > 0 ? 100 : 0);
-
-                    const target = computeStoreTarget(sid, state.year, state.month, range.startDay, range.endDay, range.totalDays);
-                    const achievePct = target > 0 ? (currentSales / target) * 100 : 0;
-
-                    const txns = computeStoreMetric('transactions', state.year, sid, range.startDay, range.endDay);
-                    const avgBill = txns > 0 ? currentSales / txns : 0;
-
-                    const vis = computeStoreMetric('visitors', state.year, sid, range.startDay, range.endDay);
-                    const conv = vis > 0 ? (txns / vis) * 100 : 0;
+                    const metrics = computeScopeMetrics([sid], period);
 
                     rows.push({
                         id: sid,
                         name: s.name,
                         area: s.area,
                         type: s.type,
-                        sales: currentSales,
-                        priorSales,
-                        growthDiff,
-                        growthPct,
-                        target,
-                        achievePct,
-                        txns,
-                        avgBill,
-                        vis,
-                        conv
+                        sales: metrics.sales,
+                        priorSales: metrics.priorSales,
+                        growthDiff: metrics.growthDiff,
+                        growthPct: metrics.growthPct,
+                        target: metrics.target,
+                        achievePct: metrics.achievementPct,
+                        txns: metrics.transactions,
+                        avgBill: metrics.averageBill,
+                        vis: metrics.visitors,
+                        conv: metrics.conversionPct
                     });
                 });
 
@@ -3134,12 +3169,15 @@
                     else if (idx === 2) rankClass += ' top-3';
 
                     const growthClass = r.growthDiff >= 0 ? 'color:var(--green);' : 'color:var(--red);';
+                    const safeName = escapeHtml(r.name);
+                    const safeId = escapeHtml(r.id);
+                    const safeArea = escapeHtml(r.area);
 
                     tr.innerHTML = `
                         <td style="text-align:center;"><span class="${rankClass}">${idx + 1}</span></td>
                         <td>
-                            <strong>${r.name}</strong>
-                            <div style="font-size:0.72rem; color:var(--ink-muted);">${r.id} • ${r.area}</div>
+                            <strong>${safeName}</strong>
+                            <div style="font-size:0.72rem; color:var(--ink-muted);">${safeId} • ${safeArea}</div>
                         </td>
                         <td><span class="chip" style="font-size:0.72rem; padding:1px 6px;">${r.type === ONLINE_TYPE ? 'أونلاين 📱' : 'معرض 🏬'}</span></td>
                         <td><strong>${fmtNum(r.sales)} ر.س</strong></td>
@@ -3170,6 +3208,7 @@
                 const meta = state.raw && state.raw.metadata ? state.raw.metadata : {};
                 const genAt = meta.generated_at || meta.timestamp || state.maxSalesDate || '';
                 dom.dataStamp.textContent = `آخر تحديث: ${formatOperationalDate(genAt, true)}`;
+                dom.footerCoverage.textContent = `نطاق المبيعات: ${state.minSalesDate || '—'} — ${state.maxSalesDate || '—'}`;
             }
 
             function render() {
@@ -3213,219 +3252,255 @@
                 dom.exportModalBackdrop.setAttribute('aria-hidden', 'true');
             }
 
+            function excelSafeText(value) {
+                const text = String(value ?? '');
+                return /^[=+\-@]/.test(text) ? `'${text}` : text;
+            }
+
+            function getRiyadhDateStamp() {
+                const parts = new Intl.DateTimeFormat('en-GB', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Riyadh'
+                }).formatToParts(new Date());
+                const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+                return `${values.year}-${values.month}-${values.day}`;
+            }
+
+            function getExportMetricOptions() {
+                return {
+                    sales: document.getElementById('m_sales').checked,
+                    prior: document.getElementById('m_prior_sales').checked,
+                    growth: document.getElementById('m_growth').checked,
+                    target: document.getElementById('m_target').checked,
+                    achievement: document.getElementById('m_achievement').checked,
+                    transactions: document.getElementById('m_transactions').checked,
+                    averageBill: document.getElementById('m_avg_bill').checked,
+                    visitors: document.getElementById('m_visitors').checked
+                };
+            }
+
+            function appendMetricHeaders(header, options, targetLabel = 'المستهدف (ر.س)') {
+                if (options.sales) header.push(`مبيعات ${state.year} (ر.س)`);
+                if (options.prior) header.push(`مبيعات ${state.year - 1} (ر.س)`);
+                if (options.growth) header.push('فارق النمو (ر.س)', 'نسبة النمو YoY');
+                if (options.target) header.push(targetLabel);
+                if (options.achievement) header.push('نسبة التحقيق %');
+                if (options.transactions) header.push('عدد الفواتير');
+                if (options.averageBill) header.push('متوسط الفاتورة (ر.س)');
+                if (options.visitors) header.push('عدد الزوار', 'معدل التحويل %');
+                return header;
+            }
+
+            function appendMetricValues(row, metrics, options) {
+                if (options.sales) row.push(metrics.sales);
+                if (options.prior) row.push(metrics.priorSales);
+                if (options.growth) row.push(metrics.growthDiff, metrics.growthPct / 100);
+                if (options.target) row.push(metrics.target);
+                if (options.achievement) row.push(metrics.achievementPct / 100);
+                if (options.transactions) row.push(metrics.transactions);
+                if (options.averageBill) row.push(metrics.averageBill);
+                if (options.visitors) row.push(metrics.visitors, metrics.conversionPct / 100);
+                return row;
+            }
+
+            function createExportWorksheet(rows) {
+                const worksheet = XLSX.utils.aoa_to_sheet(rows);
+                worksheet['!views'] = [{ rightToLeft: true }];
+                if (worksheet['!ref']) worksheet['!autofilter'] = { ref: worksheet['!ref'] };
+
+                const header = rows[0] || [];
+                header.forEach((label, columnIndex) => {
+                    const isPercent = String(label).includes('نسبة') || String(label).includes('معدل التحويل');
+                    if (!isPercent) return;
+                    for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+                        const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+                        const cell = worksheet[address];
+                        if (cell && cell.t === 'n') cell.z = '0.0%';
+                    }
+                });
+
+                worksheet['!cols'] = header.map((label, columnIndex) => {
+                    let width = String(label ?? '').length + 3;
+                    rows.slice(1, 100).forEach((row) => {
+                        width = Math.max(width, String(row[columnIndex] ?? '').length + 2);
+                    });
+                    return { wch: Math.min(Math.max(width, 10), 28) };
+                });
+                return worksheet;
+            }
+
+            function getExportStoreIds(scope) {
+                if (scope === 'current_filters') return activeStoreIds();
+                if (scope === 'all_company') return Array.from(state.stores.keys());
+                const result = [];
+                state.stores.forEach((store, id) => {
+                    if (scope === 'showrooms_only' && store.type !== ONLINE_TYPE) result.push(id);
+                    if (scope === 'online_only' && store.type === ONLINE_TYPE) result.push(id);
+                });
+                return result;
+            }
+
+            function getStoreExportMeta(storeId) {
+                const store = state.stores.get(storeId) || {
+                    id: storeId, name: `معرض ${storeId}`, area: 'غير محدد', supervisor: 'الإدارة العامة', type: 'showroom'
+                };
+                return {
+                    id: excelSafeText(storeId),
+                    name: excelSafeText(store.name),
+                    area: excelSafeText(store.area || 'غير محدد'),
+                    supervisor: excelSafeText(store.supervisor || 'الإدارة العامة'),
+                    channel: store.type === ONLINE_TYPE ? 'أونلاين' : 'صالة عرض'
+                };
+            }
+
+            function appendAreaAnalysisSheet(workbook, storeIds, period, options, includeTotals) {
+                const areaMap = new Map();
+                storeIds.forEach((storeId) => {
+                    const store = state.stores.get(storeId) || { area: 'غير محدد', supervisor: 'الإدارة العامة' };
+                    const area = store.area || 'غير محدد';
+                    if (!areaMap.has(area)) {
+                        areaMap.set(area, { ids: [], supervisor: store.supervisor || 'الإدارة العامة' });
+                    }
+                    areaMap.get(area).ids.push(storeId);
+                });
+
+                const rows = [appendMetricHeaders(['المنطقة', 'المدير الإشرافي', 'عدد المعارض'], options)];
+                Array.from(areaMap.entries())
+                    .map(([area, details]) => ({ area, details, metrics: computeScopeMetrics(details.ids, period) }))
+                    .sort((a, b) => b.metrics.sales - a.metrics.sales)
+                    .forEach(({ area, details, metrics }) => {
+                        rows.push(appendMetricValues([
+                            excelSafeText(area), excelSafeText(details.supervisor), details.ids.length
+                        ], metrics, options));
+                    });
+
+                if (includeTotals) {
+                    rows.push(appendMetricValues(['الإجمالي', '', storeIds.length], computeScopeMetrics(storeIds, period), options));
+                }
+                XLSX.utils.book_append_sheet(workbook, createExportWorksheet(rows), 'تحليل أداء المناطق');
+            }
+
             function executeExcelExport() {
                 if (typeof XLSX === 'undefined') {
-                    alert('جاري تحميل مكتبة تصدير Excel، يرجى المحاولة بعد لحظات...');
+                    alert('تعذر تحميل مكتبة Excel. تحقق من الاتصال ثم أعد المحاولة.');
                     return;
                 }
 
-                const granularityEl = document.querySelector('input[name="exportTimeGranularity"]:checked');
-                const granularity = granularityEl ? granularityEl.value : 'current_period';
-
-                const scopeEl = document.querySelector('input[name="exportScope"]:checked');
-                const scope = scopeEl ? scopeEl.value : 'current_filters';
-
-                let targetStoreIds = [];
-                if (scope === 'current_filters') targetStoreIds = activeStoreIds();
-                else if (scope === 'all_company') {
-                    targetStoreIds = Array.from(state.stores.keys());
-                } else if (scope === 'showrooms_only') {
-                    state.stores.forEach((s, id) => { if (s.type !== ONLINE_TYPE) targetStoreIds.push(id); });
-                } else if (scope === 'online_only') {
-                    state.stores.forEach((s, id) => { if (s.type === ONLINE_TYPE) targetStoreIds.push(id); });
-                }
+                const granularity = document.querySelector('input[name="exportTimeGranularity"]:checked')?.value || 'current_period';
+                const scope = document.querySelector('input[name="exportScope"]:checked')?.value || 'current_filters';
+                const targetStoreIds = getExportStoreIds(scope);
+                const options = getExportMetricOptions();
+                const includeTotals = document.getElementById('opt_include_totals').checked;
+                const includeAreaSheet = document.getElementById('opt_include_area_sheet').checked;
 
                 if (targetStoreIds.length === 0) {
                     alert('لم يتم العثور على معارض في نطاق التصدير المحدد.');
                     return;
                 }
+                if (!Object.values(options).some(Boolean)) {
+                    alert('اختر مؤشراً واحداً على الأقل للتصدير.');
+                    return;
+                }
 
-                const incSales = document.getElementById('m_sales').checked;
-                const incPrior = document.getElementById('m_prior_sales').checked;
-                const incGrowth = document.getElementById('m_growth').checked;
-                const incTarget = document.getElementById('m_target').checked;
-                const incAchieve = document.getElementById('m_achievement').checked;
-                const incTxn = document.getElementById('m_transactions').checked;
-                const incAvgBill = document.getElementById('m_avg_bill').checked;
-                const incVis = document.getElementById('m_visitors').checked;
-                const incTotals = document.getElementById('opt_include_totals').checked;
-                const incAreaSheet = document.getElementById('opt_include_area_sheet').checked;
-
-                const wb = XLSX.utils.book_new();
-                const nowStr = new Date().toISOString().split('T')[0];
+                const workbook = XLSX.utils.book_new();
+                const activePeriod = getActivePeriod();
+                const yearlyPeriod = getYearPeriod();
+                const summaryPeriod = granularity === 'yearly_summary' ? yearlyPeriod : activePeriod;
                 let fileNameSuffix = 'مقارنة_المبيعات';
 
                 if (granularity === 'monthly_breakdown') {
                     fileNameSuffix = `التفصيل_الشهري_${state.year}`;
-                    const salesMatrix = [];
-                    const sHeader = ['الترتيب', 'كود المعرض', 'اسم المعرض', 'المنطقة', 'نوع القناة'];
-                    for (let m = 1; m <= 12; m += 1) sHeader.push(MONTHS_AR[m - 1]);
-                    sHeader.push('إجمالي السنة');
-                    salesMatrix.push(sHeader);
-
-                    targetStoreIds.forEach((sid, idx) => {
-                        const s = state.stores.get(sid) || { id: sid, name: `معرض ${sid}`, area: 'غير محدد', type: 'showroom' };
-                        const row = [idx + 1, sid, s.name, s.area, s.type === ONLINE_TYPE ? 'أونلاين' : 'صالة عرض'];
-                        let rowSum = 0;
-                        for (let m = 1; m <= 12; m += 1) {
-                            const mDays = daysInMonth(state.year, m);
-                            const mVal = computeStoreMetric('sales', state.year, sid, 1, mDays, m);
-                            row.push(mVal);
-                            rowSum += mVal;
-                        }
-                        row.push(rowSum);
-                        salesMatrix.push(row);
-                    });
-
-                    const wsSales = XLSX.utils.aoa_to_sheet(salesMatrix);
-                    wsSales['!views'] = [{ rightToLeft: true }];
-                    wsSales['!autofilter'] = { ref: wsSales['!ref'] };
-                    XLSX.utils.book_append_sheet(wb, wsSales, 'المبيعات الشهرية');
-                } else if (granularity === 'daily_breakdown') {
-                    fileNameSuffix = state.mode === 'year' ? `التفصيل_اليومي_${state.year}` : `التفصيل_اليومي_${state.year}_شهر_${state.month}`;
-                    const dailyRows = [];
-                    const dHeader = ['التاريخ', 'اليوم', 'الشهر', 'كود المعرض', 'اسم المعرض', 'المنطقة'];
-                    if (incSales) dHeader.push(`مبيعات ${state.year} (ر.س)`);
-                    if (incPrior) dHeader.push(`مبيعات ${state.year - 1} (ر.س)`);
-                    if (incGrowth) { dHeader.push('فارق النمو (ر.س)'); dHeader.push('نسبة النمو YoY'); }
-                    if (incTarget) dHeader.push('المستهدف اليومي (ر.س)');
-                    if (incAchieve) dHeader.push('نسبة التحقيق %');
-                    if (incTxn) dHeader.push('عدد الفواتير');
-                    if (incAvgBill) dHeader.push('متوسط الفاتورة (ر.س)');
-                    if (incVis) { dHeader.push('عدد الزوار'); dHeader.push('معدل التحويل %'); }
-                    dailyRows.push(dHeader);
-
+                    const rows = [appendMetricHeaders([
+                        'الشهر', 'كود المعرض', 'اسم المعرض', 'المنطقة', 'المدير الإشرافي', 'نوع القناة'
+                    ], options)];
                     const cutoff = comparisonCutoff(state.year);
-                    const monthsToExport = state.mode === 'year' ? Array.from({ length: cutoff.month }, (_, i) => i + 1) : [state.month];
-
-                    monthsToExport.forEach((m) => {
-                        const maxD = (state.year === parseDateParts(cutoff.dateStr).year && m === cutoff.month) ? cutoff.day : daysInMonth(state.year, m);
-                        for (let d = 1; d <= maxD; d += 1) {
-                            const dateStr = `${state.year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                            targetStoreIds.forEach((sid) => {
-                                const s = state.stores.get(sid) || { id: sid, name: `معرض ${sid}`, area: 'غير محدد' };
-                                const sSales = computeStoreMetric('sales', state.year, sid, d, d, m);
-                                const sPrior = computeStoreMetric('sales', state.year - 1, sid, d, d, m);
-                                const sDiff = sSales - sPrior;
-                                const sPct = sPrior > 0 ? (sDiff / sPrior) * 100 : (sSales > 0 ? 100 : 0);
-                                const sTxn = computeStoreMetric('transactions', state.year, sid, d, d, m);
-                                const sVis = computeStoreMetric('visitors', state.year, sid, d, d, m);
-                                const sAvg = sTxn > 0 ? sSales / sTxn : 0;
-                                const sConv = sVis > 0 ? (sTxn / sVis) * 100 : 0;
-                                const sTarget = computeStoreTarget(sid, state.year, m, d, d, daysInMonth(state.year, m));
-                                const sAchieve = sTarget > 0 ? (sSales / sTarget) * 100 : 0;
-
-                                const r = [dateStr, d, MONTHS_AR[m - 1], sid, s.name, s.area];
-                                if (incSales) r.push(sSales);
-                                if (incPrior) r.push(sPrior);
-                                if (incGrowth) { r.push(sDiff); r.push(`${sPct.toFixed(1)}%`); }
-                                if (incTarget) r.push(sTarget);
-                                if (incAchieve) r.push(`${sAchieve.toFixed(1)}%`);
-                                if (incTxn) r.push(sTxn);
-                                if (incAvgBill) r.push(sAvg);
-                                if (incVis) { r.push(sVis); r.push(`${sConv.toFixed(1)}%`); }
-                                dailyRows.push(r);
+                    for (let month = 1; month <= 12; month += 1) {
+                        const endDay = month < cutoff.month
+                            ? daysInMonth(state.year, month)
+                            : (month === cutoff.month ? cutoff.day : 0);
+                        const monthPeriod = getMonthPeriod(month, 1, endDay);
+                        targetStoreIds.forEach((storeId) => {
+                            const store = getStoreExportMeta(storeId);
+                            rows.push(appendMetricValues([
+                                MONTHS_AR[month - 1], store.id, store.name, store.area, store.supervisor, store.channel
+                            ], computeScopeMetrics([storeId], monthPeriod), options));
+                        });
+                    }
+                    if (includeTotals) {
+                        rows.push(appendMetricValues(['الإجمالي', '', '', '', '', ''], computeScopeMetrics(targetStoreIds, yearlyPeriod), options));
+                    }
+                    XLSX.utils.book_append_sheet(workbook, createExportWorksheet(rows), 'التفصيل الشهري');
+                } else if (granularity === 'daily_breakdown') {
+                    fileNameSuffix = state.mode === 'year'
+                        ? `التفصيل_اليومي_${state.year}`
+                        : `التفصيل_اليومي_${state.year}_شهر_${state.month}`;
+                    const rows = [appendMetricHeaders([
+                        'التاريخ', 'اليوم', 'الشهر', 'كود المعرض', 'اسم المعرض', 'المنطقة'
+                    ], options, 'المستهدف اليومي (ر.س)')];
+                    const cutoff = comparisonCutoff(state.year);
+                    const months = state.mode === 'year'
+                        ? Array.from({ length: cutoff.month }, (_unused, index) => index + 1)
+                        : [state.month];
+                    months.forEach((month) => {
+                        const monthStart = state.mode === 'month' && state.day !== null ? state.day : 1;
+                        const monthEnd = state.mode === 'month'
+                            ? getDayRange().endDay
+                            : (month === cutoff.month ? cutoff.day : daysInMonth(state.year, month));
+                        for (let day = monthStart; day <= monthEnd; day += 1) {
+                            const dayPeriod = getMonthPeriod(month, day, day);
+                            const date = `${state.year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                            targetStoreIds.forEach((storeId) => {
+                                const store = getStoreExportMeta(storeId);
+                                rows.push(appendMetricValues([
+                                    date, day, MONTHS_AR[month - 1], store.id, store.name, store.area
+                                ], computeScopeMetrics([storeId], dayPeriod), options));
                             });
                         }
                     });
-
-                    const wsDaily = XLSX.utils.aoa_to_sheet(dailyRows);
-                    wsDaily['!views'] = [{ rightToLeft: true }];
-                    wsDaily['!autofilter'] = { ref: wsDaily['!ref'] };
-                    XLSX.utils.book_append_sheet(wb, wsDaily, 'المبيعات اليومية');
-                } else {
-                    fileNameSuffix = granularity === 'yearly_summary' ? `مقارنة_المبيعات_${state.year}_سنوي` : `مقارنة_المبيعات_${state.year}_${state.mode === 'year' ? 'سنوي' : 'شهر_' + state.month}`;
-                    const range = granularity === 'yearly_summary' ? { startDay: 1, endDay: 31, totalDays: 365 } : getDayRange();
-                    const tableRows = [];
-                    const header = ['الترتيب', 'كود المعرض', 'اسم المعرض', 'المنطقة', 'المدير الإشرافي', 'نوع القناة'];
-                    if (incSales) header.push(`مبيعات ${state.year} (ر.س)`);
-                    if (incPrior) header.push(`مبيعات ${state.year - 1} (ر.س)`);
-                    if (incGrowth) { header.push('فارق النمو (ر.س)'); header.push('نسبة النمو YoY'); }
-                    if (incTarget) header.push('المستهدف حتى تاريخه (ر.س)');
-                    if (incAchieve) header.push('نسبة تحقيق المستهدف');
-                    if (incTxn) header.push('عدد الفواتير');
-                    if (incAvgBill) header.push('متوسط قيمة الفاتورة (ر.س)');
-                    if (incVis) { header.push('عدد الزوار'); header.push('معدل التحويل %'); }
-                    tableRows.push(header);
-
-                    const storeDataList = [];
-                    targetStoreIds.forEach((sid) => {
-                        const s = state.stores.get(sid) || { id: sid, name: `معرض ${sid}`, area: 'غير محدد', supervisor: 'الإدارة العامة', type: 'showroom' };
-                        const curS = computeStoreMetric('sales', state.year, sid, range.startDay, range.endDay);
-                        const priS = computeStoreMetric('sales', state.year - 1, sid, range.startDay, range.endDay);
-                        const diffS = curS - priS;
-                        const pctS = priS > 0 ? (diffS / priS) * 100 : (curS > 0 ? 100 : 0);
-                        const tgt = computeStoreTarget(sid, state.year, state.month, range.startDay, range.endDay, range.totalDays);
-                        const ach = tgt > 0 ? (curS / tgt) * 100 : 0;
-                        const txn = computeStoreMetric('transactions', state.year, sid, range.startDay, range.endDay);
-                        const avg = txn > 0 ? curS / txn : 0;
-                        const vis = computeStoreMetric('visitors', state.year, sid, range.startDay, range.endDay);
-                        const conv = vis > 0 ? (txn / vis) * 100 : 0;
-
-                        storeDataList.push({
-                            id: sid, name: s.name, area: s.area, supervisor: s.supervisor, type: s.type,
-                            curS, priS, diffS, pctS, tgt, ach, txn, avg, vis, conv
-                        });
-                    });
-
-                    storeDataList.sort((a, b) => b.curS - a.curS);
-
-                    storeDataList.forEach((item, idx) => {
-                        const row = [idx + 1, item.id, item.name, item.area, item.supervisor, item.type === ONLINE_TYPE ? 'أونلاين' : 'صالة عرض'];
-                        if (incSales) row.push(item.curS);
-                        if (incPrior) row.push(item.priS);
-                        if (incGrowth) { row.push(item.diffS); row.push(`${item.pctS.toFixed(1)}%`); }
-                        if (incTarget) row.push(item.tgt);
-                        if (incAchieve) row.push(`${item.ach.toFixed(1)}%`);
-                        if (incTxn) row.push(item.txn);
-                        if (incAvgBill) row.push(item.avg);
-                        if (incVis) { row.push(item.vis); row.push(`${item.conv.toFixed(1)}%`); }
-                        tableRows.push(row);
-                    });
-
-                    const wsTable = XLSX.utils.aoa_to_sheet(tableRows);
-                    wsTable['!views'] = [{ rightToLeft: true }];
-                    wsTable['!autofilter'] = { ref: wsTable['!ref'] };
-                    XLSX.utils.book_append_sheet(wb, wsTable, 'مقارنة أداء المعارض');
-
-                    if (incAreaSheet) {
-                        const areaMap = new Map();
-                        storeDataList.forEach((st) => {
-                            const aKey = st.area || 'غير محدد';
-                            if (!areaMap.has(aKey)) {
-                                areaMap.set(aKey, { name: aKey, supervisor: st.supervisor, count: 0, curS: 0, priS: 0, tgt: 0, txn: 0, vis: 0 });
-                            }
-                            const a = areaMap.get(aKey);
-                            a.count += 1;
-                            a.curS += st.curS;
-                            a.priS += st.priS;
-                            a.tgt += st.tgt;
-                            a.txn += st.txn;
-                            a.vis += st.vis;
-                        });
-
-                        const areaRows = [];
-                        const aHeader = ['المنطقة', 'المدير الإشرافي', 'عدد المعارض', `مبيعات ${state.year} (ر.س)`, `مبيعات ${state.year - 1} (ر.س)`, 'فارق النمو (ر.س)', 'نسبة النمو YoY', 'المستهدف (ر.س)', 'نسبة التحقيق %', 'عدد الفواتير', 'متوسط الفاتورة (ر.س)', 'عدد الزوار'];
-                        areaRows.push(aHeader);
-
-                        Array.from(areaMap.values()).sort((a, b) => b.curS - a.curS).forEach((a) => {
-                            const diff = a.curS - a.priS;
-                            const pct = a.priS > 0 ? (diff / a.priS) * 100 : 0;
-                            const ach = a.tgt > 0 ? (a.curS / a.tgt) * 100 : 0;
-                            const avg = a.txn > 0 ? a.curS / a.txn : 0;
-                            areaRows.push([a.name, a.supervisor, a.count, a.curS, a.priS, diff, `${pct.toFixed(1)}%`, a.tgt, `${ach.toFixed(1)}%`, a.txn, avg, a.vis]);
-                        });
-
-                        const wsArea = XLSX.utils.aoa_to_sheet(areaRows);
-                        wsArea['!views'] = [{ rightToLeft: true }];
-                        wsArea['!autofilter'] = { ref: wsArea['!ref'] };
-                        XLSX.utils.book_append_sheet(wb, wsArea, 'تحليل أداء المناطق');
+                    if (includeTotals) {
+                        rows.push(appendMetricValues(['الإجمالي', '', '', '', '', ''], computeScopeMetrics(targetStoreIds, activePeriod), options));
                     }
+                    XLSX.utils.book_append_sheet(workbook, createExportWorksheet(rows), 'المبيعات اليومية');
+                } else {
+                    fileNameSuffix = granularity === 'yearly_summary'
+                        ? `مقارنة_المبيعات_${state.year}_سنوي`
+                        : `مقارنة_المبيعات_${state.year}_${state.mode === 'year' ? 'سنوي' : 'شهر_' + state.month}`;
+                    const rows = [appendMetricHeaders([
+                        'الترتيب', 'كود المعرض', 'اسم المعرض', 'المنطقة', 'المدير الإشرافي', 'نوع القناة'
+                    ], options, 'المستهدف حتى تاريخه (ر.س)')];
+                    targetStoreIds
+                        .map((storeId) => ({
+                            storeId,
+                            store: getStoreExportMeta(storeId),
+                            metrics: computeScopeMetrics([storeId], summaryPeriod)
+                        }))
+                        .sort((a, b) => b.metrics.sales - a.metrics.sales)
+                        .forEach((item, index) => {
+                            rows.push(appendMetricValues([
+                                index + 1, item.store.id, item.store.name, item.store.area,
+                                item.store.supervisor, item.store.channel
+                            ], item.metrics, options));
+                        });
+                    if (includeTotals) {
+                        rows.push(appendMetricValues(['الإجمالي', '', '', '', '', ''], computeScopeMetrics(targetStoreIds, summaryPeriod), options));
+                    }
+                    XLSX.utils.book_append_sheet(workbook, createExportWorksheet(rows), 'مقارنة أداء المعارض');
                 }
 
-                const exportFileName = `Orange_${fileNameSuffix}_${nowStr}.xlsx`;
-                XLSX.writeFile(wb, exportFileName);
-                closeExportModal();
+                if (includeAreaSheet) {
+                    appendAreaAnalysisSheet(workbook, targetStoreIds, summaryPeriod, options, includeTotals);
+                }
+
+                const exportFileName = `Orange_${fileNameSuffix}_${getRiyadhDateStamp()}.xlsx`;
+                try {
+                    dom.executeExcelExportBtn.disabled = true;
+                    XLSX.writeFile(workbook, exportFileName);
+                    closeExportModal();
+                } catch (error) {
+                    console.error('Excel export failed:', error);
+                    alert('تعذر إنشاء ملف Excel. أعد المحاولة أو قلّل نطاق البيانات.');
+                } finally {
+                    dom.executeExcelExportBtn.disabled = false;
+                }
             }
 
             function wireEvents() {
@@ -3551,24 +3626,34 @@
                         if (e.target === dom.exportModalBackdrop) closeExportModal();
                     });
                 }
+                dom.retryButton.addEventListener('click', loadData);
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && dom.exportModalBackdrop?.classList.contains('is-open')) {
+                        closeExportModal();
+                    }
+                });
             }
 
             function checkAccessPermission() {
                 try {
                     const userStr = localStorage.getItem('currentUser');
-                    if (userStr) {
-                        const user = JSON.parse(userStr);
-                        const uName = (user.name || '').trim().toLowerCase();
-                        const uRole = (user.role || '').trim().toLowerCase();
-                        const isAlaa = (user.name === 'علاء' || uName === 'alaa' || uName === 'alaa-orange');
-                        const isSalesManager = (uName === 'sales manager' || uRole === 'sales manager' || uRole === 'sales_manager' || uRole === 'admin' || user.role === 'Admin');
-                        if (!isAlaa && !isSalesManager) {
-                            window.location.replace('index.html');
-                            return false;
-                        }
+                    if (!userStr) {
+                        window.location.replace('index.html');
+                        return false;
+                    }
+                    const user = JSON.parse(userStr);
+                    const uName = (user.name || '').trim().toLowerCase();
+                    const uRole = (user.role || '').trim().toLowerCase();
+                    const isAlaa = (user.name === 'علاء' || uName === 'alaa' || uName === 'alaa-orange');
+                    const isSalesManager = (uName === 'sales manager' || uRole === 'sales manager' || uRole === 'sales_manager' || uRole === 'admin' || user.role === 'Admin');
+                    if (!isAlaa && !isSalesManager) {
+                        window.location.replace('index.html');
+                        return false;
                     }
                 } catch (e) {
                     console.warn('Access check error:', e);
+                    window.location.replace('index.html');
+                    return false;
                 }
                 return true;
             }
