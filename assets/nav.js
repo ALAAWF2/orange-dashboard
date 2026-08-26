@@ -66,8 +66,8 @@ async function initNavbar() {
     const nameLower = rawName.trim().toLowerCase();
     const roleLower = rawRole.trim().toLowerCase();
 
-    const isAlaa = (rawName === 'علاء' || nameLower === 'alaa' || nameLower === 'alaa-orange');
-    const isSalesManager = (nameLower === 'sales manager' || roleLower === 'sales manager' || roleLower === 'sales_manager');
+    const isAlaa = (rawName.includes('علاء') || nameLower.includes('alaa'));
+    const isSalesManager = (nameLower.includes('sales') || roleLower.includes('sales') || roleLower === 'admin' || rawRole === 'Admin');
     const isSalesComparisonUser = (isAlaa || isSalesManager);
     const isFinanceUser = (isAlaa || isSalesManager);
     const isCrmOnly = (role === 'CRM');
