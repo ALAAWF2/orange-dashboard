@@ -1878,105 +1878,6 @@
             line-height: 1.6;
         }
 
-        .exception-center {
-            margin-bottom: 20px;
-            border: 1px solid var(--card-border);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            background: #ffffff;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .exception-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            padding: 14px 18px;
-            background: linear-gradient(135deg, #111827, #1e293b);
-            color: #ffffff;
-        }
-
-        .exception-header h3 {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 900;
-        }
-
-        .exception-header p {
-            margin: 3px 0 0;
-            color: #94a3b8;
-            font-size: 0.74rem;
-        }
-
-        .exception-badge {
-            min-width: 34px;
-            padding: 4px 9px;
-            border-radius: 9999px;
-            background: var(--orange);
-            color: #ffffff;
-            text-align: center;
-            font-size: 0.76rem;
-            font-weight: 900;
-        }
-
-        .exception-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 9px;
-            padding: 12px;
-        }
-
-        .exception-row {
-            position: relative;
-            padding: 11px 12px;
-            border: 1px solid var(--card-border);
-            border-radius: 11px;
-            background: #ffffff;
-            cursor: pointer;
-            transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
-        }
-
-        .exception-row:hover {
-            transform: translateY(-2px);
-            border-color: var(--orange);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .exception-row::before {
-            content: "";
-            position: absolute;
-            top: 10px;
-            right: 0;
-            bottom: 10px;
-            width: 3px;
-            border-radius: 3px 0 0 3px;
-            background: var(--orange);
-        }
-
-        .exception-store {
-            padding-right: 7px;
-            color: var(--ink);
-            font-size: 0.8rem;
-            font-weight: 900;
-        }
-
-        .exception-reason {
-            margin-top: 5px;
-            color: var(--ink-muted);
-            font-size: 0.7rem;
-            line-height: 1.55;
-        }
-
-        .exception-metrics {
-            display: flex;
-            gap: 10px;
-            margin-top: 8px;
-            color: var(--ink-secondary);
-            font-size: 0.7rem;
-            font-weight: 800;
-        }
-
         .drillthrough-btn {
             display: inline-flex;
             align-items: center;
@@ -2046,7 +1947,6 @@
         body.power-focus-mode .hero,
         body.power-focus-mode .control-deck,
         body.power-focus-mode .scope-banner,
-        body.power-focus-mode .exception-center,
         body.power-focus-mode .page-footer {
             display: none;
         }
@@ -2077,9 +1977,6 @@
                 flex: 0 0 auto;
             }
 
-            .exception-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         @media (max-width: 480px) {
@@ -2124,7 +2021,6 @@
                 <span aria-hidden="true">◫</span>
                 <div>
                     <div class="power-toolbar-kicker">POWER BI OPERATIONS EDITION</div>
-                    <strong>مساحة القرار اليومية</strong>
                 </div>
             </div>
             <div class="power-toolbar-actions">
@@ -2383,17 +2279,6 @@
                         <span class="kpi-previous" id="fullTargetPrior">الفترة السابقة: غير متوفر</span>
                     </div>
                 </article>
-            </section>
-
-            <section class="exception-center" id="exceptionCenter" aria-labelledby="exceptionTitle">
-                <div class="exception-header">
-                    <div>
-                        <h3 id="exceptionTitle">مركز الاستثناءات التشغيلية</h3>
-                        <p>المعارض التي تحتاج قراراً الآن وفق المستهدف، النمو والتحويل.</p>
-                    </div>
-                    <span class="exception-badge" id="exceptionCount">0</span>
-                </div>
-                <div class="exception-grid" id="exceptionGrid"></div>
             </section>
 
             <!-- Insight Analytics & Visual Workspace -->
@@ -2810,9 +2695,6 @@
                 dom.savedViewName = document.getElementById('savedViewName');
                 dom.saveCurrentViewBtn = document.getElementById('saveCurrentViewBtn');
                 dom.savedViewsList = document.getElementById('savedViewsList');
-                dom.exceptionCenter = document.getElementById('exceptionCenter');
-                dom.exceptionCount = document.getElementById('exceptionCount');
-                dom.exceptionGrid = document.getElementById('exceptionGrid');
                 dom.drillthroughDrawer = document.getElementById('drillthroughDrawer');
                 dom.closeDrillthroughBtn = document.getElementById('closeDrillthroughBtn');
                 dom.drillthroughTitle = document.getElementById('drillthroughTitle');
@@ -4251,46 +4133,8 @@
                 syncPowerBackdrop();
             }
 
-            function renderExceptions() {
-                const period = getActivePeriod();
-                const rows = activeStoreIds().map((storeId) => {
-                    const store = state.stores.get(storeId);
-                    const metrics = computeScopeMetrics([storeId], period);
-                    const targetGapPct = metrics.target > 0 ? Math.max(0, 100 - metrics.achievementPct) : 0;
-                    const declinePct = Math.max(0, -metrics.growthPct);
-                    const conversionGap = metrics.visitors > 0 ? Math.max(0, 15 - metrics.conversionPct) : 0;
-                    const score = (targetGapPct * 0.45) + (declinePct * 0.35) + (conversionGap * 1.8);
-                    const reasons = [];
-                    if (targetGapPct >= 10) reasons.push(`فجوة مستهدف ${targetGapPct.toFixed(0)}%`);
-                    if (declinePct >= 5) reasons.push(`تراجع YoY ${declinePct.toFixed(1)}%`);
-                    if (conversionGap >= 2) reasons.push(`تحويل ${metrics.conversionPct.toFixed(1)}%`);
-                    if (!reasons.length) reasons.push('أولوية متابعة منخفضة');
-                    return { storeId, store, metrics, score, reasons };
-                }).sort((a, b) => b.score - a.score).slice(0, 6);
-
-                dom.exceptionCount.textContent = String(rows.length);
-                if (!rows.length) {
-                    dom.exceptionGrid.innerHTML = '<div class="empty-inline">لا توجد معارض ضمن النطاق الحالي.</div>';
-                    return;
-                }
-                dom.exceptionGrid.innerHTML = rows.map((row) => `
-                    <button type="button" class="exception-row" data-store-id="${escapeHtml(row.storeId)}">
-                        <div class="exception-store">${escapeHtml(row.store.name)}</div>
-                        <div class="exception-reason">${escapeHtml(row.reasons.join(' • '))}</div>
-                        <div class="exception-metrics">
-                            <span>تحقيق ${row.metrics.achievementPct.toFixed(1)}%</span>
-                            <span>نمو ${fmtPct(row.metrics.growthPct)}</span>
-                        </div>
-                    </button>
-                `).join('');
-                dom.exceptionGrid.querySelectorAll('.exception-row').forEach((button) => {
-                    button.addEventListener('click', () => openStoreDrillthrough(button.dataset.storeId));
-                });
-            }
-
             function renderOperationalLayer() {
                 renderFilterContext();
-                renderExceptions();
                 syncHistoryButtons();
             }
 
@@ -4600,7 +4444,7 @@
                 ].join(',');
 
                 document.addEventListener('click', (event) => {
-                    if (event.target.closest('.drillthrough-btn, .exception-row')) return;
+                    if (event.target.closest('.drillthrough-btn')) return;
                     if (event.target.closest(filterClickSelector)) recordFilterSnapshot();
                 }, true);
                 dom.yearSelect.addEventListener('change', recordFilterSnapshot, true);
