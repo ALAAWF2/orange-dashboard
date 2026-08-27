@@ -543,6 +543,87 @@
             transform: translateY(-1px);
         }
 
+
+        /* Split KPI Cards (Two Halves: Current Year vs Prior Year) */
+        .kpi-split-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: flex-start;
+            margin: 6px 0 2px;
+            padding-top: 2px;
+        }
+
+        .kpi-col {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .kpi-col.is-prior {
+            border-right: 1px solid var(--card-border);
+            padding-right: 12px;
+        }
+
+        .kpi-col-caption {
+            font-size: 0.72rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .kpi-col.is-current .kpi-col-caption {
+            color: var(--orange-dark);
+        }
+
+        .kpi-col.is-prior .kpi-col-caption {
+            color: var(--blue);
+        }
+
+        .kpi-col-caption::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+
+        .kpi-half-value {
+            font-size: clamp(0.74rem, 0.92vw, 1.14rem);
+            font-weight: 900;
+            line-height: 1.15;
+            direction: ltr;
+            text-align: right;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+            width: 100%;
+        }
+
+        .kpi-half-value.is-current {
+            color: var(--ink);
+        }
+
+        .kpi-half-value.is-prior {
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .kpi-col-sub {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--ink-muted);
+            line-height: 1.35;
+            margin-top: 2px;
+        }
+
         /* Status Panels */
         .status-panel {
             display: none;
@@ -638,12 +719,13 @@
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: var(--radius-lg);
-            padding: 18px 20px;
+            padding: 16px 18px;
             box-shadow: var(--shadow-sm);
             transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            min-height: 140px;
         }
 
         .kpi-card:hover {
@@ -2197,10 +2279,16 @@
                         <span class="kpi-label" id="targetKpiLabel">تحقيق المستهدف</span>
                         <span class="kpi-badge" id="targetStatusBadge">المستهدف</span>
                     </div>
-                    <div class="kpi-value" id="achievementValue">0%</div>
-                    <div class="kpi-sub is-stacked">
-                        <span id="targetToDateValue">مقابل 0 ر.س</span>
-                        <span class="kpi-previous" id="achievementPrior">الفترة السابقة: غير متوفر</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="achievementCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="achievementValue">0%</div>
+                            <div class="kpi-col-sub" id="targetToDateValue">المستهدف: 0 ر.س</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="achievementPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="achievementPrior">الفترة السابقة: غير متوفر</div>
+                        </div>
                     </div>
                 </article>
 
@@ -2210,9 +2298,16 @@
                         <span class="kpi-label">عدد الفواتير</span>
                         <span class="kpi-badge">المعاملات</span>
                     </div>
-                    <div class="kpi-value" id="transactionsValue">0</div>
-                    <div class="kpi-sub">
-                        <span id="transactionsGrowth">السنة السابقة: 0</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="txnCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="transactionsValue">0</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="txnPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="transactionsGrowth">0</div>
+                            <div class="kpi-col-sub" id="txnPriorSub"></div>
+                        </div>
                     </div>
                 </article>
 
@@ -2222,9 +2317,17 @@
                         <span class="kpi-label">متوسط الفاتورة</span>
                         <span class="kpi-badge">ر.س / فاتورة</span>
                     </div>
-                    <div class="kpi-value" id="averageBillValue">0</div>
-                    <div class="kpi-sub is-stacked">
-                        <span class="kpi-previous" id="averageBillPrior">الفترة السابقة: 0 ر.س</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="avgBillCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="averageBillValue">0</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="avgBillPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="averageBillPrior">الفترة السابقة: 0 ر.س</div>
+                        </div>
+                    </div>
+                    <div class="kpi-sub">
                         <span class="kpi-formula">المبيعات ÷ الفواتير</span>
                     </div>
                 </article>
@@ -2235,9 +2338,15 @@
                         <span class="kpi-label">إجمالي الزوار</span>
                         <span class="kpi-badge">العدادات</span>
                     </div>
-                    <div class="kpi-value" id="visitorsValue">0</div>
-                    <div class="kpi-sub">
-                        <span class="kpi-previous" id="visitorsPrior">الفترة السابقة: 0</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="visitorsCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="visitorsValue">0</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="visitorsPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="visitorsPrior">الفترة السابقة: 0</div>
+                        </div>
                     </div>
                 </article>
 
@@ -2247,9 +2356,17 @@
                         <span class="kpi-label">نسبة التحويل</span>
                         <span class="kpi-badge">Conversion</span>
                     </div>
-                    <div class="kpi-value" id="conversionValue">0%</div>
-                    <div class="kpi-sub is-stacked">
-                        <span class="kpi-previous" id="conversionPrior">الفترة السابقة: 0%</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="conversionCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="conversionValue">0%</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="conversionPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="conversionPrior">الفترة السابقة: 0%</div>
+                        </div>
+                    </div>
+                    <div class="kpi-sub">
                         <span class="kpi-formula">الفواتير ÷ الزوار</span>
                     </div>
                 </article>
@@ -2260,9 +2377,17 @@
                         <span class="kpi-label">قيمة الزائر</span>
                         <span class="kpi-badge">ر.س / زائر</span>
                     </div>
-                    <div class="kpi-value" id="visitorValue">0</div>
-                    <div class="kpi-sub is-stacked">
-                        <span class="kpi-previous" id="visitorValuePrior">الفترة السابقة: 0 ر.س</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="visitorValCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="visitorValue">0</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="visitorValPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="visitorValuePrior">الفترة السابقة: 0 ر.س</div>
+                        </div>
+                    </div>
+                    <div class="kpi-sub">
                         <span class="kpi-formula">المبيعات ÷ الزوار</span>
                     </div>
                 </article>
@@ -2273,10 +2398,16 @@
                         <span class="kpi-label" id="fullTargetLabel">المستهدف المسجل</span>
                         <span class="kpi-badge">المخطط</span>
                     </div>
-                    <div class="kpi-value" id="fullTargetValue">0</div>
-                    <div class="kpi-sub is-stacked">
-                        <span id="fullTargetSub">إجمالي المستهدف</span>
-                        <span class="kpi-previous" id="fullTargetPrior">الفترة السابقة: غير متوفر</span>
+                    <div class="kpi-split-body">
+                        <div class="kpi-col is-current">
+                            <span class="kpi-col-caption" id="fullTargetCurCaption">السنة الحالية</span>
+                            <div class="kpi-half-value is-current" id="fullTargetValue">0</div>
+                            <div class="kpi-col-sub" id="fullTargetSub">المحقق منه: 0%</div>
+                        </div>
+                        <div class="kpi-col is-prior">
+                            <span class="kpi-col-caption" id="fullTargetPriorCaption">السنة السابقة</span>
+                            <div class="kpi-half-value is-prior" id="fullTargetPrior">الفترة السابقة: غير متوفر</div>
+                        </div>
                     </div>
                 </article>
             </section>
@@ -3409,6 +3540,14 @@
                 const range = getDayRange();
                 const metrics = computeScopeMetrics(storeIds, getActivePeriod());
 
+                const curYearLabel = `سنة ${state.year}`;
+                const priorYearLabel = `سنة ${state.year - 1}`;
+                ['achievement', 'txn', 'avgBill', 'visitors', 'conversion', 'visitorVal', 'fullTarget'].forEach(prefix => {
+                    const curEl = document.getElementById(`${prefix}CurCaption`);
+                    const priorEl = document.getElementById(`${prefix}PriorCaption`);
+                    if (curEl) curEl.textContent = curYearLabel;
+                    if (priorEl) priorEl.textContent = priorYearLabel;
+                });
                 dom.salesCurrent.textContent = `${fmtNum(metrics.sales)} ر.س`;
                 dom.salesPrior.textContent = `${fmtNum(metrics.priorSales)} ر.س`;
                 dom.salesPeriodBadge.textContent = state.mode === 'year' ? `سنة ${state.year}` : `${MONTHS_AR[state.month - 1]} ${state.year}`;
@@ -3425,8 +3564,8 @@
                 dom.achievementValue.textContent = `${metrics.achievementPct.toFixed(1)}%`;
                 dom.targetToDateValue.textContent = `المستهدف: ${fmtNum(metrics.target)} ر.س`;
                 dom.achievementPrior.textContent = metrics.priorTarget > 0
-                    ? `الفترة السابقة: ${metrics.priorAchievementPct.toFixed(1)}%`
-                    : 'الفترة السابقة: غير متوفر';
+                    ? `${metrics.priorAchievementPct.toFixed(1)}%`
+                    : 'غير متوفر';
 
                 dom.achievementCard.className = 'kpi-card';
                 if (metrics.achievementPct >= 100) dom.achievementCard.classList.add('is-positive');
@@ -3436,22 +3575,25 @@
                 dom.transactionsValue.textContent = fmtNum(metrics.transactions);
                 const txnDiff = metrics.transactions - metrics.priorTransactions;
                 const txnPct = metrics.priorTransactions > 0 ? (txnDiff / metrics.priorTransactions) * 100 : 0;
-                dom.transactionsGrowth.textContent = `${state.year - 1}: ${fmtNum(metrics.priorTransactions)} (${fmtPct(txnPct)})`;
+                dom.transactionsGrowth.textContent = `${fmtNum(metrics.priorTransactions)}`;
+                const txnGrowthSub = document.getElementById('txnPriorSub');
+                if (txnGrowthSub) txnGrowthSub.textContent = fmtPct(txnPct);
+
                 dom.averageBillValue.textContent = `${fmtNum(metrics.averageBill, 1)} ر.س`;
-                dom.averageBillPrior.textContent = `الفترة السابقة: ${fmtNum(metrics.priorAverageBill, 1)} ر.س`;
+                dom.averageBillPrior.textContent = `${fmtNum(metrics.priorAverageBill, 1)} ر.س`;
                 dom.visitorsValue.textContent = fmtNum(metrics.visitors);
-                dom.visitorsPrior.textContent = `الفترة السابقة: ${fmtNum(metrics.priorVisitors)}`;
+                dom.visitorsPrior.textContent = `${fmtNum(metrics.priorVisitors)}`;
                 dom.conversionValue.textContent = `${metrics.conversionPct.toFixed(1)}%`;
-                dom.conversionPrior.textContent = `الفترة السابقة: ${metrics.priorConversionPct.toFixed(1)}%`;
+                dom.conversionPrior.textContent = `${metrics.priorConversionPct.toFixed(1)}%`;
                 dom.visitorValue.textContent = `${fmtNum(metrics.visitorValue, 1)} ر.س`;
-                dom.visitorValuePrior.textContent = `الفترة السابقة: ${fmtNum(metrics.priorVisitorValue, 1)} ر.س`;
+                dom.visitorValuePrior.textContent = `${fmtNum(metrics.priorVisitorValue, 1)} ر.س`;
 
                 dom.fullTargetValue.textContent = `${fmtNum(metrics.fullTarget)} ر.س`;
                 const fullAchievePct = metrics.fullTarget > 0 ? (metrics.sales / metrics.fullTarget) * 100 : 0;
                 dom.fullTargetSub.textContent = `المحقق منه: ${fullAchievePct.toFixed(1)}%`;
                 dom.fullTargetPrior.textContent = metrics.priorFullTarget > 0
-                    ? `الفترة السابقة: ${fmtNum(metrics.priorFullTarget)} ر.س`
-                    : 'الفترة السابقة: غير متوفر';
+                    ? `${fmtNum(metrics.priorFullTarget)} ر.س`
+                    : 'غير متوفر';
 
                 // Aside targets
                 dom.sideToDateTitle.textContent = state.mode === 'year' ? `المستهدف حتى اليوم في ${state.year}` : `المستهدف حتى تاريخ ${range.endDay} ${MONTHS_AR[state.month - 1]}`;
