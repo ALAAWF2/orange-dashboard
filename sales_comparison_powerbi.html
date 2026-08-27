@@ -544,11 +544,11 @@
         }
 
 
-        /* Split KPI Cards (Two Halves: Current Year vs Prior Year) */
+        /* Split KPI Cards (Unified Styling: Identical Layout & Color Coding) */
         .kpi-split-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 8px;
             align-items: flex-start;
             margin: 6px 0 2px;
             padding-top: 2px;
@@ -563,24 +563,17 @@
 
         .kpi-col.is-prior {
             border-right: 1px solid var(--card-border);
-            padding-right: 12px;
+            padding-right: 8px;
         }
 
         .kpi-col-caption {
-            font-size: 0.72rem;
+            font-size: 0.74rem;
             font-weight: 800;
             display: inline-flex;
             align-items: center;
             gap: 5px;
             white-space: nowrap;
-        }
-
-        .kpi-col.is-current .kpi-col-caption {
-            color: var(--orange-dark);
-        }
-
-        .kpi-col.is-prior .kpi-col-caption {
-            color: var(--blue);
+            color: var(--ink-muted);
         }
 
         .kpi-col-caption::before {
@@ -589,14 +582,14 @@
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: currentColor;
+            background: #94a3b8;
             flex-shrink: 0;
         }
 
         .kpi-half-value {
-            font-size: clamp(0.74rem, 0.92vw, 1.14rem);
+            font-size: clamp(0.72rem, 0.88vw, 1.12rem);
             font-weight: 900;
-            line-height: 1.15;
+            line-height: 1.18;
             direction: ltr;
             text-align: right;
             letter-spacing: -0.01em;
@@ -605,6 +598,8 @@
             text-overflow: ellipsis;
             display: block;
             width: 100%;
+            color: var(--ink);
+            transition: color var(--transition-fast);
         }
 
         .kpi-half-value.is-current {
@@ -612,8 +607,18 @@
         }
 
         .kpi-half-value.is-prior {
-            color: var(--blue);
-            font-weight: 800;
+            color: var(--ink);
+            font-weight: 900;
+        }
+
+        .kpi-half-value.is-decline,
+        .kpi-value.is-decline {
+            color: var(--red) !important;
+        }
+
+        .kpi-half-value.is-growth,
+        .kpi-value.is-growth {
+            color: var(--ink);
         }
 
         .kpi-col-sub {
@@ -622,6 +627,15 @@
             color: var(--ink-muted);
             line-height: 1.35;
             margin-top: 2px;
+        }
+
+        .kpi-col-sub.is-decline {
+            color: var(--red);
+            font-weight: 800;
+        }
+
+        .kpi-card.is-prior::before {
+            background: var(--orange);
         }
 
         /* Status Panels */
@@ -746,7 +760,7 @@
         }
 
         .kpi-card.is-prior::before {
-            background: var(--blue);
+            background: var(--orange);
         }
 
         .kpi-card.is-positive::before {
@@ -3548,8 +3562,6 @@
                     if (curEl) curEl.textContent = curYearLabel;
                     if (priorEl) priorEl.textContent = priorYearLabel;
                 });
-                dom.salesCurrent.textContent = `${fmtNum(metrics.sales)} ر.س`;
-                dom.salesPrior.textContent = `${fmtNum(metrics.priorSales)} ر.س`;
                 dom.salesPeriodBadge.textContent = state.mode === 'year' ? `سنة ${state.year}` : `${MONTHS_AR[state.month - 1]} ${state.year}`;
                 dom.salesPriorLabel.textContent = `سنة ${state.year - 1}:`;
 
@@ -3572,22 +3584,68 @@
                 else if (metrics.achievementPct >= 80) dom.achievementCard.classList.add('is-prior');
                 else dom.achievementCard.classList.add('is-negative');
 
+                // Color coding helper: red if decline (current < prior), black if growth/increase
+                function applyPerformanceColor(elem, currentVal, priorVal) {
+                    if (!elem) return;
+                    if (priorVal > 0 && currentVal < priorVal) {
+                        elem.classList.add('is-decline');
+                        elem.classList.remove('is-growth');
+                    } else {
+                        elem.classList.remove('is-decline');
+                        elem.classList.add('is-growth');
+                    }
+                }
+
+                // 1. Sales
+                dom.salesCurrent.textContent = `${fmtNum(metrics.sales)} ر.س`;
+                dom.salesPrior.textContent = `${fmtNum(metrics.priorSales)} ر.س`;
+                applyPerformanceColor(dom.salesCurrent, metrics.sales, metrics.priorSales);
+
+                // 2. Transactions
                 dom.transactionsValue.textContent = fmtNum(metrics.transactions);
                 const txnDiff = metrics.transactions - metrics.priorTransactions;
                 const txnPct = metrics.priorTransactions > 0 ? (txnDiff / metrics.priorTransactions) * 100 : 0;
                 dom.transactionsGrowth.textContent = `${fmtNum(metrics.priorTransactions)}`;
+                applyPerformanceColor(dom.transactionsValue, metrics.transactions, metrics.priorTransactions);
                 const txnGrowthSub = document.getElementById('txnPriorSub');
-                if (txnGrowthSub) txnGrowthSub.textContent = fmtPct(txnPct);
+                if (txnGrowthSub) {
+                    txnGrowthSub.textContent = fmtPct(txnPct);
+                    txnGrowthSub.className = txnPct < 0 ? 'kpi-col-sub is-decline' : 'kpi-col-sub';
+                }
 
+                // 3. Average Bill
                 dom.averageBillValue.textContent = `${fmtNum(metrics.averageBill, 1)} ر.س`;
                 dom.averageBillPrior.textContent = `${fmtNum(metrics.priorAverageBill, 1)} ر.س`;
+                applyPerformanceColor(dom.averageBillValue, metrics.averageBill, metrics.priorAverageBill);
+
+                // 4. Visitors
                 dom.visitorsValue.textContent = fmtNum(metrics.visitors);
                 dom.visitorsPrior.textContent = `${fmtNum(metrics.priorVisitors)}`;
+                applyPerformanceColor(dom.visitorsValue, metrics.visitors, metrics.priorVisitors);
+
+                // 5. Conversion Rate
                 dom.conversionValue.textContent = `${metrics.conversionPct.toFixed(1)}%`;
                 dom.conversionPrior.textContent = `${metrics.priorConversionPct.toFixed(1)}%`;
+                applyPerformanceColor(dom.conversionValue, metrics.conversionPct, metrics.priorConversionPct);
+
+                // 6. Visitor Value
                 dom.visitorValue.textContent = `${fmtNum(metrics.visitorValue, 1)} ر.س`;
                 dom.visitorValuePrior.textContent = `${fmtNum(metrics.priorVisitorValue, 1)} ر.س`;
+                applyPerformanceColor(dom.visitorValue, metrics.visitorValue, metrics.priorVisitorValue);
 
+                // 7. Achievement
+                dom.achievementValue.textContent = `${metrics.achievementPct.toFixed(1)}%`;
+                dom.targetToDateValue.textContent = `المستهدف: ${fmtNum(metrics.target)} ر.س`;
+                dom.achievementPrior.textContent = metrics.priorTarget > 0
+                    ? `${metrics.priorAchievementPct.toFixed(1)}%`
+                    : 'غير متوفر';
+                if (metrics.priorTarget > 0) {
+                    applyPerformanceColor(dom.achievementValue, metrics.achievementPct, metrics.priorAchievementPct);
+                } else {
+                    dom.achievementValue.classList.toggle('is-decline', metrics.achievementPct < 90);
+                }
+
+                // 8. Full Target
                 dom.fullTargetValue.textContent = `${fmtNum(metrics.fullTarget)} ر.س`;
                 const fullAchievePct = metrics.fullTarget > 0 ? (metrics.sales / metrics.fullTarget) * 100 : 0;
                 dom.fullTargetSub.textContent = `المحقق منه: ${fullAchievePct.toFixed(1)}%`;
