@@ -7094,7 +7094,7 @@ const EMPLOYEES = [
         "name": "Renad Alfahem",
         "startDate": "2026-07-01",
         "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh و 1108-39-Salam Mall Riyadh",
+        "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1105-30-Tala Mall Riyadh",
@@ -7103,17 +7103,9 @@ const EMPLOYEES = [
                     "1105-C",
                     "1105-E"
                 ]
-            },
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
             }
         ],
-        "addressBooks": "1105-C;1105-E;1108-C;1108-E"
+        "addressBooks": "1105-C;1105-E"
     },
     {
         "employeeId": "4988-Rabab Mahdi",

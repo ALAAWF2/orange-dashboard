@@ -179,6 +179,7 @@ async function initNavbar() {
                         <li><a class="dropdown-item" href="stagnant_products.html">📉 المنتجات الراكدة والمخزون</a></li>
                         <li><a class="dropdown-item" href="offers_analysis.html">🏷️ تحليل مبيعات العروض</a></li>
                         <li><a class="dropdown-item" href="rep.html">📊 تقارير مبيعات الفروع الموسعة</a></li>
+                        <li><a class="dropdown-item fw-bold text-primary" href="transfer_orders.html">🚚 أوامر التحويل (Transfer Orders)</a></li>
                     </ul>
                 </div>
 
