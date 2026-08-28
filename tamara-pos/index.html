@@ -607,6 +607,13 @@
 
         <!-- STEP 1: Phone Input -->
         <div id="stepInput">
+            <div id="customerInfoBadge" style="display: none; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #9a3412; font-weight: 700; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>👤</span>
+                    <span id="customerInfoText">بيانات العميل المرفق بالفاتورة</span>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label" for="customerPhone">رقم جوال العميل (المسجل في تمارا)</label>
                 <div class="phone-input-wrapper">
@@ -694,18 +701,99 @@
     let pollInterval = null;
     let qrCodeObj = null;
 
+    // Complete Showrooms Mapping (52 Showrooms)
+    const SHOWROOMS_MAP = {
+        "1001": "الأندلس مول (Andalos Mall)",
+        "1002": "هيفاء مول (Haifa Mall)",
+        "1003": "رد سي مول (Red Sea Mall)",
+        "1004": "مجمع العرب (Arab Mall)",
+        "1005": "السلام مول (Al-Salam Mall)",
+        "1006": "الياسمين مول (Al-Yasmin Mall)",
+        "1007": "مركز الخياط (Al Khayyat Center)",
+        "1008": "جدة بارك (Jeddah Park)",
+        "1009": "البساتين مول (Al Basateen Mall)",
+        "1010": "ذا فيلج (THE VILLAGE)",
+        "1011": "عزيز مول 2 (Aziz Mall 2)",
+        "1012": "سوق 7 (Sauq 7)",
+        "1013": "المنصات (Platforms)",
+        "1101": "الحمراء مول الرياض (Al Hamra Mall)",
+        "1102": "العثيم مول خريص (Riyadh Othaim Mall)",
+        "1103": "العثيم مول الربوة (Rabwa Othaim Mall)",
+        "1104": "النخيل مول الرياض (Al Nakheel Mall Riyadh)",
+        "1105": "تالا مول الرياض (Tala Mall Riyadh)",
+        "1106": "أطياف مول الرياض (Atyaf Mall Riyadh)",
+        "1107": "الرياض بارك (Al Riyadh Park)",
+        "1108": "السلام مول الرياض (Salam Mall Riyadh)",
+        "1109": "حياة مول الرياض (Hayat Mall Riyadh)",
+        "1110": "الرياض جاليري (Riyadh Gallery Mall)",
+        "1111": "الخليج مول الرياض (Khaleej Mall Riyadh)",
+        "1112": "ميم بلازا الرياض (Meem Plaza Riyadh)",
+        "1113": "بارك أفينيو الرياض (Park Avenue Riyadh)",
+        "1114": "الملقا مول الرياض (Malgha Mall)",
+        "1115": "الربيع مول الرياض (Alrabie Mall)",
+        "1201": "مكة مول (Makkah Mall)",
+        "1202": "شارع الستين مكة (Sitten Street Makkah)",
+        "1203": "جبل عمر (Jabal Omar)",
+        "1301": "جوري مول الطائف (Jouri Mall)",
+        "1302": "الكمال مول (Al Kamal Mall)",
+        "1401": "عالية مول المدينة (Alia Mall Madinah)",
+        "1402": "النور مول المدينة (Al-Noor Mall Madinah)",
+        "1501": "ينبع دانة مول (Yanbu Dana Mall)",
+        "1601": "العثيم مول الأحساء (Ehsa Othaim Mall)",
+        "1602": "الأحساء مول (AlAhsa Mall)",
+        "1701": "العثيم مول عرعر (Arar Othaim Mall)",
+        "1801": "العثيم مول حائل (Hail Othaim Mall)",
+        "1901": "الراشد مول أبها (Abha Al Rashid Mall)",
+        "1903": "موجان بارك (Mujan Park)",
+        "1904": "الباحة مول (Al Baha Mall)",
+        "1906": "لافاندا بارك جازان (Lavanda Park)",
+        "2001": "تبوك بارك (Tabuk Park)",
+        "2101": "الظهران مول الخبر (Dhahran Mall Khobar)",
+        "2102": "النخيل مول الدمام (Al Nakheel Mall Dammam)",
+        "2103": "دارين مول الدمام (Dareen Mall Dammam)",
+        "2201": "الجبيل مول (Al Jubail Mall)",
+        "2301": "الجوف سنتر (Al-Jouf Center)",
+        "2401": "النخيل بلازا بريدة (Al-Nakheel Plaza)",
+        "0": "المستودع الرئيسي (Warehouse)"
+    };
+
+    function getStoreDisplayName(storeId, passedStoreName) {
+        if (passedStoreName && passedStoreName.trim() && passedStoreName !== "undefined") {
+            return passedStoreName.trim();
+        }
+        const cleanId = String(storeId || '').trim();
+        if (SHOWROOMS_MAP[cleanId]) {
+            return SHOWROOMS_MAP[cleanId];
+        }
+        return `معرض ${cleanId}`;
+    }
+
     // Parse URL Query Parameters passed by POS
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         
         const paramStore = urlParams.get('storeId') || urlParams.get('store_id') || urlParams.get('store');
+        const paramStoreName = urlParams.get('storeName') || urlParams.get('store_name');
         const paramTerminal = urlParams.get('terminalId') || urlParams.get('terminal_id') || urlParams.get('terminal');
         const paramCart = urlParams.get('cartId') || urlParams.get('cart_id') || urlParams.get('cart') || urlParams.get('dynamics_reference');
         const rawAmount = urlParams.get('amount');
         
-        if (paramStore) currentStoreId = paramStore;
-        if (paramTerminal) currentTerminalId = paramTerminal;
         if (paramCart) currentCartId = paramCart;
+        
+        // Smart Store & Terminal Extraction from Cart ID (e.g. POS-1001-1-1787923358127-1001)
+        if (currentCartId && currentCartId.startsWith("POS-")) {
+            const parts = currentCartId.split('-');
+            if (parts.length >= 3) {
+                if (!paramStore || paramStore === "001") {
+                    currentStoreId = parts[1];
+                }
+                if (!paramTerminal || paramTerminal === "POS1") {
+                    currentTerminalId = parts[2];
+                }
+            }
+        }
+        if (paramStore && paramStore !== "001") currentStoreId = paramStore;
+        if (paramTerminal && paramTerminal !== "POS1") currentTerminalId = paramTerminal;
         
         if (rawAmount !== null && rawAmount !== undefined) {
             currentAmount = parseFloat(rawAmount) || 0.0;
@@ -730,6 +818,16 @@
             document.getElementById('customerPhone').value = cleanPhone;
         }
 
+        const paramCustName = urlParams.get('custName') || urlParams.get('cust_name');
+        const paramCustId = urlParams.get('custId') || urlParams.get('cust_id');
+        if (paramCustName || paramCustId) {
+            const badge = document.getElementById('customerInfoBadge');
+            const text = document.getElementById('customerInfoText');
+            badge.style.display = 'flex';
+            const displayLabel = [paramCustName, paramCustId ? `(${paramCustId})` : ''].filter(Boolean).join(' ');
+            text.textContent = `العميل المرفق: ${displayLabel}`;
+        }
+
         // Parse Items if provided as JSON string
         const rawItems = urlParams.get('items');
         if (rawItems) {
@@ -742,7 +840,8 @@
         }
 
         // Render Initial Values
-        document.getElementById('displayStoreTerminal').textContent = `معرض ${currentStoreId} / كاشير ${currentTerminalId}`;
+        const storeDisplayName = getStoreDisplayName(currentStoreId, paramStoreName);
+        document.getElementById('displayStoreTerminal').textContent = `${storeDisplayName} / كاشير ${currentTerminalId}`;
         document.getElementById('displayCartId').textContent = currentCartId;
     });
 
