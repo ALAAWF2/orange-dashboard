@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>دفع تمارا - نقاط البيع | Orange Bed & Bath</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --orange-primary: #fe7900;
+            --orange-hover: #e56c00;
+            --orange-light: #fff5eb;
+            --orange-border: #ffd6b0;
+            --tamara-teal: #00e0a4;
+            --tamara-dark: #2a203b;
+            --gray-bg: #f8fafc;
+            --gray-card: #ffffff;
+            --gray-text: #1e293b;
+            --gray-muted: #64748b;
+            --gray-border: #e2e8f0;
+            --success-green: #10b981;
+            --success-light: #ecfdf5;
+            --danger-red: #ef4444;
+            --danger-light: #fef2f2;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--gray-bg);
+            color: var(--gray-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #2a203b 0%, #171124 100%);
+            color: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            background: var(--orange-primary);
+            color: white;
+            font-weight: 900;
+            font-size: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title h1 {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .header-title p {
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        .tamara-badge {
+            background: rgba(0, 224, 164, 0.15);
+            color: var(--tamara-teal);
+            border: 1px solid rgba(0, 224, 164, 0.4);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        /* Card Component */
+        .card {
+            background: var(--gray-card);
+            border: 1px solid var(--gray-border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Summary Meta Info */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .meta-item {
+            background: var(--gray-bg);
+            border: 1px solid var(--gray-border);
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+        }
+
+        .meta-item .label {
+            font-size: 11px;
+            color: var(--gray-muted);
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .meta-item .value {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--gray-text);
+        }
+
+        /* Amount Hero Box */
+        .amount-box {
+            background: linear-gradient(135deg, var(--orange-light) 0%, #fff 100%);
+            border: 2px solid var(--orange-border);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .amount-box .title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--orange-hover);
+            margin-bottom: 4px;
+        }
+
+        .amount-box .total {
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--orange-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .amount-box .currency {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-muted);
+        }
+
+        /* Items Collapsible */
+        .items-accordion {
+            border: 1px solid var(--gray-border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .items-header {
+            padding: 10px 14px;
+            background: #f1f5f9;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--gray-text);
+            user-select: none;
+        }
+
+        .items-list {
+            max-height: 180px;
+            overflow-y: auto;
+            padding: 8px 12px;
+            background: #fff;
+            display: none;
+        }
+
+        .items-list.open {
+            display: block;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px dashed var(--gray-border);
+            font-size: 12px;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Step 1: Input Form */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--gray-text);
+        }
+
+        .phone-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            direction: ltr;
+        }
+
+        .phone-input {
+            width: 100%;
+            padding: 14px 16px 14px 80px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            border: 2px solid var(--gray-border);
+            border-radius: var(--radius-md);
+            outline: none;
+            transition: all 0.2s ease;
+            background: #fff;
+        }
+
+        .phone-input:focus {
+            border-color: var(--orange-primary);
+            box-shadow: 0 0 0 3px rgba(254, 121, 0, 0.15);
+        }
+
+        .phone-prefix {
+            position: absolute;
+            left: 14px;
+            font-weight: 800;
+            font-size: 15px;
+            color: var(--gray-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+        }
+
+        /* Action Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--orange-primary);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(254, 121, 0, 0.35);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--orange-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            margin-top: 10px;
+        }
+
+        .btn-danger:hover {
+            background: #fee2e2;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: var(--gray-text);
+            border: 1px solid var(--gray-border);
+            margin-top: 10px;
+        }
+
+        .btn-teal {
+            background: #0f766e;
+            color: #fff;
+            margin-top: 10px;
+        }
+
+        .btn-teal:hover {
+            background: #115e59;
+        }
+
+        /* Step 2: Waiting Screen */
+        .waiting-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 16px;
+            padding: 10px 0;
+        }
+
+        .pulse-loader {
+            position: relative;
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: var(--orange-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--orange-primary);
+            font-size: 28px;
+        }
+
+        .pulse-loader::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid var(--orange-primary);
+            animation: ripple 1.5s infinite ease-out;
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        .qr-container {
+            background: #ffffff;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            border: 2px solid var(--gray-border);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            margin: 8px 0;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: #fef3c7;
+            color: #92400e;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        /* Step 3: Success Screen */
+        .success-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 16px;
+            padding: 16px 0;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--success-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .success-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: #065f46;
+        }
+
+        .cashier-alert {
+            background: var(--success-light);
+            border: 2px solid #a7f3d0;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: right;
+            width: 100%;
+        }
+
+        .cashier-alert h4 {
+            color: #065f46;
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cashier-alert p {
+            color: #047857;
+            font-size: 13px;
+            line-height: 1.5;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            display: block;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div class="brand-box">
+            <div class="brand-logo">OB</div>
+            <div class="header-title">
+                <h1>Orange Bed & Bath</h1>
+                <p>خدمة دفع تمارا - نقاط البيع (POS)</p>
+            </div>
+        </div>
+        <div class="tamara-badge">Tamara Sandbox</div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+        <!-- Invoice Details -->
+        <div class="summary-grid">
+            <div class="meta-item">
+                <div class="label">المعرض / الكاشير</div>
+                <div class="value" id="displayStoreTerminal">-- / --</div>
+            </div>
+            <div class="meta-item">
+                <div class="label">رقم السلة المفتوحة</div>
+                <div class="value" id="displayCartId">--</div>
+            </div>
+        </div>
+
+        <!-- Amount Box -->
+        <div class="amount-box">
+            <div class="title">إجمالي المبلغ المطلوب للدفع</div>
+            <div class="total">
+                <span id="displayAmount">0.00</span>
+                <span class="currency">ر.س</span>
+            </div>
+        </div>
+
+        <!-- Items Accordion -->
+        <div class="items-accordion" id="itemsSection" style="display: none;">
+            <div class="items-header" onclick="toggleItems()">
+                <span id="itemsCountLabel">الأصناف بالسلة (0)</span>
+                <span id="itemsToggleIcon">▼</span>
+            </div>
+            <div class="items-list" id="itemsList"></div>
+        </div>
+
+        <!-- STEP 1: Phone Input -->
+        <div id="stepInput">
+            <div class="form-group">
+                <label class="form-label" for="customerPhone">رقم جوال العميل (المسجل في تمارا)</label>
+                <div class="phone-input-wrapper">
+                    <span class="phone-prefix">🇸🇦 +966</span>
+                    <input type="tel" id="customerPhone" class="phone-input" placeholder="5xxxxxxxx" maxlength="10" autocomplete="tel">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="btnCreateSession" onclick="createPaymentSession()">
+                <span>📲</span>
+                <span>إرسال رابط الدفع عبر تمارا</span>
+            </button>
+        </div>
+
+        <!-- STEP 2: Waiting & QR -->
+        <div id="stepWaiting" class="hidden">
+            <div class="waiting-box">
+                <div class="pulse-loader">⏳</div>
+                <div>
+                    <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 4px;">بانتظار إتمام الدفع من العميل</h3>
+                    <p style="font-size: 13px; color: var(--gray-muted);">تم إرسال الرابط لجوال العميل <b id="waitingPhone"></b></p>
+                </div>
+
+                <div class="status-pill" id="statusBadge">
+                    <span>⚡</span>
+                    <span id="statusText">جاري التحقق كل 4 ثوانٍ...</span>
+                </div>
+
+                <!-- Sandbox QR & Direct Link Simulator -->
+                <div class="qr-container">
+                    <div id="qrcode"></div>
+                </div>
+                <p style="font-size: 12px; color: var(--gray-muted);">امسح الـ QR أو اضغط الزر أدناه لتجربة السداد ببطاقة الاختبار</p>
+
+                <button class="btn btn-teal" id="btnOpenLink" onclick="openDirectLink()">
+                    <span>🔗</span>
+                    <span>فتح رابط الدفع في نافذة جديدة (Sandbox)</span>
+                </button>
+
+                <button class="btn btn-danger" onclick="cancelPaymentSession()">
+                    <span>❌</span>
+                    <span>إلغاء الطلب (Void Session)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Success Screen -->
+        <div id="stepSuccess" class="hidden">
+            <div class="success-box">
+                <div class="success-icon">✓</div>
+                <div>
+                    <div class="success-title">تم الدفع بنجاح في تمارا!</div>
+                    <p style="font-size: 14px; color: #047857; margin-top: 4px;">تم التحقق واستلام كامل المبلغ من العميل</p>
+                </div>
+
+                <div class="cashier-alert">
+                    <h4>🔔 تنبيه الكاشير لإصدار الفاتورة:</h4>
+                    <p>1. تم سداد مبلغ <b><span id="successAmount"></span> ر.س</b> بالكامل لدى تمارا.</p>
+                    <p>2. رقم العملية: <b><span id="successOrderId"></span></b></p>
+                    <p>3. أغلق هذه النافذة ثم اضغط في شاشة الـ POS على زر <b>[تمارا]</b> لطباعة الفاتورة للعميل.</p>
+                </div>
+
+                <button class="btn btn-secondary" onclick="window.close()">
+                    <span>🚪</span>
+                    <span>إغلاق النافذة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // State Variables
+    let currentStoreId = "";
+    let currentTerminalId = "";
+    let currentCartId = "";
+    let currentAmount = 0.0;
+    let currentPhone = "";
+    let currentItems = [];
+    let currentOrderId = "";
+    let currentCheckoutId = "";
+    let currentDeeplink = "";
+    let pollInterval = null;
+    let qrCodeObj = null;
+
+    // Parse URL Query Parameters passed by POS
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        currentStoreId = urlParams.get('storeId') || urlParams.get('store_id') || urlParams.get('store') || "001";
+        currentTerminalId = urlParams.get('terminalId') || urlParams.get('terminal_id') || urlParams.get('terminal') || "POS1";
+        currentCartId = urlParams.get('cartId') || urlParams.get('cart_id') || urlParams.get('cart') || urlParams.get('dynamics_reference') || "CART-1";
+        
+        const rawAmount = urlParams.get('amount') || "0.00";
+        currentAmount = parseFloat(rawAmount) || 0.0;
+        
+        const rawPhone = urlParams.get('phone') || urlParams.get('customer_phone') || "";
+        if (rawPhone) {
+            let cleanPhone = rawPhone.replace(/\D/g, '');
+            if (cleanPhone.startsWith('966')) cleanPhone = cleanPhone.substring(3);
+            if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1);
+            document.getElementById('customerPhone').value = cleanPhone;
+        }
+
+        // Parse Items if provided as JSON string
+        const rawItems = urlParams.get('items');
+        if (rawItems) {
+            try {
+                currentItems = JSON.parse(decodeURIComponent(rawItems));
+                renderItems();
+            } catch (e) {
+                console.log("No items JSON parsed:", e);
+            }
+        }
+
+        // Render Initial Values
+        document.getElementById('displayStoreTerminal').textContent = `معرض ${currentStoreId} / كاشير ${currentTerminalId}`;
+        document.getElementById('displayCartId').textContent = currentCartId;
+        document.getElementById('displayAmount').textContent = currentAmount.toFixed(2);
+    });
+
+    function toggleItems() {
+        const list = document.getElementById('itemsList');
+        const icon = document.getElementById('itemsToggleIcon');
+        list.classList.toggle('open');
+        icon.textContent = list.classList.contains('open') ? '▲' : '▼';
+    }
+
+    function renderItems() {
+        if (!currentItems || !currentItems.length) return;
+        const section = document.getElementById('itemsSection');
+        const countLabel = document.getElementById('itemsCountLabel');
+        const list = document.getElementById('itemsList');
+        
+        section.style.display = 'block';
+        countLabel.textContent = `الأصناف بالسلة (${currentItems.length})`;
+        
+        list.innerHTML = currentItems.map(itm => `
+            <div class="item-row">
+                <span><b>${itm.name || itm.itemId || 'صنف'}</b> × ${itm.quantity || 1}</span>
+                <span>${(parseFloat(itm.total || (itm.price * itm.quantity)) || 0).toFixed(2)} ر.س</span>
+            </div>
+        `).join('');
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    async function createPaymentSession() {
+        const phoneInput = document.getElementById('customerPhone');
+        let phone = phoneInput.value.trim().replace(/\D/g, '');
+        
+        if (!phone) {
+            showToast("الرجاء إدخال رقم جوال العميل");
+            phoneInput.focus();
+            return;
+        }
+
+        if (phone.startsWith('05')) phone = phone.substring(1);
+        if (phone.startsWith('966')) phone = phone.substring(3);
+
+        if (!phone.startsWith('5') || phone.length !== 9) {
+            showToast("رقم الجوال يجب أن يبدأ بـ 5 ويتكون من 9 أرقام (مثال: 501234567)");
+            phoneInput.focus();
+            return;
+        }
+
+        const fullPhone = "966" + phone;
+        currentPhone = fullPhone;
+
+        const btn = document.getElementById('btnCreateSession');
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>جاري إنشاء الجلسة في تمارا...</span>';
+
+        try {
+            const resp = await fetch('/api/tamara/session/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    store_id: currentStoreId,
+                    terminal_id: currentTerminalId,
+                    cart_id: currentCartId,
+                    amount: currentAmount,
+                    phone: fullPhone,
+                    items: currentItems
+                })
+            });
+
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                throw new Error(data.error || data.message || "فشل إنشاء جلسة الدفع");
+            }
+
+            currentOrderId = data.order_id;
+            currentCheckoutId = data.checkout_id;
+            currentDeeplink = data.checkout_deeplink;
+
+            // Transition to Step 2
+            document.getElementById('stepInput').classList.add('hidden');
+            document.getElementById('stepWaiting').classList.remove('hidden');
+            document.getElementById('waitingPhone').textContent = "+966 " + phone;
+
+            // Render QR Code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            qrCodeObj = new QRCode(qrContainer, {
+                text: currentDeeplink,
+                width: 180,
+                height: 180,
+                colorDark: "#2a203b",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            startPolling();
+
+        } catch (err) {
+            showToast("خطأ: " + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '<span>📲</span><span>إرسال رابط الدفع عبر تمارا</span>';
+        }
+    }
+
+    function openDirectLink() {
+        if (currentDeeplink) {
+            window.open(currentDeeplink, '_blank');
+        }
+    }
+
+    function startPolling() {
+        if (pollInterval) clearInterval(pollInterval);
+        
+        pollInterval = setInterval(async () => {
+            if (!currentOrderId) return;
+            
+            try {
+                const resp = await fetch(`/api/tamara/session/status/${encodeURIComponent(currentOrderId)}`);
+                const data = await resp.json();
+                
+                if (data.success) {
+                    const status = (data.status || "").toLowerCase();
+                    document.getElementById('statusText').textContent = `الحالة: ${status} (جاري المتابعة...)`;
+
+                    if (data.is_fully_captured || status === 'fully_captured') {
+                        clearInterval(pollInterval);
+                        onPaymentSuccess(data);
+                    } else if (status === 'declined' || status === 'canceled' || status === 'expired') {
+                        clearInterval(pollInterval);
+                        showToast(`تم إنهاء العملية بحالة: ${status}`);
+                        resetToStep1();
+                    }
+                }
+            } catch (e) {
+                console.log("Polling error:", e);
+            }
+        }, 4000);
+    }
+
+    function onPaymentSuccess(data) {
+        document.getElementById('stepWaiting').classList.add('hidden');
+        document.getElementById('stepSuccess').classList.remove('hidden');
+        document.getElementById('successAmount').textContent = currentAmount.toFixed(2);
+        document.getElementById('successOrderId').textContent = currentOrderId;
+    }
+
+    async function cancelPaymentSession() {
+        if (!confirm("هل أنت متأكد من إلغاء رابط الدفع المعلق؟")) return;
+
+        if (pollInterval) clearInterval(pollInterval);
+
+        try {
+            await fetch('/api/tamara/session/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: currentOrderId,
+                    amount: currentAmount
+                })
+            });
+            showToast("تم إلغاء العملية بنجاح");
+        } catch (e) {
+            console.log("Cancel error:", e);
+        }
+
+        resetToStep1();
+    }
+
+    function resetToStep1() {
+        currentOrderId = "";
+        currentCheckoutId = "";
+        currentDeeplink = "";
+        if (pollInterval) clearInterval(pollInterval);
+        
+        document.getElementById('stepWaiting').classList.add('hidden');
+        document.getElementById('stepSuccess').classList.add('hidden');
+        document.getElementById('stepInput').classList.remove('hidden');
+        
+        const btn = document.getElementById('btnCreateSession');
+        btn.disabled = false;
+        btn.innerHTML = '<span>📲</span><span>إرسال رابط الدفع عبر تمارا</span>';
+    }
+</script>
+</body>
+</html>
