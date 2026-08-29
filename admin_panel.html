@@ -9894,7 +9894,8 @@
                 });
 
                 const res = await fetch(`${API_BASE}/api/admin/emails?${params.toString()}`, {
-                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
                 });
 
                 if (res.ok) {
@@ -9960,7 +9961,8 @@
         async function fetchEmailShowroomsList() {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/emails/showrooms-list`, {
-                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -10066,13 +10068,21 @@
                 // Status Badge
                 let statusBadgeHtml = '';
                 if (em.status === 'completed') {
-                    statusBadgeHtml = `<span class="badge bg-success text-white px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-check-double me-1"></i> منتهي</span>`;
+                    if (em.lina_replied) {
+                        statusBadgeHtml = `<span class="badge bg-success text-white px-2 py-1" style="font-size:0.74rem;" title="تم الرد من لينا"><i class="fa-solid fa-reply me-1"></i> ردت لينا ✅</span>`;
+                    } else {
+                        statusBadgeHtml = `<span class="badge bg-success text-white px-2 py-1" style="font-size:0.74rem;"><i class="fa-solid fa-check-double me-1"></i> منتهي ✅</span>`;
+                    }
                 } else if (em.status === 'in_progress') {
-                    statusBadgeHtml = `<span class="badge bg-info text-white px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-arrows-rotate me-1"></i> قيد المتابعة</span>`;
+                    statusBadgeHtml = `<span class="badge bg-info text-white px-2 py-1" style="font-size:0.74rem;"><i class="fa-solid fa-arrows-rotate me-1"></i> قيد المتابعة</span>`;
                 } else if (em.status === 'archived') {
-                    statusBadgeHtml = `<span class="badge bg-secondary text-white px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-box-archive me-1"></i> مؤرشف</span>`;
+                    statusBadgeHtml = `<span class="badge bg-secondary text-white px-2 py-1" style="font-size:0.74rem;"><i class="fa-solid fa-box-archive me-1"></i> مؤرشف</span>`;
                 } else {
-                    statusBadgeHtml = `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-hourglass-half me-1"></i> معلق</span>`;
+                    if (em.showroom && em.showroom.type === 'showroom') {
+                        statusBadgeHtml = `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:0.74rem;" title="بانتظار رد لينا"><i class="fa-solid fa-hourglass-half me-1"></i> معلق (بانتظار رد لينا)</span>`;
+                    } else {
+                        statusBadgeHtml = `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:0.74rem;"><i class="fa-solid fa-hourglass-half me-1"></i> معلق ⏳</span>`;
+                    }
                 }
 
                 // Action Buttons
@@ -10173,7 +10183,8 @@
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/emails/${uid}?folder=${emailHubState.folder}`, {
-                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
                 });
 
                 if (res.ok) {
@@ -10284,7 +10295,8 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include',
                     body: JSON.stringify({ status: newStatus })
                 });
                 if (res.ok) {
@@ -10315,7 +10327,8 @@
             try {
                 await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include',
                     body: JSON.stringify({ is_important: newImp })
                 });
                 loadEmailHubData();
@@ -10336,7 +10349,8 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/notes`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include',
                     body: JSON.stringify({ notes: notes })
                 });
                 if (res.ok) {
@@ -10365,7 +10379,8 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/summarize`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
                 });
 
                 if (res.ok) {
@@ -10395,7 +10410,8 @@
             try {
                 await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include',
                     body: JSON.stringify({ is_important: newImp })
                 });
                 loadEmailHubData();
@@ -10411,7 +10427,8 @@
             try {
                 await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include',
                     body: JSON.stringify({ status: newStatus })
                 });
                 loadEmailHubData();
@@ -10427,7 +10444,8 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/summarize`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
                 });
                 if (res.ok) {
                     loadEmailHubData();
