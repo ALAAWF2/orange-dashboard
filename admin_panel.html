@@ -9845,6 +9845,600 @@
             window.open(`${API_BASE}/api/attendance/salary-calculator/export?${params.toString()}`, '_blank');
         }
 
+        // =========================================================
+        // 📬 Smart Email Management & Showroom Hub
+        // =========================================================
+        let emailHubState = {
+            folder: 'INBOX',
+            page: 1,
+            pageSize: 15,
+            status: 'all',
+            showroom: 'all',
+            search: '',
+            unreadOnly: false,
+            totalPages: 1,
+            currentEmailUid: null,
+            emailsCache: [],
+            showroomsLoaded: false
+        };
+
+        let emailSearchTimeout = null;
+
+        async function loadEmailHubData(forceRefresh = false) {
+            const tbody = document.getElementById('emailsTableBody');
+            const icon = document.getElementById('emailRefreshIcon');
+            if (icon) icon.classList.add('fa-spin');
+
+            if (!emailHubState.showroomsLoaded) {
+                await fetchEmailShowroomsList();
+            }
+
+            if (tbody && (forceRefresh || emailHubState.emailsCache.length === 0)) {
+                tbody.innerHTML = `<tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <div class="spinner-border text-orange mb-2" role="status"></div>
+                        <div class="fw-bold">جاري تحميل رسائل البريد الإلكتروني والمطابقة مع الفروع...</div>
+                    </td>
+                </tr>`;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    folder: emailHubState.folder,
+                    page: emailHubState.page,
+                    page_size: emailHubState.pageSize,
+                    status: emailHubState.status,
+                    showroom: emailHubState.showroom,
+                    search: emailHubState.search,
+                    unread: emailHubState.unreadOnly ? 'true' : 'false'
+                });
+
+                const res = await fetch(`${API_BASE}/api/admin/emails?${params.toString()}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    emailHubState.emailsCache = data.emails || [];
+                    
+                    // Render KPIs
+                    if (data.kpis) {
+                        const inboxVal = data.kpis.total || data.pagination?.inbox_total || 0;
+                        const unreadVal = data.kpis.unread || 0;
+                        document.getElementById('kpiEmailInbox').textContent = inboxVal.toLocaleString();
+                        document.getElementById('kpiEmailUnreadSub').textContent = `غير مقروء: ${unreadVal.toLocaleString()}`;
+                        document.getElementById('kpiEmailPending').textContent = (data.kpis.pending || 0).toLocaleString();
+                        document.getElementById('kpiEmailImportant').textContent = (data.kpis.important || 0).toLocaleString();
+                        document.getElementById('kpiEmailCompleted').textContent = (data.kpis.completed || 0).toLocaleString();
+
+                        // Sidebar badge
+                        const sidebarBadge = document.getElementById('emailSidebarUnreadBadge');
+                        if (sidebarBadge) {
+                            if (unreadVal > 0) {
+                                sidebarBadge.textContent = unreadVal > 99 ? '99+' : unreadVal;
+                                sidebarBadge.style.display = 'inline-block';
+                            } else {
+                                sidebarBadge.style.display = 'none';
+                            }
+                        }
+                    }
+
+                    // Render Pagination
+                    if (data.pagination) {
+                        emailHubState.totalPages = data.pagination.total_pages || 1;
+                        document.getElementById('emailCurrentPageDisplay').textContent = emailHubState.page;
+                        document.getElementById('emailPaginationSummary').textContent = `صفحة ${emailHubState.page} من ${emailHubState.totalPages}`;
+                        
+                        const totalFiltered = data.pagination.total || 0;
+                        const startCount = totalFiltered > 0 ? (emailHubState.page - 1) * emailHubState.pageSize + 1 : 0;
+                        const endCount = Math.min(totalFiltered, emailHubState.page * emailHubState.pageSize);
+                        document.getElementById('emailShowingInfo').textContent = `عرض ${startCount} إلى ${endCount} من إجمالي ${totalFiltered} رسالة`;
+
+                        const prevBtn = document.getElementById('emailPrevPageBtn');
+                        const nextBtn = document.getElementById('emailNextPageBtn');
+                        if (prevBtn) prevBtn.classList.toggle('disabled', emailHubState.page <= 1);
+                        if (nextBtn) nextBtn.classList.toggle('disabled', emailHubState.page >= emailHubState.totalPages);
+                    }
+
+                    renderEmailsTable(emailHubState.emailsCache);
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    if (tbody) {
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger fw-bold">فشل جلب رسائل البريد: ${err.error || 'خطأ في الاتصال بالسيرفر'}</td></tr>`;
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading email hub:", e);
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger fw-bold">حدث خطأ أثناء الاتصال: ${e.message}</td></tr>`;
+                }
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        }
+
+        async function fetchEmailShowroomsList() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/showrooms-list`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const select = document.getElementById('emailShowroomFilterSelect');
+                    if (select && data.showrooms) {
+                        select.innerHTML = '<option value="all">🏢 جميع المعارض والفروع (50+ معرض)...</option>';
+                        data.showrooms.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s.code;
+                            opt.textContent = `${s.code} - ${s.name} (${s.area_manager || 'الفرع'})`;
+                            select.appendChild(opt);
+                        });
+                        emailHubState.showroomsLoaded = true;
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching showrooms for email filter:", e);
+            }
+        }
+
+        function renderEmailsTable(emails) {
+            const tbody = document.getElementById('emailsTableBody');
+            if (!tbody) return;
+
+            if (!emails || emails.length === 0) {
+                tbody.innerHTML = `<tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-inbox fs-2 mb-2 d-block opacity-50"></i>
+                        <div class="fw-bold">لا توجد رسائل بريد مطابقة للفلتر المحدد</div>
+                        <small class="text-muted">جرب تغيير الفلتر أو مسح كلمة البحث</small>
+                    </td>
+                </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            emails.forEach(em => {
+                const tr = document.createElement('tr');
+                if (!em.is_seen) {
+                    tr.style.backgroundColor = 'rgba(254, 121, 0, 0.03)';
+                }
+
+                // Star icon
+                const isImp = em.is_important;
+                const starIconHtml = `<button class="btn btn-link p-0 text-warning fs-5" onclick="quickToggleEmailImportance('${em.uid}', event)" title="${isImp ? 'إلغاء التمييز' : 'تمييز كرسالة هامة'}">
+                    <i class="${isImp ? 'fa-solid' : 'fa-regular'} fa-star"></i>
+                </button>`;
+
+                // Showroom / Tag
+                let showroomHtml = '';
+                if (em.showroom) {
+                    if (em.showroom.type === 'showroom' && em.showroom.code) {
+                        showroomHtml = `<div>
+                            <span class="badge bg-warning text-dark px-2 py-1 mb-1 d-inline-flex align-items-center gap-1" style="font-size:0.76rem;">
+                                <i class="fa-solid fa-store"></i> ${escapeHtml(em.showroom.code)} - ${escapeHtml(em.showroom.name)}
+                            </span>
+                            ${em.showroom.area_manager ? `<small class="d-block text-muted" style="font-size:0.72rem;">👤 ${escapeHtml(em.showroom.area_manager)}</small>` : ''}
+                        </div>`;
+                    } else if (em.showroom.type === 'area_manager') {
+                        showroomHtml = `<span class="badge bg-info text-white px-2 py-1" style="font-size:0.76rem;">
+                            <i class="fa-solid fa-user-tie me-1"></i> مدير: ${escapeHtml(em.showroom.area_manager)}
+                        </span>`;
+                    }
+                } else {
+                    showroomHtml = `<span class="badge bg-light text-muted border px-2 py-1" style="font-size:0.74rem;">
+                        <i class="fa-solid fa-globe me-1"></i> جهة خارجية / عام
+                    </span>`;
+                }
+
+                // Sender
+                const senderHtml = `<div class="text-truncate" style="max-width: 210px;">
+                    <div class="fw-bold text-dark text-truncate" title="${escapeHtml(em.sender_name)}">${escapeHtml(em.sender_name || em.sender_email)}</div>
+                    <small class="text-muted font-monospace d-block text-truncate" style="font-size:0.75rem;" title="${escapeHtml(em.sender_email)}">${escapeHtml(em.sender_email)}</small>
+                </div>`;
+
+                // Subject & AI Preview
+                const unreadDot = !em.is_seen ? '<span class="badge bg-primary rounded-pill me-1" style="font-size:0.55rem; padding: 3px 5px;">جديد</span>' : '';
+                let aiPreviewHtml = '';
+                if (em.ai_summary) {
+                    aiPreviewHtml = `<div class="mt-1 p-2 bg-light rounded text-secondary border-start border-3 border-warning" style="font-size:0.76rem; line-height: 1.4;">
+                        <i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> <b>موجز ذكي:</b> ${escapeHtml(em.ai_summary.slice(0, 110))}${em.ai_summary.length > 110 ? '...' : ''}
+                    </div>`;
+                }
+                const subjectHtml = `<div style="cursor: pointer;" onclick="openEmailModal('${em.uid}')">
+                    <div class="fw-bold ${!em.is_seen ? 'text-dark' : 'text-secondary'} text-truncate" style="max-width: 380px;" title="${escapeHtml(em.subject)}">
+                        ${unreadDot}${escapeHtml(em.subject || '(بدون موضوع)')}
+                    </div>
+                    ${aiPreviewHtml}
+                </div>`;
+
+                // Date
+                let formattedDate = '--';
+                if (em.date) {
+                    try {
+                        const d = new Date(em.date);
+                        formattedDate = d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+                    } catch (_) {
+                        formattedDate = em.date.slice(0, 10);
+                    }
+                }
+                const dateHtml = `<span class="small text-muted font-monospace">${formattedDate}</span>`;
+
+                // Status Badge
+                let statusBadgeHtml = '';
+                if (em.status === 'completed') {
+                    statusBadgeHtml = `<span class="badge bg-success text-white px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-check-double me-1"></i> منتهي</span>`;
+                } else if (em.status === 'in_progress') {
+                    statusBadgeHtml = `<span class="badge bg-info text-white px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-arrows-rotate me-1"></i> قيد المتابعة</span>`;
+                } else if (em.status === 'archived') {
+                    statusBadgeHtml = `<span class="badge bg-secondary text-white px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-box-archive me-1"></i> مؤرشف</span>`;
+                } else {
+                    statusBadgeHtml = `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:0.75rem;"><i class="fa-solid fa-hourglass-half me-1"></i> معلق</span>`;
+                }
+
+                // Action Buttons
+                const actionsHtml = `<div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-outline-primary btn-sm px-2 py-1" onclick="openEmailModal('${em.uid}')" title="عرض تفاصيل الرسالة">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm px-2 py-1" onclick="quickSummarizeEmail('${em.uid}', this, event)" title="توليد ملخص تنفيذي بالذكاء الاصطناعي">
+                        <i class="fa-solid fa-robot text-dark"></i>
+                    </button>
+                    <button class="btn btn-outline-${em.status === 'completed' ? 'secondary' : 'success'} btn-sm px-2 py-1" onclick="quickToggleComplete('${em.uid}', '${em.status}', event)" title="${em.status === 'completed' ? 'إعادة للمعلق' : 'وضع علامة تم الإنجاز'}">
+                        <i class="fa-solid ${em.status === 'completed' ? 'fa-arrow-rotate-left' : 'fa-check'}"></i>
+                    </button>
+                </div>`;
+
+                tr.innerHTML = `
+                    <td class="text-center">${starIconHtml}</td>
+                    <td>${showroomHtml}</td>
+                    <td>${senderHtml}</td>
+                    <td>${subjectHtml}</td>
+                    <td class="text-center">${dateHtml}</td>
+                    <td class="text-center">${statusBadgeHtml}</td>
+                    <td class="text-center">${actionsHtml}</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterEmailsStatus(status, btnEl) {
+            emailHubState.status = status;
+            emailHubState.page = 1;
+            if (status === 'unread') {
+                emailHubState.status = 'all';
+                emailHubState.unreadOnly = true;
+            } else {
+                emailHubState.unreadOnly = false;
+            }
+
+            if (btnEl) {
+                const group = document.getElementById('emailStatusBtnGroup');
+                if (group) {
+                    group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    btnEl.classList.add('active');
+                }
+            }
+
+            loadEmailHubData();
+        }
+
+        function changeEmailShowroomFilter(code) {
+            emailHubState.showroom = code;
+            emailHubState.page = 1;
+            loadEmailHubData();
+        }
+
+        function debounceEmailSearch() {
+            clearTimeout(emailSearchTimeout);
+            emailSearchTimeout = setTimeout(() => {
+                const input = document.getElementById('emailSearchInput');
+                emailHubState.search = input ? input.value.trim() : '';
+                emailHubState.page = 1;
+                loadEmailHubData();
+            }, 350);
+        }
+
+        function clearEmailSearch() {
+            const input = document.getElementById('emailSearchInput');
+            if (input) input.value = '';
+            emailHubState.search = '';
+            emailHubState.page = 1;
+            loadEmailHubData();
+        }
+
+        function changeEmailPage(delta) {
+            const targetPage = emailHubState.page + delta;
+            if (targetPage >= 1 && targetPage <= emailHubState.totalPages) {
+                emailHubState.page = targetPage;
+                loadEmailHubData();
+            }
+        }
+
+        async function openEmailModal(uid) {
+            emailHubState.currentEmailUid = uid;
+            const modalEl = document.getElementById('emailDetailModal');
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            // Set loading state
+            document.getElementById('modalEmailSubject').textContent = 'جاري تحميل تفاصيل الرسالة...';
+            document.getElementById('modalEmailSender').textContent = '--';
+            document.getElementById('modalEmailDate').textContent = '--';
+            document.getElementById('modalEmailBodyHtmlContainer').innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border text-orange me-2"></div>جاري جلب المحتوى...</div>';
+            document.getElementById('modalEmailBodyTextContainer').textContent = '';
+            document.getElementById('modalAiSummaryCard').style.display = 'none';
+            document.getElementById('modalEmailNotesInput').value = '';
+            document.getElementById('modalEmailAttachmentsSection').classList.add('d-none');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/${uid}?folder=${emailHubState.folder}`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('modalEmailSubject').textContent = data.subject || '(بدون موضوع)';
+                    document.getElementById('modalEmailSender').textContent = `${data.sender_name} <${data.sender_email}>`;
+                    document.getElementById('modalEmailDate').textContent = data.date || '';
+
+                    // Star state
+                    const starIcon = document.getElementById('modalEmailStarIcon');
+                    if (starIcon) {
+                        starIcon.className = data.is_important ? 'fa-solid fa-star text-warning' : 'fa-regular fa-star text-warning';
+                    }
+
+                    // Showroom badge
+                    const showroomContainer = document.getElementById('modalEmailShowroomBadge');
+                    if (data.showroom && data.showroom.code) {
+                        showroomContainer.innerHTML = `<span class="badge bg-warning text-dark px-3 py-2 fs-6">
+                            <i class="fa-solid fa-store me-1"></i> ${escapeHtml(data.showroom.code)} - ${escapeHtml(data.showroom.name)}
+                            ${data.showroom.area_manager ? `<small class="d-block text-muted mt-1">👤 ${escapeHtml(data.showroom.area_manager)}</small>` : ''}
+                        </span>`;
+                    } else if (data.showroom && data.showroom.area_manager) {
+                        showroomContainer.innerHTML = `<span class="badge bg-info text-white px-3 py-2 fs-6">
+                            <i class="fa-solid fa-user-tie me-1"></i> ${escapeHtml(data.showroom.area_manager)}
+                        </span>`;
+                    } else {
+                        showroomContainer.innerHTML = `<span class="badge bg-light text-muted border px-3 py-2 fs-6">
+                            <i class="fa-solid fa-globe me-1"></i> جهة خارجية / عام
+                        </span>`;
+                    }
+
+                    // Status dropdown
+                    const statusSelect = document.getElementById('modalEmailStatusSelect');
+                    if (statusSelect) statusSelect.value = data.status || 'pending';
+
+                    // Notes
+                    const notesInput = document.getElementById('modalEmailNotesInput');
+                    if (notesInput) notesInput.value = data.notes || '';
+
+                    // AI Summary
+                    const summaryCard = document.getElementById('modalAiSummaryCard');
+                    const summaryText = document.getElementById('modalAiSummaryText');
+                    if (data.ai_summary) {
+                        summaryText.textContent = data.ai_summary;
+                        summaryCard.style.display = 'block';
+                    } else {
+                        summaryCard.style.display = 'none';
+                    }
+
+                    // Body
+                    const htmlBox = document.getElementById('modalEmailBodyHtmlContainer');
+                    const textBox = document.getElementById('modalEmailBodyTextContainer');
+                    if (data.body_html) {
+                        htmlBox.innerHTML = data.body_html;
+                    } else if (data.body_text) {
+                        htmlBox.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(data.body_text)}</pre>`;
+                    } else {
+                        htmlBox.innerHTML = '<span class="text-muted">(لا يوجد محتوى نصي في هذه الرسالة)</span>';
+                    }
+                    textBox.textContent = data.body_text || data.body_html || '';
+
+                    // Attachments
+                    const attSection = document.getElementById('modalEmailAttachmentsSection');
+                    const attList = document.getElementById('modalEmailAttachmentsList');
+                    if (data.attachments && data.attachments.length > 0) {
+                        attList.innerHTML = '';
+                        data.attachments.forEach(att => {
+                            const badge = document.createElement('div');
+                            badge.className = 'badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm';
+                            const sizeKb = Math.round((att.size || 0) / 1024);
+                            badge.innerHTML = `<i class="fa-solid fa-paperclip text-orange"></i> <span>${escapeHtml(att.filename)}</span> <small class="text-muted font-monospace">(${sizeKb} KB)</small>`;
+                            attList.appendChild(badge);
+                        });
+                        attSection.classList.remove('d-none');
+                    } else {
+                        attSection.classList.add('d-none');
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching email detail:", e);
+                document.getElementById('modalEmailBodyHtmlContainer').innerHTML = `<div class="text-danger py-4">فشل تحميل الرسالة: ${e.message}</div>`;
+            }
+        }
+
+        function toggleEmailBodyView(mode) {
+            const htmlBox = document.getElementById('modalEmailBodyHtmlContainer');
+            const textBox = document.getElementById('modalEmailBodyTextContainer');
+            const btnHtml = document.getElementById('btnViewHtmlBody');
+            const btnText = document.getElementById('btnViewTextBody');
+
+            if (mode === 'html') {
+                htmlBox.classList.remove('d-none');
+                textBox.classList.add('d-none');
+                btnHtml.classList.add('active');
+                btnText.classList.remove('active');
+            } else {
+                htmlBox.classList.add('d-none');
+                textBox.classList.remove('d-none');
+                btnText.classList.add('active');
+                btnHtml.classList.remove('active');
+            }
+        }
+
+        async function updateModalEmailStatus(newStatus) {
+            const uid = emailHubState.currentEmailUid;
+            if (!uid) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (res.ok) {
+                    loadEmailHubData();
+                }
+            } catch (e) {
+                console.error("Error updating email status:", e);
+            }
+        }
+
+        async function markModalEmailCompleted() {
+            await updateModalEmailStatus('completed');
+            const modalEl = document.getElementById('emailDetailModal');
+            const bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+        }
+
+        async function toggleModalEmailImportance() {
+            const uid = emailHubState.currentEmailUid;
+            if (!uid) return;
+
+            const starIcon = document.getElementById('modalEmailStarIcon');
+            const isCurrentlyImp = starIcon.classList.contains('fa-solid');
+            const newImp = !isCurrentlyImp;
+
+            starIcon.className = newImp ? 'fa-solid fa-star text-warning' : 'fa-regular fa-star text-warning';
+
+            try {
+                await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ is_important: newImp })
+                });
+                loadEmailHubData();
+            } catch (e) {
+                console.error("Error updating importance:", e);
+            }
+        }
+
+        async function saveModalEmailNotes() {
+            const uid = emailHubState.currentEmailUid;
+            if (!uid) return;
+            const notesInput = document.getElementById('modalEmailNotesInput');
+            const notes = notesInput ? notesInput.value.trim() : '';
+            const btn = document.getElementById('btnSaveModalNotes');
+
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ notes: notes })
+                });
+                if (res.ok) {
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-check text-success"></i> تم الحفظ!';
+                    setTimeout(() => {
+                        if (btn) btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> حفظ الملاحظة';
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error("Error saving email notes:", e);
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-xmark text-danger"></i> فشل الحفظ';
+            }
+        }
+
+        async function generateModalEmailAiSummary() {
+            const uid = emailHubState.currentEmailUid;
+            if (!uid) return;
+            const btn = document.getElementById('btnModalAiSummarize');
+            const icon = document.getElementById('modalAiSummarizeIcon');
+            const summaryCard = document.getElementById('modalAiSummaryCard');
+            const summaryText = document.getElementById('modalAiSummaryText');
+
+            if (icon) icon.className = 'fa-solid fa-spinner fa-spin text-orange';
+            if (btn) btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/summarize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    summaryText.textContent = data.ai_summary || 'تم التلخيص بنجاح';
+                    summaryCard.style.display = 'block';
+                    loadEmailHubData();
+                } else {
+                    summaryText.textContent = 'تعذر توليد الملخص الذكي حالياً.';
+                    summaryCard.style.display = 'block';
+                }
+            } catch (e) {
+                console.error("Error generating AI summary:", e);
+                summaryText.textContent = `حدث خطأ: ${e.message}`;
+                summaryCard.style.display = 'block';
+            } finally {
+                if (icon) icon.className = 'fa-solid fa-robot text-orange';
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function quickToggleEmailImportance(uid, event) {
+            if (event) event.stopPropagation();
+            const em = emailHubState.emailsCache.find(x => x.uid === uid);
+            const newImp = !(em && em.is_important);
+
+            try {
+                await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ is_important: newImp })
+                });
+                loadEmailHubData();
+            } catch (e) {
+                console.error("Error toggling importance:", e);
+            }
+        }
+
+        async function quickToggleComplete(uid, currentStatus, event) {
+            if (event) event.stopPropagation();
+            const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+
+            try {
+                await fetch(`${API_BASE}/api/admin/emails/${uid}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                loadEmailHubData();
+            } catch (e) {
+                console.error("Error toggling status:", e);
+            }
+        }
+
+        async function quickSummarizeEmail(uid, btnEl, event) {
+            if (event) event.stopPropagation();
+            if (btnEl) btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/${uid}/summarize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }
+                });
+                if (res.ok) {
+                    loadEmailHubData();
+                }
+            } catch (e) {
+                console.error("Error summarizing:", e);
+            } finally {
+                if (btnEl) btnEl.innerHTML = '<i class="fa-solid fa-robot text-dark"></i>';
+            }
+        }
+
     </script>
 
     <!-- Modal: تقرير مطابقة الموظفين بين سيرفر البصمات وقاعدة البيانات -->
