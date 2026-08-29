@@ -2482,10 +2482,14 @@
                         <div>
                             <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-envelope-open-text me-2"></i> مركز البريد الإلكتروني الذكي والمطابقة مع الفروع</h4>
                             <p class="text-muted small mb-0">
-                                متابعة وتصنيف بريد الإدارة (<code class="text-dark">alaa.wafae@orangebedbath.com</code>) مع الربط التلقائي بـ <b>50 معرضاً</b> ومدراء المناطق وتتبع الحالات وتوليد الملخصات الذكية.
+                                متابعة وتصنيف بريد الإدارة (<code class="text-dark">alaa.wafae@orangebedbath.com</code>) مع الفرز الذكي والتصنيف الآلي بـ <b>DeepSeek AI</b> وتتبع الردود.
                             </p>
                         </div>
                         <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <button class="btn btn-dark btn-sm px-3 shadow-sm d-flex align-items-center gap-2 border border-warning" id="btnDeepSeekTriage" onclick="triggerDeepSeekEmailTriage()" title="فرز وتصنيف وحل الرسائل القديمة بواسطة الذكاء الاصطناعي">
+                                <i class="fa-solid fa-wand-magic-sparkles text-warning" id="deepseekTriageIcon"></i>
+                                <span class="fw-bold">فرز وتنظيم بـ DeepSeek AI</span>
+                            </button>
                             <button class="btn btn-orange-premium btn-sm px-3 shadow-sm" onclick="loadEmailHubData(true)">
                                 <i class="fa-solid fa-rotate" id="emailRefreshIcon"></i> تحديث البريد
                             </button>
@@ -2547,9 +2551,9 @@
 
                 <!-- Filters & Search Toolbar -->
                 <div class="glass-card mb-4">
-                    <div class="row g-3 align-items-center">
+                    <div class="row g-2 align-items-center">
                         <!-- Quick Status Tabs -->
-                        <div class="col-12 col-xl-5">
+                        <div class="col-12 col-xl-4">
                             <div class="btn-group btn-group-sm w-100 flex-wrap" role="group" id="emailStatusBtnGroup">
                                 <button type="button" class="btn btn-outline-dark active" onclick="filterEmailsStatus('all', this)">
                                     <i class="fa-solid fa-list me-1"></i> الكل
@@ -2569,6 +2573,18 @@
                             </div>
                         </div>
 
+                        <!-- Category Filter -->
+                        <div class="col-12 col-md-6 col-xl-2">
+                            <select id="emailCategoryFilterSelect" class="form-select form-control-dark form-select-sm" onchange="changeEmailCategoryFilter(this.value)">
+                                <option value="all">📁 جميع التصنيفات</option>
+                                <option value="showrooms_only">🏪 إيميلات المعارض فقط</option>
+                                <option value="urgent">🚨 عاجل وهام</option>
+                                <option value="transfers">📦 طلبات تحويل بضاعة</option>
+                                <option value="discounts">🏷️ طلبات موافقة خصم</option>
+                                <option value="system">⚙️ إشعارات وتقارير آلية</option>
+                            </select>
+                        </div>
+
                         <!-- Showroom Dropdown Filter -->
                         <div class="col-12 col-md-6 col-xl-3">
                             <select id="emailShowroomFilterSelect" class="form-select form-control-dark form-select-sm" onchange="changeEmailShowroomFilter(this.value)">
@@ -2577,10 +2593,10 @@
                         </div>
 
                         <!-- Search Box -->
-                        <div class="col-12 col-md-6 col-xl-4">
+                        <div class="col-12 col-xl-3">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white"><i class="fa-solid fa-search text-muted"></i></span>
-                                <input type="text" id="emailSearchInput" class="form-control form-control-dark" placeholder="بحث في الموضوع، المعرض أو المرسل..." oninput="debounceEmailSearch()">
+                                <input type="text" id="emailSearchInput" class="form-control form-control-dark" placeholder="بحث في الموضوع أو المعرض..." oninput="debounceEmailSearch()">
                                 <button class="btn btn-outline-secondary" type="button" onclick="clearEmailSearch()" title="مسح"><i class="fa-solid fa-xmark"></i></button>
                             </div>
                         </div>
@@ -9854,6 +9870,7 @@
             pageSize: 15,
             status: 'all',
             showroom: 'all',
+            category: 'all',
             search: '',
             unreadOnly: false,
             totalPages: 1,
@@ -9889,6 +9906,7 @@
                     page_size: emailHubState.pageSize,
                     status: emailHubState.status,
                     showroom: emailHubState.showroom,
+                    category: emailHubState.category,
                     search: emailHubState.search,
                     unread: emailHubState.unreadOnly ? 'true' : 'false'
                 });
@@ -10011,25 +10029,47 @@
                     <i class="${isImp ? 'fa-solid' : 'fa-regular'} fa-star"></i>
                 </button>`;
 
-                // Showroom / Tag
+                // Showroom / Tag / Category
                 let showroomHtml = '';
+                const categoryPill = `<span class="badge bg-light text-dark border px-2 py-1" style="font-size:0.71rem;"><i class="fa-solid fa-tag me-1 text-muted"></i> ${escapeHtml(em.category || 'عام')}</span>`;
+                const urgencyPill = em.urgency === 'عاجل' ? `<span class="badge bg-danger text-white px-2 py-1" style="font-size:0.71rem;"><i class="fa-solid fa-fire me-1"></i> عاجل</span>` : '';
+                const systemPill = em.is_system ? `<span class="badge bg-secondary text-white px-2 py-1" style="font-size:0.71rem;"><i class="fa-solid fa-gear me-1"></i> آلي</span>` : '';
+
                 if (em.showroom) {
                     if (em.showroom.type === 'showroom' && em.showroom.code) {
                         showroomHtml = `<div>
                             <span class="badge bg-warning text-dark px-2 py-1 mb-1 d-inline-flex align-items-center gap-1" style="font-size:0.76rem;">
                                 <i class="fa-solid fa-store"></i> ${escapeHtml(em.showroom.code)} - ${escapeHtml(em.showroom.name)}
                             </span>
-                            ${em.showroom.area_manager ? `<small class="d-block text-muted" style="font-size:0.72rem;">👤 ${escapeHtml(em.showroom.area_manager)}</small>` : ''}
+                            ${em.showroom.area_manager ? `<small class="d-block text-muted mb-1" style="font-size:0.72rem;">👤 ${escapeHtml(em.showroom.area_manager)}</small>` : ''}
+                            <div class="d-flex gap-1 flex-wrap mt-1">
+                                ${categoryPill}
+                                ${urgencyPill}
+                                ${systemPill}
+                            </div>
                         </div>`;
                     } else if (em.showroom.type === 'area_manager') {
-                        showroomHtml = `<span class="badge bg-info text-white px-2 py-1" style="font-size:0.76rem;">
-                            <i class="fa-solid fa-user-tie me-1"></i> مدير: ${escapeHtml(em.showroom.area_manager)}
-                        </span>`;
+                        showroomHtml = `<div>
+                            <span class="badge bg-info text-white px-2 py-1 mb-1" style="font-size:0.76rem;">
+                                <i class="fa-solid fa-user-tie me-1"></i> مدير: ${escapeHtml(em.showroom.area_manager)}
+                            </span>
+                            <div class="d-flex gap-1 flex-wrap mt-1">
+                                ${categoryPill}
+                                ${urgencyPill}
+                            </div>
+                        </div>`;
                     }
                 } else {
-                    showroomHtml = `<span class="badge bg-light text-muted border px-2 py-1" style="font-size:0.74rem;">
-                        <i class="fa-solid fa-globe me-1"></i> جهة خارجية / عام
-                    </span>`;
+                    showroomHtml = `<div>
+                        <span class="badge bg-light text-muted border px-2 py-1 mb-1" style="font-size:0.74rem;">
+                            <i class="fa-solid fa-globe me-1"></i> جهة خارجية / عام
+                        </span>
+                        <div class="d-flex gap-1 flex-wrap mt-1">
+                            ${categoryPill}
+                            ${urgencyPill}
+                            ${systemPill}
+                        </div>
+                    </div>`;
                 }
 
                 // Sender
@@ -10133,10 +10173,49 @@
             loadEmailHubData();
         }
 
+        function changeEmailCategoryFilter(cat) {
+            emailHubState.category = cat;
+            emailHubState.page = 1;
+            loadEmailHubData();
+        }
+
         function changeEmailShowroomFilter(code) {
             emailHubState.showroom = code;
             emailHubState.page = 1;
             loadEmailHubData();
+        }
+
+        async function triggerDeepSeekEmailTriage() {
+            const btn = document.getElementById('btnDeepSeekTriage');
+            const icon = document.getElementById('deepseekTriageIcon');
+            if (icon) icon.className = 'fa-solid fa-spinner fa-spin text-warning';
+            if (btn) btn.disabled = true;
+
+            showSuccessToast('جاري تشغيل الذكاء الاصطناعي (DeepSeek) لفرز وتنظيم الرسائل الواردة وتلخيصها...');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/ai-triage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include',
+                    body: JSON.stringify({ limit: 30, showroom: emailHubState.showroom })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showSuccessToast(`تم بنجاح فرز وتصنيف ${data.count || 0} رسالة وتحديث حالاتها بـ DeepSeek AI!`);
+                    loadEmailHubData(true);
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    showErrorToast(`تعذر إتمام الفرز: ${err.error || 'خطأ في الاتصال'}`);
+                }
+            } catch (e) {
+                console.error("Error in DeepSeek triage:", e);
+                showErrorToast(`حدث خطأ أثناء الفرز: ${e.message}`);
+            } finally {
+                if (icon) icon.className = 'fa-solid fa-wand-magic-sparkles text-warning';
+                if (btn) btn.disabled = false;
+            }
         }
 
         function debounceEmailSearch() {
