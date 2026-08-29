@@ -1066,6 +1066,10 @@
                         <i class="fa-solid fa-paper-plane"></i>
                         <span class="nav-text">إرسال تقارير الفروع</span>
                     </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="emails-tab" data-bs-toggle="tab" data-bs-target="#emails-content" type="button" role="tab">
+                        <i class="fa-solid fa-envelope-open-text text-primary"></i>
+                        <span class="nav-text">البريد الإلكتروني 📬 <span class="badge bg-primary rounded-pill ms-1" id="emailSidebarUnreadBadge" style="display:none; font-size:0.7rem; padding: 2px 6px;">0</span></span>
+                    </button>
                     <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance-content" type="button" role="tab">
                         <i class="fa-solid fa-fingerprint text-warning"></i>
                         <span class="nav-text">سجل البصمات والدوام 🕒 <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.68rem; padding: 2px 6px;">مباشر</span></span>
@@ -2469,6 +2473,172 @@
                 </div>
             </div>
 
+            <!-- Tab [NEW]: مركز البريد الإلكتروني الذكي ومطابقة المعارض -->
+            <div class="tab-pane fade" id="emails-content" role="tabpanel">
+                
+                <!-- Section Header & Info -->
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-envelope-open-text me-2"></i> مركز البريد الإلكتروني الذكي والمطابقة مع الفروع</h4>
+                            <p class="text-muted small mb-0">
+                                متابعة وتصنيف بريد الإدارة (<code class="text-dark">alaa.wafae@orangebedbath.com</code>) مع الربط التلقائي بـ <b>50 معرضاً</b> ومدراء المناطق وتتبع الحالات وتوليد الملخصات الذكية.
+                            </p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <button class="btn btn-orange-premium btn-sm px-3 shadow-sm" onclick="loadEmailHubData(true)">
+                                <i class="fa-solid fa-rotate" id="emailRefreshIcon"></i> تحديث البريد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4 KPI Cards for Email Hub -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card p-3 border-bottom border-4 border-primary overview-card-clickable" onclick="filterEmailsStatus('all')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="kpi-title d-block mb-1">الوارد الإجمالي</span>
+                                    <div class="kpi-value text-primary fs-3 tabular-nums" id="kpiEmailInbox">0</div>
+                                    <small class="text-muted" id="kpiEmailUnreadSub">غير مقروء: 0</small>
+                                </div>
+                                <div class="fs-2 text-primary opacity-50"><i class="fa-solid fa-inbox"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card p-3 border-bottom border-4 border-warning overview-card-clickable" onclick="filterEmailsStatus('pending')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="kpi-title d-block mb-1">معلقة ومتابعة</span>
+                                    <div class="kpi-value text-warning fs-3 tabular-nums" id="kpiEmailPending">0</div>
+                                    <small class="text-muted">بحاجة لاتخاذ إجراء</small>
+                                </div>
+                                <div class="fs-2 text-warning opacity-50"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card p-3 border-bottom border-4 border-danger overview-card-clickable" onclick="filterEmailsStatus('important')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="kpi-title d-block mb-1">رسائل هامة وعاجلة</span>
+                                    <div class="kpi-value text-danger fs-3 tabular-nums" id="kpiEmailImportant">0</div>
+                                    <small class="text-muted">مميزة بنجمة ⭐</small>
+                                </div>
+                                <div class="fs-2 text-danger opacity-50"><i class="fa-solid fa-star"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card p-3 border-bottom border-4 border-success overview-card-clickable" onclick="filterEmailsStatus('completed')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="kpi-title d-block mb-1">معالجة ومنتهية</span>
+                                    <div class="kpi-value text-success fs-3 tabular-nums" id="kpiEmailCompleted">0</div>
+                                    <small class="text-muted">تم إنجازها بنجاح</small>
+                                </div>
+                                <div class="fs-2 text-success opacity-50"><i class="fa-solid fa-circle-check"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters & Search Toolbar -->
+                <div class="glass-card mb-4">
+                    <div class="row g-3 align-items-center">
+                        <!-- Quick Status Tabs -->
+                        <div class="col-12 col-xl-5">
+                            <div class="btn-group btn-group-sm w-100 flex-wrap" role="group" id="emailStatusBtnGroup">
+                                <button type="button" class="btn btn-outline-dark active" onclick="filterEmailsStatus('all', this)">
+                                    <i class="fa-solid fa-list me-1"></i> الكل
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="filterEmailsStatus('pending', this)">
+                                    <i class="fa-solid fa-hourglass-half me-1"></i> المعلقة ⏳
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="filterEmailsStatus('important', this)">
+                                    <i class="fa-solid fa-star me-1"></i> الهامة ⭐
+                                </button>
+                                <button type="button" class="btn btn-outline-success" onclick="filterEmailsStatus('completed', this)">
+                                    <i class="fa-solid fa-check-double me-1"></i> المنتهية ✅
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterEmailsStatus('unread', this)">
+                                    <i class="fa-solid fa-envelope me-1"></i> غير المقروء 🔵
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Showroom Dropdown Filter -->
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <select id="emailShowroomFilterSelect" class="form-select form-control-dark form-select-sm" onchange="changeEmailShowroomFilter(this.value)">
+                                <option value="all">🏢 جميع المعارض والفروع...</option>
+                            </select>
+                        </div>
+
+                        <!-- Search Box -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white"><i class="fa-solid fa-search text-muted"></i></span>
+                                <input type="text" id="emailSearchInput" class="form-control form-control-dark" placeholder="بحث في الموضوع، المعرض أو المرسل..." oninput="debounceEmailSearch()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearEmailSearch()" title="مسح"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email List Container -->
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0 text-dark" id="emailListHeaderTitle">
+                            <i class="fa-solid fa-inbox text-orange me-2"></i> قائمة الرسائل الواردة
+                        </h5>
+                        <span class="badge bg-light text-dark border px-3 py-2" id="emailPaginationSummary">جاري التحميل...</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-premium align-middle mb-0" id="emailsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px;" class="text-center">⭐</th>
+                                    <th style="width: 180px;">المعرض / الجهة</th>
+                                    <th style="width: 220px;">المرسل</th>
+                                    <th>الموضوع والموجز</th>
+                                    <th style="width: 120px;" class="text-center">التاريخ</th>
+                                    <th style="width: 120px;" class="text-center">الحالة</th>
+                                    <th style="width: 140px;" class="text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emailsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <div class="spinner-border text-orange mb-2" role="status"></div>
+                                        <div class="fw-bold">جاري تحميل رسائل البريد الإلكتروني...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3 border-top">
+                        <div class="small text-muted" id="emailShowingInfo">عرض -- من -- رسالة</div>
+                        <nav aria-label="Email pagination">
+                            <ul class="pagination pagination-sm mb-0 gap-1" id="emailPaginationNav">
+                                <li class="page-item disabled" id="emailPrevPageBtn">
+                                    <button class="page-link" onclick="changeEmailPage(-1)"><i class="fa-solid fa-chevron-right me-1"></i> السابق</button>
+                                </li>
+                                <li class="page-item active"><span class="page-link" id="emailCurrentPageDisplay">1</span></li>
+                                <li class="page-item" id="emailNextPageBtn">
+                                    <button class="page-link" onclick="changeEmailPage(1)">التالي <i class="fa-solid fa-chevron-left ms-1"></i></button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+
+            </div>
+
             <!-- Tab 10: Secure AI Database Analyst Chat -->
             <div class="tab-pane fade" id="ai-chat-content" role="tabpanel">
                 <div class="row g-4">
@@ -3424,6 +3594,9 @@
                     break;
                 case '#dispatch-content':
                     await loadDispatchShowroomsData();
+                    break;
+                case '#emails-content':
+                    await loadEmailHubData(forceRefresh);
                     break;
                 case '#ai-chat-content':
                     // Smart Assistant initialization if any (none required)
@@ -10036,6 +10209,124 @@
         </div>
     </div>
 
+    <!-- Modal: عارض تفاصيل البريد الإلكتروني وسير العمل والموجز الذكي -->
+    <div class="modal fade" id="emailDetailModal" tabindex="-1" aria-labelledby="emailDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <!-- Modal Header -->
+                <div class="modal-header bg-dark text-white border-0 px-4 py-3" style="border-radius: 16px 16px 0 0;">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+                        <button class="btn btn-link text-warning p-0 fs-5" id="modalEmailStarBtn" onclick="toggleModalEmailImportance()" title="تمييز بنجمة">
+                            <i class="fa-regular fa-star" id="modalEmailStarIcon"></i>
+                        </button>
+                        <div class="overflow-hidden">
+                            <h5 class="modal-title fw-bold mb-0 text-truncate text-white" id="modalEmailSubject">--</h5>
+                            <small class="text-white-50 d-flex align-items-center gap-2" id="modalEmailMetaSubtitle">
+                                <span id="modalEmailSender">--</span>
+                                <span>•</span>
+                                <span id="modalEmailDate">--</span>
+                            </small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4 bg-light">
+                    <!-- Top Action & Status Bar -->
+                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3">
+                        <div class="row g-3 align-items-center">
+                            <!-- Showroom Badge & Area Manager -->
+                            <div class="col-12 col-md-4">
+                                <span class="text-muted small d-block mb-1">المعرض / الجهة التابعة:</span>
+                                <div id="modalEmailShowroomBadge">
+                                    <span class="badge bg-secondary">غير مصنف / خارجي</span>
+                                </div>
+                            </div>
+
+                            <!-- Workflow Status Selector -->
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold text-muted mb-1">حالة الإجراء والمتابعة:</label>
+                                <select id="modalEmailStatusSelect" class="form-select form-select-sm" onchange="updateModalEmailStatus(this.value)">
+                                    <option value="pending">⏳ معلق وبانتظار إجراء (Pending)</option>
+                                    <option value="in_progress">🔄 قيد المتابعة والمعالجة (In Progress)</option>
+                                    <option value="completed">✅ تم الإنجاز والمعالجة (Completed)</option>
+                                    <option value="archived">📁 أرشفة / منتهي (Archived)</option>
+                                </select>
+                            </div>
+
+                            <!-- AI Summarize Button -->
+                            <div class="col-12 col-md-4 text-md-end">
+                                <label class="form-label small fw-bold text-muted mb-1 d-none d-md-block">&nbsp;</label>
+                                <button class="btn btn-outline-orange-premium btn-sm w-100 w-md-auto d-flex align-items-center justify-content-center gap-2 shadow-sm" id="btnModalAiSummarize" onclick="generateModalEmailAiSummary()">
+                                    <i class="fa-solid fa-robot text-orange" id="modalAiSummarizeIcon"></i>
+                                    <span>توليد ملخص تنفيذي بالذكاء الاصطناعي 🤖</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Summary Card (shown if summary exists or generated) -->
+                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3 border-start border-4 border-warning" id="modalAiSummaryCard" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark small d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-warning"></i>
+                                <span>موجز الذكاء الاصطناعي التنفيذي (AI Summary):</span>
+                            </span>
+                            <small class="badge bg-warning text-dark">موجز ذكي</small>
+                        </div>
+                        <div class="p-3 bg-light rounded text-dark small" style="line-height: 1.7; white-space: pre-wrap;" id="modalAiSummaryText"></div>
+                    </div>
+
+                    <!-- Internal Notes Card -->
+                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label small fw-bold text-dark mb-0"><i class="fa-solid fa-note-sticky text-info me-1"></i> ملاحظات الإدارة الخاصة (Internal Notes):</label>
+                            <button class="btn btn-outline-info btn-xs py-0 px-2 small" onclick="saveModalEmailNotes()" id="btnSaveModalNotes"><i class="fa-solid fa-floppy-disk me-1"></i> حفظ الملاحظة</button>
+                        </div>
+                        <textarea id="modalEmailNotesInput" class="form-control form-control-sm" rows="2" placeholder="اكتب ملاحظة أو توجيه إداري خاص بهذا الإيميل..."></textarea>
+                    </div>
+
+                    <!-- Message Body & Attachments View -->
+                    <div class="card border-0 shadow-sm p-3 bg-white rounded-3">
+                        <!-- Format Toggle (HTML vs Clean Text) -->
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                            <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-file-lines text-muted me-1"></i> نص الرسالة:</h6>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" id="btnViewHtmlBody" onclick="toggleEmailBodyView('html')">منسق (HTML)</button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnViewTextBody" onclick="toggleEmailBodyView('text')">نص عادي (Text)</button>
+                            </div>
+                        </div>
+
+                        <!-- HTML Body Container -->
+                        <div id="modalEmailBodyHtmlContainer" class="p-3 bg-white rounded border overflow-auto" style="min-height: 250px; max-height: 500px; font-size: 0.9rem;">
+                            جاري تحميل المحتوى...
+                        </div>
+
+                        <!-- Text Body Container (Hidden by default) -->
+                        <pre id="modalEmailBodyTextContainer" class="p-3 bg-light rounded border overflow-auto d-none" style="min-height: 250px; max-height: 500px; font-size: 0.85rem; white-space: pre-wrap; font-family: inherit;">
+                        </pre>
+
+                        <!-- Attachments Section -->
+                        <div id="modalEmailAttachmentsSection" class="mt-3 pt-3 border-top d-none">
+                            <span class="small fw-bold text-muted d-block mb-2"><i class="fa-solid fa-paperclip me-1"></i> المرفقات:</span>
+                            <div class="d-flex flex-wrap gap-2" id="modalEmailAttachmentsList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white border-0 px-4 py-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success btn-sm px-3 shadow-sm" onclick="markModalEmailCompleted()">
+                            <i class="fa-solid fa-check me-1"></i> تم الإنجاز والمعالجة ✅
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
+

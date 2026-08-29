@@ -626,6 +626,12 @@
                 <span>📲</span>
                 <span>إرسال رابط الدفع عبر تمارا</span>
             </button>
+
+            <!-- Test Simulator Button -->
+            <button type="button" class="btn" style="background: #eff6ff; color: #1d4ed8; border: 1.5px dashed #3b82f6; margin-top: 12px; font-weight: 700; width: 100%;" onclick="simulatePaymentSuccess()">
+                <span>🧪</span>
+                <span>محاكاة دفع ناجح فوراً (اختبار إقفال فاتورة POS)</span>
+            </button>
         </div>
 
         <!-- STEP 2: Waiting & QR -->
@@ -651,6 +657,11 @@
                 <button class="btn btn-teal" id="btnOpenLink" onclick="openDirectLink()">
                     <span>🔗</span>
                     <span>فتح رابط الدفع في نافذة جديدة (Sandbox)</span>
+                </button>
+
+                <button type="button" class="btn" style="background: #eff6ff; color: #1d4ed8; border: 1.5px dashed #3b82f6; font-weight: 700; width: 100%;" onclick="simulatePaymentSuccess()">
+                    <span>🧪</span>
+                    <span>محاكاة دفع ناجح فوراً (إرسال إشارة الإقفال للـ POS)</span>
                 </button>
 
                 <button class="btn btn-danger" onclick="cancelPaymentSession()">
@@ -839,6 +850,17 @@
             }
         }
 
+        // Parse Tenders if provided
+        const rawTenders = urlParams.get('tenders');
+        if (rawTenders) {
+            try {
+                const tenders = JSON.parse(decodeURIComponent(rawTenders));
+                console.log("[POS Tenders Available]:", tenders);
+            } catch (e) {
+                console.log("No tenders JSON parsed:", e);
+            }
+        }
+
         // Render Initial Values
         const storeDisplayName = getStoreDisplayName(currentStoreId, paramStoreName);
         document.getElementById('displayStoreTerminal').textContent = `${storeDisplayName} / كاشير ${currentTerminalId}`;
@@ -1005,6 +1027,54 @@
         document.getElementById('stepSuccess').classList.remove('hidden');
         document.getElementById('successAmount').textContent = currentAmount.toFixed(2);
         document.getElementById('successOrderId').textContent = currentOrderId;
+
+        // Post message to POS window opener for Auto-Tender
+        try {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'TAMARA_PAYMENT_COMPLETED',
+                    orderId: currentOrderId,
+                    tenderTypeId: '7',
+                    amount: currentAmount,
+                    cartId: currentCartId
+                }, '*');
+            }
+        } catch (e) {
+            console.log("Could not postMessage to opener:", e);
+        }
+
+        // Notify server of cart completion for POS Background Poller
+        try {
+            fetch('/api/tamara/session/simulate-success', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cart_id: currentCartId,
+                    amount: currentAmount
+                })
+            });
+        } catch (e) {
+            console.log("Could not notify server of success:", e);
+        }
+    }
+
+    function simulatePaymentSuccess() {
+        const amountInput = document.getElementById('inputAmount');
+        if (amountInput && amountInput.value) {
+            currentAmount = parseFloat(amountInput.value) || currentAmount;
+        }
+        currentOrderId = currentOrderId || ("SIMULATED-" + Date.now());
+        
+        showToast("⚡ جاري إرسال إشارة الدفع الناجح لإقفال الفاتورة في الـ POS...");
+        
+        setTimeout(() => {
+            onPaymentSuccess({
+                status: 'fully_captured',
+                is_fully_captured: true,
+                order_id: currentOrderId,
+                amount: currentAmount
+            });
+        }, 400);
     }
 
     async function cancelPaymentSession() {
