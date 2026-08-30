@@ -6568,25 +6568,6 @@ const EMPLOYEES = [
         "addressBooks": "1105-C;1105-E"
     },
     {
-        "employeeId": "4943-منى العمري",
-        "personnelNumber": "4943",
-        "name": "منى العمري",
-        "startDate": "2026-04-16",
-        "manager": "محمدكلو",
-        "showroom": "1113-51-Park Avenue Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1113-51-Park Avenue Riyadh",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1113-C",
-                    "1113-E"
-                ]
-            }
-        ],
-        "addressBooks": "1113-C;1113-E"
-    },
-    {
         "employeeId": "4948-ليان تركي",
         "personnelNumber": "4948",
         "name": "ليان تركي",
