@@ -4568,7 +4568,7 @@ const EMPLOYEES = [
         "name": "شهد حمدان العامري",
         "startDate": "2025-08-03",
         "manager": "جهاد ايوبي",
-        "showroom": "1602-49-AlAhsa Mall",
+        "showroom": "1602-49-AlAhsa Mall و 1601-16-Ehsa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1602-49-AlAhsa Mall",
@@ -4577,9 +4577,17 @@ const EMPLOYEES = [
                     "1602-C",
                     "1602-E"
                 ]
+            },
+            {
+                "name": "1601-16-Ehsa Othaim Mall",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "1601-C",
+                    "1601-E"
+                ]
             }
         ],
-        "addressBooks": "1602-C;1602-E"
+        "addressBooks": "1602-C;1602-E;1601-C;1601-E"
     },
     {
         "employeeId": "4678-عبدالفتاح محمد هيثم",
