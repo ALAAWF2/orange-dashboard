@@ -5575,25 +5575,6 @@ const EMPLOYEES = [
         "addressBooks": "1903-C;1903-E"
     },
     {
-        "employeeId": "4838-هنوف الوادعي",
-        "personnelNumber": "4838",
-        "name": "هنوف الوادعي",
-        "startDate": "2026-01-26",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
-        "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            }
-        ],
-        "addressBooks": "1114-C;1114-E"
-    },
-    {
         "employeeId": "4839-منال طاهر",
         "personnelNumber": "4839",
         "name": "منال طاهر",
@@ -7228,25 +7209,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2001-C;2001-E"
-    },
-    {
-        "employeeId": "4993-Athar Alzahrani",
-        "personnelNumber": "4993",
-        "name": "Athar Alzahrani",
-        "startDate": "2026-07-19",
-        "manager": "محمدكلو",
-        "showroom": "1101-12-Al_Hamra Mall",
-        "showroomDetails": [
-            {
-                "name": "1101-12-Al_Hamra Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1101-C",
-                    "1101-E"
-                ]
-            }
-        ],
-        "addressBooks": "1101-C;1101-E"
     },
     {
         "employeeId": "4997-شهد الجهني",
