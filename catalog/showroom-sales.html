@@ -1193,8 +1193,8 @@
         if (!canSwitchStores && userAssignedMall) {
           // Hide selector
           document.getElementById('showroomSelectContainer').style.display = 'none';
-          selectedStoreName = userAssignedMall;
           selectedStoreCode = findStoreCodeByName(userAssignedMall);
+          selectedStoreName = mgmtData?.stores?.[selectedStoreCode] || userAssignedMall;
         } else {
           // Can switch stores: populate dropdown
           const availableStoreEntries = populateStoreSelect();
@@ -1203,13 +1203,15 @@
           // Determine store from URL or fallback
           const urlParams = new URLSearchParams(window.location.search);
           const requestedStore = urlParams.get('store');
+          const reqCode = requestedStore ? findStoreCodeByName(requestedStore) : null;
+          const isReqAllowed = reqCode && (allowedOutlets.length === 0 || allowedOutlets.some(a => matchMallNames(a, requestedStore) || findStoreCodeByName(a) === reqCode));
 
-          if (requestedStore && findStoreCodeByName(requestedStore) && (allowedOutlets.length === 0 || allowedOutlets.includes(requestedStore))) {
-            selectedStoreName = requestedStore;
-            selectedStoreCode = findStoreCodeByName(requestedStore);
+          if (isReqAllowed) {
+            selectedStoreCode = reqCode;
+            selectedStoreName = mgmtData?.stores?.[selectedStoreCode] || requestedStore;
           } else if (userAssignedMall && findStoreCodeByName(userAssignedMall)) {
-            selectedStoreName = userAssignedMall;
             selectedStoreCode = findStoreCodeByName(userAssignedMall);
+            selectedStoreName = mgmtData?.stores?.[selectedStoreCode] || userAssignedMall;
           } else {
             const firstCode = allowedOutlets.length > 0
               ? findStoreCodeByName(allowedOutlets[0])
@@ -1244,12 +1246,134 @@
       }
     }
 
+    function cleanMallKey(v) {
+      if (!v) return '';
+      let str = String(v).toLowerCase().trim();
+      str = str.replace(/riyadh/g, 'riyad');
+      str = str.replace(/al[\s_-]+/g, 'al');
+      str = str.replace(/[-_]/g, ' ');
+      const nums = str.match(/\d+/g) || [];
+      const normNums = nums.map(n => parseInt(n, 10)).join(' ');
+      const textPart = str.replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
+      return (textPart + ' ' + normNums).trim();
+    }
+
+    function matchMallNames(a, b) {
+      if (!a || !b) return false;
+      const strA = String(a).trim().toLowerCase();
+      const strB = String(b).trim().toLowerCase();
+      if (strA === strB) return true;
+
+      const keyA = cleanMallKey(a);
+      const keyB = cleanMallKey(b);
+      if (keyA && keyB && keyA === keyB) return true;
+
+      const extract = (s) => {
+        let norm = String(s).toLowerCase();
+        norm = norm.replace(/riyadh/g, 'riyad').replace(/al[\s_-]+/g, 'al').replace(/[-_]/g, ' ');
+        const nums = (norm.match(/\d+/g) || []).map(n => parseInt(n, 10));
+        const text = norm.replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
+        return { text, nums };
+      };
+
+      const pA = extract(a);
+      const pB = extract(b);
+
+      const commonNum = pA.nums.some(n => pB.nums.includes(n));
+      if (commonNum) {
+        if (!pA.text || !pB.text || pA.text.includes(pB.text) || pB.text.includes(pA.text)) {
+          return true;
+        }
+      }
+
+      if (pA.text && pB.text && (pA.text === pB.text || pA.text.includes(pB.text) || pB.text.includes(pA.text))) {
+        if (pA.nums.length === 0 || pB.nums.length === 0 || commonNum) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
     function findStoreCodeByName(name) {
       if (!mgmtData || !mgmtData.stores || !name) return null;
-      const target = name.trim().toLowerCase();
+      const raw = String(name).trim();
+      const target = raw.toLowerCase();
+
+      // 1. Direct store code lookup (e.g. "1109")
+      if (mgmtData.stores[raw]) return raw;
+
+      // 2. Exact match
       for (const [code, sName] of Object.entries(mgmtData.stores)) {
         if (sName.trim().toLowerCase() === target) return code;
       }
+
+      // 3. Cleaned key match (handles riyadh <-> riyad, dashes, spaces)
+      const targetKey = cleanMallKey(raw);
+      for (const [code, sName] of Object.entries(mgmtData.stores)) {
+        if (cleanMallKey(sName) === targetKey) return code;
+      }
+
+      // 4. Flexible match via matchMallNames
+      for (const [code, sName] of Object.entries(mgmtData.stores)) {
+        if (matchMallNames(raw, sName) || matchMallNames(raw, `${code}-${sName}`)) return code;
+      }
+
+      // 5. Match by store numbers if present
+      const targetNums = (raw.match(/\d+/g) || []).map(n => parseInt(n, 10));
+      if (targetNums.length > 0) {
+        for (const [code, sName] of Object.entries(mgmtData.stores)) {
+          if (targetNums.includes(parseInt(code, 10))) return code;
+          const sNums = (sName.match(/\d+/g) || []).map(n => parseInt(n, 10));
+          if (sNums.length > 0 && targetNums.includes(sNums[0])) return code;
+        }
+      }
+
+      // 6. Arabic / English keyword aliases
+      const keywords = [
+        { keys: ['hayat', 'حياة'], match: ['hayat'] },
+        { keys: ['andalos', 'andalus', 'أندلس', 'اندلس'], match: ['andalos'] },
+        { keys: ['haifa', 'هيفاء', 'هيفا'], match: ['haifa'] },
+        { keys: ['red sea', 'رد سي', 'ردسي'], match: ['red sea'] },
+        { keys: ['arab mall', 'عرب'], match: ['arab'] },
+        { keys: ['yasmin', 'ياسمين'], match: ['yasmin'] },
+        { keys: ['khayyat', 'خياط'], match: ['khayyat'] },
+        { keys: ['jeddah park', 'جدة بارك'], match: ['jeddah park'] },
+        { keys: ['basateen', 'بساتين'], match: ['basateen'] },
+        { keys: ['village', 'فيلج', 'قرية'], match: ['village'] },
+        { keys: ['hamra', 'حمراء', 'حمرا'], match: ['hamra'] },
+        { keys: ['rabwa', 'ربوة', 'ربوه'], match: ['rabwa'] },
+        { keys: ['tala', 'تالا'], match: ['tala'] },
+        { keys: ['atyaf', 'أطياف', 'اطياف'], match: ['atyaf'] },
+        { keys: ['meem', 'ميم'], match: ['meem'] },
+        { keys: ['park avenue', 'بارك افينيو', 'افينيو'], match: ['park avenue'] },
+        { keys: ['malgha', 'ملقا', 'ملقة'], match: ['malgha'] },
+        { keys: ['alrabie', 'ربيع'], match: ['alrabie', 'alrabia'] },
+        { keys: ['jouri', 'جوري'], match: ['jouri'] },
+        { keys: ['kamal', 'كمال'], match: ['kamal'] },
+        { keys: ['alia', 'عالية', 'عاليه'], match: ['alia'] },
+        { keys: ['noor', 'نور'], match: ['noor'] },
+        { keys: ['dana', 'دانة', 'دانه'], match: ['dana'] },
+        { keys: ['arar', 'عرعر'], match: ['arar'] },
+        { keys: ['hail', 'حائل', 'حايل'], match: ['hail'] },
+        { keys: ['mujan', 'موجان'], match: ['mujan'] },
+        { keys: ['baha', 'باحة', 'باحه'], match: ['baha'] },
+        { keys: ['lavanda', 'لافاندا', 'لافندر'], match: ['lavanda'] },
+        { keys: ['tabuk', 'تبوك'], match: ['tabuk'] },
+        { keys: ['dhahran', 'ظهران'], match: ['dhahran'] },
+        { keys: ['jubail', 'جبيل'], match: ['jubail'] },
+        { keys: ['jouf', 'جوف'], match: ['jouf'] }
+      ];
+
+      for (const kw of keywords) {
+        if (kw.keys.some(k => target.includes(k))) {
+          for (const [code, sName] of Object.entries(mgmtData.stores)) {
+            const sLower = sName.toLowerCase();
+            if (kw.match.some(m => sLower.includes(m))) return code;
+          }
+        }
+      }
+
       return null;
     }
 
@@ -1268,7 +1392,9 @@
             && !lower.includes('مستودع')
             && name !== 'PLATFORMS';
           if (!isValidType) return false;
-          if (allowedOutlets.length > 0) return allowedOutlets.includes(name);
+          if (allowedOutlets.length > 0) {
+            return allowedOutlets.some(allowed => matchMallNames(allowed, name) || findStoreCodeByName(allowed) === code);
+          }
           return true;
         })
         .sort((a, b) => a[1].localeCompare(b[1], 'ar'));
@@ -2120,9 +2246,9 @@
       if (!outletSales || !storeName) return 0;
       if (outletSales[storeName] != null) return Number(outletSales[storeName]) || 0;
 
-      const normalizedStoreName = storeName.trim().toLowerCase();
+      const targetKey = cleanMallKey(storeName);
       const matchingEntry = Object.entries(outletSales).find(
-        ([outletName]) => outletName.trim().toLowerCase() === normalizedStoreName
+        ([outletName]) => cleanMallKey(outletName) === targetKey || matchMallNames(outletName, storeName)
       );
       return matchingEntry ? Number(matchingEntry[1]) || 0 : 0;
     }

@@ -2363,11 +2363,51 @@
 
     function cleanMallKey(v) {
       if (!v) return '';
-      const str = String(v).toLowerCase().trim();
+      let str = String(v).toLowerCase().trim();
+      str = str.replace(/riyadh/g, 'riyad');
+      str = str.replace(/al[\s_-]+/g, 'al');
+      str = str.replace(/[-_]/g, ' ');
       const nums = str.match(/\d+/g) || [];
       const normNums = nums.map(n => parseInt(n, 10)).join(' ');
-      const textPart = str.replace(/\d+/g, '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+      const textPart = str.replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
       return (textPart + ' ' + normNums).trim();
+    }
+
+    function matchMallNames(a, b) {
+      if (!a || !b) return false;
+      const strA = String(a).trim().toLowerCase();
+      const strB = String(b).trim().toLowerCase();
+      if (strA === strB) return true;
+
+      const keyA = cleanMallKey(a);
+      const keyB = cleanMallKey(b);
+      if (keyA && keyB && keyA === keyB) return true;
+
+      const extract = (s) => {
+        let norm = String(s).toLowerCase();
+        norm = norm.replace(/riyadh/g, 'riyad').replace(/al[\s_-]+/g, 'al').replace(/[-_]/g, ' ');
+        const nums = (norm.match(/\d+/g) || []).map(n => parseInt(n, 10));
+        const text = norm.replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
+        return { text, nums };
+      };
+
+      const pA = extract(a);
+      const pB = extract(b);
+
+      const commonNum = pA.nums.some(n => pB.nums.includes(n));
+      if (commonNum) {
+        if (!pA.text || !pB.text || pA.text.includes(pB.text) || pB.text.includes(pA.text)) {
+          return true;
+        }
+      }
+
+      if (pA.text && pB.text && (pA.text === pB.text || pA.text.includes(pB.text) || pB.text.includes(pA.text))) {
+        if (pA.nums.length === 0 || pB.nums.length === 0 || commonNum) {
+          return true;
+        }
+      }
+
+      return false;
     }
 
     function normalizeKey(v) {
@@ -2380,7 +2420,8 @@
       const currentTargetKey = cleanMallKey(userMall);
       for (const [branchName, qty] of Object.entries(product.branches)) {
         const bLower = branchName.toLowerCase();
-        if (cleanMallKey(branchName) !== currentTargetKey &&
+        if (!matchMallNames(branchName, userMall) &&
+            cleanMallKey(branchName) !== currentTargetKey &&
             qty > 0 &&
             bLower !== 'warehouse' &&
             !bLower.includes('riyadh') &&
@@ -2421,11 +2462,11 @@
         (dataRef || []).forEach(product => {
           values.set(String(product.code), Number(product.sales) || 0);
         });
-      } else if (mallKey && salesByOutletRef) {
+      } else if (userMall && salesByOutletRef) {
         Object.entries(salesByOutletRef).forEach(([code, outlets]) => {
           if (!outlets || typeof outlets !== 'object') return;
           for (const [mallName, value] of Object.entries(outlets)) {
-            if (cleanMallKey(mallName) === mallKey) {
+            if (cleanMallKey(mallName) === mallKey || matchMallNames(mallName, userMall)) {
               values.set(String(code), Number(value) || 0);
               break;
             }
@@ -2462,7 +2503,7 @@
       if (d.branches[userMall] !== undefined) return Number(d.branches[userMall]) || 0;
       const targetKey = cleanMallKey(userMall);
       for (let k in d.branches) {
-        if (cleanMallKey(k) === targetKey) {
+        if (cleanMallKey(k) === targetKey || matchMallNames(k, userMall)) {
           return Number(d.branches[k]) || 0;
         }
       }
