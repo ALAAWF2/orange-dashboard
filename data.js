@@ -3505,25 +3505,6 @@ const EMPLOYEES = [
         "addressBooks": "1108-C;1108-E"
     },
     {
-        "employeeId": "4414-سامودين بيلاكال",
-        "personnelNumber": "4414",
-        "name": "سامودين بيلاكال",
-        "startDate": "2024-12-01",
-        "manager": "المنطقة الغربية",
-        "showroom": "1006-13-Al-Yasmin Mall",
-        "showroomDetails": [
-            {
-                "name": "1006-13-Al-Yasmin Mall",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1006-C",
-                    "1006-E"
-                ]
-            }
-        ],
-        "addressBooks": "1006-C;1006-E"
-    },
-    {
         "employeeId": "4415-سيف",
         "personnelNumber": "4415",
         "name": "سيف",
