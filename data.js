@@ -5173,18 +5173,18 @@ const EMPLOYEES = [
         "name": "Areej Alaklbi",
         "startDate": "2025-12-16",
         "manager": "محمدكلو",
-        "showroom": "1110-45- Riyadh Gallery Mall",
+        "showroom": "1111-46-Khaleej Mall Riyadh",
         "showroomDetails": [
             {
-                "name": "1110-45- Riyadh Gallery Mall",
+                "name": "1111-46-Khaleej Mall Riyadh",
                 "manager": "محمدكلو",
                 "codes": [
-                    "1110-C",
-                    "1110-E"
+                    "1111-C",
+                    "1111-E"
                 ]
             }
         ],
-        "addressBooks": "1110-C;1110-E"
+        "addressBooks": "1111-C;1111-E"
     },
     {
         "employeeId": "4789-عبير القرني",
