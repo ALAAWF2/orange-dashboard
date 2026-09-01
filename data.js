@@ -4880,18 +4880,18 @@ const EMPLOYEES = [
         "name": "ارون بابو",
         "startDate": "2025-10-13",
         "manager": "جهاد ايوبي",
-        "showroom": "1601-16-Ehsa Othaim Mall",
+        "showroom": "2103-42-Dareen Mall Dammam",
         "showroomDetails": [
             {
-                "name": "1601-16-Ehsa Othaim Mall",
+                "name": "2103-42-Dareen Mall Dammam",
                 "manager": "جهاد ايوبي",
                 "codes": [
-                    "1601-C",
-                    "1601-E"
+                    "2103-C",
+                    "2103-E"
                 ]
             }
         ],
-        "addressBooks": "1601-C;1601-E"
+        "addressBooks": "2103-C;2103-E"
     },
     {
         "employeeId": "4752-خديجة مجش",
