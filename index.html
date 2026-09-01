@@ -5285,7 +5285,7 @@
                 // === 1. Daily Sales Data (from rawData) ===
                 const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
                 let dailyRows = [];
-                let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0;
+                let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0, grandDailyTarget = 0;
 
                 let loopDate = new Date(startDate);
                 while (loopDate <= endDate) {
@@ -5323,7 +5323,13 @@
                     const conv = visitors > 0 ? ((trans / visitors) * 100) : 0;
                     const dayOfWeek = loopDate.getDay();
 
-                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, sales, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv, custVal });
+                    let dailyTgt = 0;
+                    if (_dailyTargetsCache && _dailyTargetsCache[storeId] && _dailyTargetsCache[storeId][dateStr]) {
+                        dailyTgt = Number(_dailyTargetsCache[storeId][dateStr]) || 0;
+                    }
+                    grandDailyTarget += dailyTgt;
+
+                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, sales, dailyTarget: dailyTgt, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv, custVal });
                     grandSales += sales; grandSalesLY += salesLY; grandTrans += trans; grandVisitors += visitors; grandVisitorsLY += visitorsLY; grandTarget += target;
                     loopDate.setDate(loopDate.getDate() + 1);
                 }
@@ -5536,7 +5542,7 @@
                     <!-- Tab Panes -->
                     <div class="drill-body">
                         <div id="drill-daily-${uid}" class="drill-tab-pane">
-                            ${renderDailyDrill(dailyRows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, storeId, storeName)}
+                            ${renderDailyDrill(dailyRows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, storeId, storeName, grandDailyTarget)}
                         </div>
                         <div id="drill-emp-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderEmpDrill(empList, totalEmpSales, uid)}
@@ -6356,7 +6362,7 @@
             tableContainer.innerHTML = renderIncentiveTableHtml(storeIncentives[monthStr]);
         };
 
-        function renderDailyDrill(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, storeId, storeName) {
+        function renderDailyDrill(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, storeId, storeName, grandDailyTarget = 0) {
             if (rows.length === 0) return '<div class="text-center text-muted py-3">لا توجد بيانات</div>';
             const grandCustVal = grandVisitors > 0 ? Math.round(grandSales / grandVisitors) : 0;
             const uid = storeId.replace(/[^a-zA-Z0-9]/g, '');
@@ -6367,17 +6373,19 @@
             <div class="table-responsive" style="max-height:400px; overflow-y:auto;">
                 <table class="table table-sm drill-table mb-0">
                     <thead><tr>
-                        <th>التاريخ</th><th>اليوم</th><th class="text-end">المبيعات</th><th class="text-end opacity-75">السنة السابقة</th>
+                        <th>التاريخ</th><th>اليوم</th><th class="text-end">المبيعات</th><th class="text-end" style="color: #fe7900;">المستهدف اليومي</th><th class="text-end opacity-75">السنة السابقة</th>
                         <th class="text-center">النمو %</th><th class="text-center">الفواتير</th><th class="text-center">م. الفاتورة</th>
                         <th class="text-center">الزوار</th><th class="text-center opacity-75">زوار LY</th><th class="text-center">ق. العميل</th><th class="text-center">التحويل</th>
                     </tr></thead><tbody>`;
 
             rows.forEach(r => {
                 const dayClass = r.dayOfWeek === 5 ? 'day-fri' : r.dayOfWeek === 6 ? 'day-sat' : '';
+                const dailyTgtDisplay = r.dailyTarget > 0 ? r.dailyTarget.toLocaleString() : '-';
                 html += `<tr class="${dayClass}">
                     <td class="fw-bold">${r.date}</td>
                     <td>${r.dayName}</td>
                     <td class="text-end fw-bold">${r.sales.toLocaleString()}</td>
+                    <td class="text-end fw-bold" style="color: #fe7900;">${dailyTgtDisplay}</td>
                     <td class="text-end text-muted">${r.salesLY.toLocaleString()}</td>
                     <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
                     <td class="text-center">${r.trans.toLocaleString()}</td>
@@ -6391,9 +6399,11 @@
                 </tr>`;
             });
 
+            const grandDailyTgtDisplay = grandDailyTarget > 0 ? grandDailyTarget.toLocaleString() : '-';
             html += `</tbody><tfoot class="fw-bold" style="background:#fff3e0;"><tr>
                 <td colspan="2">الإجمالي</td>
                 <td class="text-end">${grandSales.toLocaleString()}</td>
+                <td class="text-end" style="color: #fe7900;">${grandDailyTgtDisplay}</td>
                 <td class="text-end">${grandSalesLY.toLocaleString()}</td>
                 <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
                 <td class="text-center">${grandTrans.toLocaleString()}</td>
