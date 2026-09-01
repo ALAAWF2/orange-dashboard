@@ -5165,21 +5165,33 @@
         let _empCache = null;  // Cached employees_data.json
         let _ceoProductsCache = null;  // Cached ceo_data/products.json
         let _ceoSalesCache = {};  // Cached ceo_data/sales_YYYY_MM.json per month
+        let _dailyTargetsCache = null; // Cached daily_targets.json
         let _drillLoadingPromise = null;
         let _drillDataCache = {}; // Store drill data per store for Excel export
 
         async function loadDrillData() {
-            if (_empCache && _ceoProductsCache) return;
+            if (_empCache && _ceoProductsCache && _dailyTargetsCache) return;
             if (_drillLoadingPromise) return _drillLoadingPromise;
             _drillLoadingPromise = (async () => {
-                const [empRes, prodRes] = await Promise.all([
+                const [empRes, prodRes, targetRes] = await Promise.all([
                     fetch('employees_data.json'),
-                    fetch('ceo_data/products.json')
+                    fetch('ceo_data/products.json'),
+                    fetch('daily_targets.json').catch(() => null)
                 ]);
                 _empCache = await empRes.json();
                 const prodRaw = await prodRes.json();
                 // products.json is wrapped: { products: { item_id: {name, category, ...} } }
                 _ceoProductsCache = prodRaw.products || prodRaw;
+                if (targetRes && targetRes.ok) {
+                    try {
+                        const targetRaw = await targetRes.json();
+                        _dailyTargetsCache = targetRaw.targets || targetRaw;
+                    } catch (e) {
+                        _dailyTargetsCache = {};
+                    }
+                } else {
+                    _dailyTargetsCache = {};
+                }
             })();
             return _drillLoadingPromise;
         }
