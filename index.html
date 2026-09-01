@@ -5299,13 +5299,25 @@
                 let dailyRows = [];
                 let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0, grandDailyTarget = 0;
 
-                let loopDate = new Date(startDate);
-                while (loopDate <= endDate) {
+                // Always show all days of the month so full daily targets are visible
+                let drillStart, drillEnd;
+                if (startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
+                    drillStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+                    drillEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+                } else {
+                    drillStart = new Date(startDate);
+                    drillEnd = new Date(endDate);
+                }
+                const todayStr = new Date().toLocaleDateString('en-CA');
+
+                let loopDate = new Date(drillStart);
+                while (loopDate <= drillEnd) {
                     const dateStr = loopDate.toLocaleDateString('en-CA');
+                    const isFuture = dateStr > todayStr;
                     const dayData = getDayData(storeId, dateStr);
-                    const sales = dayData.sales || 0;
-                    const visitors = dayData.visitors || 0;
-                    const trans = dayData.trans || 0;
+                    const sales = isFuture ? 0 : (dayData.sales || 0);
+                    const visitors = isFuture ? 0 : (dayData.visitors || 0);
+                    const trans = isFuture ? 0 : (dayData.trans || 0);
                     let target = dayData.target || 0;
                     if (target > 0 && rawData.metadata && rawData.metadata.target_end_date) {
                         const extDate = new Date(rawData.metadata.target_end_date);
@@ -5341,7 +5353,7 @@
                     }
                     grandDailyTarget += dailyTgt;
 
-                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, sales, dailyTarget: dailyTgt, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv, custVal });
+                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, isFuture, sales, dailyTarget: dailyTgt, salesLY, growth, trans, avgInv, visitors, visitorsLY, conv, custVal });
                     grandSales += sales; grandSalesLY += salesLY; grandTrans += trans; grandVisitors += visitors; grandVisitorsLY += visitorsLY; grandTarget += target;
                     loopDate.setDate(loopDate.getDate() + 1);
                 }
@@ -5637,8 +5649,18 @@
                 let dailyRows = [];
                 let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0, grandDailyTarget = 0;
 
-                let loopDate = new Date(startDate);
-                while (loopDate <= endDate) {
+                let drillStart, drillEnd;
+                if (startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
+                    drillStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+                    drillEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+                } else {
+                    drillStart = new Date(startDate);
+                    drillEnd = new Date(endDate);
+                }
+                const todayStr = new Date().toLocaleDateString('en-CA');
+
+                let loopDate = new Date(drillStart);
+                while (loopDate <= drillEnd) {
                     const dateStr = loopDate.toLocaleDateString('en-CA');
                     let daySales = 0, dayVisitors = 0, dayTrans = 0, dayTarget = 0, dayDailyTarget = 0;
                     let daySalesLY = 0, dayVisitorsLY = 0;
@@ -5839,19 +5861,30 @@
             rows.forEach(r => {
                 const dayClass = r.dayOfWeek === 5 ? 'day-fri' : r.dayOfWeek === 6 ? 'day-sat' : '';
                 const dailyTgtDisplay = r.dailyTarget > 0 ? r.dailyTarget.toLocaleString() : '-';
+                const isFuture = r.isFuture;
+                const salesDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.sales.toLocaleString();
+                const growthDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : `${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%`;
+                const growthClass = isFuture ? 'text-muted' : (r.growth >= 0 ? 'text-success' : 'text-danger');
+                const transDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.trans.toLocaleString();
+                const avgInvDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.avgInv.toLocaleString();
+                const visitorsDisplay = (isFuture || shouldHideVisitors()) ? '<span class="text-muted opacity-50">-</span>' : r.visitors.toLocaleString();
+                const visitorsLYDisplay = (isFuture || shouldHideVisitors()) ? '<span class="text-muted opacity-50">-</span>' : r.visitorsLY.toLocaleString();
+                const custValDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.custVal.toLocaleString();
+                const convDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : (r.conv.toFixed(1) + '%');
+
                 html += `<tr class="${dayClass}">
                     <td class="text-center">${r.date}</td>
                     <td class="text-center">${r.dayName}</td>
-                    <td class="text-center fw-bold">${r.sales.toLocaleString()}</td>
+                    <td class="text-center fw-bold">${salesDisplay}</td>
                     <td class="text-center fw-bold" style="color:#fe7900;">${dailyTgtDisplay}</td>
                     <td class="text-center text-muted">${r.salesLY.toLocaleString()}</td>
-                    <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
-                    <td class="text-center">${r.trans.toLocaleString()}</td>
-                    <td class="text-center">${r.avgInv.toLocaleString()}</td>
-                    <td class="text-center fw-bold">${shouldHideVisitors() ? '-' : r.visitors.toLocaleString()}</td>
-                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : r.visitorsLY.toLocaleString()}</td>
-                    <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
-                    <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
+                    <td class="text-center ${growthClass} fw-bold">${growthDisplay}</td>
+                    <td class="text-center">${transDisplay}</td>
+                    <td class="text-center">${avgInvDisplay}</td>
+                    <td class="text-center fw-bold">${visitorsDisplay}</td>
+                    <td class="text-center text-muted">${visitorsLYDisplay}</td>
+                    <td class="text-center fw-bold">${custValDisplay}</td>
+                    <td class="text-center">${convDisplay}</td>
                 </tr>`;
             });
             const grandDailyTgtDisplay = grandDailyTarget > 0 ? grandDailyTarget.toLocaleString() : '-';
@@ -6393,21 +6426,30 @@
             rows.forEach(r => {
                 const dayClass = r.dayOfWeek === 5 ? 'day-fri' : r.dayOfWeek === 6 ? 'day-sat' : '';
                 const dailyTgtDisplay = r.dailyTarget > 0 ? r.dailyTarget.toLocaleString() : '-';
+                const isFuture = r.isFuture;
+                const salesDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.sales.toLocaleString();
+                const growthDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : `${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%`;
+                const growthClass = isFuture ? 'text-muted' : (r.growth >= 0 ? 'text-success' : 'text-danger');
+                const transDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.trans.toLocaleString();
+                const avgInvDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.avgInv.toLocaleString();
+                const visitorsDisplay = (isFuture || shouldHideVisitors()) ? '<span class="text-muted opacity-50">-</span>' : `<a href="#" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary">${r.visitors.toLocaleString()}</a>`;
+                const visitorsLYDisplay = (isFuture || shouldHideVisitors()) ? '<span class="text-muted opacity-50">-</span>' : r.visitorsLY.toLocaleString();
+                const custValDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : r.custVal.toLocaleString();
+                const convDisplay = isFuture ? '<span class="text-muted opacity-50">-</span>' : (r.conv.toFixed(1) + '%');
+
                 html += `<tr class="${dayClass}">
                     <td class="fw-bold">${r.date}</td>
                     <td>${r.dayName}</td>
-                    <td class="text-end fw-bold">${r.sales.toLocaleString()}</td>
+                    <td class="text-end fw-bold">${salesDisplay}</td>
                     <td class="text-end fw-bold" style="color: #fe7900;">${dailyTgtDisplay}</td>
                     <td class="text-end text-muted">${r.salesLY.toLocaleString()}</td>
-                    <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
-                    <td class="text-center">${r.trans.toLocaleString()}</td>
-                    <td class="text-center">${r.avgInv.toLocaleString()}</td>
-                    <td class="text-center fw-bold">
-                        ${shouldHideVisitors() ? '-' : `<a href="#" onclick="event.stopPropagation(); showHourlyVisitors('${storeId}', '${encodeURIComponent(storeName)}', new Date('${r.date}'), new Date('${r.date}')); return false;" class="text-decoration-none text-primary">${r.visitors.toLocaleString()}</a>`}
-                    </td>
-                    <td class="text-center text-muted">${shouldHideVisitors() ? '-' : r.visitorsLY.toLocaleString()}</td>
-                    <td class="text-center fw-bold">${r.custVal.toLocaleString()}</td>
-                    <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
+                    <td class="text-center ${growthClass} fw-bold">${growthDisplay}</td>
+                    <td class="text-center">${transDisplay}</td>
+                    <td class="text-center">${avgInvDisplay}</td>
+                    <td class="text-center fw-bold">${visitorsDisplay}</td>
+                    <td class="text-center text-muted">${visitorsLYDisplay}</td>
+                    <td class="text-center fw-bold">${custValDisplay}</td>
+                    <td class="text-center">${convDisplay}</td>
                 </tr>`;
             });
 
@@ -6813,15 +6855,16 @@
                 const rows = data.dailyRows.map(r => ({
                     'التاريخ': r.date,
                     'اليوم': r.dayName,
-                    'المبيعات': Math.round(r.sales),
+                    'المبيعات': r.isFuture ? '-' : Math.round(r.sales),
+                    'المستهدف اليومي': r.dailyTarget || 0,
                     'السنة السابقة': Math.round(r.salesLY),
-                    'النمو %': +(r.growth.toFixed(1)),
-                    'الفواتير': r.trans,
-                    'م. الفاتورة': r.avgInv,
-                    'الزوار': shouldHideVisitors() ? '-' : r.visitors,
-                    'زوار السنة السابقة': shouldHideVisitors() ? '-' : r.visitorsLY,
-                    'قيمة العميل': r.custVal,
-                    'التحويل %': +(r.conv.toFixed(1))
+                    'النمو %': r.isFuture ? '-' : +(r.growth.toFixed(1)),
+                    'الفواتير': r.isFuture ? '-' : r.trans,
+                    'م. الفاتورة': r.isFuture ? '-' : r.avgInv,
+                    'الزوار': (r.isFuture || shouldHideVisitors()) ? '-' : r.visitors,
+                    'زوار السنة السابقة': (r.isFuture || shouldHideVisitors()) ? '-' : r.visitorsLY,
+                    'قيمة العميل': r.isFuture ? '-' : r.custVal,
+                    'التحويل %': r.isFuture ? '-' : +(r.conv.toFixed(1))
                 }));
                 const ws = XLSX.utils.json_to_sheet(rows);
                 ws['!cols'] = [{wch:12},{wch:10},{wch:12},{wch:14},{wch:10},{wch:10},{wch:12},{wch:10},{wch:14},{wch:12},{wch:10}];
