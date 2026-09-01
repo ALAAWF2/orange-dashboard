@@ -5617,12 +5617,12 @@
                 // === 1. Daily Sales (aggregated across all stores) ===
                 const dayNames = ["\u0627\u0644\u0623\u062d\u062f", "\u0627\u0644\u0627\u062b\u0646\u064a\u0646", "\u0627\u0644\u062b\u0644\u0627\u062b\u0627\u0621", "\u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621", "\u0627\u0644\u062e\u0645\u064a\u0633", "\u0627\u0644\u062c\u0645\u0639\u0629", "\u0627\u0644\u0633\u0628\u062a"];
                 let dailyRows = [];
-                let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0;
+                let grandSales = 0, grandSalesLY = 0, grandTrans = 0, grandVisitors = 0, grandVisitorsLY = 0, grandTarget = 0, grandDailyTarget = 0;
 
                 let loopDate = new Date(startDate);
                 while (loopDate <= endDate) {
                     const dateStr = loopDate.toLocaleDateString('en-CA');
-                    let daySales = 0, dayVisitors = 0, dayTrans = 0, dayTarget = 0;
+                    let daySales = 0, dayVisitors = 0, dayTrans = 0, dayTarget = 0, dayDailyTarget = 0;
                     let daySalesLY = 0, dayVisitorsLY = 0;
 
                     storeIds.forEach(sid => {
@@ -5645,6 +5645,10 @@
                         }
                         dayTarget += targetVal;
 
+                        if (_dailyTargetsCache && _dailyTargetsCache[sid] && _dailyTargetsCache[sid][dateStr]) {
+                            dayDailyTarget += Number(_dailyTargetsCache[sid][dateStr]) || 0;
+                        }
+
                         // Last Year
                         let lyDate = new Date(loopDate);
                         lyDate.setFullYear(loopDate.getFullYear() - 1);
@@ -5662,8 +5666,8 @@
                     const conv = dayVisitors > 0 ? ((dayTrans / dayVisitors) * 100) : 0;
                     const dayOfWeek = loopDate.getDay();
 
-                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, sales: daySales, salesLY: daySalesLY, growth, trans: dayTrans, avgInv, visitors: dayVisitors, visitorsLY: dayVisitorsLY, conv, custVal });
-                    grandSales += daySales; grandSalesLY += daySalesLY; grandTrans += dayTrans; grandVisitors += dayVisitors; grandVisitorsLY += dayVisitorsLY; grandTarget += dayTarget;
+                    dailyRows.push({ date: dateStr, dayName: dayNames[dayOfWeek], dayOfWeek, sales: daySales, dailyTarget: dayDailyTarget, salesLY: daySalesLY, growth, trans: dayTrans, avgInv, visitors: dayVisitors, visitorsLY: dayVisitorsLY, conv, custVal });
+                    grandSales += daySales; grandSalesLY += daySalesLY; grandTrans += dayTrans; grandVisitors += dayVisitors; grandVisitorsLY += dayVisitorsLY; grandTarget += dayTarget; grandDailyTarget += dayDailyTarget;
                     loopDate.setDate(loopDate.getDate() + 1);
                 }
 
@@ -5786,7 +5790,7 @@
                     <!-- Tab Panes -->
                     <div class="drill-body">
                         <div id="drill-daily-${uid}" class="drill-tab-pane">
-                            ${renderManagerDailyTable(dailyRows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv)}
+                            ${renderManagerDailyTable(dailyRows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, grandDailyTarget)}
                         </div>
                         <div id="drill-emp-${uid}" class="drill-tab-pane" style="display:none;">
                             ${renderEmpDrill(empList, totalEmpSales, uid)}
@@ -5806,20 +5810,22 @@
             }
         }
 
-        function renderManagerDailyTable(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv) {
+        function renderManagerDailyTable(rows, grandSales, grandSalesLY, grandTrans, grandVisitors, grandVisitorsLY, grandAvgInv, grandGrowth, grandConv, grandDailyTarget = 0) {
             const grandCustVal = grandVisitors > 0 ? Math.round(grandSales / grandVisitors) : 0;
             let html = `<div class="table-responsive" style="max-height:500px; overflow-y:auto;">
                 <table class="table table-sm drill-table mb-0">
                     <thead><tr>
-                        <th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u064a\u0648\u0645</th><th>\u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a</th><th>\u0645\u0628\u064a\u0639\u0627\u062a \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u0633\u0627\u0628\u0642</th><th>\u0627\u0644\u0646\u0645\u0648</th>
+                        <th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u064a\u0648\u0645</th><th>\u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a</th><th style="color:#fe7900;">\u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641 \u0627\u0644\u064a\u0648\u0645\u064a</th><th>\u0645\u0628\u064a\u0639\u0627\u062a \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u0633\u0627\u0628\u0642</th><th>\u0627\u0644\u0646\u0645\u0648</th>
                         <th>\u0627\u0644\u0641\u0648\u0627\u062a\u064a\u0631</th><th>\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0641\u0627\u062a\u0648\u0631\u0629</th><th>\u0627\u0644\u0632\u0648\u0627\u0631</th><th>\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u0633\u0627\u0628\u0642</th><th>\u0642\u064a\u0645\u0629 \u0627\u0644\u0639\u0645\u064a\u0644</th><th>\u0627\u0644\u062a\u062d\u0648\u064a\u0644</th>
                     </tr></thead><tbody>`;
             rows.forEach(r => {
                 const dayClass = r.dayOfWeek === 5 ? 'day-fri' : r.dayOfWeek === 6 ? 'day-sat' : '';
+                const dailyTgtDisplay = r.dailyTarget > 0 ? r.dailyTarget.toLocaleString() : '-';
                 html += `<tr class="${dayClass}">
                     <td class="text-center">${r.date}</td>
                     <td class="text-center">${r.dayName}</td>
                     <td class="text-center fw-bold">${r.sales.toLocaleString()}</td>
+                    <td class="text-center fw-bold" style="color:#fe7900;">${dailyTgtDisplay}</td>
                     <td class="text-center text-muted">${r.salesLY.toLocaleString()}</td>
                     <td class="text-center ${r.growth >= 0 ? 'text-success' : 'text-danger'} fw-bold">${r.growth > 0 ? '+' : ''}${r.growth.toFixed(1)}%</td>
                     <td class="text-center">${r.trans.toLocaleString()}</td>
@@ -5830,9 +5836,11 @@
                     <td class="text-center">${r.conv.toFixed(1) + '%'}</td>
                 </tr>`;
             });
+            const grandDailyTgtDisplay = grandDailyTarget > 0 ? grandDailyTarget.toLocaleString() : '-';
             html += `</tbody><tfoot><tr>
                 <td class="text-center" colspan="2">\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a</td>
                 <td class="text-center">${grandSales.toLocaleString()}</td>
+                <td class="text-center" style="color:#fe7900;">${grandDailyTgtDisplay}</td>
                 <td class="text-center">${grandSalesLY.toLocaleString()}</td>
                 <td class="text-center ${grandGrowth >= 0 ? 'text-success' : 'text-danger'}">${grandGrowth > 0 ? '+' : ''}${grandGrowth.toFixed(1)}%</td>
                 <td class="text-center">${grandTrans.toLocaleString()}</td>
