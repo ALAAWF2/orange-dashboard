@@ -309,10 +309,15 @@
                                 <input type="text" class="form-control" id="notesInput" placeholder="مثال: تفكيك بناء على طلب مبيعات المعرض">
                             </div>
 
-                            <!-- Submit Button -->
-                            <button type="submit" class="btn btn-orange w-100 py-3" id="submitBtn" disabled>
-                                <i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)
-                            </button>
+                            <!-- Action Buttons -->
+                            <div class="d-flex flex-column gap-2">
+                                <button type="button" class="btn btn-outline-primary w-100 py-2 fw-bold" id="addToBatchBtn" disabled>
+                                    <i class="fa-solid fa-cart-plus ms-2"></i> إضافة إلى قائمة التفكيك المجمعة (Batch)
+                                </button>
+                                <button type="submit" class="btn btn-orange w-100 py-2 fw-bold" id="submitBtn" disabled>
+                                    <i class="fa-solid fa-bolt ms-2"></i> تفكيك هذا الطقم فوراً (فردي)
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -406,8 +411,53 @@
             </div>
         </div>
 
+        <!-- Multi-Showroom & Multi-Product Batch Queue Card -->
+        <div class="card-custom mt-3" id="batchQueueCard" style="display: none; border-color: #3b82f6;">
+            <div class="card-header-custom" style="background: #eff6ff;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-primary fs-5"></i>
+                    <span class="fw-bold text-primary">قائمة التفكيك المجمعة (متعددة المعارض والأطقم)</span>
+                    <span class="badge bg-primary rounded-pill" id="batchCountBadge">0 عمليات</span>
+                </div>
+                <div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearBatchQueue()">
+                        <i class="fa-solid fa-trash-can ms-1"></i> مسح القائمة
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>المعرض المستهدف</th>
+                                <th>صنف الكيت</th>
+                                <th>الكمية</th>
+                                <th>حالة الرصيد في المعرض</th>
+                                <th>المكونات الناتجة</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <span class="text-muted small">إجمالي العمليات: <strong id="batchTotalOps">0</strong> | إجمالي الأطقم المراد تفكيكها: <strong id="batchTotalKits" class="text-primary">0</strong> حبة</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary px-4 py-2 fw-bold" id="executeBatchBtn" onclick="executeBatchQueue()">
+                            <i class="fa-solid fa-bolt-lightning ms-2"></i> تنفيذ وتفكيك القائمة بالكامل في داينامكس (UAT)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- History Table -->
-        <div class="card-custom mt-2">
+        <div class="card-custom mt-3">
             <div class="card-header-custom">
                 <span><i class="fa-solid fa-clock-rotate-left text-muted ms-2"></i> سجل العمليات السابقة (UAT)</span>
                 <button class="btn btn-sm btn-outline-secondary" onclick="loadHistory()">
@@ -605,8 +655,9 @@
             qtyInput.addEventListener('change', triggerPreview);
             showroomSelect.addEventListener('change', triggerPreview);
 
-            // Form Submit
+            // Form Submit & Batch Add
             document.getElementById('disassemblyForm').addEventListener('submit', handleFormSubmit);
+            document.getElementById('addToBatchBtn').addEventListener('click', addToBatchQueue);
         }
 
         function selectKit(kit) {
@@ -624,6 +675,7 @@
             const kitId = document.getElementById('selectedKitId').value;
             const qty = parseInt(document.getElementById('kitQuantity').value) || 1;
             const submitBtn = document.getElementById('submitBtn');
+            const addToBatchBtn = document.getElementById('addToBatchBtn');
 
             const badge = document.getElementById('targetWarehouseBadge');
             if (wh) {
@@ -639,10 +691,12 @@
                 document.getElementById('emptyPreviewNotice').style.display = 'block';
                 document.getElementById('activePreviewDetails').style.display = 'none';
                 submitBtn.disabled = true;
+                addToBatchBtn.disabled = true;
                 return;
             }
 
             submitBtn.disabled = true;
+            addToBatchBtn.disabled = true;
             submitBtn.innerHTML = `<span class="spinner-border spinner-custom ms-2"></span> جاري استخراج مكونات الـ BOM...`;
 
             try {
@@ -652,8 +706,6 @@
                 const data = await res.json();
                 if (data.success && data.preview) {
                     renderPreview(data.preview);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = `<i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)`;
                 } else {
                     alert('خطأ في المعاينة: ' + (data.error || 'تعذر جلب تفاصيل الطقم'));
                     submitBtn.innerHTML = `<i class="fa-solid fa-triangle-exclamation ms-2"></i> خطأ في الطقم المختار`;
@@ -661,12 +713,14 @@
             } catch (err) {
                 alert('فشل الاتصال بالخادم للمعاينة.');
                 submitBtn.disabled = true;
+                addToBatchBtn.disabled = true;
             }
         }
 
         function renderPreview(preview) {
             activePreviewData = preview;
             const submitBtn = document.getElementById('submitBtn');
+            const addToBatchBtn = document.getElementById('addToBatchBtn');
             document.getElementById('emptyPreviewNotice').style.display = 'none';
             document.getElementById('activePreviewDetails').style.display = 'block';
 
@@ -686,7 +740,8 @@
                     </div>
                 `;
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `<i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)`;
+                addToBatchBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-bolt ms-2"></i> تفكيك هذا الطقم فوراً (فردي)`;
             } else {
                 let otherMsg = '';
                 if (stockInfo.other_warehouses_with_stock && stockInfo.other_warehouses_with_stock.length > 0) {
@@ -704,6 +759,7 @@
                     </div>
                 `;
                 submitBtn.disabled = true;
+                addToBatchBtn.disabled = true;
                 submitBtn.innerHTML = `<i class="fa-solid fa-ban ms-2"></i> المخزون غير كافٍ في المعرض للتفكيك`;
             }
 
@@ -737,7 +793,162 @@
             });
         }
 
-        // 5. Execute Disassembly in Dynamics UAT
+        // ─── Multi-Item / Multi-Store Batch Queue Logic ───
+        let batchQueue = [];
+
+        function addToBatchQueue() {
+            if (!activePreviewData) return;
+            if (!activePreviewData.has_enough_stock) {
+                alert('لا يمكن إضافة هذا الصنف إلى القائمة لأن رصيده في المعرض غير كافٍ!');
+                return;
+            }
+
+            const whSelect = document.getElementById('showroomSelect');
+            const whName = whSelect.options[whSelect.selectedIndex].text;
+            const notes = document.getElementById('notesInput').value.trim();
+
+            // Check if already exists for same showroom & kit
+            const existingIndex = batchQueue.findIndex(item => item.warehouse === activePreviewData.warehouse && item.kit_id === activePreviewData.kit_item_id);
+            if (existingIndex > -1) {
+                if (!confirm(`هذا الطقم مضاف مسبقاً لنفس المعرض (${activePreviewData.warehouse}). هل تريد تحديث الكمية؟`)) {
+                    return;
+                }
+                batchQueue[existingIndex].qty = activePreviewData.disassemble_quantity;
+                batchQueue[existingIndex].notes = notes;
+            } else {
+                batchQueue.push({
+                    warehouse: activePreviewData.warehouse,
+                    warehouse_name: whName,
+                    kit_id: activePreviewData.kit_item_id,
+                    kit_name: activePreviewData.kit_name,
+                    qty: activePreviewData.disassemble_quantity,
+                    notes: notes,
+                    components_count: activePreviewData.lines.filter(l => l.type === 'component').length,
+                    available_stock: activePreviewData.stock_info?.target_stock?.available || 0
+                });
+            }
+
+            renderBatchQueue();
+
+            // Reset kit selection so user can pick next kit or showroom
+            document.getElementById('selectedKitId').value = '';
+            document.getElementById('selectedKitName').value = '';
+            document.getElementById('kitSearchInput').value = '';
+            document.getElementById('selectedKitDisplay').style.display = 'none';
+            document.getElementById('kitQuantity').value = 1;
+            document.getElementById('notesInput').value = '';
+            document.getElementById('emptyPreviewNotice').style.display = 'block';
+            document.getElementById('activePreviewDetails').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('addToBatchBtn').disabled = true;
+
+            // Smooth scroll to batch card
+            document.getElementById('batchQueueCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function renderBatchQueue() {
+            const card = document.getElementById('batchQueueCard');
+            const tbody = document.getElementById('batchTableBody');
+            const countBadge = document.getElementById('batchCountBadge');
+            const totalOps = document.getElementById('batchTotalOps');
+            const totalKits = document.getElementById('batchTotalKits');
+
+            if (batchQueue.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            tbody.innerHTML = '';
+            let sumKits = 0;
+
+            batchQueue.forEach((item, index) => {
+                sumKits += item.qty;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${index + 1}</strong></td>
+                    <td>
+                        <span class="badge bg-primary fs-6">${item.warehouse}</span>
+                        <small class="text-muted d-block mt-1">${item.warehouse_name}</small>
+                    </td>
+                    <td>
+                        <strong>${item.kit_name}</strong>
+                        <div class="small text-muted">كود: <code>${item.kit_id}</code></div>
+                    </td>
+                    <td><span class="badge bg-danger fs-6">-${item.qty} Pcs</span></td>
+                    <td><span class="badge bg-success">متوفر (${item.available_stock} حبة)</span></td>
+                    <td><span class="badge bg-info text-dark">${item.components_count} مكونات</span></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFromBatchQueue(${index})">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            countBadge.textContent = `${batchQueue.length} عمليات`;
+            totalOps.textContent = batchQueue.length;
+            totalKits.textContent = sumKits;
+        }
+
+        function removeFromBatchQueue(index) {
+            batchQueue.splice(index, 1);
+            renderBatchQueue();
+        }
+
+        function clearBatchQueue() {
+            if (confirm('هل أنت متأكد من مسح كافة العمليات من القائمة المجمعة؟')) {
+                batchQueue = [];
+                renderBatchQueue();
+            }
+        }
+
+        async function executeBatchQueue() {
+            if (batchQueue.length === 0) return;
+
+            if (!confirm(`هل أنت متأكد من تنفيذ وتفكيك عدد (${batchQueue.length}) أطقم عبر المعارض المحددة دفعة واحدة في داينامكس UAT؟`)) {
+                return;
+            }
+
+            const btn = document.getElementById('executeBatchBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-custom ms-2"></span> جاري تفكيك جميع الأطقم في داينامكس...`;
+
+            try {
+                const res = await fetch('/api/d365/bom/execute-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ items: batchQueue })
+                });
+                const data = await res.json();
+
+                if (data.results) {
+                    let successMsg = `تم إنجاز ${data.success_count} من أصل ${data.total} عملية بنجاح في داينامكس!\n\n`;
+                    data.results.forEach(r => {
+                        if (r.success) {
+                            successMsg += `✅ معرض ${r.warehouse} | طقم ${r.kit_id}: تم إنشاء الدفتر ${r.journal_number}\n`;
+                        } else {
+                            successMsg += `❌ معرض ${r.warehouse} | طقم ${r.kit_id}: فشل (${r.error})\n`;
+                        }
+                    });
+                    alert(successMsg);
+                    batchQueue = [];
+                    renderBatchQueue();
+                    loadHistory();
+                } else {
+                    alert('حدث خطأ أثناء تنفيذ الدفعة: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (err) {
+                alert('فشل الاتصال بالخادم لتنفيذ الدفعة: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-bolt-lightning ms-2"></i> تنفيذ وتفكيك القائمة بالكامل في داينامكس (UAT)`;
+            }
+        }
+
+        // 5. Execute Disassembly in Dynamics UAT (Single)
         async function handleFormSubmit(e) {
             e.preventDefault();
             if (!activePreviewData) return;
