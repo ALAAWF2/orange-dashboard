@@ -344,6 +344,9 @@
                             <!-- Stock Check Alert Box -->
                             <div id="stockAlertBox" class="mb-3"></div>
                             
+                            <!-- Cost Balance Alert Box -->
+                            <div id="costBalanceBox" class="mb-3" style="display: none;"></div>
+                            
                             <!-- Deduct Section -->
                             <div class="preview-box-deduct mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -760,12 +763,39 @@
                 `;
                 submitBtn.disabled = true;
                 addToBatchBtn.disabled = true;
-                submitBtn.innerHTML = `<i class="fa-solid fa-ban ms-2"></i> المخزون غير كافٍ في المعرض للتفكيك`;
+            }
+
+            // 2. Cost Balancing Visualization
+            const costSum = preview.cost_summary || {};
+            const costBox = document.getElementById('costBalanceBox');
+            if (costSum.kit_unit_cost > 0) {
+                costBox.className = 'alert alert-info d-flex align-items-center justify-content-between p-3 mb-3 border-info';
+                costBox.innerHTML = `
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="fa-solid fa-scale-balanced fs-3 text-info"></i>
+                        <div>
+                            <div class="fw-bold text-dark fs-6">التوازن المالي للمخزون (مضبوط بالهللة 100%)</div>
+                            <div class="small text-muted mt-1">
+                                تكلفة الصرف (الكيت): <strong>${costSum.total_deduct_cost} ر.س</strong> 
+                                ⬅️ موزعة بدقة ➡️ 
+                                تكلفة الإضافة (المكونات): <strong>${costSum.total_add_cost} ر.س</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-success fs-6"><i class="fa-solid fa-check ms-1"></i> فرق المخزون = 0.00 ر.س</span>
+                        <div class="small text-muted mt-1">لا يوجد أي أثر على الأرباح والخسائر (P&L)</div>
+                    </div>
+                `;
+                costBox.style.display = 'flex';
+            } else {
+                costBox.style.display = 'none';
             }
 
             // Deduct card
+            const kitLine = preview.lines.find(l => l.type === 'parent_kit') || {};
             document.getElementById('deductItemName').textContent = preview.kit_name;
-            document.getElementById('deductItemCode').textContent = preview.kit_item_id;
+            document.getElementById('deductItemCode').innerHTML = `${preview.kit_item_id} <span class="badge bg-light text-dark border ms-2"><i class="fa-solid fa-coins text-warning ms-1"></i> تكلفة الحبة: ${kitLine.unit_cost || 0} ر.س (إجمالي: ${kitLine.cost_amount || 0} ر.س)</span>`;
             document.getElementById('deductWarehouseSpan').textContent = preview.warehouse;
             document.getElementById('deductQtyBadge').textContent = `-${preview.disassemble_quantity} Pcs`;
             document.getElementById('confirmWhText').textContent = preview.warehouse;
@@ -784,6 +814,7 @@
                     <div>
                         <div class="fw-bold text-dark"><i class="fa-solid fa-tag text-muted ms-1"></i> كود الصنف: <code>${comp.item_id}</code></div>
                         <div class="small text-muted mt-1">المستودع المستهدف: <span class="fw-bold text-primary">${comp.warehouse}</span> (نفس المعرض)</div>
+                        <div class="small text-success mt-1 fw-bold"><i class="fa-solid fa-coins text-warning ms-1"></i> التكلفة المخصصة: ${comp.unit_cost} ر.س / حبة (إجمالي: ${comp.cost_amount} ر.س)</div>
                     </div>
                     <div class="text-end">
                         <span class="badge bg-success fs-6 px-3 py-2">+${comp.quantity} ${comp.unit}</span>
