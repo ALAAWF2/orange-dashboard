@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <style>
     :root {
       --primary: #fe7900;
@@ -1090,9 +1091,6 @@
         <button type="button" class="btn btn-secondary" onclick="window.print()" title="طباعة العروض">
           طباعة القائمة
         </button>
-        <button type="button" class="btn btn-secondary" onclick="refreshData()" title="تحديث البيانات">
-          تحديث البيانات
-        </button>
       </div>
     </div>
   </header>
@@ -1375,6 +1373,206 @@
     // Persistent User Preferences
     const STORAGE_KEY_SHOWROOM = 'orange_catalog_offers_showroom';
 
+    // Supabase Client for Catalog Session Detection
+    const SUPABASE_URL = "https://sufeqdvooqkolghflhta.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmVxZHZvb3Frb2xnaGZsaHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY5OTIsImV4cCI6MjA4ODk5Mjk5Mn0.ody4a53OtJqzLIoTvJ3S6Igdue-Sy4HsUQ_Cz7MUSjY";
+    let supabaseClient = null;
+    if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+        });
+      } catch (err) {
+        console.warn('Supabase initialization warning:', err);
+      }
+    }
+
+    const ARABIC_MALL_MAP = {
+      'ياسمين': '13-Al-Yasmin Mall',
+      'ردسي': '06-Red Sea Mall',
+      'ريد سي': '06-Red Sea Mall',
+      'اندلس': '04-Andalos Mall',
+      'أندلس': '04-Andalos Mall',
+      'عرب': '07-Arab Mall',
+      'مكة': '08-Makkah Mall',
+      'سلام': '09-Al-Salam Mall',
+      'جوري': '11-Jouri Mall',
+      'ملقا': '1114-Malgha Mall',
+      'ربيع': '1115-Alrabie Mall',
+      'حمراء': '12-Al_Hamra Mall',
+      'كمال': '14-Al Kamal Mall',
+      'عثيم رياض': '15-Riyadh Othaim Mall',
+      'خياط': '18-Al_Khayyat Center',
+      'حائل': '19-Hail Othaim Mall',
+      'لافاندا': '1906-LAVANDA PARK',
+      'ستين': '20-Sitten Street Makkah',
+      'ابها': '21-Abha Al_Rashid Mall New',
+      'أبها': '21-Abha Al_Rashid Mall New',
+      'تبوك': '22-Tabuk Park',
+      'عالية': '23-Alia Mall Madinah',
+      'ينبع': '24-Yanbu Dana Mall',
+      'ربوة': '25-Rabwa Othaim Mall',
+      'نور': '26-Al-Noor Mall Madinah',
+      'ظهران': '27-Dhahran Mall khobar',
+      'نخيل': '28-Al Nakheel Mall Dammam',
+      'تالا': '30-Tala Mall Riyadh',
+      'اطياف': '32-Atyaf Mall Riyadh',
+      'أطياف': '32-Atyaf Mall Riyadh',
+      'جبيل': '36-Al jubail Mall',
+      'رياض بارك': '38-Al_Riyadh Park',
+      'حياة': '40-Hayat Mall Riyad',
+      'دارين': '42-Dareen Mall Dammam',
+      'موجان': '43-Mujan Park',
+      'غاليري': '45- Riyadh Gallery Mall',
+      'خليج': '46-Khaleej Mall Riyadh',
+      'نخيل بلازا': '47-Al-Nakheel Plaza',
+      'جدة بارك': '48 - Jeddah Park',
+      'احساء': '49-AlAhsa Mall',
+      'أحساء': '49-AlAhsa Mall',
+      'ميم': '50-Meem Plaza Riyadh',
+      'بارك افينيو': '51-Park Avenue Riyadh',
+      'باحة': '52-Al_Baha Mall',
+      'بساتين': '53-Al Basateen Mall',
+      'فيلاج': '54-THE VILLAGE',
+      'عزيز': '56- Aziz Mall 2',
+      'سوق 7': '57-Sauq7'
+    };
+
+    function findMatchingShowroom(rawName) {
+      if (!rawName) return '';
+      const target = String(rawName).trim();
+      if (!target || target === 'إجمالي المستودعات' || target.toUpperCase() === 'ALL' || target.toUpperCase() === 'TOTAL_WAREHOUSES') return '';
+
+      // 1. Direct exact match
+      if (allShowroomNames.includes(target)) return target;
+
+      // 2. Arabic keywords match
+      const targetClean = target.replace(/معرض|فرع|صالة|مول|بلازا|سنتر/g, '').trim();
+      for (const [kw, branchKey] of Object.entries(ARABIC_MALL_MAP)) {
+        if (target.includes(kw) || targetClean.includes(kw)) {
+          if (allShowroomNames.includes(branchKey)) return branchKey;
+        }
+      }
+
+      // Helper for normalization
+      const norm = (s) => String(s || '').toLowerCase()
+        .replace(/riyadh/g, 'riyad')
+        .replace(/al[\s_-]+/g, 'al ')
+        .replace(/[-_]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const targetNorm = norm(target);
+
+      // 3. Exact normalized match
+      for (const name of allShowroomNames) {
+        if (norm(name) === targetNorm) return name;
+      }
+
+      // 4. Match stripped of store index numbers
+      const targetNoNum = targetNorm.replace(/^\d+[\s-]*/, '').trim();
+      for (const name of allShowroomNames) {
+        const nameNoNum = norm(name).replace(/^\d+[\s-]*/, '').trim();
+        if (targetNoNum && nameNoNum && (targetNoNum === nameNoNum || targetNorm.includes(nameNoNum) || norm(name).includes(targetNoNum) || targetNoNum.includes(nameNoNum) || nameNoNum.includes(targetNoNum))) {
+          return name;
+        }
+      }
+
+      // 5. Significant word match
+      const targetWords = targetNorm.split(' ').filter(w => w.length > 2 && !['mall', 'center', 'plaza', 'park', 'riyad', 'city', 'dammam', 'khobar', 'jeddah', 'makkah', 'madinah'].includes(w));
+      if (targetWords.length > 0) {
+        for (const name of allShowroomNames) {
+          const nameWords = norm(name).split(' ');
+          if (targetWords.every(tw => nameWords.some(nw => nw.includes(tw) || tw.includes(nw)))) {
+            return name;
+          }
+        }
+      }
+
+      return '';
+    }
+
+    async function detectLoggedInShowroom() {
+      // A. URL parameters (?mall=, ?store=, ?showroom=)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlShowroom = urlParams.get('mall') || urlParams.get('store') || urlParams.get('showroom');
+      if (urlShowroom) {
+        const matched = findMatchingShowroom(urlShowroom);
+        if (matched) return matched;
+      }
+
+      // B. Check localStorage keys (from catalog session, previous visits, etc.)
+      const storageKeys = [
+        'orange_catalog_offers_showroom',
+        'userMall',
+        'savedShowroom',
+        'catalog_showroom',
+        'selectedMall'
+      ];
+      for (const key of storageKeys) {
+        try {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const matched = findMatchingShowroom(val);
+            if (matched) return matched;
+          }
+        } catch (e) {}
+      }
+
+      // C. Check Dashboard login (currentUser)
+      try {
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (currentUserStr) {
+          const currentUser = JSON.parse(currentUserStr);
+          const candidates = [
+            currentUser.mall,
+            currentUser.showroom,
+            currentUser.branch,
+            currentUser.store,
+            currentUser.name,
+            currentUser.displayName
+          ];
+          for (const cand of candidates) {
+            if (cand) {
+              const matched = findMatchingShowroom(cand);
+              if (matched) return matched;
+            }
+          }
+        }
+      } catch (e) {}
+
+      // D. Check Supabase Auth session & profile
+      if (supabaseClient) {
+        try {
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          if (session?.user) {
+            const { data: profile } = await supabaseClient
+              .from('profiles')
+              .select('mall, managed_outlets, role')
+              .eq('id', session.user.id)
+              .maybeSingle();
+
+            if (profile) {
+              if (profile.mall && profile.mall !== 'إجمالي المستودعات') {
+                const matched = findMatchingShowroom(profile.mall);
+                if (matched) return matched;
+              }
+              if (Array.isArray(profile.managed_outlets) && profile.managed_outlets.length > 0) {
+                for (const outlet of profile.managed_outlets) {
+                  const matched = findMatchingShowroom(outlet);
+                  if (matched) return matched;
+                }
+              }
+            }
+          }
+        } catch (sbErr) {
+          console.warn('Supabase profile check error:', sbErr);
+        }
+      }
+
+      return '';
+    }
+
     // Image Resolution Logic
     function getProductImageSrc(product) {
       if (!product) return 'noimage.png';
@@ -1446,11 +1644,18 @@
         // Update KPIs
         updateKPIs();
 
-        // Restore Saved Showroom Preference
-        const savedShowroom = localStorage.getItem(STORAGE_KEY_SHOWROOM);
-        if (savedShowroom && allShowroomNames.includes(savedShowroom)) {
-          document.getElementById('showroomSelect').value = savedShowroom;
-          document.getElementById('kpiCurrentShowroom').textContent = savedShowroom;
+        // Auto-detect showroom from login (Supabase session, currentUser, localStorage, or URL param)
+        const detectedShowroom = await detectLoggedInShowroom();
+        const showroomSelect = document.getElementById('showroomSelect');
+
+        if (detectedShowroom) {
+          showroomSelect.value = detectedShowroom;
+          document.getElementById('kpiCurrentShowroom').textContent = detectedShowroom;
+          localStorage.setItem(STORAGE_KEY_SHOWROOM, detectedShowroom);
+          localStorage.setItem('userMall', detectedShowroom);
+        } else {
+          showroomSelect.value = '';
+          document.getElementById('kpiCurrentShowroom').textContent = 'جميع المعارض';
         }
 
         loadingEl.style.display = 'none';
@@ -1585,7 +1790,13 @@
 
     // Event Handlers for Filters
     function onShowroomChange(selectedMall) {
-      localStorage.setItem(STORAGE_KEY_SHOWROOM, selectedMall);
+      if (selectedMall) {
+        localStorage.setItem(STORAGE_KEY_SHOWROOM, selectedMall);
+        localStorage.setItem('userMall', selectedMall);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_SHOWROOM);
+        localStorage.removeItem('userMall');
+      }
       document.getElementById('kpiCurrentShowroom').textContent = selectedMall || 'جميع المعارض';
       applyFilters();
     }
@@ -1624,7 +1835,7 @@
       });
     }
 
-    function resetAllFilters() {
+    async function resetAllFilters() {
       expandedGroups.clear();
       document.getElementById('searchInput').value = '';
       document.getElementById('searchClearBtn').style.display = 'none';
@@ -1633,9 +1844,18 @@
       const sortSelect = document.getElementById('sortOrderSelect');
       if (sortSelect) sortSelect.value = 'created_desc';
       document.getElementById('showroomStockOnlyCheckbox').checked = false;
-      document.getElementById('showroomSelect').value = '';
-      localStorage.removeItem(STORAGE_KEY_SHOWROOM);
-      document.getElementById('kpiCurrentShowroom').textContent = 'جميع المعارض';
+
+      // Keep logged-in showroom if present
+      const detectedShowroom = await detectLoggedInShowroom();
+      if (detectedShowroom) {
+        document.getElementById('showroomSelect').value = detectedShowroom;
+        document.getElementById('kpiCurrentShowroom').textContent = detectedShowroom;
+        localStorage.setItem(STORAGE_KEY_SHOWROOM, detectedShowroom);
+      } else {
+        document.getElementById('showroomSelect').value = '';
+        localStorage.removeItem(STORAGE_KEY_SHOWROOM);
+        document.getElementById('kpiCurrentShowroom').textContent = 'جميع المعارض';
+      }
       applyFilters();
     }
 
