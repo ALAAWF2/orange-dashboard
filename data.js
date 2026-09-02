@@ -727,7 +727,7 @@ const EMPLOYEES = [
         "name": "محمد علي كامل",
         "startDate": "2017-11-19",
         "manager": "رضوان عطيوي",
-        "showroom": "1202-20-Sitten Street Makkah",
+        "showroom": "1202-20-Sitten Street Makkah و 1201-08-Makkah Mall",
         "showroomDetails": [
             {
                 "name": "1202-20-Sitten Street Makkah",
@@ -736,9 +736,17 @@ const EMPLOYEES = [
                     "1202-C",
                     "1202-E"
                 ]
+            },
+            {
+                "name": "1201-08-Makkah Mall",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1201-C",
+                    "1201-E"
+                ]
             }
         ],
-        "addressBooks": "1202-C;1202-E"
+        "addressBooks": "1202-C;1202-E;1201-C;1201-E"
     },
     {
         "employeeId": "0412-عاصم عبد الودود البا",
