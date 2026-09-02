@@ -4435,7 +4435,7 @@ const EMPLOYEES = [
         "name": "خالد محمد النهاري",
         "startDate": "2025-07-08",
         "manager": "المنطقة الغربية",
-        "showroom": "1004-07-Arab Mall",
+        "showroom": "1004-07-Arab Mall و 1007-18-Al_Khayyat Center",
         "showroomDetails": [
             {
                 "name": "1004-07-Arab Mall",
@@ -4444,9 +4444,17 @@ const EMPLOYEES = [
                     "1004-C",
                     "1004-E"
                 ]
+            },
+            {
+                "name": "1007-18-Al_Khayyat Center",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1007-C",
+                    "1007-E"
+                ]
             }
         ],
-        "addressBooks": "1004-C;1004-E"
+        "addressBooks": "1004-C;1004-E;1007-C;1007-E"
     },
     {
         "employeeId": "4651-اماني سعد المالكي",
