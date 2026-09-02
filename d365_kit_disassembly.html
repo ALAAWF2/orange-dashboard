@@ -336,6 +336,9 @@
                         <!-- Dynamic Preview Details -->
                         <div id="activePreviewDetails" style="display: none;">
                             
+                            <!-- Stock Check Alert Box -->
+                            <div id="stockAlertBox" class="mb-3"></div>
+                            
                             <!-- Deduct Section -->
                             <div class="preview-box-deduct mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -663,8 +666,46 @@
 
         function renderPreview(preview) {
             activePreviewData = preview;
+            const submitBtn = document.getElementById('submitBtn');
             document.getElementById('emptyPreviewNotice').style.display = 'none';
             document.getElementById('activePreviewDetails').style.display = 'block';
+
+            // 1. Stock Check Visualization
+            const stockInfo = preview.stock_info || {};
+            const targetStock = stockInfo.target_stock || { on_hand: 0, available: 0 };
+            const hasEnough = preview.has_enough_stock;
+            const stockAlert = document.getElementById('stockAlertBox');
+
+            if (hasEnough) {
+                stockAlert.className = 'alert alert-success d-flex align-items-center gap-3 mb-3';
+                stockAlert.innerHTML = `
+                    <i class="fa-solid fa-circle-check fs-3 text-success"></i>
+                    <div>
+                        <div class="fw-bold fs-6 text-success">الرصيد متوفر في هذا المعرض (${preview.warehouse})</div>
+                        <div class="small text-dark">الرصيد المتاح حالياً: <strong>${targetStock.available} حبة</strong> | الكمية المطلوبة للتفكيك: <strong>${preview.disassemble_quantity} حبة</strong></div>
+                    </div>
+                `;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)`;
+            } else {
+                let otherMsg = '';
+                if (stockInfo.other_warehouses_with_stock && stockInfo.other_warehouses_with_stock.length > 0) {
+                    const others = stockInfo.other_warehouses_with_stock.map(o => `${o.warehouse} (${o.available} حبة)`).join('، ');
+                    otherMsg = `<div class="mt-2 small bg-white p-2 rounded border text-muted"><i class="fa-solid fa-boxes-stacked text-primary ms-1"></i> هذا الطقم متوفر في مستودعات/معارض أخرى: <strong class="text-dark">${others}</strong></div>`;
+                }
+                stockAlert.className = 'alert alert-danger d-flex align-items-start gap-3 mb-3';
+                stockAlert.innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation fs-3 text-danger mt-1"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold fs-6 text-danger">تنبيه: لا يوجد رصيد كافٍ من هذا الطقم في المعرض (${preview.warehouse})!</div>
+                        <div class="small text-dark mt-1">الرصيد المتاح حالياً في هذا المعرض: <span class="badge bg-danger fs-6">${targetStock.available} حبة</span> (الكمية المطلوبة للتفكيك: <strong>${preview.disassemble_quantity} حبة</strong>).</div>
+                        ${otherMsg}
+                        <div class="mt-2 text-danger small fw-bold"><i class="fa-solid fa-ban ms-1"></i> تم تعطيل زر التفكيك منعاً لحدوث رصيد سالب في المعرض.</div>
+                    </div>
+                `;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-ban ms-2"></i> المخزون غير كافٍ في المعرض للتفكيك`;
+            }
 
             // Deduct card
             document.getElementById('deductItemName').textContent = preview.kit_name;
