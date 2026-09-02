@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفكيك أطقم المنتجات (BOM) - Dynamics 365 UAT | أورنج</title>
+    
+    <!-- Bootstrap RTL CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-orange: #fe7900;
+            --primary-orange-hover: #e06a00;
+            --primary-orange-light: #fff5eb;
+            --dark-navy: #1e293b;
+            --bg-light: #f8fafc;
+            --card-border: #e2e8f0;
+            --text-main: #334155;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .navbar-brand-orange {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--primary-orange) !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .top-navbar {
+            background: #ffffff;
+            border-bottom: 1px solid var(--card-border);
+            padding: 12px 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .card-custom {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            background: #ffffff;
+            border-bottom: 1px solid var(--card-border);
+            padding: 16px 24px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--dark-navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-orange {
+            background-color: var(--primary-orange);
+            color: #ffffff;
+            border: none;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px 24px;
+            transition: all 0.2s;
+        }
+
+        .btn-orange:hover {
+            background-color: var(--primary-orange-hover);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(254, 121, 0, 0.25);
+        }
+
+        .btn-orange:disabled {
+            background-color: #cbd5e1;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .environment-badge {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .user-badge {
+            background: var(--primary-orange-light);
+            color: var(--primary-orange);
+            border: 1px solid #fed7aa;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .preview-box-deduct {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .preview-box-add {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .same-warehouse-pill {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .table-custom th {
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.85rem;
+            border-bottom: 2px solid var(--card-border);
+            padding: 12px 16px;
+        }
+
+        .table-custom td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.9rem;
+        }
+
+        .search-results-dropdown {
+            max-height: 260px;
+            overflow-y: auto;
+            position: absolute;
+            width: 100%;
+            z-index: 1050;
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .search-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s;
+        }
+
+        .search-item:hover, .search-item.active {
+            background: var(--primary-orange-light);
+            color: var(--primary-orange);
+        }
+
+        .spinner-custom {
+            width: 1.2rem;
+            height: 1.2rem;
+            border-width: 0.18em;
+        }
+    </style>
+
+    <!-- Strict security gate: visible only for Alaa -->
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                if (!user || user.name !== 'علاء') {
+                    alert('عذراً، هذه الصفحة مخصصة للمستخدم علاء فقط.');
+                    window.location.replace('index.html');
+                }
+            } catch (e) {
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- Navigation Header -->
+    <nav class="top-navbar d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <a href="admin_panel.html" class="navbar-brand-orange text-decoration-none">
+                <i class="fa-solid fa-boxes-packing"></i>
+                <span>أورنج | تفكيك أطقم الكيت (BOM)</span>
+            </a>
+            <span class="environment-badge">
+                <i class="fa-solid fa-flask"></i> بيئة الساندبوكس (Dynamics UAT)
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="user-badge" id="userBadge">
+                <i class="fa-solid fa-user-shield"></i> المستخدم: علاء
+            </span>
+            <a href="admin_panel.html" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="fa-solid fa-arrow-right ms-1"></i> العودة للوحة التحكم
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container py-4">
+        
+        <!-- Explanation Banner -->
+        <div class="alert alert-light border card-custom p-4 mb-4" style="border-left: 4px solid var(--primary-orange) !important;">
+            <div class="d-flex align-items-start gap-3">
+                <div class="p-2 rounded-circle bg-light text-warning" style="font-size: 1.5rem;">
+                    <i class="fa-solid fa-wand-magic-sparkles text-primary-orange" style="color: var(--primary-orange);"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-1">أتمتة تفكيك الأطقم عبر الـ API المباشر</h5>
+                    <p class="text-muted mb-0" style="font-size: 0.95rem;">
+                        تقوم هذه الصفحة تلقائياً بسحب مكونات الـ BOM المعتمدة للطقم من داينامكس، وإنشاء دفتر حركة مخزون رسمي في الساندبوكس بحيث يتم خصم صنف الكيت وإدخال كافة مكوناته بالتوازي لنفس المعرض المحدد 100%.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left Column: Input Form -->
+            <div class="col-lg-5">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <span><i class="fa-solid fa-sliders text-warning ms-2"></i> تحديد بيانات العملية</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="disassemblyForm">
+                            
+                            <!-- Showroom Selection -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fa-solid fa-store text-muted ms-1"></i> المعرض / المستودع المستهدف:
+                                </label>
+                                <select class="form-select" id="showroomSelect" required>
+                                    <option value="">-- جاري تحميل قائمة المعارض... --</option>
+                                </select>
+                                <div class="form-text">سيتم إدخال كافة المكونات لنفس المعرض المختار حصراً.</div>
+                            </div>
+
+                            <!-- Kit Selection -->
+                            <div class="mb-3 position-relative">
+                                <label class="form-label fw-bold">
+                                    <i class="fa-solid fa-box-open text-muted ms-1"></i> اختيار صنف الكيت (BOM Item):
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                    <input type="text" class="form-control" id="kitSearchInput" placeholder="ابحث برقم الصنف أو الاسم..." autocomplete="off">
+                                    <button class="btn btn-outline-secondary" type="button" id="refreshBomsBtn" title="تحديث القائمة من داينامكس">
+                                        <i class="fa-solid fa-rotate"></i>
+                                    </button>
+                                </div>
+                                <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+                                <input type="hidden" id="selectedKitId">
+                                <input type="hidden" id="selectedKitName">
+                                <div class="mt-2 text-primary small fw-bold" id="selectedKitDisplay" style="display: none;">
+                                    <i class="fa-solid fa-check-circle text-success ms-1"></i> الطقم المختار: <span id="kitNameSpan"></span>
+                                </div>
+                            </div>
+
+                            <!-- Quantity -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fa-solid fa-calculator text-muted ms-1"></i> عدد الأطقم المراد تفكيكها:
+                                </label>
+                                <div class="input-group" style="max-width: 200px;">
+                                    <button class="btn btn-outline-secondary" type="button" id="qtyMinus">-</button>
+                                    <input type="number" class="form-control text-center fw-bold" id="kitQuantity" value="1" min="1" max="100">
+                                    <button class="btn btn-outline-secondary" type="button" id="qtyPlus">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="fa-solid fa-comment-dots text-muted ms-1"></i> ملاحظات الدفتر (اختياري):
+                                </label>
+                                <input type="text" class="form-control" id="notesInput" placeholder="مثال: تفكيك بناء على طلب مبيعات المعرض">
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-orange w-100 py-3" id="submitBtn" disabled>
+                                <i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Preview & Verification -->
+            <div class="col-lg-7">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <span><i class="fa-solid fa-eye text-primary ms-2"></i> معاينة الحركات والتحقق الفوري</span>
+                        <span class="same-warehouse-pill" id="targetWarehouseBadge">
+                            <i class="fa-solid fa-location-dot"></i> يرجى اختيار المعرض
+                        </span>
+                    </div>
+                    <div class="card-body p-4" id="previewContainer">
+                        <div class="text-center py-5 text-muted" id="emptyPreviewNotice">
+                            <i class="fa-solid fa-clipboard-list" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="mt-3 mb-0">اختر المعرض وصنف الكيت لمعاينة تفاصيل الخصم والإضافة تلقائياً.</p>
+                        </div>
+
+                        <!-- Dynamic Preview Details -->
+                        <div id="activePreviewDetails" style="display: none;">
+                            
+                            <!-- Deduct Section -->
+                            <div class="preview-box-deduct mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-danger">
+                                        <i class="fa-solid fa-minus-circle ms-1"></i> 1. الصنف المخصوم من المعرض (الكيت):
+                                    </span>
+                                    <span class="badge bg-danger rounded-pill" id="deductQtyBadge">-1</span>
+                                </div>
+                                <div class="bg-white p-3 rounded border">
+                                    <div class="fw-bold text-dark" id="deductItemName">...</div>
+                                    <div class="text-muted small mt-1">كود الصنف: <code id="deductItemCode">...</code> | المستودع: <span class="fw-bold text-dark" id="deductWarehouseSpan">...</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Add Components Section -->
+                            <div class="preview-box-add mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-success">
+                                        <i class="fa-solid fa-plus-circle ms-1"></i> 2. الأصناف المضافة لنفس المعرض (المكونات):
+                                    </span>
+                                    <span class="badge bg-success rounded-pill" id="componentsCountBadge">0 أصناف</span>
+                                </div>
+                                
+                                <div id="componentsListContainer" class="d-flex flex-column gap-2">
+                                    <!-- Components inserted here -->
+                                </div>
+                            </div>
+
+                            <!-- Verification Guarantee Banner -->
+                            <div class="alert alert-success d-flex align-items-center gap-3 mb-0 py-2">
+                                <i class="fa-solid fa-shield-halved fs-4"></i>
+                                <div class="small">
+                                    <strong>تحقق تلقائي:</strong> ستدخل جميع المكونات بنفس اللحظة إلى نفس المعرض المحدد (<span class="fw-bold" id="confirmWhText">...</span>) لضمان دقة المخزون 100%.
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Status & Success Notification -->
+                <div id="resultCard" class="card-custom border-success" style="display: none;">
+                    <div class="card-body p-4 text-center">
+                        <div class="text-success mb-2" style="font-size: 3rem;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <h4 class="fw-bold text-success mb-2">تم إنشاء دفتر التفكيك بنجاح في داينامكس!</h4>
+                        <p class="text-muted mb-3" id="resultMessageText">تم تجهيز الدفتر وإدراج كافة السطور بالكامل.</p>
+                        
+                        <div class="p-3 bg-light rounded border d-inline-block text-start mb-3" style="min-width: 320px;">
+                            <div class="mb-1"><strong>رقم الدفتر (Journal Number):</strong> <code class="fs-5 text-primary" id="resultJournalNumber">...</code></div>
+                            <div class="mb-1"><strong>المعرض المستهدف:</strong> <span id="resultWarehouse">...</span></div>
+                            <div class="mb-1"><strong>عدد السطور المنشأة:</strong> <span class="badge bg-primary" id="resultLinesCount">...</span></div>
+                            <div><strong>الحالة:</strong> <span class="badge bg-warning text-dark">جاهز للترحيل (Draft/Unposted)</span></div>
+                        </div>
+
+                        <div>
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-4" onclick="resetForm()">
+                                <i class="fa-solid fa-plus ms-1"></i> تنفيذ تفكيك طقم آخر
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="card-custom mt-2">
+            <div class="card-header-custom">
+                <span><i class="fa-solid fa-clock-rotate-left text-muted ms-2"></i> سجل العمليات السابقة (UAT)</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="loadHistory()">
+                    <i class="fa-solid fa-rotate ms-1"></i> تحديث السجل
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>التوقيت</th>
+                                <th>المعرض</th>
+                                <th>صنف الكيت</th>
+                                <th>الكمية</th>
+                                <th>رقم الدفتر في داينامكس</th>
+                                <th>السطور</th>
+                                <th>المستخدم</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">جاري تحميل السجل...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Dynamic Showrooms & Logic -->
+    <script src="data.js"></script>
+    <script>
+        let allKits = [];
+        let activePreviewData = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initShowrooms();
+            await loadKits();
+            loadHistory();
+            setupEventListeners();
+        });
+
+        // 1. Initialize Showrooms Dropdown from data.js
+        function initShowrooms() {
+            const select = document.getElementById('showroomSelect');
+            select.innerHTML = '<option value="">-- اختر المعرض المستهدف --</option>';
+
+            const showroomMap = new Map();
+
+            // Try extracting from EMPLOYEES in data.js
+            if (typeof EMPLOYEES !== 'undefined' && Array.isArray(EMPLOYEES)) {
+                EMPLOYEES.forEach(emp => {
+                    if (emp.showroomDetails && Array.isArray(emp.showroomDetails)) {
+                        emp.showroomDetails.forEach(s => {
+                            const name = s.name || '';
+                            const codeMatch = name.match(/^(\d{4})/);
+                            if (codeMatch) {
+                                const code = codeMatch[1];
+                                if (!showroomMap.has(code)) {
+                                    showroomMap.set(code, name);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Fallback list of standard Orange showrooms if map is empty
+            if (showroomMap.size === 0) {
+                const defaults = [
+                    ["1001", "1001 - Andalos Mall"],
+                    ["1002", "1002 - Haifa Mall"],
+                    ["1003", "1003 - Red Sea Mall"],
+                    ["1004", "1004 - Arab Mall"],
+                    ["1005", "1005 - Al-Salam Mall"],
+                    ["1006", "1006 - Al-Yasmin Mall"],
+                    ["1007", "1007 - Al_Khayyat Center"],
+                    ["1008", "1008 - Jeddah Park"],
+                    ["1013", "1013 - Park Avenue Riyadh"],
+                    ["1101", "1101 - Al_Hamra Mall Riyadh"],
+                    ["1102", "1102 - Riyadh Othaim Mall"],
+                    ["1104", "1104 - Al Nakheel Mall Riyadh"],
+                    ["1105", "1105 - Tala Mall Riyadh"],
+                    ["1107", "1107 - Al_Riyadh Park"],
+                    ["1110", "1110 - Riyadh Gallery Mall"],
+                    ["1201", "1201 - Makkah Mall"],
+                    ["1301", "1301 - Jouri Mall Taif"],
+                    ["1401", "1401 - Alia Mall Madinah"],
+                    ["1601", "1601 - Ehsa Othaim Mall"],
+                    ["2101", "2101 - Dhahran Mall Khobar"],
+                    ["WH01", "WH01 - مستودع جدة الرئيسي"],
+                    ["WH02", "WH02 - مستودع الرياض الرئيسي"]
+                ];
+                defaults.forEach(([c, n]) => showroomMap.set(c, n));
+            }
+
+            // Sort by code and append
+            const sorted = Array.from(showroomMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+            sorted.forEach(([code, name]) => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = `${code} - ${name}`;
+                select.appendChild(opt);
+            });
+        }
+
+        // 2. Fetch BOM Kits from API
+        async function loadKits(force = false) {
+            const input = document.getElementById('kitSearchInput');
+            input.placeholder = "جاري تحميل أطقم الكيت من داينامكس...";
+            
+            try {
+                const res = await fetch(`/api/d365/bom/kits?refresh=${force}`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success && data.kits) {
+                    allKits = data.kits;
+                    input.placeholder = `ابحث بين ${allKits.length} طقم كيت معتمد...`;
+                } else {
+                    input.placeholder = "تعذر تحميل الأصناف: " + (data.error || "خطأ غير معروف");
+                }
+            } catch (err) {
+                input.placeholder = "فشل الاتصال بالخادم لجلب الأطقم.";
+            }
+        }
+
+        // 3. Search Autocomplete
+        function setupEventListeners() {
+            const searchInput = document.getElementById('kitSearchInput');
+            const dropdown = document.getElementById('searchResultsDropdown');
+            const showroomSelect = document.getElementById('showroomSelect');
+            const qtyInput = document.getElementById('kitQuantity');
+
+            // Search filter
+            searchInput.addEventListener('input', () => {
+                const term = searchInput.value.trim().toLowerCase();
+                if (!term || allKits.length === 0) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                const filtered = allKits.filter(k => 
+                    k.kit_item_id.toLowerCase().includes(term) ||
+                    (k.bom_name && k.bom_name.toLowerCase().includes(term))
+                ).slice(0, 15);
+
+                if (filtered.length === 0) {
+                    dropdown.innerHTML = '<div class="p-3 text-muted text-center small">لا توجد أطقم مطابقة.</div>';
+                    dropdown.style.display = 'block';
+                    return;
+                }
+
+                dropdown.innerHTML = '';
+                filtered.forEach(k => {
+                    const item = document.createElement('div');
+                    item.className = 'search-item';
+                    item.innerHTML = `
+                        <div class="fw-bold">${k.bom_name || k.kit_item_id}</div>
+                        <div class="small text-muted">كود الكيت: <code class="text-primary">${k.kit_item_id}</code> | BOM: ${k.bom_id}</div>
+                    `;
+                    item.addEventListener('click', () => {
+                        selectKit(k);
+                        dropdown.style.display = 'none';
+                    });
+                    dropdown.appendChild(item);
+                });
+                dropdown.style.display = 'block';
+            });
+
+            // Close dropdown on click outside
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            // Refresh button
+            document.getElementById('refreshBomsBtn').addEventListener('click', () => loadKits(true));
+
+            // Quantity controls
+            document.getElementById('qtyMinus').addEventListener('click', () => {
+                let v = parseInt(qtyInput.value) || 1;
+                if (v > 1) { qtyInput.value = v - 1; triggerPreview(); }
+            });
+            document.getElementById('qtyPlus').addEventListener('click', () => {
+                let v = parseInt(qtyInput.value) || 1;
+                qtyInput.value = v + 1;
+                triggerPreview();
+            });
+            qtyInput.addEventListener('change', triggerPreview);
+            showroomSelect.addEventListener('change', triggerPreview);
+
+            // Form Submit
+            document.getElementById('disassemblyForm').addEventListener('submit', handleFormSubmit);
+        }
+
+        function selectKit(kit) {
+            document.getElementById('selectedKitId').value = kit.kit_item_id;
+            document.getElementById('selectedKitName').value = kit.bom_name;
+            document.getElementById('kitSearchInput').value = `${kit.kit_item_id} - ${kit.bom_name}`;
+            document.getElementById('kitNameSpan').textContent = kit.bom_name;
+            document.getElementById('selectedKitDisplay').style.display = 'block';
+            triggerPreview();
+        }
+
+        // 4. Live Preview Calculation
+        async function triggerPreview() {
+            const wh = document.getElementById('showroomSelect').value;
+            const kitId = document.getElementById('selectedKitId').value;
+            const qty = parseInt(document.getElementById('kitQuantity').value) || 1;
+            const submitBtn = document.getElementById('submitBtn');
+
+            const badge = document.getElementById('targetWarehouseBadge');
+            if (wh) {
+                const whName = document.getElementById('showroomSelect').options[document.getElementById('showroomSelect').selectedIndex].text;
+                badge.innerHTML = `<i class="fa-solid fa-location-dot"></i> المعرض: ${whName}`;
+                badge.className = "same-warehouse-pill bg-primary text-white border-primary";
+            } else {
+                badge.innerHTML = `<i class="fa-solid fa-location-dot"></i> يرجى اختيار المعرض`;
+                badge.className = "same-warehouse-pill";
+            }
+
+            if (!wh || !kitId || qty <= 0) {
+                document.getElementById('emptyPreviewNotice').style.display = 'block';
+                document.getElementById('activePreviewDetails').style.display = 'none';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-custom ms-2"></span> جاري استخراج مكونات الـ BOM...`;
+
+            try {
+                const res = await fetch(`/api/d365/bom/preview?warehouse=${encodeURIComponent(wh)}&kit_id=${encodeURIComponent(kitId)}&qty=${qty}`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success && data.preview) {
+                    renderPreview(data.preview);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)`;
+                } else {
+                    alert('خطأ في المعاينة: ' + (data.error || 'تعذر جلب تفاصيل الطقم'));
+                    submitBtn.innerHTML = `<i class="fa-solid fa-triangle-exclamation ms-2"></i> خطأ في الطقم المختار`;
+                }
+            } catch (err) {
+                alert('فشل الاتصال بالخادم للمعاينة.');
+                submitBtn.disabled = true;
+            }
+        }
+
+        function renderPreview(preview) {
+            activePreviewData = preview;
+            document.getElementById('emptyPreviewNotice').style.display = 'none';
+            document.getElementById('activePreviewDetails').style.display = 'block';
+
+            // Deduct card
+            document.getElementById('deductItemName').textContent = preview.kit_name;
+            document.getElementById('deductItemCode').textContent = preview.kit_item_id;
+            document.getElementById('deductWarehouseSpan').textContent = preview.warehouse;
+            document.getElementById('deductQtyBadge').textContent = `-${preview.disassemble_quantity} Pcs`;
+            document.getElementById('confirmWhText').textContent = preview.warehouse;
+
+            // Components list
+            const compContainer = document.getElementById('componentsListContainer');
+            compContainer.innerHTML = '';
+            
+            const compLines = preview.lines.filter(l => l.type === 'component');
+            document.getElementById('componentsCountBadge').textContent = `${compLines.length} مكونات`;
+
+            compLines.forEach(comp => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'bg-white p-3 rounded border d-flex justify-content-between align-items-center';
+                itemDiv.innerHTML = `
+                    <div>
+                        <div class="fw-bold text-dark"><i class="fa-solid fa-tag text-muted ms-1"></i> كود الصنف: <code>${comp.item_id}</code></div>
+                        <div class="small text-muted mt-1">المستودع المستهدف: <span class="fw-bold text-primary">${comp.warehouse}</span> (نفس المعرض)</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-success fs-6 px-3 py-2">+${comp.quantity} ${comp.unit}</span>
+                    </div>
+                `;
+                compContainer.appendChild(itemDiv);
+            });
+        }
+
+        // 5. Execute Disassembly in Dynamics UAT
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!activePreviewData) return;
+
+            const submitBtn = document.getElementById('submitBtn');
+            const wh = document.getElementById('showroomSelect').value;
+            const kitId = document.getElementById('selectedKitId').value;
+            const qty = parseInt(document.getElementById('kitQuantity').value) || 1;
+            const notes = document.getElementById('notesInput').value;
+
+            if (!confirm(`هل أنت متأكد من تفكيك عدد (${qty}) طقم "${kitId}" في المعرض (${wh})؟\nسيتم إنشاء دفتر حركة مخزون رسمي في داينامكس UAT.`)) {
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-custom ms-2"></span> جاري إنشاء الدفتر والأسطر في داينامكس...`;
+
+            try {
+                const res = await fetch('/api/d365/bom/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        warehouse: wh,
+                        kit_id: kitId,
+                        qty: qty,
+                        notes: notes
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('resultJournalNumber').textContent = data.journal_number;
+                    document.getElementById('resultWarehouse').textContent = data.warehouse;
+                    document.getElementById('resultLinesCount').textContent = `${data.created_lines_count} سطر`;
+                    document.getElementById('resultMessageText').textContent = data.message;
+                    
+                    document.getElementById('resultCard').style.display = 'block';
+                    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+
+                    loadHistory();
+                } else {
+                    alert('فشلت العملية في داينامكس:\n' + (data.error || (data.errors ? data.errors.join('\n') : 'خطأ غير معروف')));
+                }
+            } catch (err) {
+                alert('حدث خطأ أثناء الاتصال بالخادم: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-bolt ms-2"></i> تأكيد وإنشاء الدفتر في داينامكس (UAT)`;
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('resultCard').style.display = 'none';
+            document.getElementById('selectedKitId').value = '';
+            document.getElementById('selectedKitName').value = '';
+            document.getElementById('kitSearchInput').value = '';
+            document.getElementById('selectedKitDisplay').style.display = 'none';
+            document.getElementById('notesInput').value = '';
+            document.getElementById('emptyPreviewNotice').style.display = 'block';
+            document.getElementById('activePreviewDetails').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 6. Load History
+        async function loadHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            try {
+                const res = await fetch('/api/d365/bom/history', { credentials: 'include' });
+                const data = await res.json();
+                if (data.success && data.history && data.history.length > 0) {
+                    tbody.innerHTML = '';
+                    data.history.forEach(row => {
+                        const tr = document.createElement('tr');
+                        const dateStr = new Date(row.timestamp).toLocaleString('ar-SA');
+                        tr.innerHTML = `
+                            <td><small>${dateStr}</small></td>
+                            <td><span class="badge bg-light text-dark border">${row.warehouse}</span></td>
+                            <td><strong>${row.kit_item_id}</strong><br><small class="text-muted">${row.kit_name || ''}</small></td>
+                            <td><span class="badge bg-secondary">${row.quantity}</span></td>
+                            <td><code class="text-primary fw-bold">${row.journal_number}</code></td>
+                            <td><span class="badge bg-info text-dark">${row.lines_count}</span></td>
+                            <td><small>${row.user || 'علاء'}</small></td>
+                            <td><span class="badge ${row.status === 'Created' ? 'bg-success' : 'bg-danger'}">${row.status === 'Created' ? 'تم الإنشاء' : 'خطأ جزئي'}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد عمليات سابقة مسجلة.</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">تعذر تحميل السجل.</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>

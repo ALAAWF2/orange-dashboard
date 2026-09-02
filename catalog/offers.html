@@ -511,7 +511,8 @@
       border-color: #cbd5e1;
     }
 
-    .offer-group.collapsed .offer-products-body {
+    .offer-group.collapsed .offer-products-body,
+    .offer-group.collapsed .offer-ribbon-bar {
       display: none;
     }
 
@@ -583,6 +584,19 @@
       background: var(--accent-purple-light);
       color: var(--accent-purple-dark);
       border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .offer-new-tag {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .offer-items-count-badge {
@@ -1188,13 +1202,26 @@
 
       <!-- Secondary Controls Bar -->
       <div class="controls-secondary">
-        <div class="view-mode-tabs">
-          <button type="button" class="view-tab-btn active" id="btnViewGrouped" onclick="setViewMode('grouped')">
-            <span>📑</span> مجمعة حسب العرض
-          </button>
-          <button type="button" class="view-tab-btn" id="btnViewGrid" onclick="setViewMode('grid')">
-            <span>🔲</span> شبكة المنتجات
-          </button>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div class="view-mode-tabs">
+            <button type="button" class="view-tab-btn active" id="btnViewGrouped" onclick="setViewMode('grouped')">
+              <span>📑</span> مجمعة حسب العرض
+            </button>
+            <button type="button" class="view-tab-btn" id="btnViewGrid" onclick="setViewMode('grid')">
+              <span>🔲</span> شبكة المنتجات
+            </button>
+          </div>
+
+          <!-- Sort by Offer Creation Date -->
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem; font-weight: 700;">
+            <label for="sortOrderSelect" style="color: var(--text-muted); white-space: nowrap;">ترتيب العروض:</label>
+            <select id="sortOrderSelect" class="form-control" style="width: auto; padding: 5px 12px; font-size: 0.82rem; height: auto;" onchange="applyFilters()">
+              <option value="created_desc" selected>📅 تاريخ الإنشاء (الأحدث أولاً - الافتراضي)</option>
+              <option value="created_asc">📅 تاريخ الإنشاء (الأقدم أولاً)</option>
+              <option value="items_desc">📦 الأكثر منتجات</option>
+              <option value="title_asc">🔤 أبجدياً (أ - ي)</option>
+            </select>
+          </div>
         </div>
 
         <div class="toggle-all-btns" id="accordionControlBtns">
@@ -1297,6 +1324,67 @@
     let allShowroomNames = [];      // Unique showroom names list
     let allCategories = [];         // Unique categories list
     let currentViewMode = 'grouped';// 'grouped' or 'grid'
+    let expandedGroups = new Set(); // Offer IDs currently expanded (default is empty = all closed)
+
+    // Exact Creation Order Mapping in Dynamics 365 (DiscountRecordId sequence)
+    // Higher RecId = more recently created in Dynamics
+    const OFFER_CREATION_RECIDS = {
+      "ORNG-000396": 5637172334,
+      "ORNG-000395": 5637172333,
+      "ORNG-00292":  5637172331,
+      "ORNG-000394": 5637172329,
+      "ORNG-000393": 5637172328,
+      "ORNG-000392": 5637172327,
+      "ORNG-000391": 5637172326,
+      "ORNG-00282":  5637171579,
+      "ORNG-00281":  5637171578,
+      "ORNG-000382": 5637171577,
+      "ORNG-000381": 5637171576,
+      "ORNG-000375": 5637170830,
+      "ORNG-000374": 5637170829,
+      "ORNG-000373": 5637170828,
+      "ORNG-000371": 5637170826,
+      "ORNG-000364": 5637170079,
+      "ORNG-000363": 5637170078,
+      "ORNG-000351": 5637169326,
+      "ORNG-00261":  5637168577,
+      "ORNG-000337": 5637167832,
+      "ORNG-000336": 5637167831,
+      "ORNG-000335": 5637167830,
+      "ORNG-000333": 5637167828,
+      "ORNG-000332": 5637167827,
+      "ORNG-000331": 5637167826,
+      "ORNG-000325": 5637167080,
+      "ORNG-000323": 5637167078,
+      "ORNG-000322": 5637167077,
+      "ORNG-000313": 5637166329,
+      "ORNG-000312": 5637166328,
+      "ORNG-000311": 5637166327,
+      "ORNG-00251":  5637166326,
+      "ORNG-00245":  5637164834,
+      "ORNG-00243":  5637164828,
+      "ORNG-000276": 5637162582,
+      "ORNG-000185": 5637155845,
+      "ORNG-000163": 5637155078,
+      "ORNG-000162": 5637155077,
+      "ORNG-000161": 5637155076,
+      "ORNG-00081":  5637149834,
+      "ORNG-00060":  5637149124,
+      "ORNG-000083": 5637149106,
+      "ORNG-000080": 5637149100,
+      "ORNG-00055":  5637149087,
+      "ORNG-00053":  5637149085,
+      "ORNG-000037": 5637147597
+    };
+
+    function getOfferCreationScore(offerId, recId) {
+      if (recId) return Number(recId);
+      const cleanId = String(offerId || '').trim();
+      if (OFFER_CREATION_RECIDS[cleanId]) return OFFER_CREATION_RECIDS[cleanId];
+      // Fallback for new offers: extract integer number from offer ID
+      const m = cleanId.match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    }
 
     // Persistent User Preferences
     const STORAGE_KEY_SHOWROOM = 'orange_catalog_offers_showroom';
@@ -1461,6 +1549,7 @@
             offerId,
             offerName,
             isMultiBuy,
+            recId: offerMeta.rec_id || OFFER_CREATION_RECIDS[offerId] || null,
             dealPrice: offerMeta.deal_price ?? null,
             originalPrice: offerMeta.original_price ?? null,
             items: []
@@ -1485,8 +1574,12 @@
         });
       });
 
-      // Convert map to sorted array (offers with most items first)
-      groupedOffers = Array.from(groupsMap.values()).sort((a, b) => b.items.length - a.items.length);
+      // Convert map to sorted array: by creation date descending (newest created offer first)
+      groupedOffers = Array.from(groupsMap.values()).sort((a, b) => {
+        const scoreA = getOfferCreationScore(a.offerId, a.recId);
+        const scoreB = getOfferCreationScore(b.offerId, b.recId);
+        return scoreB - scoreA;
+      });
     }
 
     // Update Top KPIs
@@ -1535,14 +1628,25 @@
 
     function toggleAllGroups(collapse) {
       const groups = document.querySelectorAll('.offer-group');
-      groups.forEach(g => g.classList.toggle('collapsed', collapse));
+      groups.forEach(g => {
+        g.classList.toggle('collapsed', collapse);
+        const offerId = g.id.replace('group_', '');
+        if (collapse) {
+          expandedGroups.delete(offerId);
+        } else {
+          expandedGroups.add(offerId);
+        }
+      });
     }
 
     function resetAllFilters() {
+      expandedGroups.clear();
       document.getElementById('searchInput').value = '';
       document.getElementById('searchClearBtn').style.display = 'none';
       document.getElementById('categorySelect').value = '';
       document.getElementById('offerTypeSelect').value = 'all';
+      const sortSelect = document.getElementById('sortOrderSelect');
+      if (sortSelect) sortSelect.value = 'created_desc';
       document.getElementById('showroomStockOnlyCheckbox').checked = false;
       document.getElementById('showroomSelect').value = '';
       localStorage.removeItem(STORAGE_KEY_SHOWROOM);
@@ -1624,6 +1728,18 @@
         }
       });
 
+      // Sort filtered groups according to user selection (default: created_desc)
+      const sortOrder = document.getElementById('sortOrderSelect')?.value || 'created_desc';
+      if (sortOrder === 'created_desc') {
+        filteredGroups.sort((a, b) => getOfferCreationScore(b.offerId, b.recId) - getOfferCreationScore(a.offerId, a.recId));
+      } else if (sortOrder === 'created_asc') {
+        filteredGroups.sort((a, b) => getOfferCreationScore(a.offerId, a.recId) - getOfferCreationScore(b.offerId, b.recId));
+      } else if (sortOrder === 'items_desc') {
+        filteredGroups.sort((a, b) => b.items.length - a.items.length);
+      } else if (sortOrder === 'title_asc') {
+        filteredGroups.sort((a, b) => a.offerName.localeCompare(b.offerName, 'ar'));
+      }
+
       // Handle Empty State
       const emptyState = document.getElementById('emptyState');
       const container = document.getElementById('offersContainer');
@@ -1645,11 +1761,16 @@
 
     // Render Grouped by Offer View
     function renderGroupedView(groups, selectedMall) {
+      const searchVal = document.getElementById('searchInput').value.trim();
       const container = document.getElementById('offersContainer');
       container.innerHTML = groups.map(group => {
         const typeBadge = group.isMultiBuy
           ? '<span class="offer-type-tag offer-type-multi">🎁 عرض كميات / مجموعة (Multi-Buy)</span>'
           : '<span class="offer-type-tag offer-type-deal">🏷️ خصم مباشر (سعر خاص)</span>';
+
+        // By default, groups are collapsed (مسكرة) unless searched or specifically opened by user
+        const isExpanded = searchVal ? true : expandedGroups.has(group.offerId);
+        const collapsedClass = isExpanded ? '' : 'collapsed';
 
         let ribbonContent = '';
         if (group.isMultiBuy) {
@@ -1678,15 +1799,19 @@
           `;
         }
 
+        const creationScore = getOfferCreationScore(group.offerId, group.recId);
+        const isNewOffer = creationScore >= 5637171576; // Offers created in late August / September 2026
+        const newBadge = isNewOffer ? '<span class="offer-new-tag">✨ جديد</span>' : '';
         const productCardsHtml = group.items.map(({ product, offerMeta }) => renderProductCard(product, offerMeta, selectedMall)).join('');
 
         return `
-          <div class="offer-group" id="group_${group.offerId}">
+          <div class="offer-group ${collapsedClass}" id="group_${group.offerId}">
             <div class="offer-group-header" onclick="toggleGroup('${group.offerId}')">
               <div class="offer-header-left">
                 <span class="offer-id-badge">${group.offerId}</span>
                 <h3 class="offer-title">${escapeHtml(group.offerName)}</h3>
                 ${typeBadge}
+                ${newBadge}
                 <span class="offer-items-count-badge">${group.items.length} منتجات</span>
               </div>
               <div class="offer-header-right">
@@ -1837,7 +1962,13 @@
 
     function toggleGroup(offerId) {
       const el = document.getElementById(`group_${offerId}`);
-      if (el) el.classList.toggle('collapsed');
+      if (!el) return;
+      const isCollapsed = el.classList.toggle('collapsed');
+      if (isCollapsed) {
+        expandedGroups.delete(offerId);
+      } else {
+        expandedGroups.add(offerId);
+      }
     }
 
     // Modal Details Logic
