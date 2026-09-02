@@ -7456,6 +7456,63 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1010-C;1010-E"
+    },
+    {
+        "employeeId": "5013-مريم المطيري",
+        "personnelNumber": "5013",
+        "name": "مريم المطيري",
+        "startDate": "2026-08-31",
+        "manager": "المنطقة الغربية",
+        "showroom": "1008-48 - Jeddah Park",
+        "showroomDetails": [
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
+            }
+        ],
+        "addressBooks": "1008-C;1008-E"
+    },
+    {
+        "employeeId": "5015-اماني محمد",
+        "personnelNumber": "5015",
+        "name": "اماني محمد",
+        "startDate": "2026-08-31",
+        "manager": "المنطقة الغربية",
+        "showroom": "1002-05-Haifa Mall",
+        "showroomDetails": [
+            {
+                "name": "1002-05-Haifa Mall",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1002-C",
+                    "1002-E"
+                ]
+            }
+        ],
+        "addressBooks": "1002-C;1002-E"
+    },
+    {
+        "employeeId": "5014-رؤى البقمي",
+        "personnelNumber": "5014",
+        "name": "رؤى البقمي",
+        "startDate": "2026-08-31",
+        "manager": "عبيدة السباعي",
+        "showroom": "1001-04-Andalos Mall",
+        "showroomDetails": [
+            {
+                "name": "1001-04-Andalos Mall",
+                "manager": "عبيدة السباعي",
+                "codes": [
+                    "1001-C",
+                    "1001-E"
+                ]
+            }
+        ],
+        "addressBooks": "1001-C;1001-E"
     }
 ];
 
