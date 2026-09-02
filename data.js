@@ -2691,25 +2691,6 @@ const EMPLOYEES = [
         "addressBooks": "1301-C;1301-E"
     },
     {
-        "employeeId": "4124-بدريه شريف المالكي",
-        "personnelNumber": "4124",
-        "name": "بدريه شريف المالكي",
-        "startDate": "2024-05-01",
-        "manager": "عبيدة السباعي",
-        "showroom": "1007-18-Al_Khayyat Center",
-        "showroomDetails": [
-            {
-                "name": "1007-18-Al_Khayyat Center",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1007-C",
-                    "1007-E"
-                ]
-            }
-        ],
-        "addressBooks": "1007-C;1007-E"
-    },
-    {
         "employeeId": "4141-نزيهه خالد شاعري",
         "personnelNumber": "4141",
         "name": "نزيهه خالد شاعري",
