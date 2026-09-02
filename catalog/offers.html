@@ -1364,6 +1364,14 @@
       return m ? parseInt(m[0], 10) : 0;
     }
 
+    // Format numeric price: preserve decimal places if present (e.g. 499.99), otherwise integer (e.g. 799)
+    function formatPrice(val) {
+      if (val === null || val === undefined || val === '') return '0';
+      const num = Number(val);
+      if (isNaN(num)) return String(val);
+      return (num % 1 === 0) ? String(num) : num.toFixed(2);
+    }
+
     // Persistent User Preferences
     const STORAGE_KEY_SHOWROOM = 'orange_catalog_offers_showroom';
 
@@ -1758,17 +1766,17 @@
             </div>
           `;
         } else if (group.dealPrice !== null) {
-          const orig = group.originalPrice ?? 0;
-          const deal = group.dealPrice;
+          const orig = Number(group.originalPrice ?? 0);
+          const deal = Number(group.dealPrice);
           const diff = orig > deal ? (orig - deal) : 0;
           const pct = orig > deal ? Math.round((diff / orig) * 100) : 0;
 
           ribbonContent = `
             <div class="offer-price-deal-box">
               <span style="font-size:0.85rem; color:var(--text-muted); font-weight:700;">سعر العرض:</span>
-              <span class="deal-price-value">${deal} ريال</span>
-              ${orig > deal ? `<span class="original-price-value">${orig} ريال</span>` : ''}
-              ${diff > 0 ? `<span class="savings-badge">وفر ${diff} ريال (${pct}%)</span>` : ''}
+              <span class="deal-price-value">${formatPrice(deal)} ريال</span>
+              ${orig > deal ? `<span class="original-price-value">${formatPrice(orig)} ريال</span>` : ''}
+              ${diff > 0 ? `<span class="savings-badge">وفر ${formatPrice(diff)} ريال (${pct}%)</span>` : ''}
             </div>
             <div style="font-size:0.82rem; color:var(--text-muted); font-weight:600;">
               ${escapeHtml(group.offerName)}
@@ -1839,13 +1847,13 @@
       let priceRowHtml = '';
       if (!isMulti && dealPrice !== null) {
         priceRowHtml = `
-          <span class="card-deal-price">${dealPrice} <span>ريال</span></span>
-          ${origPrice > dealPrice ? `<span class="card-orig-price">${origPrice} ريال</span>` : ''}
+          <span class="card-deal-price">${formatPrice(dealPrice)} <span>ريال</span></span>
+          ${origPrice > dealPrice ? `<span class="card-orig-price">${formatPrice(origPrice)} ريال</span>` : ''}
           <span style="background:#e74c3c; color:#fff; border-radius:4px; padding:1px 6px; font-size:0.72rem; font-weight:800; margin-right:auto;">خصم</span>
         `;
       } else {
         priceRowHtml = `
-          <span class="card-deal-price" style="color:var(--text-main);">${product.price || origPrice} <span>ريال</span></span>
+          <span class="card-deal-price" style="color:var(--text-main);">${formatPrice(product.price || origPrice)} <span>ريال</span></span>
           <span style="background:var(--accent-purple); color:#fff; border-radius:4px; padding:1px 6px; font-size:0.72rem; font-weight:800; margin-right:auto;">عرض كمية</span>
         `;
       }
@@ -1976,14 +1984,14 @@
         offerBox.style.display = 'block';
         offerTitle.textContent = `العرض: ${offerMeta.offer_name} (${offerMeta.offer_id || ''})`;
         if (!offerMeta.is_multi_buy && offerMeta.deal_price !== undefined) {
-          const deal = offerMeta.deal_price;
-          const orig = offerMeta.original_price || product.price || 0;
+          const deal = Number(offerMeta.deal_price);
+          const orig = Number(offerMeta.original_price || product.price || 0);
           const diff = orig > deal ? (orig - deal) : 0;
           offerPricing.innerHTML = `
             <div style="font-size:0.9rem; font-weight:700; margin-top:4px;">
-              سعر العرض الترويجي: <span style="color:var(--primary); font-size:1.1rem; font-weight:900;">${deal} ريال</span>
-              ${orig > deal ? `<span style="text-decoration:line-through; color:var(--text-muted); margin-right:8px;">${orig} ريال</span>` : ''}
-              ${diff > 0 ? `<span style="background:var(--accent-green); color:#fff; border-radius:4px; padding:1px 6px; font-size:0.75rem; margin-right:8px;">توفير ${diff} ريال</span>` : ''}
+              سعر العرض الترويجي: <span style="color:var(--primary); font-size:1.1rem; font-weight:900;">${formatPrice(deal)} ريال</span>
+              ${orig > deal ? `<span style="text-decoration:line-through; color:var(--text-muted); margin-right:8px;">${formatPrice(orig)} ريال</span>` : ''}
+              ${diff > 0 ? `<span style="background:var(--accent-green); color:#fff; border-radius:4px; padding:1px 6px; font-size:0.75rem; margin-right:8px;">توفير ${formatPrice(diff)} ريال</span>` : ''}
             </div>
           `;
         } else {
