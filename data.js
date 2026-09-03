@@ -727,16 +727,8 @@ const EMPLOYEES = [
         "name": "محمد علي كامل",
         "startDate": "2017-11-19",
         "manager": "رضوان عطيوي",
-        "showroom": "1202-20-Sitten Street Makkah و 1201-08-Makkah Mall",
+        "showroom": "1201-08-Makkah Mall و 1202-20-Sitten Street Makkah",
         "showroomDetails": [
-            {
-                "name": "1202-20-Sitten Street Makkah",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1202-C",
-                    "1202-E"
-                ]
-            },
             {
                 "name": "1201-08-Makkah Mall",
                 "manager": "رضوان عطيوي",
@@ -744,9 +736,17 @@ const EMPLOYEES = [
                     "1201-C",
                     "1201-E"
                 ]
+            },
+            {
+                "name": "1202-20-Sitten Street Makkah",
+                "manager": "رضوان عطيوي",
+                "codes": [
+                    "1202-C",
+                    "1202-E"
+                ]
             }
         ],
-        "addressBooks": "1202-C;1202-E;1201-C;1201-E"
+        "addressBooks": "1201-C;1201-E;1202-C;1202-E"
     },
     {
         "employeeId": "0412-عاصم عبد الودود البا",
@@ -7458,7 +7458,7 @@ const EMPLOYEES = [
         "employeeId": "5013-مريم المطيري",
         "personnelNumber": "5013",
         "name": "مريم المطيري",
-        "startDate": "2026-08-31",
+        "startDate": "2026-09-01",
         "manager": "المنطقة الغربية",
         "showroom": "1008-48 - Jeddah Park",
         "showroomDetails": [
@@ -7477,7 +7477,7 @@ const EMPLOYEES = [
         "employeeId": "5015-اماني محمد",
         "personnelNumber": "5015",
         "name": "اماني محمد",
-        "startDate": "2026-08-31",
+        "startDate": "2026-09-01",
         "manager": "المنطقة الغربية",
         "showroom": "1002-05-Haifa Mall",
         "showroomDetails": [
@@ -7493,10 +7493,29 @@ const EMPLOYEES = [
         "addressBooks": "1002-C;1002-E"
     },
     {
+        "employeeId": "5016-عهود سالم",
+        "personnelNumber": "5016",
+        "name": "عهود سالم",
+        "startDate": "2026-09-01",
+        "manager": "محمدكلو",
+        "showroom": "1113-51-Park Avenue Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1113-51-Park Avenue Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1113-C",
+                    "1113-E"
+                ]
+            }
+        ],
+        "addressBooks": "1113-C;1113-E"
+    },
+    {
         "employeeId": "5014-رؤى البقمي",
         "personnelNumber": "5014",
         "name": "رؤى البقمي",
-        "startDate": "2026-08-31",
+        "startDate": "2026-09-01",
         "manager": "عبيدة السباعي",
         "showroom": "1001-04-Andalos Mall",
         "showroomDetails": [
