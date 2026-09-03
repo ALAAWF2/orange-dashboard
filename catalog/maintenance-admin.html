@@ -1539,6 +1539,8 @@
                 <option value="تعبئة غاز">تعبئة غاز</option>
                 <option value="استبدال قطع">استبدال قطع</option>
                 <option value="غسيل وتنظيف فلاتر">غسيل وتنظيف فلاتر</option>
+                <option value="فحص ومعاينة">فحص ومعاينة</option>
+                <option value="متوقف عن العمل">متوقف عن العمل</option>
               </select>
             </div>
           </div>
@@ -1626,6 +1628,7 @@
                 <option value="استبدال قطع">استبدال قطع</option>
                 <option value="غسيل وتنظيف فلاتر">غسيل وتنظيف فلاتر</option>
                 <option value="فحص ومعاينة">فحص ومعاينة</option>
+                <option value="متوقف عن العمل">متوقف عن العمل</option>
               </select>
             </div>
           </div>
@@ -2567,7 +2570,7 @@
             <td>${escapeHtml(item.last_maintenance || '—')}</td>
             <td style="font-weight:700;">${escapeHtml(item.next_maintenance || '—')}</td>
             <td>${daysBadge}</td>
-            <td><span class="status-badge status-resolved">${escapeHtml(item.status || 'يعمل')}</span></td>
+            <td><span class="status-badge ${item.status === 'خارج الخدمة' ? 'status-rejected' : 'status-resolved'}">${escapeHtml(item.status || 'يعمل')}</span></td>
             <td>
               <div style="display:flex; gap:4px; align-items:center;">
                 <button onclick="openEditAcModal('${item.id}')" class="btn btn-accent" style="padding:4px 8px; font-size:11px; border-radius:6px;">تعديل</button>
@@ -2624,7 +2627,7 @@
             <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}')">${escapeHtml(v.date || '—')}</td>
             <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}')"><strong>${escapeHtml(v.mall || '—')}</strong></td>
             <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}');"><span style="color:var(--secondary); font-weight:700;">${escapeHtml(v.company || '—')}</span></td>
-            <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}')"><span class="status-badge status-approved">${escapeHtml(primaryWorkType)}</span></td>
+            <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}')"><span class="status-badge ${primaryWorkType === 'متوقف عن العمل' ? 'status-rejected' : 'status-approved'}">${escapeHtml(primaryWorkType)}</span></td>
             <td>${coverageBadge}</td>
             <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}')">${escapeHtml(replacedParts)}</td>
             <td onclick="openAcVisitDetailsModal('${escapeHtml(v.visit_no)}')" style="font-weight:bold; color:var(--primary);">${Number(v.invoice_amount || 0).toLocaleString()} ر.س</td>
@@ -2690,7 +2693,7 @@
               <td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${idx + 1}</td>
               <td style="padding:8px; border:1px solid #e2e8f0;"><strong style="color:var(--secondary); font-family:monospace;">${escapeHtml(w.ac_code || 'ALL')}</strong></td>
               <td style="padding:8px; border:1px solid #e2e8f0;">${escapeHtml(assetInfo)}</td>
-              <td style="padding:8px; border:1px solid #e2e8f0;"><span class="status-badge status-approved">${escapeHtml(w.work_type || primaryWorkType)}</span></td>
+              <td style="padding:8px; border:1px solid #e2e8f0;"><span class="status-badge ${(w.work_type || primaryWorkType) === 'متوقف عن العمل' ? 'status-rejected' : 'status-approved'}">${escapeHtml(w.work_type || primaryWorkType)}</span></td>
               <td style="padding:8px; border:1px solid #e2e8f0;">${escapeHtml(w.replaced_part || 'لا يوجد')}</td>
               <td style="padding:8px; border:1px solid #e2e8f0; color:#64748b;">${escapeHtml(w.notes || '—')}</td>
             </tr>
@@ -2705,7 +2708,7 @@
           <div><span style="color:#64748b; font-size:0.8rem; display:block;">المعرض / الفرع:</span><strong>🏢 ${escapeHtml(v.mall || '—')}</strong></div>
           <div><span style="color:#64748b; font-size:0.8rem; display:block;">تاريخ الزيارة:</span><strong>📅 ${escapeHtml(v.date || '—')}</strong></div>
           <div><span style="color:#64748b; font-size:0.8rem; display:block;">شركة الصيانة / الفني:</span><strong>🛠️ ${escapeHtml(v.company || '—')}</strong></div>
-          <div><span style="color:#64748b; font-size:0.8rem; display:block;">نوع الزيارة:</span><span class="status-badge status-approved">${escapeHtml(primaryWorkType)}</span></div>
+          <div><span style="color:#64748b; font-size:0.8rem; display:block;">نوع الزيارة:</span><span class="status-badge ${primaryWorkType === 'متوقف عن العمل' ? 'status-rejected' : 'status-approved'}">${escapeHtml(primaryWorkType)}</span></div>
           <div><span style="color:#64748b; font-size:0.8rem; display:block;">مبلغ الفاتورة:</span><strong style="color:var(--primary); font-size:1.1rem;">${Number(v.invoice_amount || 0).toLocaleString()} ر.س</strong></div>
           <div><span style="color:#64748b; font-size:0.8rem; display:block;">عدد الوحدات المخدومة:</span><strong>❄️ ${works.length} وحدة مكيف</strong></div>
         </div>
@@ -2817,6 +2820,7 @@
             <option value="استبدال قطع">استبدال قطع</option>
             <option value="غسيل وتنظيف فلاتر">غسيل وتنظيف فلاتر</option>
             <option value="فحص ومعاينة">فحص ومعاينة</option>
+            <option value="متوقف عن العمل">متوقف عن العمل</option>
           </select>
         </td>
         <td style="padding:6px; border:1px solid #e2e8f0;">
@@ -2950,6 +2954,8 @@
         };
         if (item.work_type === 'إصلاح عطل' || item.work_type === 'استبدال قطع') {
           updatePayload.status = 'يعمل';
+        } else if (item.work_type === 'متوقف عن العمل') {
+          updatePayload.status = 'خارج الخدمة';
         }
         await supabaseClient.from('ac_assets').update(updatePayload).eq('code', item.ac_code);
       }
@@ -3199,6 +3205,8 @@
           };
           if (work_type === 'إصلاح عطل' || work_type === 'استبدال قطع') {
             updatePayload.status = 'يعمل';
+          } else if (work_type === 'متوقف عن العمل') {
+            updatePayload.status = 'خارج الخدمة';
           }
           await supabaseClient.from('ac_assets').update(updatePayload).eq('code', ac_code);
         }
