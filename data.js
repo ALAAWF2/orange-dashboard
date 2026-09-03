@@ -1128,16 +1128,8 @@ const EMPLOYEES = [
         "name": "صالح",
         "startDate": "2021-08-02",
         "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh و 1109-40-Hayat Mall Riyad",
+        "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
-            {
-                "name": "1105-30-Tala Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1105-C",
-                    "1105-E"
-                ]
-            },
             {
                 "name": "1109-40-Hayat Mall Riyad",
                 "manager": "عبدالله السرداح",
@@ -1147,7 +1139,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1105-C;1105-E;1109-C;1109-E"
+        "addressBooks": "1109-C;1109-E"
     },
     {
         "employeeId": "1544-محمد شاجاهان فالاثود",
@@ -4465,25 +4457,6 @@ const EMPLOYEES = [
         "addressBooks": "2103-C;2103-E"
     },
     {
-        "employeeId": "4661-فاطمه معدى البيشي",
-        "personnelNumber": "4661",
-        "name": "فاطمه معدى البيشي",
-        "startDate": "2025-07-31",
-        "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1105-30-Tala Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1105-C",
-                    "1105-E"
-                ]
-            }
-        ],
-        "addressBooks": "1105-C;1105-E"
-    },
-    {
         "employeeId": "4668-جميله محمد سفياني",
         "personnelNumber": "4668",
         "name": "جميله محمد سفياني",
@@ -6649,25 +6622,6 @@ const EMPLOYEES = [
         "addressBooks": "1401-C;1401-E"
     },
     {
-        "employeeId": "4960-ريما عبدالله",
-        "personnelNumber": "4960",
-        "name": "ريما عبدالله",
-        "startDate": "2026-05-14",
-        "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1105-30-Tala Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1105-C",
-                    "1105-E"
-                ]
-            }
-        ],
-        "addressBooks": "1105-C;1105-E"
-    },
-    {
         "employeeId": "4963-شيماء سليمان",
         "personnelNumber": "4963",
         "name": "شيماء سليمان",
@@ -7034,16 +6988,8 @@ const EMPLOYEES = [
         "name": "Renad Alfahem",
         "startDate": "2026-07-01",
         "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh و 1108-39-Salam Mall Riyadh",
+        "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
-            {
-                "name": "1105-30-Tala Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1105-C",
-                    "1105-E"
-                ]
-            },
             {
                 "name": "1108-39-Salam Mall Riyadh",
                 "manager": "عبدالله السرداح",
@@ -7053,7 +6999,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1105-C;1105-E;1108-C;1108-E"
+        "addressBooks": "1108-C;1108-E"
     },
     {
         "employeeId": "4988-Rabab Mahdi",
@@ -7301,25 +7247,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1903-C;1903-E"
-    },
-    {
-        "employeeId": "5003-عبد الاله محمد",
-        "personnelNumber": "5003",
-        "name": "عبد الاله محمد",
-        "startDate": "2026-08-02",
-        "manager": "عبدالله السرداح",
-        "showroom": "1105-30-Tala Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1105-30-Tala Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1105-C",
-                    "1105-E"
-                ]
-            }
-        ],
-        "addressBooks": "1105-C;1105-E"
     },
     {
         "employeeId": "5005-رغد فيصل القحطاني",
