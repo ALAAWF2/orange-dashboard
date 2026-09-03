@@ -825,6 +825,7 @@
                 <th>التاريخ</th>
                 <th>اليوم</th>
                 <th>المبيعات</th>
+                <th style="color:var(--primary);">المستهدف اليومي</th>
                 <th>السنة السابقة</th>
                 <th>النمو %</th>
                 <th>الفواتير</th>
@@ -950,6 +951,7 @@
     let incentivesData = null;
     let productsData = null;
     let salesByOutletData = null;
+    let dailyTargetsData = {};
     let catalogUpdatedAt = null;
     let dataWarnings = [];
     let selectedStoreCode = null;
@@ -1149,7 +1151,7 @@
           window.AverageBillProgram.load(),
           window.ExpectedCommissionVisibility.load()
         ]);
-        const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes] = await Promise.all([
+        const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes, dailyTargetsRes] = await Promise.all([
           fetch('../summary.json?_=' + Date.now()).catch(() => null),
           fetch('../employees_data.json?_=' + Date.now()).catch(() => null),
           averageBillProgramState.enabled
@@ -1157,7 +1159,8 @@
             : Promise.resolve(null),
           fetch('products.json?_=' + Date.now()).catch(() => null),
           fetch('sales_by_outlet.json?_=' + Date.now()).catch(() => null),
-          fetch('last_updated.json?_=' + Date.now()).catch(() => null)
+          fetch('last_updated.json?_=' + Date.now()).catch(() => null),
+          fetch('../daily_targets.json?_=' + Date.now()).catch(() => null)
         ]);
 
         mgmtData = await readJsonResponse(mgmtRes);
@@ -1167,6 +1170,8 @@
         salesByOutletData = await readJsonResponse(outletSalesRes);
         const updatedData = await readJsonResponse(updatedRes);
         catalogUpdatedAt = updatedData?.last_updated || null;
+        const dtRaw = await readJsonResponse(dailyTargetsRes);
+        dailyTargetsData = dtRaw?.targets || dtRaw || {};
 
         if (!mgmtData?.stores || !Array.isArray(mgmtData.sales)) {
           throw new Error('ملف ملخص المبيعات غير متوفر أو غير صالح.');
@@ -1983,6 +1988,7 @@
       tbody.innerHTML = '';
 
       let totalSales = 0;
+      let totalDailyTarget = 0;
       let totalSalesLY = 0;
       let totalInvoices = 0;
       let totalVisitors = 0;
@@ -1991,20 +1997,28 @@
       let rowsHtml = '';
       let daysRenderedCount = 0;
 
-      for (let d = 1; d <= currentDay; d++) {
+      const storeKey = String(selectedStoreCode || '').padStart(4, '0');
+      const storeDailyTargets = (dailyTargetsData && (dailyTargetsData[selectedStoreCode] || dailyTargetsData[storeKey])) || {};
+
+      for (let d = 1; d <= daysInMonth; d++) {
         const dayStr = String(d).padStart(2, '0');
         const dateKey = `${monthPrefix}-${dayStr}`;
         const dateObj = parseLocalYmd(dateKey);
         const lyDateKey = toLocalYmd(getPriorYearComparableDate(dateObj));
         const dayOfWeekName = ARABIC_DAYS[dateObj.getDay()];
 
-        const sales = salesMap[dateKey] || 0;
+        const isFuture = d > currentDay;
+
+        const sales = isFuture ? 0 : (salesMap[dateKey] || 0);
         const salesLY = salesMap[lyDateKey] || 0;
-        const invoices = transMap[dateKey] || 0;
-        const visitors = visitorsMap[dateKey] || 0;
+        const invoices = isFuture ? 0 : (transMap[dateKey] || 0);
+        const visitors = isFuture ? 0 : (visitorsMap[dateKey] || 0);
         const visitorsLY = visitorsMap[lyDateKey] || 0;
 
+        const dailyTgt = Number(storeDailyTargets[dateKey]) || 0;
+
         totalSales += sales;
+        totalDailyTarget += dailyTgt;
         totalSalesLY += salesLY;
         totalInvoices += invoices;
         totalVisitors += visitors;
@@ -2022,19 +2036,29 @@
         const isWeekend = dateObj.getDay() === 5 || dateObj.getDay() === 6; // Friday or Saturday
         const rowBgStyle = isWeekend ? 'style="background-color: #fffcf5;"' : '';
 
+        const salesDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : fmtMoney(sales);
+        const dailyTgtDisplay = dailyTgt > 0 ? fmtMoney(dailyTgt) : '-';
+        const growthDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : `<span class="badge-status ${growthClass}">${growthSign}${fmtPerc(growth)}</span>`;
+        const invoicesDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : invoices;
+        const avgTicketDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : fmtMoney(avgTicket);
+        const visitorsDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : (visitors > 0 ? visitors.toLocaleString() : '-');
+        const custValDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : fmtMoney(custVal);
+        const convRateDisplay = isFuture ? '<span style="color:var(--text-muted); opacity:0.5;">-</span>' : (visitors > 0 ? fmtPerc(convRate) : '-');
+
         rowsHtml += `
           <tr ${rowBgStyle}>
             <td><strong>${dateKey}</strong></td>
             <td>${dayOfWeekName}</td>
-            <td style="font-weight:800; color:var(--text-main);">${fmtMoney(sales)}</td>
+            <td style="font-weight:800; color:var(--text-main);">${salesDisplay}</td>
+            <td style="font-weight:800; color:var(--primary);">${dailyTgtDisplay}</td>
             <td style="color:var(--text-muted);">${fmtMoney(salesLY)}</td>
-            <td><span class="badge-status ${growthClass}">${growthSign}${fmtPerc(growth)}</span></td>
-            <td>${invoices}</td>
-            <td>${fmtMoney(avgTicket)}</td>
-            <td style="color:var(--primary-dark); font-weight:700;">${visitors > 0 ? visitors.toLocaleString() : '-'}</td>
+            <td>${growthDisplay}</td>
+            <td>${invoicesDisplay}</td>
+            <td>${avgTicketDisplay}</td>
+            <td style="color:var(--primary-dark); font-weight:700;">${visitorsDisplay}</td>
             <td style="color:var(--text-muted);">${visitorsLY > 0 ? visitorsLY.toLocaleString() : '-'}</td>
-            <td>${fmtMoney(custVal)}</td>
-            <td><strong>${visitors > 0 ? fmtPerc(convRate) : '-'}</strong></td>
+            <td>${custValDisplay}</td>
+            <td><strong>${convRateDisplay}</strong></td>
           </tr>
         `;
       }
@@ -2046,11 +2070,13 @@
       const totalConvRate = totalVisitors > 0 ? (totalInvoices / totalVisitors) * 100 : 0;
       const totalGrowthSign = totalGrowth >= 0 ? '+' : '';
       const totalGrowthClass = totalGrowth >= 0 ? 'badge-green' : 'badge-red';
+      const totalDailyTgtDisplay = totalDailyTarget > 0 ? fmtMoney(totalDailyTarget) : '-';
 
       rowsHtml += `
         <tr class="total-row">
           <td colspan="2">المجموع التراكمي (MTD)</td>
           <td>${fmtMoney(totalSales)}</td>
+          <td style="color:var(--primary); font-weight:800;">${totalDailyTgtDisplay}</td>
           <td>${fmtMoney(totalSalesLY)}</td>
           <td><span class="badge-status ${totalGrowthClass}">${totalGrowthSign}${fmtPerc(totalGrowth)}</span></td>
           <td>${totalInvoices.toLocaleString()}</td>
