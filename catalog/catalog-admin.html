@@ -3770,9 +3770,9 @@
         }
         
         const uploadData = await uploadRes.json();
-        progressText.textContent = `تم الرفع بنجاح! جاري تشغيل سكريبت الذكاء الاصطناعي (OCR) وقراءة ملصقات الصور... 🔍⏳`;
+        progressText.textContent = `تم رفع ${uploadData.count || files.length} صور بنجاح! جاري تشغيل معالجة الذكاء الاصطناعي... 🔍⏳`;
         
-        // Step 2: Run processing
+        // Step 2: Trigger background OCR processing
         const processRes = await fetch('/api/catalog/ocr/process', {
           method: 'POST',
           headers: {
@@ -3781,12 +3781,63 @@
         });
         
         if (!processRes.ok) {
-          const err = await processRes.json();
-          throw new Error(err.error || 'فشل معالجة الصور بالـ OCR');
+          let msg = 'فشل تشغيل معالجة الصور';
+          try {
+            const err = await processRes.json();
+            msg = err.error || msg;
+          } catch (e) {}
+          throw new Error(msg);
         }
         
-        const processData = await processRes.json();
-        ocrProcessedItems = processData.results || [];
+        // Step 3: Poll /api/catalog/ocr/status until completed
+        const pollInterval = 1500;
+        let finalResults = [];
+        
+        while (true) {
+          await new Promise(r => setTimeout(r, pollInterval));
+          
+          let statusRes;
+          try {
+            statusRes = await fetch('/api/catalog/ocr/status', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${userSessionToken}`
+              }
+            });
+          } catch (netErr) {
+            console.warn('Status poll network error, retrying...', netErr);
+            continue;
+          }
+          
+          if (!statusRes.ok) {
+            continue;
+          }
+          
+          let statusData;
+          try {
+            statusData = await statusRes.json();
+          } catch (jsonErr) {
+            continue;
+          }
+          
+          if (statusData.error) {
+            throw new Error(statusData.error);
+          }
+          
+          const cur = statusData.current || 0;
+          const tot = statusData.total || files.length;
+          const pct = tot > 0 ? Math.round((cur / tot) * 100) : 0;
+          const currentFile = statusData.current_file ? ` (${statusData.current_file})` : '';
+          
+          progressText.textContent = `جاري قراءة الصور بالذكاء الاصطناعي... ${cur} من أصل ${tot} [${pct}%]${currentFile} 🔍⏳`;
+          
+          if (statusData.completed) {
+            finalResults = statusData.results || [];
+            break;
+          }
+        }
+        
+        ocrProcessedItems = finalResults;
         
         progressContainer.style.display = 'none';
         reviewContainer.style.display = 'block';
