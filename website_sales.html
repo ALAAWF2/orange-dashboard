@@ -185,19 +185,6 @@
     .gw-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
     .gw-bar-bg { height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
     .gw-bar-fill { height: 100%; background: var(--primary); border-radius: 5px; }
-    .nav-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
-    .nav-tab {
-      padding: 10px 18px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-muted);
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.2s;
-    }
-    .nav-tab:hover { color: var(--primary); }
-    .nav-tab.active { color: var(--primary); border-color: var(--primary); }
     .table-container { overflow-x: auto; max-height: 550px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: right; }
     th {
@@ -211,10 +198,6 @@
     }
     td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
     tr:hover td { background-color: #f8fafc; }
-    .diff-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-    .diff-zero { background: #dcfce7; color: #166534; }
-    .diff-minor { background: #fef3c7; color: #92400e; }
-    .diff-unavail { background: #f1f5f9; color: #64748b; }
     .filter-search { padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 260px; }
     .alert-box {
       background: #fffbeb;
@@ -488,15 +471,9 @@
       </div>
     </div>
 
-    <div class="nav-tabs">
-      <div class="nav-tab active" onclick="switchTab('tab-daily', this)">جدول الأيام التفصيلي (245 يوماً)</div>
-      <div class="nav-tab" onclick="switchTab('tab-reconciliations', this)">سجل التسويات والفروق المعتمد (3,671 قيداً)</div>
-      <div class="nav-tab" onclick="switchTab('tab-decisions', this)">تعريفات الحساب المعتمدة</div>
-    </div>
-
-    <div id="tab-daily" class="box" style="display: block;">
+    <div class="box">
       <div class="box-header">
-        <div class="box-title">سجل الأيام التفصيلي والمطابقة اليومية</div>
+        <div class="box-title">جدول الأيام التفصيلي</div>
         <input type="text" id="daily-search" class="filter-search" placeholder="بحث بالتاريخ (مثال: 2026-08)..." onkeyup="filterDailyTable()">
       </div>
       <div class="table-container">
@@ -504,18 +481,17 @@
           <thead>
             <tr>
               <th>التاريخ</th>
-              <th>المبيعات (C)</th>
-              <th>المرتجع (D)</th>
-              <th>الصافي (E)</th>
-              <th>الطلبات (H)</th>
-              <th>القطع (T)</th>
-              <th>الزوار (F)</th>
-              <th>الاستفادة (G)</th>
+              <th>المبيعات</th>
+              <th>المرتجع</th>
+              <th>الصافي</th>
+              <th>الطلبات</th>
+              <th>القطع</th>
+              <th>الزوار</th>
+              <th>نسبة التحويل</th>
               <th>متوسط قيمة الفاتورة</th>
               <th>متوسط القطع لكل فاتورة</th>
-              <th>الإعلانات (K)</th>
-              <th>المعارض (V)</th>
-              <th>حالة المطابقة</th>
+              <th>مبيعات الإعلانات</th>
+              <th>مبيعات المعارض</th>
             </tr>
           </thead>
           <tbody id="tbody-daily"></tbody>
@@ -523,94 +499,6 @@
       </div>
     </div>
 
-    <div id="tab-reconciliations" class="box" style="display: none;">
-      <div class="box-header">
-        <div class="box-title">سجل التسويات والفروق التاريخية المثبتة بالأسباب الدقيقة</div>
-        <div style="display: flex; gap: 10px;">
-          <select id="recon-category-filter" class="filter-search" style="width: 220px;" onchange="filterReconTable()">
-            <option value="ALL">جميع فئات التسويات</option>
-            <option value="MissingBeforeConnect">بيانات ما قبل الربط التحليلي</option>
-            <option value="ERPReport3002">مرجع تقرير 3002 لشهر أغسطس</option>
-            <option value="IntradaySnapshot">توقيت تسجيل الإكسل مبكراً</option>
-            <option value="FormulaShift">انزياح معادلة الإكسل ($L$51 / $C$51)</option>
-            <option value="DefinitionDivergence">اختلاف تعريف مبيعات المعارض</option>
-            <option value="CustomerLookahead">سجل إيميلات العملاء الثابت</option>
-            <option value="InternalWarehouseCorrection">تسويات مستودع داخلية في فبراير</option>
-            <option value="OrderStatusTransition">تغير حالة الطلب بعد التسجيل</option>
-          </select>
-          <input type="text" id="recon-search" class="filter-search" placeholder="بحث في السجل..." onkeyup="filterReconTable()">
-        </div>
-      </div>
-      <div class="table-container">
-        <table id="table-recon">
-          <thead>
-            <tr>
-              <th>التاريخ</th>
-              <th>التبويب والخلية</th>
-              <th>المؤشر</th>
-              <th>قيمة الإكسل</th>
-              <th>قيمة المصدر</th>
-              <th>الفرق</th>
-              <th>تصنيف السبب</th>
-              <th>ملاحظة المطابقة</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-recon"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="tab-decisions" class="box" style="display: none;">
-      <div class="box-header">
-        <div class="box-title">تعريفات الحساب المعتمدة</div>
-        <span class="kpi-tag tag-formula">مطبقة في الداشبورد</span>
-      </div>
-      <div style="line-height: 1.8; font-size: 14px;">
-        <p style="margin-bottom: 16px; color: var(--text-muted);">
-          يستخدم الداشبورد مدخلات الأيام المحفوظة من الملف ويعيد حساب النسب والمتوسطات من عناصرها. تُعرض قراءة المصدر الحالية بشكل منفصل في سجل الفروق.
-        </p>
-
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 16px;">
-          <h3 style="font-size: 15px; color: var(--navy); margin-bottom: 8px;">1. سقطة صيغة إجمالي شهر يوليو في الإكسل (استثناء 31 يوليو)</h3>
-          <p style="font-size: 13px; color: #475569; margin-bottom: 8px;">
-            <strong>المشكلة السابقة:</strong> صيغة إجمالي يوليو توقفت عند يوم 30 يوليو واستثنت يوم 31 يوليو، بينما صيغة المرتجعات شملت الشهر كاملًا.
-          </p>
-          <p style="font-size: 13px; color: var(--primary); font-weight: 600;">
-            الداشبورد يجمع جميع أيام الفترة المحددة، لذلك يشمل 31 يوليو ولا يكرر خطأ نطاق الجمع القديم.
-          </p>
-        </div>
-
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 16px;">
-          <h3 style="font-size: 15px; color: var(--navy); margin-bottom: 8px;">2. انزياح مراجع صيغ الإعلانات في أواخر أغسطس (أيام 25 إلى 31 أغسطس)</h3>
-          <p style="font-size: 13px; color: #475569; margin-bottom: 8px;">
-            <strong>المشكلة السابقة:</strong> صيغ استفادة الإعلانات وحصتها في آخر سبعة أيام من أغسطس كانت تشير إلى بيانات يوم سابق بدل بيانات اليوم نفسه.
-          </p>
-          <p style="font-size: 13px; color: var(--primary); font-weight: 600;">
-            الداشبورد يحسب طلبات إعلان اليوم ÷ زوار إعلان اليوم لكل سطر، ثم يحسب الفترة من إجمالي الطلبات ÷ إجمالي الزوار.
-          </p>
-        </div>
-
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 16px;">
-          <h3 style="font-size: 15px; color: var(--navy); margin-bottom: 8px;">3. تعريف مبيعات المعارض وإجمالي أورانج</h3>
-          <p style="font-size: 13px; color: #475569; margin-bottom: 8px;">
-            <strong>تعريف الملف:</strong> مبيعات المعارض تساوي إجمالي مبيعات أورانج ناقص مبيعات الموقع قبل المرتجعات.
-          </p>
-          <p style="font-size: 13px; color: var(--primary); font-weight: 600;">
-            مبيعات المعارض في هذا العرض = إجمالي مبيعات أورانج − مبيعات الموقع قبل المرتجعات، كما يعرفها الملف.
-          </p>
-        </div>
-
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 18px;">
-          <h3 style="font-size: 15px; color: var(--navy); margin-bottom: 8px;">4. مصادر مبيعات شهر أغسطس</h3>
-          <p style="font-size: 13px; color: #475569; margin-bottom: 8px;">
-            <strong>المعتمد:</strong> صافي المبيعات اليومية مأخوذ من قيمة Warehouse المصححة في PostgreSQL، وهي مطابقة لقيمة الملف لجميع الأيام المشمولة.
-          </p>
-          <p style="font-size: 13px; color: var(--primary); font-weight: 600;">
-            لا يبدّل المحرك مصدر الحساب حسب اسم الشهر. تبقى WooCommerce وGA4 وReport 3002 مصادر مقارنة مستقلة.
-          </p>
-        </div>
-      </div>
-    </div>
   </main>
 
   <script>
@@ -629,7 +517,6 @@
         DASHBOARD_DATA = await res.json();
         renderPeriod(CURRENT_PERIOD);
         renderDailyTable();
-        renderReconciliationsTable();
       } catch (err) {
         console.error('Failed to load data from primary path, trying fallback...', err);
         try {
@@ -637,7 +524,6 @@
           DASHBOARD_DATA = await res2.json();
           renderPeriod(CURRENT_PERIOD);
           renderDailyTable();
-          renderReconciliationsTable();
         } catch (err2) {
           document.body.innerHTML = '<div style="padding: 40px; text-align: center; color: red;">تعذر تحميل بيانات الداشبورد: ' + err2.message + '</div>';
         }
@@ -755,26 +641,6 @@
 
       DASHBOARD_DATA.daily_records.forEach(d => {
         const k = d.kpis;
-        let badgeClass = 'diff-zero';
-        let badgeText = 'مطابق';
-
-        if (d.reconciliations && d.reconciliations.length > 0) {
-          const cat = d.reconciliations[0].category;
-          if (cat === 'ERPReport3002') {
-            badgeClass = 'diff-minor';
-            badgeText = 'مرجع 3002';
-          } else if (cat === 'MissingBeforeConnect') {
-            badgeClass = 'diff-unavail';
-            badgeText = 'قبل الربط التحليلي';
-          } else if (cat === 'IntradaySnapshot') {
-            badgeClass = 'diff-minor';
-            badgeText = 'لقطة مبكرة';
-          } else {
-            badgeClass = 'diff-minor';
-            badgeText = 'فرق مسجل';
-          }
-        }
-
         const tr = document.createElement('tr');
         tr.dataset.date = d.date;
         tr.innerHTML = `
@@ -790,7 +656,6 @@
           <td>${k.upt ? k.upt.toFixed(1) : '-'}</td>
           <td>${fmtMoney(k.ads_revenue)}</td>
           <td>${fmtMoney(k.showroom_sales)}</td>
-          <td><span class="diff-badge ${badgeClass}">${badgeText}</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -803,50 +668,6 @@
         const text = r.innerText.toLowerCase();
         r.style.display = text.includes(q) ? '' : 'none';
       });
-    }
-
-    function renderReconciliationsTable() {
-      if (!DASHBOARD_DATA || !DASHBOARD_DATA.reconciliations) return;
-      const tbody = document.getElementById('tbody-recon');
-      tbody.innerHTML = '';
-
-      DASHBOARD_DATA.reconciliations.slice(0, 1000).forEach(r => {
-        const tr = document.createElement('tr');
-        tr.dataset.category = r.category;
-        tr.dataset.search = (r.date + ' ' + r.sheet + ' ' + r.cell + ' ' + r.metric_label_ar + ' ' + r.reason_ar).toLowerCase();
-        tr.innerHTML = `
-          <td><strong>${r.date}</strong></td>
-          <td>${r.sheet}!${r.cell}</td>
-          <td><strong>${r.metric_label_ar}</strong></td>
-          <td>${r.excel_reference !== null ? r.excel_reference : '<span style="color:#94a3b8">فارغ</span>'}</td>
-          <td>${r.source_actual !== null ? r.source_actual : '<span style="color:#94a3b8">غير متاح</span>'}</td>
-          <td style="color: var(--danger); font-weight: 600;">${r.difference !== null ? r.difference.toFixed(2) : '-'}</td>
-          <td><span class="diff-badge diff-minor">${r.category}</span></td>
-          <td style="font-size: 12px; color: #475569;">${r.reason_ar}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterReconTable() {
-      const cat = document.getElementById('recon-category-filter').value;
-      const q = document.getElementById('recon-search').value.toLowerCase();
-      const rows = document.querySelectorAll('#tbody-recon tr');
-
-      rows.forEach(r => {
-        const matchesCat = (cat === 'ALL' || r.dataset.category === cat);
-        const matchesSearch = (!q || r.dataset.search.includes(q));
-        r.style.display = (matchesCat && matchesSearch) ? '' : 'none';
-      });
-    }
-
-    function switchTab(tabId, el) {
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      if (el) el.classList.add('active');
-
-      document.getElementById('tab-daily').style.display = (tabId === 'tab-daily') ? 'block' : 'none';
-      document.getElementById('tab-reconciliations').style.display = (tabId === 'tab-reconciliations') ? 'block' : 'none';
-      document.getElementById('tab-decisions').style.display = (tabId === 'tab-decisions') ? 'block' : 'none';
     }
 
     window.addEventListener('DOMContentLoaded', initDashboard);
