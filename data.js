@@ -960,16 +960,8 @@ const EMPLOYEES = [
         "name": "ادريس شافي بانقاسيري",
         "startDate": "2020-02-22",
         "manager": "المنطقة الغربية",
-        "showroom": "1008-48 - Jeddah Park و 1002-05-Haifa Mall",
+        "showroom": "1002-05-Haifa Mall و 1008-48 - Jeddah Park",
         "showroomDetails": [
-            {
-                "name": "1008-48 - Jeddah Park",
-                "manager": "المنطقة الغربية",
-                "codes": [
-                    "1008-C",
-                    "1008-E"
-                ]
-            },
             {
                 "name": "1002-05-Haifa Mall",
                 "manager": "المنطقة الغربية",
@@ -977,9 +969,17 @@ const EMPLOYEES = [
                     "1002-C",
                     "1002-E"
                 ]
+            },
+            {
+                "name": "1008-48 - Jeddah Park",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1008-C",
+                    "1008-E"
+                ]
             }
         ],
-        "addressBooks": "1008-C;1008-E;1002-C;1002-E"
+        "addressBooks": "1002-C;1002-E;1008-C;1008-E"
     },
     {
         "employeeId": "1088-زين ال عبيد ايشه",
@@ -7439,7 +7439,7 @@ const EMPLOYEES = [
         "employeeId": "5016-عهود سالم",
         "personnelNumber": "5016",
         "name": "عهود سالم",
-        "startDate": "2026-09-01",
+        "startDate": "2026-09-02",
         "manager": "محمدكلو",
         "showroom": "1113-51-Park Avenue Riyadh",
         "showroomDetails": [
