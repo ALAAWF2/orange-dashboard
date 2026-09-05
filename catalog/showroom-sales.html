@@ -807,6 +807,9 @@
         <button class="tab-btn" id="tabBtnTop" onclick="switchTab('top')" role="tab">
           <i class="bi bi-trophy-fill"></i> الأعلى مبيعاً والفئات
         </button>
+        <button class="tab-btn" id="tabBtnChallenge" onclick="switchTab('challenge')" role="tab">
+          <i class="bi bi-fire" style="color:var(--primary);"></i> تحدي مبيعات الفريق (لحافات ولبادات) <span class="tab-badge" id="challengeBadgeCount">0</span>
+        </button>
       </div>
 
       <!-- TAB 1: Daily Sales -->
@@ -926,6 +929,138 @@
           </div>
         </div>
       </div>
+
+      <!-- TAB 4: Team Sales Challenge -->
+      <div id="tabChallenge" class="content-box" style="display: none;">
+        <div class="content-header">
+          <div>
+            <h2><i class="bi bi-trophy-fill" style="color:var(--primary);"></i> تحدي مبيعات الفريق — اللحافات واللبادات (Team Sales Challenge)</h2>
+            <div id="challengePeriodSubtitle" style="font-size:0.84rem; color:var(--text-muted); margin-top:4px;">
+              متابعة أداء موظفي المعرض وتصنيف مبيعات اللحافات واللبادات حسب شرائح الأسعار الرسمية
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
+              <label for="challengeScopeSelect" class="form-label mb-0 small fw-bold text-muted">النطاق:</label>
+              <select id="challengeScopeSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onChallengeScopeChange(this.value)">
+                <option value="month">كامل الشهر (MTD)</option>
+                <option value="day">يوم محدد</option>
+              </select>
+            </div>
+            <div id="challengeDateContainer" style="display: none;">
+              <input type="date" id="challengeDateInput" class="form-control form-control-sm fw-bold" onchange="onChallengeDateChange(this.value)">
+            </div>
+            <button onclick="exportTableToCsv('challengeQuiltsBody', 'Orange_Quilts_Challenge')" class="btn-action-sm">
+              <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير اللحافات CSV
+            </button>
+            <button onclick="exportTableToCsv('challengeToppersBody', 'Orange_Toppers_Challenge')" class="btn-action-sm">
+              <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير اللبادات CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Challenge KPI Mini-Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid var(--primary) !important;">
+              <div class="text-muted small fw-bold">إجمالي مبيع لحافات كينغ</div>
+              <div class="fs-4 fw-bold" style="color:var(--text-main); font-variant-numeric: tabular-nums;" id="challengeTotalQuiltsQty">0 قطعة</div>
+              <div class="small fw-bold" style="color:var(--primary-dark);" id="challengeTotalQuiltsAmt">0 ر.س</div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid var(--accent) !important;">
+              <div class="text-muted small fw-bold">إجمالي مبيع اللبادات</div>
+              <div class="fs-4 fw-bold" style="color:var(--text-main); font-variant-numeric: tabular-nums;" id="challengeTotalToppersQty">0 قطعة</div>
+              <div class="small fw-bold" style="color:var(--accent);" id="challengeTotalToppersAmt">0 ر.س</div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid #f59e0b !important;">
+              <div class="text-muted small fw-bold">🥇 بطل اللحافات كينغ</div>
+              <div class="fs-5 fw-bold text-truncate" style="color:var(--text-main);" id="challengeTopQuiltSeller">—</div>
+              <div class="small fw-bold text-muted" id="challengeTopQuiltSellerSub">0 قطعة</div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid #8b5cf6 !important;">
+              <div class="text-muted small fw-bold">🥇 بطل اللبادات</div>
+              <div class="fs-5 fw-bold text-truncate" style="color:var(--text-main);" id="challengeTopTopperSeller">—</div>
+              <div class="small fw-bold text-muted" id="challengeTopTopperSellerSub">0 قطعة</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: King Quilts Table -->
+        <div class="mb-5">
+          <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+            <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: var(--text-main);">
+              <span style="color: var(--primary);">KING SIZE : مبيع لحافات</span> (تحدي أطقم اللحاف كينغ)
+            </h3>
+            <span class="badge" style="background: var(--primary-light); color: var(--primary-dark); font-weight: 800;" id="challengeQuiltsBadge">0 موظف</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 45px; text-align:center;">#</th>
+                  <th style="min-width: 140px;">إسم الموظف</th>
+                  <th style="text-align:center;">199</th>
+                  <th style="text-align:center;">299</th>
+                  <th style="text-align:center;">399</th>
+                  <th style="text-align:center;">499_495</th>
+                  <th style="text-align:center;">599_595</th>
+                  <th style="text-align:center;">699_695</th>
+                  <th style="text-align:center;">799_795</th>
+                  <th style="text-align:center;">899_895</th>
+                  <th style="text-align:center;">999_995</th>
+                  <th style="text-align:center;">1199</th>
+                  <th style="text-align:center;">1299</th>
+                  <th style="text-align:center; background:#f59e0b; color:#fff;">أجمالي عدد اللحافات</th>
+                  <th style="text-align:center; background:var(--primary); color:#fff;">إجمالي قيمة اللحافات</th>
+                </tr>
+              </thead>
+              <tbody id="challengeQuiltsBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 2: Toppers Table -->
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+            <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: var(--text-main);">
+              <span style="color: var(--accent);">مبيع اللبادات : KING SIZE + QUEEN SIZE + FULL SIZE + TWIN SIZE</span> (تحدي اللبادات)
+            </h3>
+            <span class="badge" style="background: var(--accent-light); color: var(--accent); font-weight: 800;" id="challengeToppersBadge">0 موظف</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 45px; text-align:center;">#</th>
+                  <th style="min-width: 140px;">إسم الموظف</th>
+                  <th style="text-align:center;">TWIN 179</th>
+                  <th style="text-align:center;">FULL 189</th>
+                  <th style="text-align:center;">FULL 249</th>
+                  <th style="text-align:center;">FULL 299</th>
+                  <th style="text-align:center;">QUEEN 189</th>
+                  <th style="text-align:center;">KING 99</th>
+                  <th style="text-align:center;">KING 199</th>
+                  <th style="text-align:center;">KING 399</th>
+                  <th style="text-align:center;">KING 499</th>
+                  <th style="text-align:center; background:#27ae60; color:#fff;">أجمالي عدد البادات</th>
+                  <th style="text-align:center; background:#1e7e34; color:#fff;">إجمالي قيمة البادات</th>
+                </tr>
+              </thead>
+              <tbody id="challengeToppersBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -958,6 +1093,9 @@
     let selectedStoreName = null;
     let selectedMonthPrefix = toLocalYmd(new Date()).slice(0, 7);
     let printInProgress = false;
+    let teamChallengeData = null;
+    let challengeScope = 'month';
+    let challengeSelectedDate = null;
 
     const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -1151,7 +1289,7 @@
           window.AverageBillProgram.load(),
           window.ExpectedCommissionVisibility.load()
         ]);
-        const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes, dailyTargetsRes] = await Promise.all([
+        const [mgmtRes, empRes, incRes, prodRes, outletSalesRes, updatedRes, dailyTargetsRes, challengeRes] = await Promise.all([
           fetch('../summary.json?_=' + Date.now()).catch(() => null),
           fetch('../employees_data.json?_=' + Date.now()).catch(() => null),
           averageBillProgramState.enabled
@@ -1160,7 +1298,8 @@
           fetch('products.json?_=' + Date.now()).catch(() => null),
           fetch('sales_by_outlet.json?_=' + Date.now()).catch(() => null),
           fetch('last_updated.json?_=' + Date.now()).catch(() => null),
-          fetch('../daily_targets.json?_=' + Date.now()).catch(() => null)
+          fetch('../daily_targets.json?_=' + Date.now()).catch(() => null),
+          fetch('../team_sales_challenge.json?_=' + Date.now()).catch(() => null)
         ]);
 
         mgmtData = await readJsonResponse(mgmtRes);
@@ -1172,6 +1311,12 @@
         catalogUpdatedAt = updatedData?.last_updated || null;
         const dtRaw = await readJsonResponse(dailyTargetsRes);
         dailyTargetsData = dtRaw?.targets || dtRaw || {};
+
+        teamChallengeData = await readJsonResponse(challengeRes);
+        if (!teamChallengeData) {
+          const fallbackChallenge = await fetch('team_sales_challenge.json?_=' + Date.now()).catch(() => null);
+          teamChallengeData = await readJsonResponse(fallbackChallenge);
+        }
 
         if (!mgmtData?.stores || !Array.isArray(mgmtData.sales)) {
           throw new Error('ملف ملخص المبيعات غير متوفر أو غير صالح.');
@@ -1735,6 +1880,9 @@
 
       // Top Products & Categories
       renderTopProductsAndCategories(selectedStoreName);
+
+      // Team Sales Challenge (Quilts & Toppers)
+      renderTeamChallengeData();
 
       document.getElementById('printReportButton').disabled = false;
     }
@@ -3008,12 +3156,13 @@
       const tabs = [
         { key: 'daily', divId: 'tabDaily', btnId: 'tabBtnDaily' },
         { key: 'employees', divId: 'tabEmployees', btnId: 'tabBtnEmployees' },
-        { key: 'top', divId: 'tabTop', btnId: 'tabBtnTop' }
+        { key: 'top', divId: 'tabTop', btnId: 'tabBtnTop' },
+        { key: 'challenge', divId: 'tabChallenge', btnId: 'tabBtnChallenge' }
       ];
 
       tabs.forEach(t => {
         const tabEl = document.getElementById(t.divId);
-        const btnEl = document.getElementById(t.btnId) || document.getElementById('tabBtnEmps');
+        const btnEl = document.getElementById(t.btnId);
         const isActive = t.key === tabId;
         if (tabEl) {
           tabEl.style.display = isActive ? 'block' : 'none';
@@ -3022,6 +3171,251 @@
           btnEl.classList.toggle('active', isActive);
         }
       });
+
+      if (tabId === 'challenge') {
+        renderTeamChallengeData();
+      }
+    }
+
+    const QUILT_COLS = ["199", "299", "399", "499_495", "599_595", "699_695", "799_795", "899_895", "999_995", "1199", "1299"];
+    const TOPPER_COLS = ["TWIN_179", "FULL_189", "FULL_249", "FULL_299", "QUEEN_189", "KING_99", "KING_199", "KING_399", "KING_499"];
+
+    function onChallengeScopeChange(scope) {
+      challengeScope = scope;
+      const dateContainer = document.getElementById('challengeDateContainer');
+      if (dateContainer) {
+        dateContainer.style.display = scope === 'day' ? 'inline-block' : 'none';
+      }
+      renderTeamChallengeData();
+    }
+
+    function onChallengeDateChange(val) {
+      challengeSelectedDate = val;
+      renderTeamChallengeData();
+    }
+
+    function renderTeamChallengeData() {
+      if (!selectedStoreCode) return;
+
+      const storeKey = String(selectedStoreCode);
+      const storeData = teamChallengeData?.stores?.[storeKey] || {};
+      const monthData = storeData[selectedMonthPrefix] || null;
+
+      // Setup Date input bounds & defaults
+      const dateInput = document.getElementById('challengeDateInput');
+      if (dateInput && selectedMonthPrefix) {
+        const [y, m] = selectedMonthPrefix.split('-').map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        dateInput.min = `${selectedMonthPrefix}-01`;
+        dateInput.max = `${selectedMonthPrefix}-${String(lastDay).padStart(2, '0')}`;
+        if (!challengeSelectedDate || !challengeSelectedDate.startsWith(selectedMonthPrefix)) {
+          const availableDays = monthData?.days ? Object.keys(monthData.days).sort() : [];
+          challengeSelectedDate = availableDays.length > 0 ? availableDays[availableDays.length - 1] : `${selectedMonthPrefix}-01`;
+        }
+        dateInput.value = challengeSelectedDate;
+      }
+
+      // Determine active section data: month_summary or specific day
+      let activeData = null;
+      if (challengeScope === 'day' && challengeSelectedDate && monthData?.days?.[challengeSelectedDate]) {
+        activeData = monthData.days[challengeSelectedDate];
+      } else if (monthData?.month_summary) {
+        activeData = monthData.month_summary;
+      }
+
+      const quiltsSec = activeData?.quilts || { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
+      const toppersSec = activeData?.toppers || { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
+
+      // Update subtitle
+      const subtitleEl = document.getElementById('challengePeriodSubtitle');
+      if (subtitleEl) {
+        if (challengeScope === 'day' && challengeSelectedDate) {
+          subtitleEl.textContent = `مبيعات يوم: ${challengeSelectedDate} — معرض ${selectedStoreName || selectedStoreCode}`;
+        } else {
+          subtitleEl.textContent = `مبيعات شهر: ${formatMonthLabel(selectedMonthPrefix)} (تراكمي) — معرض ${selectedStoreName || selectedStoreCode}`;
+        }
+      }
+
+      // Update Badge Count
+      const badgeCount = document.getElementById('challengeBadgeCount');
+      if (badgeCount) {
+        const totalParticipants = new Set([
+          ...quiltsSec.employees.map(e => e.id),
+          ...toppersSec.employees.map(e => e.id)
+        ]).size;
+        badgeCount.textContent = totalParticipants;
+      }
+
+      // Update KPI Cards
+      const qQtyEl = document.getElementById('challengeTotalQuiltsQty');
+      const qAmtEl = document.getElementById('challengeTotalQuiltsAmt');
+      if (qQtyEl) qQtyEl.textContent = `${(quiltsSec.totals.qty || 0).toLocaleString()} قطعة`;
+      if (qAmtEl) qAmtEl.textContent = `${fmtMoney(quiltsSec.totals.amount)} ر.س`;
+
+      const tQtyEl = document.getElementById('challengeTotalToppersQty');
+      const tAmtEl = document.getElementById('challengeTotalToppersAmt');
+      if (tQtyEl) tQtyEl.textContent = `${(toppersSec.totals.qty || 0).toLocaleString()} قطعة`;
+      if (tAmtEl) tAmtEl.textContent = `${fmtMoney(toppersSec.totals.amount)} ر.س`;
+
+      // Top Quilt Seller
+      const topQuiltEl = document.getElementById('challengeTopQuiltSeller');
+      const topQuiltSub = document.getElementById('challengeTopQuiltSellerSub');
+      if (quiltsSec.employees.length > 0 && quiltsSec.employees[0].qty > 0) {
+        const topQ = quiltsSec.employees[0];
+        const name = empData?.employee_names?.[topQ.id] || topQ.name;
+        if (topQuiltEl) topQuiltEl.textContent = name;
+        if (topQuiltSub) topQuiltSub.textContent = `${topQ.qty} قطعة (${fmtMoney(topQ.amount)} ر.س)`;
+      } else {
+        if (topQuiltEl) topQuiltEl.textContent = '—';
+        if (topQuiltSub) topQuiltSub.textContent = 'لا توجد مبيعات';
+      }
+
+      // Top Topper Seller
+      const topTopperEl = document.getElementById('challengeTopTopperSeller');
+      const topTopperSub = document.getElementById('challengeTopTopperSellerSub');
+      if (toppersSec.employees.length > 0 && toppersSec.employees[0].qty > 0) {
+        const topT = toppersSec.employees[0];
+        const name = empData?.employee_names?.[topT.id] || topT.name;
+        if (topTopperEl) topTopperEl.textContent = name;
+        if (topTopperSub) topTopperSub.textContent = `${topT.qty} قطعة (${fmtMoney(topT.amount)} ر.س)`;
+      } else {
+        if (topTopperEl) topTopperEl.textContent = '—';
+        if (topTopperSub) topTopperSub.textContent = 'لا توجد مبيعات';
+      }
+
+      // Render Tables
+      renderChallengeQuiltsTable(quiltsSec);
+      renderChallengeToppersTable(toppersSec);
+    }
+
+    function renderChallengeQuiltsTable(quiltsSec) {
+      const tbody = document.getElementById('challengeQuiltsBody');
+      const badgeEl = document.getElementById('challengeQuiltsBadge');
+      if (!tbody) return;
+
+      const emps = quiltsSec.employees || [];
+      if (badgeEl) badgeEl.textContent = `${emps.length} موظف`;
+
+      if (emps.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="15" class="text-center text-muted p-4">لا توجد مبيعات لحافات مسجلة لهذه الفترة</td></tr>';
+        return;
+      }
+
+      let rowsHtml = '';
+      emps.forEach((emp, idx) => {
+        const rank = idx + 1;
+        let rankBadge = `<span class="rank-circle rank-other">${rank}</span>`;
+        if (rank === 1) rankBadge = `<span class="rank-circle rank-1">🥇</span>`;
+        else if (rank === 2) rankBadge = `<span class="rank-circle rank-2">🥈</span>`;
+        else if (rank === 3) rankBadge = `<span class="rank-circle rank-3">🥉</span>`;
+
+        const name = empData?.employee_names?.[emp.id] || emp.name;
+        const counts = emp.counts || {};
+
+        let colsHtml = '';
+        QUILT_COLS.forEach(col => {
+          const val = counts[col] || 0;
+          if (val > 0) {
+            colsHtml += `<td class="text-center" style="font-weight:800; color:var(--primary-dark); background:#fff9f4;">${val}</td>`;
+          } else {
+            colsHtml += `<td class="text-center" style="color:var(--text-muted); opacity:0.35;">-</td>`;
+          }
+        });
+
+        rowsHtml += `
+          <tr>
+            <td class="text-center">${rankBadge}</td>
+            <td style="font-weight:800; color:var(--text-main);">${escapeHtml(name)}</td>
+            ${colsHtml}
+            <td class="text-center" style="font-weight:900; background:#fef3c7; color:#92400e;">${emp.qty}</td>
+            <td class="text-center" style="font-weight:900; color:var(--primary-dark);">${fmtMoney(emp.amount)}</td>
+          </tr>
+        `;
+      });
+
+      // Total Row
+      const totals = quiltsSec.totals || { qty: 0, amount: 0, counts: {} };
+      let totColsHtml = '';
+      QUILT_COLS.forEach(col => {
+        const val = totals.counts?.[col] || 0;
+        totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val > 0 ? val : '-'}</td>`;
+      });
+
+      rowsHtml += `
+        <tr class="total-row">
+          <td colspan="2" class="text-center">المجموع العام للمعرض</td>
+          ${totColsHtml}
+          <td class="text-center" style="font-weight:900; font-size:1rem; color:#d97706;">${totals.qty}</td>
+          <td class="text-center" style="font-weight:900; font-size:1rem; color:var(--primary-dark);">${fmtMoney(totals.amount)}</td>
+        </tr>
+      `;
+
+      tbody.innerHTML = rowsHtml;
+    }
+
+    function renderChallengeToppersTable(toppersSec) {
+      const tbody = document.getElementById('challengeToppersBody');
+      const badgeEl = document.getElementById('challengeToppersBadge');
+      if (!tbody) return;
+
+      const emps = toppersSec.employees || [];
+      if (badgeEl) badgeEl.textContent = `${emps.length} موظف`;
+
+      if (emps.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted p-4">لا توجد مبيعات لبادات مسجلة لهذه الفترة</td></tr>';
+        return;
+      }
+
+      let rowsHtml = '';
+      emps.forEach((emp, idx) => {
+        const rank = idx + 1;
+        let rankBadge = `<span class="rank-circle rank-other">${rank}</span>`;
+        if (rank === 1) rankBadge = `<span class="rank-circle rank-1">🥇</span>`;
+        else if (rank === 2) rankBadge = `<span class="rank-circle rank-2">🥈</span>`;
+        else if (rank === 3) rankBadge = `<span class="rank-circle rank-3">🥉</span>`;
+
+        const name = empData?.employee_names?.[emp.id] || emp.name;
+        const counts = emp.counts || {};
+
+        let colsHtml = '';
+        TOPPER_COLS.forEach(col => {
+          const val = counts[col] || 0;
+          if (val > 0) {
+            colsHtml += `<td class="text-center" style="font-weight:800; color:var(--accent); background:#f0fdf4;">${val}</td>`;
+          } else {
+            colsHtml += `<td class="text-center" style="color:var(--text-muted); opacity:0.35;">-</td>`;
+          }
+        });
+
+        rowsHtml += `
+          <tr>
+            <td class="text-center">${rankBadge}</td>
+            <td style="font-weight:800; color:var(--text-main);">${escapeHtml(name)}</td>
+            ${colsHtml}
+            <td class="text-center" style="font-weight:900; background:#dcfce7; color:#15803d;">${emp.qty}</td>
+            <td class="text-center" style="font-weight:900; color:var(--accent);">${fmtMoney(emp.amount)}</td>
+          </tr>
+        `;
+      });
+
+      // Total Row
+      const totals = toppersSec.totals || { qty: 0, amount: 0, counts: {} };
+      let totColsHtml = '';
+      TOPPER_COLS.forEach(col => {
+        const val = totals.counts?.[col] || 0;
+        totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val > 0 ? val : '-'}</td>`;
+      });
+
+      rowsHtml += `
+        <tr class="total-row">
+          <td colspan="2" class="text-center">المجموع العام للمعرض</td>
+          ${totColsHtml}
+          <td class="text-center" style="font-weight:900; font-size:1rem; color:#15803d;">${totals.qty}</td>
+          <td class="text-center" style="font-weight:900; font-size:1rem; color:var(--accent);">${fmtMoney(totals.amount)}</td>
+        </tr>
+      `;
+
+      tbody.innerHTML = rowsHtml;
     }
 
     // CSV Export Helper
