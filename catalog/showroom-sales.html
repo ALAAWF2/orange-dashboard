@@ -1016,6 +1016,7 @@
                   <th style="text-align:center;">999_995</th>
                   <th style="text-align:center;">1199</th>
                   <th style="text-align:center;">1299</th>
+                  <th style="text-align:center;">أخرى</th>
                   <th style="text-align:center; background:#f59e0b; color:#fff;">أجمالي عدد اللحافات</th>
                   <th style="text-align:center; background:var(--primary); color:#fff;">إجمالي قيمة اللحافات</th>
                 </tr>
@@ -1050,6 +1051,7 @@
                   <th style="text-align:center;">KING 199</th>
                   <th style="text-align:center;">KING 399</th>
                   <th style="text-align:center;">KING 499</th>
+                  <th style="text-align:center;">أخرى</th>
                   <th style="text-align:center; background:#27ae60; color:#fff;">أجمالي عدد البادات</th>
                   <th style="text-align:center; background:#1e7e34; color:#fff;">إجمالي قيمة البادات</th>
                 </tr>
@@ -3177,8 +3179,8 @@
       }
     }
 
-    const QUILT_COLS = ["199", "299", "399", "499_495", "599_595", "699_695", "799_795", "899_895", "999_995", "1199", "1299"];
-    const TOPPER_COLS = ["TWIN_179", "FULL_189", "FULL_249", "FULL_299", "QUEEN_189", "KING_99", "KING_199", "KING_399", "KING_499"];
+    const QUILT_COLS = ["199", "299", "399", "499_495", "599_595", "699_695", "799_795", "899_895", "999_995", "1199", "1299", "OTHER"];
+    const TOPPER_COLS = ["TWIN_179", "FULL_189", "FULL_249", "FULL_299", "QUEEN_189", "KING_99", "KING_199", "KING_399", "KING_499", "OTHER"];
 
     function onChallengeScopeChange(scope) {
       challengeScope = scope;
@@ -3317,6 +3319,8 @@
           const val = counts[col] || 0;
           if (val > 0) {
             colsHtml += `<td class="text-center" style="font-weight:800; color:var(--primary-dark); background:#fff9f4;">${val}</td>`;
+          } else if (val < 0) {
+            colsHtml += `<td class="text-center" style="font-weight:800; color:#ef4444; background:#fef2f2;">${val}</td>`;
           } else {
             colsHtml += `<td class="text-center" style="color:var(--text-muted); opacity:0.35;">-</td>`;
           }
@@ -3338,7 +3342,7 @@
       let totColsHtml = '';
       QUILT_COLS.forEach(col => {
         const val = totals.counts?.[col] || 0;
-        totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val > 0 ? val : '-'}</td>`;
+        totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val !== 0 ? val : '-'}</td>`;
       });
 
       rowsHtml += `
@@ -3362,7 +3366,7 @@
       if (badgeEl) badgeEl.textContent = `${emps.length} موظف`;
 
       if (emps.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted p-4">لا توجد مبيعات لبادات مسجلة لهذه الفترة</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted p-4">لا توجد مبيعات لبادات مسجلة لهذه الفترة</td></tr>';
         return;
       }
 
@@ -3382,6 +3386,8 @@
           const val = counts[col] || 0;
           if (val > 0) {
             colsHtml += `<td class="text-center" style="font-weight:800; color:var(--accent); background:#f0fdf4;">${val}</td>`;
+          } else if (val < 0) {
+            colsHtml += `<td class="text-center" style="font-weight:800; color:#ef4444; background:#fef2f2;">${val}</td>`;
           } else {
             colsHtml += `<td class="text-center" style="color:var(--text-muted); opacity:0.35;">-</td>`;
           }
@@ -3403,7 +3409,7 @@
       let totColsHtml = '';
       TOPPER_COLS.forEach(col => {
         const val = totals.counts?.[col] || 0;
-        totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val > 0 ? val : '-'}</td>`;
+        totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val !== 0 ? val : '-'}</td>`;
       });
 
       rowsHtml += `
