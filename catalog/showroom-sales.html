@@ -3211,18 +3211,23 @@
         dateInput.min = `${selectedMonthPrefix}-01`;
         dateInput.max = `${selectedMonthPrefix}-${String(lastDay).padStart(2, '0')}`;
         if (!challengeSelectedDate || !challengeSelectedDate.startsWith(selectedMonthPrefix)) {
-          const availableDays = monthData?.days ? Object.keys(monthData.days).sort() : [];
-          challengeSelectedDate = availableDays.length > 0 ? availableDays[availableDays.length - 1] : `${selectedMonthPrefix}-01`;
+          const nowLocal = toLocalYmd(new Date());
+          if (nowLocal.startsWith(selectedMonthPrefix)) {
+            challengeSelectedDate = nowLocal;
+          } else {
+            const availableDays = monthData?.days ? Object.keys(monthData.days).sort() : [];
+            challengeSelectedDate = availableDays.length > 0 ? availableDays[availableDays.length - 1] : `${selectedMonthPrefix}-01`;
+          }
         }
         dateInput.value = challengeSelectedDate;
       }
 
       // Determine active section data: month_summary or specific day
       let activeData = null;
-      if (challengeScope === 'day' && challengeSelectedDate && monthData?.days?.[challengeSelectedDate]) {
-        activeData = monthData.days[challengeSelectedDate];
-      } else if (monthData?.month_summary) {
-        activeData = monthData.month_summary;
+      if (challengeScope === 'day') {
+        activeData = (challengeSelectedDate && monthData?.days?.[challengeSelectedDate]) ? monthData.days[challengeSelectedDate] : null;
+      } else {
+        activeData = monthData?.month_summary || null;
       }
 
       const quiltsSec = activeData?.quilts || { employees: [], totals: { qty: 0, amount: 0, counts: {} } };

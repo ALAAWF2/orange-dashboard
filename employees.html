@@ -4417,9 +4417,13 @@
                     Object.entries(teamChallengeData.stores).forEach(([sKey, sVal]) => {
                         if (!isStoreInActiveScope(sKey)) return;
                         const mVal = sVal[monthPrefix];
-                        if (mVal && mVal.month_summary) {
-                            (mVal.month_summary.quilts?.employees || []).forEach(e => emps.add(e.id));
-                            (mVal.month_summary.toppers?.employees || []).forEach(e => emps.add(e.id));
+                        if (!mVal) return;
+                        const activeData = (challengeScope === 'day')
+                            ? (challengeSelectedDate && mVal.days?.[challengeSelectedDate] ? mVal.days[challengeSelectedDate] : null)
+                            : (mVal.month_summary || null);
+                        if (activeData) {
+                            (activeData.quilts?.employees || []).forEach(e => emps.add(e.id));
+                            (activeData.toppers?.employees || []).forEach(e => emps.add(e.id));
                         }
                     });
                     count = emps.size;
@@ -4427,12 +4431,17 @@
                     if (!isStoreInActiveScope(selectedBranch)) return;
                     const sVal = teamChallengeData.stores[selectedBranch];
                     const mVal = sVal ? sVal[monthPrefix] : null;
-                    if (mVal && mVal.month_summary) {
-                        const emps = new Set([
-                            ...(mVal.month_summary.quilts?.employees || []).map(e => e.id),
-                            ...(mVal.month_summary.toppers?.employees || []).map(e => e.id)
-                        ]);
-                        count = emps.size;
+                    if (mVal) {
+                        const activeData = (challengeScope === 'day')
+                            ? (challengeSelectedDate && mVal.days?.[challengeSelectedDate] ? mVal.days[challengeSelectedDate] : null)
+                            : (mVal.month_summary || null);
+                        if (activeData) {
+                            const emps = new Set([
+                                ...(activeData.quilts?.employees || []).map(e => e.id),
+                                ...(activeData.toppers?.employees || []).map(e => e.id)
+                            ]);
+                            count = emps.size;
+                        }
                     }
                 }
                 const badgeEl = document.getElementById('challengeBadgeCount');
@@ -4462,20 +4471,25 @@
                     dateInput.max = `${monthPrefix}-${String(lastDay).padStart(2, '0')}`;
 
                     if (!challengeSelectedDate || !challengeSelectedDate.startsWith(monthPrefix)) {
-                        let availableDays = [];
-                        if (selectedBranch !== 'all') {
-                            const mData = teamChallengeData.stores?.[selectedBranch]?.[monthPrefix];
-                            if (mData && mData.days) availableDays = Object.keys(mData.days).sort();
+                        const nowLocal = toLocalYMD(new Date());
+                        if (nowLocal.startsWith(monthPrefix)) {
+                            challengeSelectedDate = nowLocal;
                         } else {
-                            const daysSet = new Set();
-                            Object.entries(teamChallengeData.stores).forEach(([sKey, s]) => {
-                                if (!isStoreInActiveScope(sKey)) return;
-                                const mData = s[monthPrefix];
-                                if (mData && mData.days) Object.keys(mData.days).forEach(d => daysSet.add(d));
-                            });
-                            availableDays = Array.from(daysSet).sort();
+                            let availableDays = [];
+                            if (selectedBranch !== 'all') {
+                                const mData = teamChallengeData.stores?.[selectedBranch]?.[monthPrefix];
+                                if (mData && mData.days) availableDays = Object.keys(mData.days).sort();
+                            } else {
+                                const daysSet = new Set();
+                                Object.entries(teamChallengeData.stores).forEach(([sKey, s]) => {
+                                    if (!isStoreInActiveScope(sKey)) return;
+                                    const mData = s[monthPrefix];
+                                    if (mData && mData.days) Object.keys(mData.days).forEach(d => daysSet.add(d));
+                                });
+                                availableDays = Array.from(daysSet).sort();
+                            }
+                            challengeSelectedDate = availableDays.length > 0 ? availableDays[availableDays.length - 1] : `${monthPrefix}-01`;
                         }
-                        challengeSelectedDate = availableDays.length > 0 ? availableDays[availableDays.length - 1] : `${monthPrefix}-01`;
                     }
                     dateInput.value = challengeSelectedDate;
                 }
@@ -4492,10 +4506,10 @@
                     const monthData = storeData[monthPrefix] || null;
 
                     let activeData = null;
-                    if (challengeScope === 'day' && challengeSelectedDate && monthData?.days?.[challengeSelectedDate]) {
-                        activeData = monthData.days[challengeSelectedDate];
-                    } else if (monthData?.month_summary) {
-                        activeData = monthData.month_summary;
+                    if (challengeScope === 'day') {
+                        activeData = (challengeSelectedDate && monthData?.days?.[challengeSelectedDate]) ? monthData.days[challengeSelectedDate] : null;
+                    } else {
+                        activeData = monthData?.month_summary || null;
                     }
 
                     quiltsSec = activeData?.quilts || { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
@@ -4523,10 +4537,10 @@
                         if (!mVal) return;
 
                         let sData = null;
-                        if (challengeScope === 'day' && challengeSelectedDate && mVal.days?.[challengeSelectedDate]) {
-                            sData = mVal.days[challengeSelectedDate];
-                        } else if (mVal.month_summary) {
-                            sData = mVal.month_summary;
+                        if (challengeScope === 'day') {
+                            sData = (challengeSelectedDate && mVal.days?.[challengeSelectedDate]) ? mVal.days[challengeSelectedDate] : null;
+                        } else {
+                            sData = mVal.month_summary || null;
                         }
                         if (!sData) return;
 
