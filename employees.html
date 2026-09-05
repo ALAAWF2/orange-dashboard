@@ -12,8 +12,10 @@
     <title>Orange | أداء الموظفين</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <!-- Orange Common Assets -->
     <link rel="stylesheet" href="assets/orange-ui.css">
@@ -25,6 +27,23 @@
     <style>
         :root {
             --bs-primary: #fe7900;
+            --primary: #fe7900;
+            --primary-dark: #d86600;
+            --primary-light: #fff0e8;
+            --accent: #27ae60;
+            --accent-light: #e8f8ef;
+            --danger: #e74c3c;
+            --danger-light: #fdecea;
+            --warning: #f39c12;
+            --warning-light: #fef5e7;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --border-radius-sm: 10px;
+            --border-radius: 16px;
+            --border-radius-lg: 24px;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
+            --transition: 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
             --bg-light: #f8f9fa;
             --card-radius: 12px;
             --font-main: 'Tajawal', sans-serif;
@@ -558,11 +577,161 @@
             }
         }
 
-        /* Chart Section Mobile */
-        @media (max-width: 768px) {
-            .card.border-0.shadow-sm[style*="height: 300px"] {
-                height: 250px !important;
-            }
+        /* Tabs Bar */
+        .tabs-container {
+            width: 100%;
+            margin: 0 0 20px 0;
+        }
+
+        .nav-tabs-custom {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-dark);
+            border-bottom-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 -2px 6px rgba(0,0,0,0.03);
+        }
+
+        .tab-badge {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 900;
+        }
+
+        /* Content Cards & Header */
+        .content-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 40px;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .content-header h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin: 0;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-action-sm {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: var(--border-radius-sm);
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-action-sm:hover {
+            background: var(--accent-light);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Custom Data Tables for Challenge */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #ffffff;
+            font-size: 0.88rem;
+        }
+
+        .data-table th {
+            background: #1e293b;
+            color: #ffffff;
+            font-weight: 800;
+            padding: 12px 14px;
+            text-align: right;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .data-table td {
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+
+        .data-table tr:hover td {
+            background-color: #fff8f2;
+        }
+
+        .data-table tr.total-row td {
+            background: #f8fafc;
+            font-weight: 900;
+            border-top: 2px solid var(--primary);
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary-dark);
+        }
+
+        .rank-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.82rem;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
     </style>
 </head>
@@ -778,8 +947,20 @@
             </div>
         </div>
 
-            <!-- List View Container (Default) -->
-            <div id="listViewContainer">
+        <!-- Navigation Tabs -->
+        <div class="tabs-container">
+            <div class="nav-tabs-custom" role="tablist">
+                <button class="tab-btn active" id="tabBtnEmployees" onclick="switchMainTab('employees')" role="tab">
+                    <i class="bi bi-people-fill"></i> ترتيب وأداء الموظفين <span class="tab-badge" id="mainEmpsCount">0</span>
+                </button>
+                <button class="tab-btn" id="tabBtnChallenge" onclick="switchMainTab('challenge')" role="tab">
+                    <i class="bi bi-fire" style="color:var(--primary);"></i> تحدي مبيعات الفريق (لحافات ولبادات) <span class="tab-badge" id="challengeBadgeCount">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- List View Container (Default) -->
+        <div id="listViewContainer">
                 <!-- Summary KPIs -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-3">
@@ -1164,6 +1345,153 @@
                 </div>
             </div>
 
+            <!-- TAB: Team Sales Challenge (Quilts & Toppers) -->
+            <div id="tabChallenge" class="content-box" style="display: none;">
+                <div class="content-header">
+                    <div>
+                        <h2><i class="bi bi-trophy-fill" style="color:var(--primary);"></i> تحدي مبيعات الفريق — اللحافات واللبادات (Team Sales Challenge)</h2>
+                        <div id="challengePeriodSubtitle" style="font-size:0.84rem; color:var(--text-muted); margin-top:4px;">
+                            متابعة أداء موظفي المعرض وتصنيف مبيعات اللحافات واللبادات حسب شرائح الأسعار الرسمية
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
+                            <label for="challengeBranchSelect" class="form-label mb-0 small fw-bold text-muted">الفرع:</label>
+                            <select id="challengeBranchSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onChallengeBranchChange(this.value)">
+                                <option value="all">كافة الفروع</option>
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
+                            <label for="challengeMonthSelect" class="form-label mb-0 small fw-bold text-muted">الشهر:</label>
+                            <select id="challengeMonthSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onChallengeMonthChange(this.value)">
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
+                            <label for="challengeScopeSelect" class="form-label mb-0 small fw-bold text-muted">النطاق:</label>
+                            <select id="challengeScopeSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onChallengeScopeChange(this.value)">
+                                <option value="month">كامل الشهر (MTD)</option>
+                                <option value="day">يوم محدد</option>
+                            </select>
+                        </div>
+                        <div id="challengeDateContainer" style="display: none;">
+                            <input type="date" id="challengeDateInput" class="form-control form-control-sm fw-bold" onchange="onChallengeDateChange(this.value)">
+                        </div>
+                        <button type="button" onclick="exportChallengeTableToCsv('challengeQuiltsBody', 'Orange_Quilts_Challenge')" class="btn-action-sm">
+                            <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير اللحافات CSV
+                        </button>
+                        <button type="button" onclick="exportChallengeTableToCsv('challengeToppersBody', 'Orange_Toppers_Challenge')" class="btn-action-sm">
+                            <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير اللبادات CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Challenge KPI Mini-Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid var(--primary) !important;">
+                            <div class="text-muted small fw-bold">إجمالي مبيع لحافات كينغ</div>
+                            <div class="fs-4 fw-bold" style="color:var(--text-main); font-variant-numeric: tabular-nums;" id="challengeTotalQuiltsQty">0 قطعة</div>
+                            <div class="small fw-bold" style="color:var(--primary-dark);" id="challengeTotalQuiltsAmt">0 ر.س</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid var(--accent) !important;">
+                            <div class="text-muted small fw-bold">إجمالي مبيع اللبادات</div>
+                            <div class="fs-4 fw-bold" style="color:var(--text-main); font-variant-numeric: tabular-nums;" id="challengeTotalToppersQty">0 قطعة</div>
+                            <div class="small fw-bold" style="color:var(--accent);" id="challengeTotalToppersAmt">0 ر.س</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid #f59e0b !important;">
+                            <div class="text-muted small fw-bold">🥇 بطل اللحافات كينغ</div>
+                            <div class="fs-5 fw-bold text-truncate" style="color:var(--text-main);" id="challengeTopQuiltSeller">—</div>
+                            <div class="small fw-bold text-muted" id="challengeTopQuiltSellerSub">0 قطعة</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 bg-white border rounded-3 text-center shadow-sm" style="border-top: 3.5px solid #8b5cf6 !important;">
+                            <div class="text-muted small fw-bold">🥇 بطل اللبادات</div>
+                            <div class="fs-5 fw-bold text-truncate" style="color:var(--text-main);" id="challengeTopTopperSeller">—</div>
+                            <div class="small fw-bold text-muted" id="challengeTopTopperSellerSub">0 قطعة</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 1: King Quilts Table -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: var(--text-main);">
+                            <span style="color: var(--primary);">KING SIZE : مبيع لحافات</span> (تحدي أطقم اللحاف كينغ)
+                        </h3>
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary-dark); font-weight: 800;" id="challengeQuiltsBadge">0 موظف</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px; text-align:center;">#</th>
+                                    <th style="min-width: 140px;">إسم الموظف</th>
+                                    <th id="thQuiltsStore" style="min-width: 110px; display: none;">الفرع</th>
+                                    <th style="text-align:center;">199</th>
+                                    <th style="text-align:center;">299</th>
+                                    <th style="text-align:center;">399</th>
+                                    <th style="text-align:center;">495_499</th>
+                                    <th style="text-align:center;">595_599</th>
+                                    <th style="text-align:center;">695_699</th>
+                                    <th style="text-align:center;">795_799</th>
+                                    <th style="text-align:center;">895_899</th>
+                                    <th style="text-align:center;">995_999</th>
+                                    <th style="text-align:center;">1199</th>
+                                    <th style="text-align:center;">1299</th>
+                                    <th style="text-align:center;">أخرى</th>
+                                    <th style="text-align:center; background:#f59e0b; color:#fff;">أجمالي عدد اللحافات</th>
+                                    <th style="text-align:center; background:var(--primary); color:#fff;">إجمالي قيمة اللحافات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="challengeQuiltsBody">
+                                <!-- Dynamically populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section 2: Toppers Table -->
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: var(--text-main);">
+                            <span style="color: var(--accent);">مبيع اللبادات : KING SIZE + QUEEN SIZE + FULL SIZE + TWIN SIZE</span> (تحدي اللبادات)
+                        </h3>
+                        <span class="badge" style="background: var(--accent-light); color: var(--accent); font-weight: 800;" id="challengeToppersBadge">0 موظف</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px; text-align:center;">#</th>
+                                    <th style="min-width: 140px;">إسم الموظف</th>
+                                    <th id="thToppersStore" style="min-width: 110px; display: none;">الفرع</th>
+                                    <th style="text-align:center;">TWIN 179</th>
+                                    <th style="text-align:center;">FULL 189</th>
+                                    <th style="text-align:center;">FULL 249</th>
+                                    <th style="text-align:center;">FULL 299</th>
+                                    <th style="text-align:center;">QUEEN 189</th>
+                                    <th style="text-align:center;">KING 99</th>
+                                    <th style="text-align:center;">KING 199</th>
+                                    <th style="text-align:center;">KING 399</th>
+                                    <th style="text-align:center;">KING 499</th>
+                                    <th style="text-align:center;">أخرى</th>
+                                    <th style="text-align:center; background:#27ae60; color:#fff;">أجمالي عدد البادات</th>
+                                    <th style="text-align:center; background:#1e7e34; color:#fff;">إجمالي قيمة البادات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="challengeToppersBody">
+                                <!-- Dynamically populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1432,6 +1760,17 @@
             let averageBillIncentivesCache = null; // NEW: Average Bill Incentives
             let top10Chart, branchChart;
 
+            // Team Sales Challenge State
+            let teamChallengeData = null;
+            let currentMainTab = 'employees';
+            let challengeScope = 'month';
+            let challengeSelectedDate = null;
+            let challengeSelectedMonth = null;
+            let challengeSelectedBranch = 'all';
+
+            const QUILT_COLS = ["199", "299", "399", "499_495", "599_595", "699_695", "799_795", "899_895", "999_995", "1199", "1299", "OTHER"];
+            const TOPPER_COLS = ["TWIN_179", "FULL_189", "FULL_249", "FULL_299", "QUEEN_189", "KING_99", "KING_199", "KING_399", "KING_499", "OTHER"];
+
             // Sorting State
             let currentSortColumn = 'sales';
             let currentSortDirection = 'desc';
@@ -1564,13 +1903,14 @@
                         window.AverageBillProgram.load(),
                         window.ExpectedCommissionVisibility.load()
                     ]);
-                    const [empRes, mgmtRes, prodRes, incentivesRes] = await Promise.all([
+                    const [empRes, mgmtRes, prodRes, incentivesRes, challengeRes] = await Promise.all([
                         fetch('employees_data.json'),
                         fetch('management_data.json'),
                         fetch('data/products/employee_products_data.json').catch(() => null),
                         averageBillProgramState.enabled
                             ? fetch('average_bill_incentives.json').catch(() => null)
-                            : Promise.resolve(null)
+                            : Promise.resolve(null),
+                        fetch('team_sales_challenge.json?_=' + Date.now()).catch(() => null)
                     ]);
 
                     const empJson = await empRes.json();
@@ -1605,12 +1945,25 @@
                         employeeProductsData = prodJson.periods || {};
                     }
 
+                    if (challengeRes && challengeRes.ok) {
+                        try {
+                            teamChallengeData = await challengeRes.json();
+                        } catch (e) {
+                            console.error("Error parsing team_sales_challenge.json:", e);
+                        }
+                    }
+
                     window.storesData = storesData;
                     window.storeMeta = storeMeta;
                     window.storeTargets = mgmtJson.targets || [];
 
                     populateFilters();
+                    initChallengeFilters();
                     updatePage();
+
+                    if (window.location.hash === '#challenge' || new URLSearchParams(window.location.search).get('tab') === 'challenge') {
+                        switchMainTab('challenge');
+                    }
 
                     // Debug: Show record count
                     const totalStores = Object.keys(historyData).length;
@@ -1685,11 +2038,23 @@
                 const searchTerm = document.getElementById('searchEmp').value.toLowerCase();
 
                 // Visibility Toggle based on View Mode
-                document.getElementById('listViewContainer').style.display = viewMode === 'list' ? 'block' : 'none';
-                document.getElementById('matrixViewContainer').style.display = viewMode === 'matrix' ? 'block' : 'none';
-                document.getElementById('auditViewContainer').style.display = viewMode === 'audit' ? 'block' : 'none';
-                document.getElementById('perfMatrixContainer').style.display = viewMode === 'perf' ? 'block' : 'none';
-                document.getElementById('tenureViewContainer').style.display = viewMode === 'tenure' ? 'block' : 'none';
+                if (currentMainTab === 'challenge') {
+                    document.getElementById('listViewContainer').style.display = 'none';
+                    document.getElementById('matrixViewContainer').style.display = 'none';
+                    document.getElementById('auditViewContainer').style.display = 'none';
+                    document.getElementById('perfMatrixContainer').style.display = 'none';
+                    document.getElementById('tenureViewContainer').style.display = 'none';
+                    const chalEl = document.getElementById('tabChallenge');
+                    if (chalEl) chalEl.style.display = 'block';
+                } else {
+                    const chalEl = document.getElementById('tabChallenge');
+                    if (chalEl) chalEl.style.display = 'none';
+                    document.getElementById('listViewContainer').style.display = viewMode === 'list' ? 'block' : 'none';
+                    document.getElementById('matrixViewContainer').style.display = viewMode === 'matrix' ? 'block' : 'none';
+                    document.getElementById('auditViewContainer').style.display = viewMode === 'audit' ? 'block' : 'none';
+                    document.getElementById('perfMatrixContainer').style.display = viewMode === 'perf' ? 'block' : 'none';
+                    document.getElementById('tenureViewContainer').style.display = viewMode === 'tenure' ? 'block' : 'none';
+                }
                 document.getElementById('newEmpFilterContainer').style.display = (currentUser.role === 'Admin' && (viewMode === 'list' || viewMode === 'tenure' || viewMode === 'perf')) ? 'block' : 'none';
 
                 // Aggregate employee data
@@ -2254,6 +2619,14 @@
                     renderPerfMatrix();
                 } else if (viewMode === 'tenure') {
                     renderTenureView();
+                }
+
+                const mainEmpsCountEl = document.getElementById('mainEmpsCount');
+                if (mainEmpsCountEl) mainEmpsCountEl.textContent = empList.length;
+
+                updateChallengeBadgeCount();
+                if (currentMainTab === 'challenge') {
+                    renderTeamChallengeData();
                 }
             }
 
@@ -3721,6 +4094,559 @@
                         <td><span class="badge bg-info text-dark">نقل</span></td>
                     </tr>
                 `).join('');
+            }
+
+            // ==========================================
+            // TEAM SALES CHALLENGE (QUILTS & TOPPERS)
+            // ==========================================
+
+            function fmtMoney(num) {
+                if (num == null || isNaN(num)) return '0';
+                return Math.round(Number(num)).toLocaleString('en-US');
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function formatMonthLabel(monthPrefix) {
+                const [year, month] = String(monthPrefix || '').split('-').map(Number);
+                if (!year || !month) return monthPrefix;
+                return new Intl.DateTimeFormat('ar-SA-u-ca-gregory', {
+                    month: 'long',
+                    year: 'numeric'
+                }).format(new Date(year, month - 1, 1));
+            }
+
+            function initChallengeFilters() {
+                if (!teamChallengeData || !teamChallengeData.stores) return;
+
+                // 1. Collect all unique months
+                const monthsSet = new Set();
+                Object.values(teamChallengeData.stores).forEach(s => {
+                    Object.keys(s).forEach(m => {
+                        if (/^\d{4}-\d{2}$/.test(m)) monthsSet.add(m);
+                    });
+                });
+                const sortedMonths = Array.from(monthsSet).sort().reverse();
+                
+                const monthSelect = document.getElementById('challengeMonthSelect');
+                if (monthSelect) {
+                    monthSelect.innerHTML = '';
+                    sortedMonths.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = formatMonthLabel(m);
+                        monthSelect.appendChild(opt);
+                    });
+                    
+                    const nowMonth = toLocalYMD(new Date()).slice(0, 7);
+                    if (sortedMonths.includes(nowMonth)) {
+                        challengeSelectedMonth = nowMonth;
+                    } else if (sortedMonths.length > 0) {
+                        challengeSelectedMonth = sortedMonths[0];
+                    }
+                    monthSelect.value = challengeSelectedMonth;
+                }
+
+                // 2. Populate Branch Select
+                const branchSelect = document.getElementById('challengeBranchSelect');
+                if (branchSelect) {
+                    const currentVal = branchSelect.value || document.getElementById('branchFilter')?.value || 'all';
+                    branchSelect.innerHTML = '<option value="all">كافة الفروع</option>';
+                    
+                    const stores = Object.keys(teamChallengeData.stores).sort();
+                    stores.forEach(sCode => {
+                        const sName = storesData[sCode] || sCode;
+                        const opt = document.createElement('option');
+                        opt.value = sCode;
+                        opt.textContent = sName;
+                        branchSelect.appendChild(opt);
+                    });
+                    
+                    branchSelect.value = currentVal;
+                    challengeSelectedBranch = currentVal;
+                }
+            }
+
+            function switchMainTab(tabId) {
+                currentMainTab = tabId;
+                const btnEmps = document.getElementById('tabBtnEmployees');
+                const btnChal = document.getElementById('tabBtnChallenge');
+                const chalEl = document.getElementById('tabChallenge');
+
+                if (tabId === 'challenge') {
+                    if (btnEmps) btnEmps.classList.remove('active');
+                    if (btnChal) btnChal.classList.add('active');
+
+                    // Hide normal employee view containers
+                    document.getElementById('listViewContainer').style.display = 'none';
+                    document.getElementById('matrixViewContainer').style.display = 'none';
+                    document.getElementById('auditViewContainer').style.display = 'none';
+                    document.getElementById('perfMatrixContainer').style.display = 'none';
+                    document.getElementById('tenureViewContainer').style.display = 'none';
+
+                    if (chalEl) chalEl.style.display = 'block';
+
+                    // Sync branch selection if needed
+                    const mainBranch = document.getElementById('branchFilter')?.value || 'all';
+                    const chalBranchSelect = document.getElementById('challengeBranchSelect');
+                    if (chalBranchSelect && mainBranch !== chalBranchSelect.value) {
+                        chalBranchSelect.value = mainBranch;
+                        challengeSelectedBranch = mainBranch;
+                    }
+
+                    renderTeamChallengeData();
+                } else {
+                    if (btnEmps) btnEmps.classList.add('active');
+                    if (btnChal) btnChal.classList.remove('active');
+                    if (chalEl) chalEl.style.display = 'none';
+
+                    const viewMode = document.getElementById('viewMode')?.value || 'list';
+                    document.getElementById('listViewContainer').style.display = viewMode === 'list' ? 'block' : 'none';
+                    document.getElementById('matrixViewContainer').style.display = viewMode === 'matrix' ? 'block' : 'none';
+                    document.getElementById('auditViewContainer').style.display = viewMode === 'audit' ? 'block' : 'none';
+                    document.getElementById('perfMatrixContainer').style.display = viewMode === 'perf' ? 'block' : 'none';
+                    document.getElementById('tenureViewContainer').style.display = viewMode === 'tenure' ? 'block' : 'none';
+                }
+            }
+
+            function onChallengeBranchChange(val) {
+                challengeSelectedBranch = val;
+                const mf = document.getElementById('branchFilter');
+                if (mf && mf.value !== val) {
+                    mf.value = val;
+                }
+                renderTeamChallengeData();
+            }
+
+            function onChallengeMonthChange(val) {
+                challengeSelectedMonth = val;
+                challengeSelectedDate = null;
+                renderTeamChallengeData();
+            }
+
+            function onChallengeScopeChange(scope) {
+                challengeScope = scope;
+                const dateContainer = document.getElementById('challengeDateContainer');
+                if (dateContainer) {
+                    dateContainer.style.display = scope === 'day' ? 'inline-block' : 'none';
+                }
+                renderTeamChallengeData();
+            }
+
+            function onChallengeDateChange(val) {
+                challengeSelectedDate = val;
+                renderTeamChallengeData();
+            }
+
+            function updateChallengeBadgeCount() {
+                if (!teamChallengeData || !teamChallengeData.stores) return;
+                const monthPrefix = challengeSelectedMonth || toLocalYMD(new Date()).slice(0, 7);
+                const selectedBranch = challengeSelectedBranch || document.getElementById('branchFilter')?.value || 'all';
+
+                let count = 0;
+                if (selectedBranch === 'all') {
+                    const emps = new Set();
+                    Object.values(teamChallengeData.stores).forEach(sVal => {
+                        const mVal = sVal[monthPrefix];
+                        if (mVal && mVal.month_summary) {
+                            (mVal.month_summary.quilts?.employees || []).forEach(e => emps.add(e.id));
+                            (mVal.month_summary.toppers?.employees || []).forEach(e => emps.add(e.id));
+                        }
+                    });
+                    count = emps.size;
+                } else {
+                    const sVal = teamChallengeData.stores[selectedBranch];
+                    const mVal = sVal ? sVal[monthPrefix] : null;
+                    if (mVal && mVal.month_summary) {
+                        const emps = new Set([
+                            ...(mVal.month_summary.quilts?.employees || []).map(e => e.id),
+                            ...(mVal.month_summary.toppers?.employees || []).map(e => e.id)
+                        ]);
+                        count = emps.size;
+                    }
+                }
+                const badgeEl = document.getElementById('challengeBadgeCount');
+                if (badgeEl) badgeEl.textContent = count;
+            }
+
+            function renderTeamChallengeData() {
+                if (!teamChallengeData) return;
+
+                const selectedBranch = challengeSelectedBranch || document.getElementById('challengeBranchSelect')?.value || document.getElementById('branchFilter')?.value || 'all';
+                const monthPrefix = challengeSelectedMonth || document.getElementById('challengeMonthSelect')?.value || toLocalYMD(new Date()).slice(0, 7);
+
+                // Date input setup
+                const dateInput = document.getElementById('challengeDateInput');
+                if (dateInput && monthPrefix) {
+                    const [y, m] = monthPrefix.split('-').map(Number);
+                    const lastDay = new Date(y, m, 0).getDate();
+                    dateInput.min = `${monthPrefix}-01`;
+                    dateInput.max = `${monthPrefix}-${String(lastDay).padStart(2, '0')}`;
+
+                    if (!challengeSelectedDate || !challengeSelectedDate.startsWith(monthPrefix)) {
+                        let availableDays = [];
+                        if (selectedBranch !== 'all') {
+                            const mData = teamChallengeData.stores?.[selectedBranch]?.[monthPrefix];
+                            if (mData && mData.days) availableDays = Object.keys(mData.days).sort();
+                        } else {
+                            const daysSet = new Set();
+                            Object.values(teamChallengeData.stores).forEach(s => {
+                                const mData = s[monthPrefix];
+                                if (mData && mData.days) Object.keys(mData.days).forEach(d => daysSet.add(d));
+                            });
+                            availableDays = Array.from(daysSet).sort();
+                        }
+                        challengeSelectedDate = availableDays.length > 0 ? availableDays[availableDays.length - 1] : `${monthPrefix}-01`;
+                    }
+                    dateInput.value = challengeSelectedDate;
+                }
+
+                let quiltsSec = { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
+                let toppersSec = { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
+                const isAllBranches = (selectedBranch === 'all');
+
+                if (!isAllBranches) {
+                    const storeKey = String(selectedBranch);
+                    const storeData = teamChallengeData.stores?.[storeKey] || {};
+                    const monthData = storeData[monthPrefix] || null;
+
+                    let activeData = null;
+                    if (challengeScope === 'day' && challengeSelectedDate && monthData?.days?.[challengeSelectedDate]) {
+                        activeData = monthData.days[challengeSelectedDate];
+                    } else if (monthData?.month_summary) {
+                        activeData = monthData.month_summary;
+                    }
+
+                    quiltsSec = activeData?.quilts || { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
+                    toppersSec = activeData?.toppers || { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
+
+                    const storeName = storesData[selectedBranch] || selectedBranch;
+                    const subtitleEl = document.getElementById('challengePeriodSubtitle');
+                    if (subtitleEl) {
+                        if (challengeScope === 'day' && challengeSelectedDate) {
+                            subtitleEl.textContent = `مبيعات يوم: ${challengeSelectedDate} — معرض ${storeName}`;
+                        } else {
+                            subtitleEl.textContent = `مبيعات شهر: ${formatMonthLabel(monthPrefix)} (تراكمي) — معرض ${storeName}`;
+                        }
+                    }
+                } else {
+                    // All Branches Aggregation
+                    const quiltsMap = {};
+                    const toppersMap = {};
+                    const qTotals = { qty: 0, amount: 0, counts: {} };
+                    const tTotals = { qty: 0, amount: 0, counts: {} };
+
+                    Object.entries(teamChallengeData.stores || {}).forEach(([sKey, sVal]) => {
+                        const mVal = sVal[monthPrefix];
+                        if (!mVal) return;
+
+                        let sData = null;
+                        if (challengeScope === 'day' && challengeSelectedDate && mVal.days?.[challengeSelectedDate]) {
+                            sData = mVal.days[challengeSelectedDate];
+                        } else if (mVal.month_summary) {
+                            sData = mVal.month_summary;
+                        }
+                        if (!sData) return;
+
+                        const storeName = storesData[sKey] || sKey;
+
+                        // Quilts
+                        if (sData.quilts) {
+                            qTotals.qty += sData.quilts.totals?.qty || 0;
+                            qTotals.amount += sData.quilts.totals?.amount || 0;
+                            Object.entries(sData.quilts.totals?.counts || {}).forEach(([col, cVal]) => {
+                                qTotals.counts[col] = (qTotals.counts[col] || 0) + cVal;
+                            });
+                            (sData.quilts.employees || []).forEach(e => {
+                                if (!quiltsMap[e.id]) {
+                                    quiltsMap[e.id] = { id: e.id, name: e.name, storeName: storeName, qty: 0, amount: 0, counts: {} };
+                                }
+                                quiltsMap[e.id].qty += e.qty || 0;
+                                quiltsMap[e.id].amount += e.amount || 0;
+                                Object.entries(e.counts || {}).forEach(([col, cVal]) => {
+                                    quiltsMap[e.id].counts[col] = (quiltsMap[e.id].counts[col] || 0) + cVal;
+                                });
+                            });
+                        }
+
+                        // Toppers
+                        if (sData.toppers) {
+                            tTotals.qty += sData.toppers.totals?.qty || 0;
+                            tTotals.amount += sData.toppers.totals?.amount || 0;
+                            Object.entries(sData.toppers.totals?.counts || {}).forEach(([col, cVal]) => {
+                                tTotals.counts[col] = (tTotals.counts[col] || 0) + cVal;
+                            });
+                            (sData.toppers.employees || []).forEach(e => {
+                                if (!toppersMap[e.id]) {
+                                    toppersMap[e.id] = { id: e.id, name: e.name, storeName: storeName, qty: 0, amount: 0, counts: {} };
+                                }
+                                toppersMap[e.id].qty += e.qty || 0;
+                                toppersMap[e.id].amount += e.amount || 0;
+                                Object.entries(e.counts || {}).forEach(([col, cVal]) => {
+                                    toppersMap[e.id].counts[col] = (toppersMap[e.id].counts[col] || 0) + cVal;
+                                });
+                            });
+                        }
+                    });
+
+                    const qEmps = Object.values(quiltsMap).sort((a, b) => (b.qty - a.qty) || (b.amount - a.amount));
+                    const tEmps = Object.values(toppersMap).sort((a, b) => (b.qty - a.qty) || (b.amount - a.amount));
+
+                    quiltsSec = { employees: qEmps, totals: qTotals };
+                    toppersSec = { employees: tEmps, totals: tTotals };
+
+                    const subtitleEl = document.getElementById('challengePeriodSubtitle');
+                    if (subtitleEl) {
+                        if (challengeScope === 'day' && challengeSelectedDate) {
+                            subtitleEl.textContent = `مبيعات يوم: ${challengeSelectedDate} — كافة الفروع`;
+                        } else {
+                            subtitleEl.textContent = `مبيعات شهر: ${formatMonthLabel(monthPrefix)} (تراكمي) — كافة الفروع`;
+                        }
+                    }
+                }
+
+                // Update Total Participants Badge
+                const totalParticipants = new Set([
+                    ...quiltsSec.employees.map(e => e.id),
+                    ...toppersSec.employees.map(e => e.id)
+                ]).size;
+                const badgeCount = document.getElementById('challengeBadgeCount');
+                if (badgeCount) badgeCount.textContent = totalParticipants;
+
+                // Update 4 KPI Mini-Cards
+                const qQtyEl = document.getElementById('challengeTotalQuiltsQty');
+                const qAmtEl = document.getElementById('challengeTotalQuiltsAmt');
+                if (qQtyEl) qQtyEl.textContent = `${(quiltsSec.totals.qty || 0).toLocaleString()} قطعة`;
+                if (qAmtEl) qAmtEl.textContent = `${fmtMoney(quiltsSec.totals.amount)} ر.س`;
+
+                const tQtyEl = document.getElementById('challengeTotalToppersQty');
+                const tAmtEl = document.getElementById('challengeTotalToppersAmt');
+                if (tQtyEl) tQtyEl.textContent = `${(toppersSec.totals.qty || 0).toLocaleString()} قطعة`;
+                if (tAmtEl) tAmtEl.textContent = `${fmtMoney(toppersSec.totals.amount)} ر.س`;
+
+                // Top Quilt Seller
+                const topQuiltEl = document.getElementById('challengeTopQuiltSeller');
+                const topQuiltSub = document.getElementById('challengeTopQuiltSellerSub');
+                if (quiltsSec.employees.length > 0 && quiltsSec.employees[0].qty > 0) {
+                    const topQ = quiltsSec.employees[0];
+                    const name = employeeNames?.[topQ.id] || topQ.name;
+                    const storeInfo = isAllBranches && topQ.storeName ? ` (${topQ.storeName})` : '';
+                    if (topQuiltEl) topQuiltEl.textContent = name + storeInfo;
+                    if (topQuiltSub) topQuiltSub.textContent = `${topQ.qty} قطعة (${fmtMoney(topQ.amount)} ر.س)`;
+                } else {
+                    if (topQuiltEl) topQuiltEl.textContent = '—';
+                    if (topQuiltSub) topQuiltSub.textContent = 'لا توجد مبيعات';
+                }
+
+                // Top Topper Seller
+                const topTopperEl = document.getElementById('challengeTopTopperSeller');
+                const topTopperSub = document.getElementById('challengeTopTopperSellerSub');
+                if (toppersSec.employees.length > 0 && toppersSec.employees[0].qty > 0) {
+                    const topT = toppersSec.employees[0];
+                    const name = employeeNames?.[topT.id] || topT.name;
+                    const storeInfo = isAllBranches && topT.storeName ? ` (${topT.storeName})` : '';
+                    if (topTopperEl) topTopperEl.textContent = name + storeInfo;
+                    if (topTopperSub) topTopperSub.textContent = `${topT.qty} قطعة (${fmtMoney(topT.amount)} ر.س)`;
+                } else {
+                    if (topTopperEl) topTopperEl.textContent = '—';
+                    if (topTopperSub) topTopperSub.textContent = 'لا توجد مبيعات';
+                }
+
+                // Render Tables
+                renderChallengeQuiltsTable(quiltsSec, isAllBranches);
+                renderChallengeToppersTable(toppersSec, isAllBranches);
+            }
+
+            function renderChallengeQuiltsTable(quiltsSec, isAllBranches) {
+                const tbody = document.getElementById('challengeQuiltsBody');
+                const badgeEl = document.getElementById('challengeQuiltsBadge');
+                const thStore = document.getElementById('thQuiltsStore');
+                if (!tbody) return;
+
+                if (thStore) thStore.style.display = isAllBranches ? 'table-cell' : 'none';
+
+                const emps = quiltsSec.employees || [];
+                if (badgeEl) badgeEl.textContent = `${emps.length} موظف`;
+
+                const totalCols = isAllBranches ? 16 : 15;
+                if (emps.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="text-center text-muted p-4">لا توجد مبيعات لحافات مسجلة لهذه الفترة</td></tr>`;
+                    return;
+                }
+
+                let rowsHtml = '';
+                emps.forEach((emp, idx) => {
+                    const rank = idx + 1;
+                    let rankBadge = `<span class="rank-circle rank-other">${rank}</span>`;
+                    if (rank === 1) rankBadge = `<span class="rank-circle rank-1">🥇</span>`;
+                    else if (rank === 2) rankBadge = `<span class="rank-circle rank-2">🥈</span>`;
+                    else if (rank === 3) rankBadge = `<span class="rank-circle rank-3">🥉</span>`;
+
+                    const name = employeeNames?.[emp.id] || emp.name;
+                    const counts = emp.counts || {};
+
+                    let colsHtml = '';
+                    QUILT_COLS.forEach(col => {
+                        const val = counts[col] || 0;
+                        if (val > 0) {
+                            colsHtml += `<td class="text-center" style="font-weight:800; color:var(--primary-dark); background:#fff9f4;">${val}</td>`;
+                        } else if (val < 0) {
+                            colsHtml += `<td class="text-center" style="font-weight:800; color:#ef4444; background:#fef2f2;">${val}</td>`;
+                        } else {
+                            colsHtml += `<td class="text-center" style="color:var(--text-muted); opacity:0.35;">-</td>`;
+                        }
+                    });
+
+                    const storeTd = isAllBranches ? `<td style="font-weight:700; color:var(--text-muted); font-size:0.82rem;">${escapeHtml(emp.storeName || '')}</td>` : '';
+
+                    rowsHtml += `
+                        <tr>
+                            <td class="text-center">${rankBadge}</td>
+                            <td style="font-weight:800; color:var(--text-main);">${escapeHtml(name)}</td>
+                            ${storeTd}
+                            ${colsHtml}
+                            <td class="text-center" style="font-weight:900; background:#fef3c7; color:#92400e;">${emp.qty}</td>
+                            <td class="text-center" style="font-weight:900; color:var(--primary-dark);">${fmtMoney(emp.amount)}</td>
+                        </tr>
+                    `;
+                });
+
+                // Total Row
+                const totals = quiltsSec.totals || { qty: 0, amount: 0, counts: {} };
+                let totColsHtml = '';
+                QUILT_COLS.forEach(col => {
+                    const val = totals.counts?.[col] || 0;
+                    totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val !== 0 ? val : '-'}</td>`;
+                });
+
+                const leadColspan = isAllBranches ? 3 : 2;
+                rowsHtml += `
+                    <tr class="total-row">
+                        <td colspan="${leadColspan}" class="text-center">${isAllBranches ? 'المجموع العام لكافة الفروع' : 'المجموع العام للمعرض'}</td>
+                        ${totColsHtml}
+                        <td class="text-center" style="font-weight:900; font-size:1rem; color:#d97706;">${totals.qty}</td>
+                        <td class="text-center" style="font-weight:900; font-size:1rem; color:var(--primary-dark);">${fmtMoney(totals.amount)}</td>
+                    </tr>
+                `;
+
+                tbody.innerHTML = rowsHtml;
+            }
+
+            function renderChallengeToppersTable(toppersSec, isAllBranches) {
+                const tbody = document.getElementById('challengeToppersBody');
+                const badgeEl = document.getElementById('challengeToppersBadge');
+                const thStore = document.getElementById('thToppersStore');
+                if (!tbody) return;
+
+                if (thStore) thStore.style.display = isAllBranches ? 'table-cell' : 'none';
+
+                const emps = toppersSec.employees || [];
+                if (badgeEl) badgeEl.textContent = `${emps.length} موظف`;
+
+                const totalCols = isAllBranches ? 15 : 14;
+                if (emps.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="text-center text-muted p-4">لا توجد مبيعات لبادات مسجلة لهذه الفترة</td></tr>`;
+                    return;
+                }
+
+                let rowsHtml = '';
+                emps.forEach((emp, idx) => {
+                    const rank = idx + 1;
+                    let rankBadge = `<span class="rank-circle rank-other">${rank}</span>`;
+                    if (rank === 1) rankBadge = `<span class="rank-circle rank-1">🥇</span>`;
+                    else if (rank === 2) rankBadge = `<span class="rank-circle rank-2">🥈</span>`;
+                    else if (rank === 3) rankBadge = `<span class="rank-circle rank-3">🥉</span>`;
+
+                    const name = employeeNames?.[emp.id] || emp.name;
+                    const counts = emp.counts || {};
+
+                    let colsHtml = '';
+                    TOPPER_COLS.forEach(col => {
+                        const val = counts[col] || 0;
+                        if (val > 0) {
+                            colsHtml += `<td class="text-center" style="font-weight:800; color:var(--accent); background:#f0fdf4;">${val}</td>`;
+                        } else if (val < 0) {
+                            colsHtml += `<td class="text-center" style="font-weight:800; color:#ef4444; background:#fef2f2;">${val}</td>`;
+                        } else {
+                            colsHtml += `<td class="text-center" style="color:var(--text-muted); opacity:0.35;">-</td>`;
+                        }
+                    });
+
+                    const storeTd = isAllBranches ? `<td style="font-weight:700; color:var(--text-muted); font-size:0.82rem;">${escapeHtml(emp.storeName || '')}</td>` : '';
+
+                    rowsHtml += `
+                        <tr>
+                            <td class="text-center">${rankBadge}</td>
+                            <td style="font-weight:800; color:var(--text-main);">${escapeHtml(name)}</td>
+                            ${storeTd}
+                            ${colsHtml}
+                            <td class="text-center" style="font-weight:900; background:#dcfce7; color:#15803d;">${emp.qty}</td>
+                            <td class="text-center" style="font-weight:900; color:var(--accent);">${fmtMoney(emp.amount)}</td>
+                        </tr>
+                    `;
+                });
+
+                // Total Row
+                const totals = toppersSec.totals || { qty: 0, amount: 0, counts: {} };
+                let totColsHtml = '';
+                TOPPER_COLS.forEach(col => {
+                    const val = totals.counts?.[col] || 0;
+                    totColsHtml += `<td class="text-center" style="font-weight:900; color:var(--text-main);">${val !== 0 ? val : '-'}</td>`;
+                });
+
+                const leadColspan = isAllBranches ? 3 : 2;
+                rowsHtml += `
+                    <tr class="total-row">
+                        <td colspan="${leadColspan}" class="text-center">${isAllBranches ? 'المجموع العام لكافة الفروع' : 'المجموع العام للمعرض'}</td>
+                        ${totColsHtml}
+                        <td class="text-center" style="font-weight:900; font-size:1rem; color:#15803d;">${totals.qty}</td>
+                        <td class="text-center" style="font-weight:900; font-size:1rem; color:var(--accent);">${fmtMoney(totals.amount)}</td>
+                    </tr>
+                `;
+
+                tbody.innerHTML = rowsHtml;
+            }
+
+            function exportChallengeTableToCsv(tableBodyId, filename) {
+                const tbody = document.getElementById(tableBodyId);
+                if (!tbody) return;
+
+                const table = tbody.closest('table');
+                if (!table) return;
+
+                const rows = Array.from(table.querySelectorAll('thead tr, tbody tr'));
+                const csvData = rows.map(tr => {
+                    return Array.from(tr.querySelectorAll('td, th'))
+                        .filter(cell => cell.style.display !== 'none')
+                        .map(cell => `"${cell.textContent.trim().replace(/"/g, '""')}"`)
+                        .join(',');
+                }).join('\n');
+
+                const blob = new Blob(["\ufeff" + csvData], { type: 'text/csv;charset=utf-8;' });
+                const selBranch = challengeSelectedBranch || document.getElementById('branchFilter')?.value || 'all';
+                const storeLabel = selBranch === 'all' ? 'All_Stores' : (storesData[selBranch] || selBranch);
+                const safeStoreName = String(storeLabel).replace(/[\\/:*?"<>|]/g, '_');
+                const timeLabel = challengeScope === 'day' ? challengeSelectedDate : (challengeSelectedMonth || 'current');
+                
+                if (typeof saveAs === 'function') {
+                    saveAs(blob, `${filename}_${safeStoreName}_${timeLabel}.csv`);
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}_${safeStoreName}_${timeLabel}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
             }
         </script>
 
