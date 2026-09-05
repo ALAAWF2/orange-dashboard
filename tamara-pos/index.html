@@ -750,7 +750,7 @@
         <div class="meta-strip">
             <div class="meta-card">
                 <span class="label">🏬 المعرض / الكاشير</span>
-                <span class="value" id="displayStoreTerminal">معرض 001 / كاشير POS1</span>
+                <span class="value" id="displayStoreTerminal">جاري تحميل المعرض...</span>
             </div>
             <div class="meta-card">
                 <span class="label">🛒 رقم السلة</span>
@@ -975,7 +975,7 @@
         if (SHOWROOMS_MAP[cleanId]) {
             return SHOWROOMS_MAP[cleanId];
         }
-        return `معرض ${cleanId}`;
+        return (cleanId && cleanId !== '001') ? `معرض ${cleanId}` : 'معرض أورنج';
     }
 
     // Parse URL Query Parameters passed by POS
@@ -993,17 +993,29 @@
         // Smart Store & Terminal Extraction from Cart ID (e.g. POS-1001-1-1787923358127-1001)
         if (currentCartId && currentCartId.startsWith("POS-")) {
             const parts = currentCartId.split('-');
-            if (parts.length >= 3) {
-                if (!paramStore || paramStore === "001") {
+            if (parts.length >= 3 && parts[1]) {
+                if (!paramStore || paramStore === "001" || paramStore === "1") {
                     currentStoreId = parts[1];
                 }
-                if (!paramTerminal || paramTerminal === "POS1") {
-                    currentTerminalId = parts[2];
+                if (!paramTerminal || paramTerminal === "POS1" || paramTerminal.startsWith("POS-")) {
+                    currentTerminalId = "POS" + parts[2];
                 }
             }
         }
-        if (paramStore && paramStore !== "001") currentStoreId = paramStore;
-        if (paramTerminal && paramTerminal !== "POS1") currentTerminalId = paramTerminal;
+        if (paramStore && paramStore !== "001" && paramStore !== "1") currentStoreId = paramStore;
+        if (paramTerminal && paramTerminal !== "POS1") {
+            if (paramTerminal.startsWith("POS-")) {
+                const tparts = paramTerminal.split('-');
+                if (tparts.length >= 3) {
+                    if (!paramStore || paramStore === "001" || paramStore === "1") currentStoreId = tparts[1];
+                    currentTerminalId = "POS" + tparts[2];
+                } else {
+                    currentTerminalId = paramTerminal;
+                }
+            } else {
+                currentTerminalId = paramTerminal;
+            }
+        }
         
         if (rawAmount !== null && rawAmount !== undefined) {
             currentAmount = parseFloat(rawAmount) || 0.0;

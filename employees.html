@@ -779,13 +779,20 @@
     <script src="pdf_export_employees.js"></script>
 
     <script>
-        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        let currentUser = null;
+        try {
+            currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        } catch (_err) {
+            currentUser = null;
+        }
+
         if (!currentUser) {
             window.location.href = 'login.html';
         } else if (currentUser.name === 'علاء' && currentUser.role !== 'Admin') {
             currentUser.role = 'Admin';
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
         }
+        window.currentUser = currentUser;
 
         // Enforce visibility of Edit Targets button based on role
         if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager' || currentUser.name === 'Sales Manager')) {
@@ -865,14 +872,14 @@
                 <!-- Manager -->
                 <div class="col-md-2 col-lg-2">
                     <label class="form-label small text-muted fw-bold mb-1">مدير المنطقة</label>
-                    <select id="managerFilter" class="form-select form-select-sm" onchange="updatePage()">
+                    <select id="managerFilter" class="form-select form-select-sm" onchange="onManagerFilterChange()">
                         <option value="all">الكل</option>
                     </select>
                 </div>
                 <!-- Branch -->
                 <div class="col-md-2 col-lg-2">
                     <label class="form-label small text-muted fw-bold mb-1">الفرع</label>
-                    <select id="branchFilter" class="form-select form-select-sm" onchange="updatePage()">
+                    <select id="branchFilter" class="form-select form-select-sm" onchange="onMainBranchChange()">
                         <option value="all">كافة الفروع</option>
                     </select>
                 </div>
@@ -1784,6 +1791,75 @@
             let monthlyTargetsData = {}; // Global for new targets
 
             // Helpers
+            function isUserAdmin() {
+                const user = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+                if (!user) return false;
+                const role = (user.role || '').trim().toLowerCase();
+                const name = (user.name || '').trim().toLowerCase();
+                return role === 'admin' || name === 'sales manager' || name.includes('علاء') || name.includes('alaa');
+            }
+
+            function isUserManager() {
+                return !isUserAdmin();
+            }
+
+            function getAllowedStoreCodes() {
+                if (isUserAdmin()) {
+                    return Object.keys(storesData || {});
+                }
+                const user = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+                const mgrName = user ? (user.name || '').trim() : '';
+                const allowed = [];
+                Object.entries(storeMeta || {}).forEach(([code, meta]) => {
+                    if (meta && (meta.manager || '').trim() === mgrName) {
+                        allowed.push(String(code));
+                    }
+                });
+                return allowed;
+            }
+
+            function isStoreAllowed(storeCode) {
+                if (isUserAdmin()) return true;
+                if (!storeCode) return false;
+                return getAllowedStoreCodes().includes(String(storeCode));
+            }
+
+            function getActiveManager() {
+                if (isUserManager()) {
+                    return currentUser ? (currentUser.name || '').trim() : '';
+                }
+                const mf = document.getElementById('managerFilter');
+                return mf ? mf.value.trim() : 'all';
+            }
+
+            function getActiveScopedStoreCodes() {
+                const activeMgr = getActiveManager();
+                if (isUserManager()) {
+                    const allowed = [];
+                    Object.entries(storeMeta || {}).forEach(([code, meta]) => {
+                        if (meta && (meta.manager || '').trim() === activeMgr) {
+                            allowed.push(String(code));
+                        }
+                    });
+                    return allowed;
+                }
+                if (activeMgr === 'all') {
+                    return Object.keys(storesData || {});
+                }
+                const scoped = [];
+                Object.entries(storeMeta || {}).forEach(([code, meta]) => {
+                    if (meta && (meta.manager || '').trim() === activeMgr) {
+                        scoped.push(String(code));
+                    }
+                });
+                return scoped;
+            }
+
+            function isStoreInActiveScope(storeCode) {
+                if (!storeCode) return false;
+                return getActiveScopedStoreCodes().includes(String(storeCode));
+            }
+
             function toLocalYMD(d) {
                 if (!d) return '';
                 const dateObj = (d instanceof Date) ? d : new Date(d);
@@ -1987,61 +2063,156 @@
                 }
             }
 
+            function updateBranchFilterOptions() {
+                const activeMgr = getActiveManager();
+                const isSpecificMgr = (activeMgr !== 'all' && activeMgr !== '');
+                const allLabel = isSpecificMgr ? `كافة معارض المنطقة (${activeMgr})` : 'كافة الفروع';
+                const scopedStores = getActiveScopedStoreCodes();
+
+                // 1. Main Branch Select
+                const mainBranchSelect = document.getElementById('branchFilter');
+                if (mainBranchSelect) {
+                    const prevVal = mainBranchSelect.value || 'all';
+                    mainBranchSelect.innerHTML = `<option value="all">${allLabel}</option>`;
+
+                    const sortedStores = scopedStores.slice().sort((a, b) => 
+                        (storesData[a] || a).localeCompare(storesData[b] || b, 'ar')
+                    );
+
+                    sortedStores.forEach(code => {
+                        const opt = document.createElement('option');
+                        opt.value = code;
+                        opt.textContent = storesData[code] || code;
+                        mainBranchSelect.appendChild(opt);
+                    });
+
+                    if (prevVal !== 'all' && scopedStores.includes(String(prevVal))) {
+                        mainBranchSelect.value = prevVal;
+                    } else {
+                        mainBranchSelect.value = 'all';
+                    }
+                }
+
+                // 2. Challenge Branch Select
+                const chalBranchSelect = document.getElementById('challengeBranchSelect');
+                if (chalBranchSelect) {
+                    const prevVal = chalBranchSelect.value || challengeSelectedBranch || 'all';
+                    chalBranchSelect.innerHTML = `<option value="all">${allLabel}</option>`;
+
+                    const challengeStores = Object.keys(teamChallengeData?.stores || {})
+                        .filter(code => scopedStores.includes(String(code)))
+                        .sort((a, b) => (storesData[a] || a).localeCompare(storesData[b] || b, 'ar'));
+
+                    challengeStores.forEach(code => {
+                        const opt = document.createElement('option');
+                        opt.value = code;
+                        opt.textContent = storesData[code] || code;
+                        chalBranchSelect.appendChild(opt);
+                    });
+
+                    if (prevVal !== 'all' && scopedStores.includes(String(prevVal))) {
+                        chalBranchSelect.value = prevVal;
+                        challengeSelectedBranch = prevVal;
+                    } else {
+                        chalBranchSelect.value = 'all';
+                        challengeSelectedBranch = 'all';
+                    }
+                }
+            }
+
+            function onManagerFilterChange() {
+                updateBranchFilterOptions();
+                updatePage();
+            }
+
+            function onMainBranchChange() {
+                const bf = document.getElementById('branchFilter');
+                let val = bf ? bf.value : 'all';
+                if (val !== 'all' && !isStoreInActiveScope(val)) {
+                    val = 'all';
+                    if (bf) bf.value = 'all';
+                }
+                challengeSelectedBranch = val;
+                const cb = document.getElementById('challengeBranchSelect');
+                if (cb && cb.value !== val) {
+                    cb.value = val;
+                }
+                updatePage();
+            }
+
             function populateFilters() {
+                const isAdmin = isUserAdmin();
+                const isMgr = isUserManager();
+                const managerName = currentUser ? (currentUser.name || '').trim() : '';
+
                 // Managers
                 const managerSelect = document.getElementById('managerFilter');
-                const managers = new Set();
-                Object.values(storeMeta).forEach(meta => {
-                    if (meta.manager && meta.manager !== 'online') {
-                        managers.add(meta.manager);
-                    }
-                });
-                Array.from(managers).sort().forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.textContent = m;
-                    managerSelect.appendChild(opt);
-                });
+                if (managerSelect) {
+                    managerSelect.innerHTML = '<option value="all">الكل</option>';
+                    const managers = new Set();
+                    Object.values(storeMeta || {}).forEach(meta => {
+                        if (meta.manager && meta.manager !== 'online') {
+                            managers.add(meta.manager.trim());
+                        }
+                    });
+                    Array.from(managers).sort().forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        managerSelect.appendChild(opt);
+                    });
 
-                // Branches
-                const branchSelect = document.getElementById('branchFilter');
-                const branches = Object.keys(historyData || {});
-                const isManager = currentUser && currentUser.role === 'Manager';
-                const managerName = currentUser ? currentUser.name : '';
-
-                branches.forEach(code => {
-                    if (isManager) {
-                        const meta = storeMeta ? storeMeta[code] : null;
-                        if (!meta || meta.manager !== managerName) {
-                            return; // skip this store
+                    if (isMgr) {
+                        managerSelect.value = managerName;
+                        if (managerSelect.parentElement) {
+                            managerSelect.parentElement.style.display = 'none';
+                        }
+                    } else {
+                        if (managerSelect.parentElement) {
+                            managerSelect.parentElement.style.display = '';
                         }
                     }
-                    const name = storesData[code] || code;
-                    const opt = document.createElement('option');
-                    opt.value = code;
-                    opt.textContent = name;
-                    branchSelect.appendChild(opt);
-                });
+                }
+
+                updateBranchFilterOptions();
             }
 
             function updatePage() {
-                let managerFilter = document.getElementById('managerFilter').value;
+                const isAdmin = isUserAdmin();
+                const isMgr = isUserManager();
+                const managerName = currentUser ? (currentUser.name || '').trim() : '';
 
-                // Enforce Permissions
-                if (currentUser.role !== 'Admin') {
-                    managerFilter = currentUser.name;
-                    // Also lock UI
-                    const mf = document.getElementById('managerFilter');
-                    if (mf.value !== currentUser.name) {
-                        mf.value = currentUser.name;
-                        mf.parentElement.style.display = 'none';
+                let managerFilter = 'all';
+                const mf = document.getElementById('managerFilter');
+
+                if (isMgr) {
+                    managerFilter = managerName;
+                    if (mf) {
+                        mf.value = managerName;
+                        if (mf.parentElement) mf.parentElement.style.display = 'none';
                     }
+                    const vmc = document.getElementById('viewModeContainer');
+                    if (vmc) vmc.style.display = 'none';
                 } else {
-                    // Show View Mode for Admin (Sales Manager)
-                    document.getElementById('viewModeContainer').style.display = 'block';
+                    if (mf) {
+                        managerFilter = mf.value;
+                        if (mf.parentElement) mf.parentElement.style.display = '';
+                    }
+                    const vmc = document.getElementById('viewModeContainer');
+                    if (vmc) vmc.style.display = 'block';
                 }
 
-                const branchFilter = document.getElementById('branchFilter').value;
+                const branchSelect = document.getElementById('branchFilter');
+                let branchFilter = branchSelect ? branchSelect.value : 'all';
+                if (branchFilter !== 'all' && !isStoreInActiveScope(branchFilter)) {
+                    branchFilter = 'all';
+                    if (branchSelect) branchSelect.value = 'all';
+                }
+                challengeSelectedBranch = branchFilter;
+                const chalBranchSelect = document.getElementById('challengeBranchSelect');
+                if (chalBranchSelect && chalBranchSelect.value !== branchFilter) {
+                    chalBranchSelect.value = branchFilter;
+                }
                 const periodFilter = document.getElementById('periodFilter').value;
                 const viewMode = document.getElementById('viewMode').value;
                 const sortBy = document.getElementById('sortBy').value;
@@ -2412,16 +2583,11 @@
 
                     // Now Apply Filters based on PRIMARY Store
 
-                    // Filter by Branch
-                    if (branchFilter !== 'all' && branchFilter !== e.storeCode) return false;
+                    // 1. Role Enforcement & Active Manager Filter
+                    if (!isStoreInActiveScope(e.storeCode)) return false;
 
-                    // Filter by Manager
-                    if (managerFilter !== 'all') {
-                        const meta = storeMeta[e.storeCode];
-                        if (!meta || meta.manager !== managerFilter) {
-                            return false;
-                        }
-                    }
+                    // 2. Filter by Branch
+                    if (branchFilter !== 'all' && branchFilter !== e.storeCode) return false;
 
                     // Filter Non-Active
                     if (e.sales === 0 && e.transactions === 0) return false;
@@ -2627,9 +2793,7 @@
                 if (mainEmpsCountEl) mainEmpsCountEl.textContent = empList.length;
 
                 updateChallengeBadgeCount();
-                if (currentMainTab === 'challenge') {
-                    renderTeamChallengeData();
-                }
+                renderTeamChallengeData();
             }
 
             function updateCharts(empList) {
@@ -4157,23 +4321,7 @@
                 }
 
                 // 2. Populate Branch Select
-                const branchSelect = document.getElementById('challengeBranchSelect');
-                if (branchSelect) {
-                    const currentVal = branchSelect.value || document.getElementById('branchFilter')?.value || 'all';
-                    branchSelect.innerHTML = '<option value="all">كافة الفروع</option>';
-                    
-                    const stores = Object.keys(teamChallengeData.stores).sort();
-                    stores.forEach(sCode => {
-                        const sName = storesData[sCode] || sCode;
-                        const opt = document.createElement('option');
-                        opt.value = sCode;
-                        opt.textContent = sName;
-                        branchSelect.appendChild(opt);
-                    });
-                    
-                    branchSelect.value = currentVal;
-                    challengeSelectedBranch = currentVal;
-                }
+                updateBranchFilterOptions();
             }
 
             function switchMainTab(tabId) {
@@ -4196,7 +4344,10 @@
                     if (chalEl) chalEl.style.display = 'block';
 
                     // Sync branch selection if needed
-                    const mainBranch = document.getElementById('branchFilter')?.value || 'all';
+                    let mainBranch = document.getElementById('branchFilter')?.value || 'all';
+                    if (mainBranch !== 'all' && !isStoreInActiveScope(mainBranch)) {
+                        mainBranch = 'all';
+                    }
                     const chalBranchSelect = document.getElementById('challengeBranchSelect');
                     if (chalBranchSelect && mainBranch !== chalBranchSelect.value) {
                         chalBranchSelect.value = mainBranch;
@@ -4215,16 +4366,20 @@
                     document.getElementById('auditViewContainer').style.display = viewMode === 'audit' ? 'block' : 'none';
                     document.getElementById('perfMatrixContainer').style.display = viewMode === 'perf' ? 'block' : 'none';
                     document.getElementById('tenureViewContainer').style.display = viewMode === 'tenure' ? 'block' : 'none';
+                    updatePage();
                 }
             }
 
             function onChallengeBranchChange(val) {
+                if (val !== 'all' && !isStoreInActiveScope(val)) {
+                    val = 'all';
+                }
                 challengeSelectedBranch = val;
                 const mf = document.getElementById('branchFilter');
                 if (mf && mf.value !== val) {
                     mf.value = val;
                 }
-                renderTeamChallengeData();
+                updatePage();
             }
 
             function onChallengeMonthChange(val) {
@@ -4250,12 +4405,16 @@
             function updateChallengeBadgeCount() {
                 if (!teamChallengeData || !teamChallengeData.stores) return;
                 const monthPrefix = challengeSelectedMonth || toLocalYMD(new Date()).slice(0, 7);
-                const selectedBranch = challengeSelectedBranch || document.getElementById('branchFilter')?.value || 'all';
+                let selectedBranch = challengeSelectedBranch || document.getElementById('branchFilter')?.value || 'all';
+                if (selectedBranch !== 'all' && !isStoreInActiveScope(selectedBranch)) {
+                    selectedBranch = 'all';
+                }
 
                 let count = 0;
                 if (selectedBranch === 'all') {
                     const emps = new Set();
-                    Object.values(teamChallengeData.stores).forEach(sVal => {
+                    Object.entries(teamChallengeData.stores).forEach(([sKey, sVal]) => {
+                        if (!isStoreInActiveScope(sKey)) return;
                         const mVal = sVal[monthPrefix];
                         if (mVal && mVal.month_summary) {
                             (mVal.month_summary.quilts?.employees || []).forEach(e => emps.add(e.id));
@@ -4264,6 +4423,7 @@
                     });
                     count = emps.size;
                 } else {
+                    if (!isStoreInActiveScope(selectedBranch)) return;
                     const sVal = teamChallengeData.stores[selectedBranch];
                     const mVal = sVal ? sVal[monthPrefix] : null;
                     if (mVal && mVal.month_summary) {
@@ -4281,7 +4441,15 @@
             function renderTeamChallengeData() {
                 if (!teamChallengeData) return;
 
-                const selectedBranch = challengeSelectedBranch || document.getElementById('challengeBranchSelect')?.value || document.getElementById('branchFilter')?.value || 'all';
+                let selectedBranch = challengeSelectedBranch || document.getElementById('challengeBranchSelect')?.value || document.getElementById('branchFilter')?.value || 'all';
+                if (selectedBranch !== 'all' && !isStoreInActiveScope(selectedBranch)) {
+                    selectedBranch = 'all';
+                    challengeSelectedBranch = 'all';
+                    const cbEl = document.getElementById('challengeBranchSelect');
+                    if (cbEl) cbEl.value = 'all';
+                    const mbEl = document.getElementById('branchFilter');
+                    if (mbEl) mbEl.value = 'all';
+                }
                 const monthPrefix = challengeSelectedMonth || document.getElementById('challengeMonthSelect')?.value || toLocalYMD(new Date()).slice(0, 7);
 
                 // Date input setup
@@ -4299,7 +4467,8 @@
                             if (mData && mData.days) availableDays = Object.keys(mData.days).sort();
                         } else {
                             const daysSet = new Set();
-                            Object.values(teamChallengeData.stores).forEach(s => {
+                            Object.entries(teamChallengeData.stores).forEach(([sKey, s]) => {
+                                if (!isStoreInActiveScope(sKey)) return;
                                 const mData = s[monthPrefix];
                                 if (mData && mData.days) Object.keys(mData.days).forEach(d => daysSet.add(d));
                             });
@@ -4313,6 +4482,8 @@
                 let quiltsSec = { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
                 let toppersSec = { employees: [], totals: { qty: 0, amount: 0, counts: {} } };
                 const isAllBranches = (selectedBranch === 'all');
+                const activeMgr = getActiveManager();
+                const isSpecificMgr = (activeMgr !== 'all' && activeMgr !== '');
 
                 if (!isAllBranches) {
                     const storeKey = String(selectedBranch);
@@ -4339,13 +4510,14 @@
                         }
                     }
                 } else {
-                    // All Branches Aggregation
+                    // All Branches Aggregation within Active Scope
                     const quiltsMap = {};
                     const toppersMap = {};
                     const qTotals = { qty: 0, amount: 0, counts: {} };
                     const tTotals = { qty: 0, amount: 0, counts: {} };
 
                     Object.entries(teamChallengeData.stores || {}).forEach(([sKey, sVal]) => {
+                        if (!isStoreInActiveScope(sKey)) return;
                         const mVal = sVal[monthPrefix];
                         if (!mVal) return;
 
@@ -4406,10 +4578,11 @@
 
                     const subtitleEl = document.getElementById('challengePeriodSubtitle');
                     if (subtitleEl) {
+                        const areaLabel = isSpecificMgr ? `معارض المنطقة (${activeMgr})` : 'كافة الفروع';
                         if (challengeScope === 'day' && challengeSelectedDate) {
-                            subtitleEl.textContent = `مبيعات يوم: ${challengeSelectedDate} — كافة الفروع`;
+                            subtitleEl.textContent = `مبيعات يوم: ${challengeSelectedDate} — ${areaLabel}`;
                         } else {
-                            subtitleEl.textContent = `مبيعات شهر: ${formatMonthLabel(monthPrefix)} (تراكمي) — كافة الفروع`;
+                            subtitleEl.textContent = `مبيعات شهر: ${formatMonthLabel(monthPrefix)} (تراكمي) — ${areaLabel}`;
                         }
                     }
                 }
@@ -4529,9 +4702,12 @@
                 });
 
                 const leadColspan = isAllBranches ? 3 : 2;
+                const activeMgr = getActiveManager();
+                const isSpecificMgr = (activeMgr !== 'all' && activeMgr !== '');
+                const allTotalTitle = isSpecificMgr ? `المجموع العام لمعارض المنطقة (${activeMgr})` : 'المجموع العام لكافة الفروع';
                 rowsHtml += `
                     <tr class="total-row">
-                        <td colspan="${leadColspan}" class="text-center">${isAllBranches ? 'المجموع العام لكافة الفروع' : 'المجموع العام للمعرض'}</td>
+                        <td colspan="${leadColspan}" class="text-center">${isAllBranches ? allTotalTitle : 'المجموع العام للمعرض'}</td>
                         ${totColsHtml}
                         <td class="text-center" style="font-weight:900; font-size:1rem; color:#d97706;">${totals.qty}</td>
                         <td class="text-center" style="font-weight:900; font-size:1rem; color:var(--primary-dark);">${fmtMoney(totals.amount)}</td>
@@ -4606,7 +4782,7 @@
                 const leadColspan = isAllBranches ? 3 : 2;
                 rowsHtml += `
                     <tr class="total-row">
-                        <td colspan="${leadColspan}" class="text-center">${isAllBranches ? 'المجموع العام لكافة الفروع' : 'المجموع العام للمعرض'}</td>
+                        <td colspan="${leadColspan}" class="text-center">${isAllBranches ? allTotalTitle : 'المجموع العام للمعرض'}</td>
                         ${totColsHtml}
                         <td class="text-center" style="font-weight:900; font-size:1rem; color:#15803d;">${totals.qty}</td>
                         <td class="text-center" style="font-weight:900; font-size:1rem; color:var(--accent);">${fmtMoney(totals.amount)}</td>
@@ -4633,7 +4809,13 @@
 
                 const blob = new Blob(["\ufeff" + csvData], { type: 'text/csv;charset=utf-8;' });
                 const selBranch = challengeSelectedBranch || document.getElementById('branchFilter')?.value || 'all';
-                const storeLabel = selBranch === 'all' ? 'All_Stores' : (storesData[selBranch] || selBranch);
+                let storeLabel = 'All_Stores';
+                if (selBranch === 'all') {
+                    const activeMgr = getActiveManager();
+                    storeLabel = (activeMgr !== 'all' && activeMgr !== '') ? `Area_${activeMgr}` : 'All_Stores';
+                } else {
+                    storeLabel = storesData[selBranch] || selBranch;
+                }
                 const safeStoreName = String(storeLabel).replace(/[\\/:*?"<>|]/g, '_');
                 const timeLabel = challengeScope === 'day' ? challengeSelectedDate : (challengeSelectedMonth || 'current');
                 
