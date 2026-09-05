@@ -167,6 +167,144 @@
             font-weight: 700;
         }
 
+        /* Mode Navigation Tabs */
+        .pos-tabs-bar {
+            display: flex;
+            background: #e2e8f0;
+            padding: 4px;
+            border-radius: 14px;
+            gap: 4px;
+        }
+
+        .pos-tab-btn {
+            flex: 1;
+            padding: 10px 14px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--slate-600);
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .pos-tab-btn:hover {
+            color: var(--slate-900);
+        }
+
+        .pos-tab-btn.active {
+            background: #ffffff;
+            color: var(--orange-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Refund Mode Specific Styles */
+        .refund-hero-banner {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .refund-hero-banner h3 {
+            color: var(--slate-900);
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .refund-hero-banner p {
+            color: var(--slate-500);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .search-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 14px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            outline: none;
+            direction: ltr;
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .search-input:focus {
+            border-color: var(--orange-primary);
+        }
+
+        .order-card {
+            background: #ffffff;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .order-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .order-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .order-item.full-span {
+            grid-column: span 2;
+            background: #f0fdf4;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .order-item .label {
+            font-size: 11px;
+            color: var(--slate-500);
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .order-item .val {
+            font-size: 13px;
+            color: var(--slate-900);
+            word-break: break-all;
+            font-weight: 800;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Main Card */
         .pos-card {
             background: #ffffff;
@@ -738,155 +876,268 @@
         </div>
     </header>
 
+    <!-- Mode Navigation Tabs -->
+    <nav class="pos-tabs-bar">
+        <button type="button" class="pos-tab-btn active" id="btnTabSale" onclick="switchMode('sale')">
+            🛒 تحصيل دفعة (QR Code)
+        </button>
+        <button type="button" class="pos-tab-btn" id="btnTabRefund" onclick="switchMode('refund')">
+            🔄 استرداد مرتجع (Refund)
+        </button>
+    </nav>
+
     <!-- Main Card -->
     <main class="pos-card">
-        <!-- Status Banner -->
-        <div class="status-banner" id="modeBanner">
-            <span>💡</span>
-            <span id="modeBannerText">تم فتح الصفحة مباشرة. يمكنك إدخال المبلغ ورقم الجوال للتجربة.</span>
-        </div>
-
-        <!-- Meta Strip: Showroom & Cart -->
-        <div class="meta-strip">
-            <div class="meta-card">
-                <span class="label">🏬 المعرض / الكاشير</span>
-                <span class="value" id="displayStoreTerminal">جاري تحميل المعرض...</span>
-            </div>
-            <div class="meta-card">
-                <span class="label">🛒 رقم السلة</span>
-                <span class="value" id="displayCartId">CART-1</span>
-            </div>
-        </div>
-
-        <!-- Hero Amount Card -->
-        <section class="hero-amount-card">
-            <div class="title">إجمالي المبلغ المطلوب للدفع</div>
-            <div class="amount-row">
-                <input type="number" step="0.01" min="1" id="inputAmount" class="amount-input-control" value="0.00">
-                <span class="currency">ر.س</span>
+        <!-- ==================== SALE MODE ==================== -->
+        <div id="containerSale">
+            <!-- Status Banner -->
+            <div class="status-banner" id="modeBanner">
+                <span>💡</span>
+                <span id="modeBannerText">تم فتح الصفحة مباشرة. يمكنك إدخال المبلغ ورقم الجوال للتجربة.</span>
             </div>
 
-            <!-- Quick Presets -->
-            <div class="presets-wrapper" id="presetButtons">
-                <span style="font-size: 11px; color: var(--slate-500); font-weight: 700;">مبالغ سريعة:</span>
-                <button type="button" class="preset-chip" onclick="setPresetAmount(50)">50 ر.س</button>
-                <button type="button" class="preset-chip" onclick="setPresetAmount(100)">100 ر.س</button>
-                <button type="button" class="preset-chip" onclick="setPresetAmount(200)">200 ر.س</button>
-                <button type="button" class="preset-chip" onclick="setPresetAmount(500)">500 ر.س</button>
-            </div>
-        </section>
-
-        <!-- Collapsible Cart Items -->
-        <section class="items-accordion" id="itemsSection" style="display: none;">
-            <div class="items-header" onclick="toggleItems()">
-                <span id="itemsCountLabel">الأصناف بالسلة (0)</span>
-                <span id="itemsToggleIcon">▼</span>
-            </div>
-            <div class="items-list" id="itemsList"></div>
-        </section>
-
-        <!-- STEP 1: Phone Input & Initiation -->
-        <section id="stepInput">
-            <div id="customerInfoBadge" class="customer-pill" style="display: none;">
-                <span>👤</span>
-                <span id="customerInfoText">بيانات العميل المرفق بالفاتورة</span>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="customerPhone">رقم جوال العميل (المسجل في تمارا)</label>
-                <div class="phone-field-wrapper">
-                    <span class="phone-prefix">🇸🇦 +966</span>
-                    <input type="tel" id="customerPhone" class="phone-input" placeholder="5xxxxxxxx" maxlength="10" autocomplete="tel">
+            <!-- Meta Strip: Showroom & Cart -->
+            <div class="meta-strip">
+                <div class="meta-card">
+                    <span class="label">🏬 المعرض / الكاشير</span>
+                    <span class="value" id="displayStoreTerminal">جاري تحميل المعرض...</span>
                 </div>
-                <small style="font-size: 11px; color: var(--slate-500); font-weight: 600; margin-top: 3px;">
-                    سيتم إرسال رابط الدفع إلى تطبيق تمارا الخاص بالعميل فوراً.
-                </small>
+                <div class="meta-card">
+                    <span class="label">🛒 رقم السلة</span>
+                    <span class="value" id="displayCartId">CART-1</span>
+                </div>
             </div>
 
-            <button type="button" class="btn btn-primary" id="btnCreateSession" onclick="createPaymentSession()">
-                <span>📲</span>
-                <span>إرسال رابط الدفع عبر تمارا</span>
-            </button>
-
-            <!-- Test Simulator Button -->
-            <button type="button" class="btn btn-simulator" onclick="simulatePaymentSuccess()">
-                <span>🧪</span>
-                <span>محاكاة دفع ناجح فوراً (إرسال إشارة الإقفال للـ POS)</span>
-            </button>
-        </section>
-
-        <!-- STEP 2: Waiting & QR Scanning -->
-        <section id="stepWaiting" class="hidden">
-            <div class="waiting-box">
-                <div class="pulse-ring-wrapper">
-                    <div class="pulse-loader">⏳</div>
+            <!-- Hero Amount Card -->
+            <section class="hero-amount-card">
+                <div class="title">إجمالي المبلغ المطلوب للدفع</div>
+                <div class="amount-row">
+                    <input type="number" step="0.01" min="1" id="inputAmount" class="amount-input-control" value="0.00">
+                    <span class="currency">ر.س</span>
                 </div>
 
-                <div>
-                    <h3 style="font-size: 17px; font-weight: 800; color: var(--slate-900); margin-bottom: 3px;">بانتظار إتمام الدفع من العميل</h3>
-                    <p style="font-size: 12px; color: var(--slate-500);">تم إرسال الرابط لجوال العميل <b id="waitingPhone" style="color: var(--slate-800);"></b></p>
+                <!-- Quick Presets -->
+                <div class="presets-wrapper" id="presetButtons">
+                    <span style="font-size: 11px; color: var(--slate-500); font-weight: 700;">مبالغ سريعة:</span>
+                    <button type="button" class="preset-chip" onclick="setPresetAmount(50)">50 ر.س</button>
+                    <button type="button" class="preset-chip" onclick="setPresetAmount(100)">100 ر.س</button>
+                    <button type="button" class="preset-chip" onclick="setPresetAmount(200)">200 ر.س</button>
+                    <button type="button" class="preset-chip" onclick="setPresetAmount(500)">500 ر.س</button>
+                </div>
+            </section>
+
+            <!-- Collapsible Cart Items -->
+            <section class="items-accordion" id="itemsSection" style="display: none;">
+                <div class="items-header" onclick="toggleItems()">
+                    <span id="itemsCountLabel">الأصناف بالسلة (0)</span>
+                    <span id="itemsToggleIcon">▼</span>
+                </div>
+                <div class="items-list" id="itemsList"></div>
+            </section>
+
+            <!-- STEP 1: Phone Input & Initiation -->
+            <section id="stepInput">
+                <div id="customerInfoBadge" class="customer-pill" style="display: none;">
+                    <span>👤</span>
+                    <span id="customerInfoText">بيانات العميل المرفق بالفاتورة</span>
                 </div>
 
-                <div class="status-pill" id="statusBadge">
-                    <span class="live-dot"></span>
-                    <span id="statusText">جاري التحقق كل 4 ثوانٍ...</span>
+                <div class="form-group">
+                    <label class="form-label" for="customerPhone">رقم جوال العميل (المسجل في تمارا)</label>
+                    <div class="phone-field-wrapper">
+                        <span class="phone-prefix">🇸🇦 +966</span>
+                        <input type="tel" id="customerPhone" class="phone-input" placeholder="5xxxxxxxx" maxlength="10" autocomplete="tel">
+                    </div>
+                    <small style="font-size: 11px; color: var(--slate-500); font-weight: 600; margin-top: 3px;">
+                        سيتم إرسال رابط الدفع إلى تطبيق تمارا الخاص بالعميل فوراً.
+                    </small>
                 </div>
 
-                <!-- Sandbox QR -->
-                <div class="qr-card">
-                    <div id="qrcode"></div>
-                </div>
-                <p style="font-size: 12px; color: var(--slate-500); font-weight: 600;">امسح الـ QR بكاميرا الجوال أو استخدم الرابط أدناه</p>
-
-                <button type="button" class="btn btn-teal" id="btnOpenLink" onclick="openDirectLink()">
-                    <span>🔗</span>
-                    <span>فتح رابط الدفع في نافذة جديدة (Sandbox)</span>
+                <button type="button" class="btn btn-primary" id="btnCreateSession" onclick="createPaymentSession()">
+                    <span>📲</span>
+                    <span>إرسال رابط الدفع عبر تمارا</span>
                 </button>
 
+                <!-- Test Simulator Button -->
                 <button type="button" class="btn btn-simulator" onclick="simulatePaymentSuccess()">
                     <span>🧪</span>
                     <span>محاكاة دفع ناجح فوراً (إرسال إشارة الإقفال للـ POS)</span>
                 </button>
+            </section>
 
-                <button type="button" class="btn btn-danger" onclick="cancelPaymentSession()">
-                    <span>❌</span>
-                    <span>إلغاء الطلب (Void Session)</span>
+            <!-- STEP 2: Waiting & QR Scanning -->
+            <section id="stepWaiting" class="hidden">
+                <div class="waiting-box">
+                    <div class="pulse-ring-wrapper">
+                        <div class="pulse-loader">⏳</div>
+                    </div>
+
+                    <div>
+                        <h3 style="font-size: 17px; font-weight: 800; color: var(--slate-900); margin-bottom: 3px;">بانتظار إتمام الدفع من العميل</h3>
+                        <p style="font-size: 12px; color: var(--slate-500);">تم إرسال الرابط لجوال العميل <b id="waitingPhone" style="color: var(--slate-800);"></b></p>
+                    </div>
+
+                    <div class="status-pill" id="statusBadge">
+                        <span class="live-dot"></span>
+                        <span id="statusText">جاري التحقق كل 4 ثوانٍ...</span>
+                    </div>
+
+                    <!-- Sandbox QR -->
+                    <div class="qr-card">
+                        <div id="qrcode"></div>
+                    </div>
+                    <p style="font-size: 12px; color: var(--slate-500); font-weight: 600;">امسح الـ QR بكاميرا الجوال أو استخدم الرابط أدناه</p>
+
+                    <button type="button" class="btn btn-teal" id="btnOpenLink" onclick="openDirectLink()">
+                        <span>🔗</span>
+                        <span>فتح رابط الدفع في نافذة جديدة (Sandbox)</span>
+                    </button>
+
+                    <button type="button" class="btn btn-simulator" onclick="simulatePaymentSuccess()">
+                        <span>🧪</span>
+                        <span>محاكاة دفع ناجح فوراً (إرسال إشارة الإقفال للـ POS)</span>
+                    </button>
+
+                    <button type="button" class="btn btn-danger" onclick="cancelPaymentSession()">
+                        <span>❌</span>
+                        <span>إلغاء الطلب (Void Session)</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- STEP 3: Success Screen -->
+            <section id="stepSuccess" class="hidden">
+                <div class="success-box">
+                    <div class="success-icon-badge">✓</div>
+                    <div>
+                        <div class="success-title">تم الدفع بنجاح في تمارا!</div>
+                        <p style="font-size: 13px; color: #047857; font-weight: 600; margin-top: 4px;">تم التحقق واستلام كامل المبلغ من العميل</p>
+                    </div>
+
+                    <div class="receipt-summary">
+                        <div class="receipt-row">
+                            <span style="color: var(--slate-500); font-weight: 600;">المبلغ المسدد:</span>
+                            <span class="val" style="color: #059669; font-size: 15px;"><span id="successAmount">0.00</span> ر.س</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span style="color: var(--slate-500); font-weight: 600;">رقم العملية:</span>
+                            <code class="val" id="successOrderId" style="font-size: 12px; direction: ltr;">-</code>
+                        </div>
+                    </div>
+
+                    <div class="cashier-alert-box">
+                        <h4>🔔 تنبيه الكاشير لإصدار الفاتورة:</h4>
+                        <p>1. تم سداد الفاتورة بالكامل لدى تمارا دون أي معلقات.</p>
+                        <p>2. أغلق هذه النافذة ثم اضغط في شاشة الـ POS على زر <b>[تمارا]</b> لطباعة الفاتورة للعميل.</p>
+                    </div>
+
+                    <button type="button" class="btn btn-outline" onclick="window.close()">
+                        <span>🚪</span>
+                        <span>إغلاق النافذة والعودة للـ POS</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== REFUND MODE ==================== -->
+        <div id="containerRefund" class="hidden">
+            <div class="refund-hero-banner">
+                <h3>🔄 استرداد مبلغ مرتجع لتمارا</h3>
+                <p>ابحث عن الفاتورة الأصلية لإعادة المبلغ لحساب العميل وتعديل خطة أقساطه فوراً.</p>
+            </div>
+
+            <!-- Search Form -->
+            <div class="form-group">
+                <label class="form-label" for="inputRefundQuery">رقم مرجع الفاتورة الأصلية أو معرف طلب تمارا أو جوال العميل</label>
+                <div class="search-group">
+                    <input type="text" id="inputRefundQuery" class="search-input" 
+                           placeholder="ORNG-POS-... أو 05b38d... أو 05xxxxxxxx">
+                    <button type="button" id="btnLookupOrder" class="btn btn-primary" style="width: auto; padding: 0 20px;" onclick="lookupOrder()">
+                        <span id="btnLookupText">بحث</span>
+                        <span class="spinner hidden" id="spinnerLookup"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Order Details Card (Loaded after search) -->
+            <div id="cardOrderDetails" class="order-card hidden">
+                <div class="order-grid">
+                    <div class="order-item">
+                        <span class="label">مرجع الفاتورة:</span>
+                        <span id="lblOrderRef" class="val">-</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="label">معرف تمارا:</span>
+                        <code id="lblOrderPaymentId" class="val" style="font-size: 11px;">-</code>
+                    </div>
+                    <div class="order-item">
+                        <span class="label">إجمالي الفاتورة:</span>
+                        <span id="lblOrderTotal" class="val">0.00 ر.س</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="label">المسترد سابقاً:</span>
+                        <span id="lblOrderRefunded" class="val" style="color: #d97706;">0.00 ر.س</span>
+                    </div>
+                    <div class="order-item full-span">
+                        <span class="label" style="color: #15803d;">الحد الأقصى المتاح للاسترداد:</span>
+                        <span id="lblOrderRemaining" class="val" style="color: #16a34a; font-size: 17px;">0.00 ر.س</span>
+                    </div>
+                </div>
+
+                <!-- Refund Form Inside Card -->
+                <div class="form-group">
+                    <label class="form-label" for="inputRefundAmount">المبلغ المراد استرداده للعميل (ر.س)</label>
+                    <input type="number" step="0.01" id="inputRefundAmount" class="search-input" style="width: 100%; direction: rtl; text-align: right;"
+                           placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="inputRefundReason">سبب الإرجاع (اختياري)</label>
+                    <input type="text" id="inputRefundReason" class="search-input" style="width: 100%; direction: rtl; text-align: right;"
+                           placeholder="إرجاع صنف / إلغاء طلب" value="مرتجع من الكاشير">
+                </div>
+
+                <button type="button" id="btnExecuteRefund" class="btn btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);" onclick="executeRefund()">
+                    <span id="btnRefundText">تأكيد استرداد المبلغ عبر تمارا</span>
+                    <span class="spinner hidden" id="spinnerRefund"></span>
                 </button>
             </div>
-        </section>
 
-        <!-- STEP 3: Success Screen -->
-        <section id="stepSuccess" class="hidden">
-            <div class="success-box">
+            <!-- Refund Success State -->
+            <div id="cardRefundSuccess" class="success-box hidden" style="margin-top: 20px;">
                 <div class="success-icon-badge">✓</div>
                 <div>
-                    <div class="success-title">تم الدفع بنجاح في تمارا!</div>
-                    <p style="font-size: 13px; color: #047857; font-weight: 600; margin-top: 4px;">تم التحقق واستلام كامل المبلغ من العميل</p>
+                    <div class="success-title">تم استرداد المبلغ بنجاح!</div>
+                    <p style="font-size: 13px; color: #047857; font-weight: 600; margin-top: 4px;">تم إرسال الاسترداد لتمارا وتعديل أقساط العميل فوراً</p>
                 </div>
 
                 <div class="receipt-summary">
                     <div class="receipt-row">
-                        <span style="color: var(--slate-500); font-weight: 600;">المبلغ المسدد:</span>
-                        <span class="val" style="color: #059669; font-size: 15px;"><span id="successAmount">0.00</span> ر.س</span>
+                        <span style="color: var(--slate-500); font-weight: 600;">المبلغ المسترد:</span>
+                        <span class="val" id="resRefundedAmount" style="color: #dc2626; font-size: 15px;">0.00 ر.س</span>
                     </div>
                     <div class="receipt-row">
-                        <span style="color: var(--slate-500); font-weight: 600;">رقم العملية:</span>
-                        <code class="val" id="successOrderId" style="font-size: 12px; direction: ltr;">-</code>
+                        <span style="color: var(--slate-500); font-weight: 600;">مرجع الاسترداد (Refund Ref):</span>
+                        <code class="val" id="resRefundRef" style="font-size: 12px; direction: ltr;">-</code>
+                    </div>
+                    <div class="receipt-row">
+                        <span style="color: var(--slate-500); font-weight: 600;">المتبقي في الفاتورة:</span>
+                        <span class="val" id="resRemainingBalance">0.00 ر.س</span>
                     </div>
                 </div>
 
                 <div class="cashier-alert-box">
-                    <h4>🔔 تنبيه الكاشير لإصدار الفاتورة:</h4>
-                    <p>1. تم سداد الفاتورة بالكامل لدى تمارا دون أي معلقات.</p>
-                    <p>2. أغلق هذه النافذة ثم اضغط في شاشة الـ POS على زر <b>[تمارا]</b> لطباعة الفاتورة للعميل.</p>
+                    <h4>🔔 تنبيه الكاشير:</h4>
+                    <p>1. تم تسجيل عملية الاسترداد وتحديث رصيد العميل لدى تمارا.</p>
+                    <p>2. يمكنك الآن إغلاق هذه النافذة أو طباعة إشعار الإرجاع من الـ POS.</p>
                 </div>
 
-                <button type="button" class="btn btn-outline" onclick="window.close()">
+                <button type="button" class="btn btn-outline" onclick="window.close();">
                     <span>🚪</span>
                     <span>إغلاق النافذة والعودة للـ POS</span>
                 </button>
             </div>
-        </section>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -1066,7 +1317,202 @@
         const storeDisplayName = getStoreDisplayName(currentStoreId, paramStoreName);
         document.getElementById('displayStoreTerminal').textContent = `${storeDisplayName} / كاشير ${currentTerminalId}`;
         document.getElementById('displayCartId').textContent = currentCartId;
+
+        // Auto-detect Refund Mode from POS parameters
+        const modeParam = (urlParams.get('mode') || '').toLowerCase();
+        const isReturn = urlParams.get('is_return') === 'true' || urlParams.get('isReturn') === 'true';
+        const origReceipt = urlParams.get('original_receipt') || urlParams.get('originalReceipt') || urlParams.get('receipt') || '';
+
+        if (modeParam === 'refund' || isReturn || currentAmount < 0) {
+            switchMode('refund');
+            const searchTarget = origReceipt || (currentAmount < 0 ? currentCartId : '');
+            if (searchTarget) {
+                const qInput = document.getElementById('inputRefundQuery');
+                if (qInput) qInput.value = searchTarget;
+                lookupOrder(searchTarget);
+            }
+            if (currentAmount < 0) {
+                const refAmtInput = document.getElementById('inputRefundAmount');
+                if (refAmtInput) refAmtInput.value = Math.abs(currentAmount).toFixed(2);
+            }
+        }
+
+        const refundQueryEl = document.getElementById('inputRefundQuery');
+        if (refundQueryEl) {
+            refundQueryEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    lookupOrder();
+                }
+            });
+        }
     });
+
+    function switchMode(mode) {
+        const containerSale = document.getElementById("containerSale");
+        const containerRefund = document.getElementById("containerRefund");
+        const btnTabSale = document.getElementById("btnTabSale");
+        const btnTabRefund = document.getElementById("btnTabRefund");
+
+        if (mode === "refund") {
+            if (containerSale) containerSale.classList.add("hidden");
+            if (containerRefund) containerRefund.classList.remove("hidden");
+            if (btnTabSale) btnTabSale.classList.remove("active");
+            if (btnTabRefund) btnTabRefund.classList.add("active");
+        } else {
+            if (containerRefund) containerRefund.classList.add("hidden");
+            if (containerSale) containerSale.classList.remove("hidden");
+            if (btnTabRefund) btnTabRefund.classList.remove("active");
+            if (btnTabSale) btnTabSale.classList.add("active");
+        }
+    }
+
+    let currentOrderData = null;
+
+    async function lookupOrder(query) {
+        const qInput = document.getElementById('inputRefundQuery');
+        const q = (query || (qInput ? qInput.value.trim() : "")).trim();
+        if (!q) {
+            showToast("يرجى إدخال رقم مرجع الفاتورة الأصلية أو معرف طلب تمارا");
+            if (qInput) qInput.focus();
+            return;
+        }
+
+        const btn = document.getElementById('btnLookupOrder');
+        const sp = document.getElementById('spinnerLookup');
+        const txt = document.getElementById('btnLookupText');
+        const cardDetails = document.getElementById('cardOrderDetails');
+        const cardSuccess = document.getElementById('cardRefundSuccess');
+
+        if (btn) btn.disabled = true;
+        if (sp) sp.classList.remove('hidden');
+        if (txt) txt.textContent = "جاري البحث...";
+        if (cardDetails) cardDetails.classList.add('hidden');
+        if (cardSuccess) cardSuccess.classList.add('hidden');
+
+        try {
+            const resp = await fetch(`/api/tamara/order/lookup?query=${encodeURIComponent(q)}`);
+            const data = await resp.json();
+
+            if (!resp.ok || !data.ok) {
+                throw new Error(data.error || "لم يتم العثور على أي عملية مطابقة في تمارا");
+            }
+
+            currentOrderData = data;
+
+            document.getElementById('lblOrderRef').textContent = data.merchant_reference || data.order_reference_id || "-";
+            document.getElementById('lblOrderPaymentId').textContent = data.order_id || "-";
+            document.getElementById('lblOrderTotal').textContent = Number(data.captured_amount || data.amount || 0).toFixed(2) + " ر.س";
+            document.getElementById('lblOrderRefunded').textContent = Number(data.refunded_amount || 0).toFixed(2) + " ر.س";
+            document.getElementById('lblOrderRemaining').textContent = Number(data.refundable_amount || 0).toFixed(2) + " ر.س";
+
+            const amtInput = document.getElementById('inputRefundAmount');
+            const reqAmt = Math.abs(currentAmount);
+            if (reqAmt > 0 && reqAmt <= data.refundable_amount) {
+                if (amtInput) amtInput.value = reqAmt.toFixed(2);
+            } else if (amtInput && !amtInput.value) {
+                amtInput.value = Number(data.refundable_amount).toFixed(2);
+            }
+
+            if (cardDetails) cardDetails.classList.remove('hidden');
+        } catch (err) {
+            showToast("خطأ أثناء البحث: " + err.message);
+        } finally {
+            if (btn) btn.disabled = false;
+            if (sp) sp.classList.add('hidden');
+            if (txt) txt.textContent = "بحث";
+        }
+    }
+
+    async function executeRefund() {
+        if (!currentOrderData || !currentOrderData.order_id) {
+            showToast("يرجى البحث عن الفاتورة الأصلية أولاً");
+            return;
+        }
+
+        const amtInput = document.getElementById('inputRefundAmount');
+        const amountVal = parseFloat(amtInput ? amtInput.value : "0");
+        if (isNaN(amountVal) || amountVal <= 0) {
+            showToast("يرجى إدخال مبلغ استرداد صحيح أكبر من صفر");
+            if (amtInput) amtInput.focus();
+            return;
+        }
+
+        const maxAvail = currentOrderData.refundable_amount || 0.0;
+        if (amountVal > (maxAvail + 0.01)) {
+            showToast(`المبلغ المدخل (${amountVal.toFixed(2)} ر.س) يتجاوز الحد المتبقي القابل للاسترداد (${maxAvail.toFixed(2)} ر.س)`);
+            return;
+        }
+
+        const reasonInput = document.getElementById('inputRefundReason');
+        const reason = (reasonInput ? reasonInput.value.trim() : "") || "مرتجع من الكاشير";
+
+        if (!confirm(`هل أنت متأكد من استرداد مبلغ ${amountVal.toFixed(2)} ر.س للعميل عبر تمارا؟`)) {
+            return;
+        }
+
+        const btn = document.getElementById('btnExecuteRefund');
+        const sp = document.getElementById('spinnerRefund');
+        const txt = document.getElementById('btnRefundText');
+        if (btn) btn.disabled = true;
+        if (sp) sp.classList.remove('hidden');
+        if (txt) txt.textContent = "جاري تنفيذ الاسترداد...";
+
+        try {
+            const payload = {
+                order_id: currentOrderData.order_id,
+                merchant_reference: currentOrderData.merchant_reference || currentOrderData.order_reference_id || "",
+                amount: amountVal,
+                reason: reason,
+                store_id: currentStoreId || currentOrderData.store_id || "001",
+                terminal_id: currentTerminalId || currentOrderData.terminal_id || "POS1",
+                cart_id: currentCartId || "",
+                return_cart_id: currentCartId || ""
+            };
+
+            const resp = await fetch('/api/tamara/refund', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) {
+                throw new Error(data.error || "تعذر تنفيذ الاسترداد من تمارا");
+            }
+
+            document.getElementById('cardOrderDetails').classList.add('hidden');
+            document.getElementById('resRefundedAmount').textContent = Number(data.refunded_amount || amountVal).toFixed(2) + " ر.س";
+            document.getElementById('resRefundRef').textContent = data.refund_reference || data.refund_id || "-";
+            document.getElementById('resRemainingBalance').textContent = Number(data.remaining_balance || 0).toFixed(2) + " ر.س";
+            document.getElementById('cardRefundSuccess').classList.remove('hidden');
+
+            // Post message to POS window opener for Auto-Tender
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage({
+                        type: 'TAMARA_REFUND_COMPLETED',
+                        orderId: currentOrderData.order_id,
+                        refundId: data.refund_id,
+                        refundRef: data.refund_reference,
+                        amount: amountVal,
+                        tenderTypeId: '6',
+                        cartId: currentCartId
+                    }, '*');
+                }
+            } catch (e) {
+                console.log("Could not postMessage refund to opener:", e);
+            }
+
+            showToast("تم تنفيذ الاسترداد وتحديث حساب العميل بنجاح!");
+        } catch (err) {
+            showToast("خطأ أثناء الاسترداد: " + err.message);
+        } finally {
+            if (btn) btn.disabled = false;
+            if (sp) sp.classList.add('hidden');
+            if (txt) txt.textContent = "تأكيد استرداد المبلغ عبر تمارا";
+        }
+    }
 
     function setPresetAmount(val) {
         document.getElementById('inputAmount').value = parseFloat(val).toFixed(2);
