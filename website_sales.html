@@ -556,6 +556,121 @@
       .funnel-grid { grid-template-columns: 1fr; }
       .hero-metrics-grid { grid-template-columns: 1fr 1fr; }
     }
+    /* Tooltip styles */
+    .kpi-info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #64748b;
+      font-size: 11px;
+      font-family: monospace, sans-serif;
+      font-weight: 700;
+      cursor: help;
+      position: relative;
+      margin: 0 4px;
+      vertical-align: middle;
+      transition: all 0.2s ease;
+      user-select: none;
+      border: 1px solid #cbd5e1;
+      padding: 0;
+      line-height: 1;
+      outline: none;
+    }
+    .kpi-info-btn:hover, .kpi-info-btn:focus {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .tooltip-content {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 50%;
+      transform: translateX(50%);
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      width: 250px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 10000;
+      pointer-events: none;
+      text-align: right;
+      font-weight: normal;
+      white-space: normal;
+    }
+    .tooltip-content::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      right: 50%;
+      transform: translateX(50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: #0f172a transparent transparent transparent;
+    }
+    .kpi-info-btn:hover .tooltip-content,
+    .kpi-info-btn:focus .tooltip-content {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(50%) translateY(-2px);
+    }
+    .tooltip-title {
+      font-weight: 700;
+      color: #fb923c;
+      margin-bottom: 4px;
+      display: block;
+      font-size: 12px;
+    }
+    .tooltip-source {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .tooltip-source strong {
+      color: #38bdf8;
+    }
+    /* Tooltip position variants */
+    .tooltip-align-left .tooltip-content {
+      right: -10px;
+      transform: none;
+    }
+    .tooltip-align-left .tooltip-content::after {
+      right: 15px;
+      transform: none;
+    }
+    .tooltip-align-right .tooltip-content {
+      right: auto;
+      left: -10px;
+      transform: none;
+    }
+    .tooltip-align-right .tooltip-content::after {
+      right: auto;
+      left: 15px;
+      transform: none;
+    }
+    .tooltip-bottom .tooltip-content {
+      bottom: auto;
+      top: calc(100% + 8px);
+    }
+    .tooltip-bottom .tooltip-content::after {
+      top: auto;
+      bottom: 100%;
+      border-color: transparent transparent #0f172a transparent;
+    }
   </style>
 </head>
 <body>
@@ -595,18 +710,47 @@
       <section class="card hero-card" aria-label="أداء المبيعات الرئيسي">
         <div>
           <div class="hero-title-row">
-            <span class="hero-label">صافي المبيعات</span>
+            <div style="display:flex; align-items:center;">
+              <span class="hero-label">صافي المبيعات</span>
+              <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات مؤشر صافي المبيعات">
+                i
+                <span class="tooltip-content">
+                  <span class="tooltip-title">صافي المبيعات (Net Sales)</span>
+                  إجمالي قيمة طلبات الشراء المؤكدة بالمتجر مخصوماً منها مبالغ المرتجعات المعتمدة.
+                  <span class="tooltip-source">المصدر: <strong>WooCommerce Orders - تقرير 3002</strong></span>
+                </span>
+              </button>
+            </div>
             <span class="hero-period-tag" id="kpi-period-label">تحميل...</span>
           </div>
           <div class="hero-amount" id="kpi-net-sales">0</div>
           <div class="hero-sub">
             <span class="text-green" id="kpi-change-rate">↑ 0% عن الفترة السابقة</span>
             <span class="text-muted" id="kpi-gross-refunds">(المبيعات: 0 | المرتجعات: 0)</span>
+            <button class="kpi-info-btn" type="button" aria-label="معلومات المبيعات الإجمالية والمرتجعات">
+              i
+              <span class="tooltip-content">
+                <span class="tooltip-title">المبيعات قبل المرتجع والمرتجعات</span>
+                <strong>المبيعات:</strong> قيمة الطلبات المؤكدة بالضريبة والشحن والخصم.<br>
+                <strong>المرتجعات:</strong> المبالغ المردودة للمستودع والمعتمدة بتقرير 3002.
+                <span class="tooltip-source">المصدر: <strong>website_wc_orders + report_3002</strong></span>
+              </span>
+            </button>
           </div>
 
           <div class="target-progress-box">
             <div class="target-row">
-              <span id="kpi-target-pct">0% من المستهدف</span>
+              <div style="display:flex; align-items:center;">
+                <span id="kpi-target-pct">0% من المستهدف</span>
+                <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات المستهدف">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">المستهدف التناسبي (Prorated Target)</span>
+                    المستهدف المبيعي التناسبي المحسوب بدقة بناءً على الأيام المنقضية من الشهر حتى تاريخ اليوم.
+                    <span class="tooltip-source">المصدر: <strong>محرك الحسابات + جدول المستهدفات</strong></span>
+                  </span>
+                </button>
+              </div>
               <span class="text-muted" id="kpi-target-remaining">المتبقي: 0</span>
             </div>
             <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
@@ -617,15 +761,45 @@
 
         <div class="hero-metrics-grid">
           <div>
-            <div class="mini-metric-label">الطلبات المدفوعة</div>
+            <div class="mini-metric-label">
+              الطلبات المدفوعة
+              <button class="kpi-info-btn" type="button" aria-label="معلومات الطلبات المدفوعة">
+                i
+                <span class="tooltip-content">
+                  <span class="tooltip-title">عدد الطلبات المدفوعة (Paid Orders)</span>
+                  عدد فواتير الشراء الناجحة بحالات: مكتمل، جاري التوصيل، وقيد المعالجة (يستثنى الملغى والفاشل).
+                  <span class="tooltip-source">المصدر: <strong>WooCommerce Orders</strong></span>
+                </span>
+              </button>
+            </div>
             <div class="mini-metric-value" id="kpi-paid-orders">0</div>
           </div>
           <div>
-            <div class="mini-metric-label">صافي متوسط الطلب</div>
+            <div class="mini-metric-label">
+              صافي متوسط الطلب
+              <button class="kpi-info-btn" type="button" aria-label="معلومات متوسط الطلب">
+                i
+                <span class="tooltip-content">
+                  <span class="tooltip-title">صافي متوسط قيمة الطلب (Net AOV)</span>
+                  متوسط الإنفاق الصافي للسلة الواحدة = صافي المبيعات ÷ عدد الطلبات المدفوعة.
+                  <span class="tooltip-source">المصدر: <strong>محرك الحسابات (Net Sales ÷ Orders)</strong></span>
+                </span>
+              </button>
+            </div>
             <div class="mini-metric-value" id="kpi-net-aov">0</div>
           </div>
           <div>
-            <div class="mini-metric-label">تحويل الجلسات (GA4)</div>
+            <div class="mini-metric-label">
+              تحويل الجلسات (GA4)
+              <button class="kpi-info-btn tooltip-align-left" type="button" aria-label="معلومات معدل التحويل">
+                i
+                <span class="tooltip-content">
+                  <span class="tooltip-title">معدل تحويل الجلسات (Session Conv Rate)</span>
+                  نسبة جلسات الزوار التي انتهت بطلب شراء فعلي = مستخدمو الشراء ÷ إجمالي الجلسات.
+                  <span class="tooltip-source">المصدر: <strong>Google Analytics 4 (Sessions & Purchase)</strong></span>
+                </span>
+              </button>
+            </div>
             <div class="mini-metric-value" id="kpi-conversion-rate">0%</div>
           </div>
         </div>
@@ -649,7 +823,17 @@
     <!-- Funnel Section: وين عم نخسر فرصة البيع؟ -->
     <section class="card funnel-card" aria-label="قمع تحويل المتجر">
       <div class="funnel-header">
-        <h2>🎯 وين عم نخسر فرصة البيع؟ (مسار الشراء من GA4)</h2>
+        <div style="display:flex; align-items:center;">
+          <h2>🎯 وين عم نخسر فرصة البيع؟ (مسار الشراء من GA4)</h2>
+          <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات قمع الشراء">
+            i
+            <span class="tooltip-content">
+              <span class="tooltip-title">قمع التجارة الإلكترونية (GA4 Funnel)</span>
+              تتبع رحلة العميل خطوة بخطوة من دخول المتجر، استعراض المنتجات، الإضافة للسلة، الانتقال للدفع، وحتى إتمام الشراء.
+              <span class="tooltip-source">المصدر: <strong>Google Analytics 4 Enhanced Ecommerce</strong></span>
+            </span>
+          </button>
+        </div>
         <span id="funnel-source-note">مصدر موثق: أحداث التجارة الإلكترونية المعتمدة في Google Analytics 4</span>
       </div>
       <div class="funnel-grid" id="funnel-grid-container">
@@ -683,11 +867,61 @@
               <th>المنتج</th>
               <th>الـ SKU</th>
               <th>الفئة التجارية</th>
-              <th>القطع المباعة</th>
-              <th>صافي المبيعات</th>
-              <th>الطلبات</th>
-              <th>المخزون الحالي</th>
-              <th>أيام التغطية</th>
+              <th>
+                القطع المباعة
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات القطع المباعة">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">القطع المباعة (Units Sold)</span>
+                    مجموع الوحدات المباعة من هذا المنتج في الفترة المحددة.
+                    <span class="tooltip-source">المصدر: <strong>website_wc_order_lines</strong></span>
+                  </span>
+                </button>
+              </th>
+              <th>
+                صافي المبيعات
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات صافي مبيعات المنتج">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">صافي مبيعات المنتج</span>
+                    مجموع الإيراد الصافي الناتج عن بيع هذا المنتج (الكمية × السعر الفعلي بعد خصم السطور).
+                    <span class="tooltip-source">المصدر: <strong>website_wc_order_lines (line_total)</strong></span>
+                  </span>
+                </button>
+              </th>
+              <th>
+                الطلبات
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات عدد طلبات المنتج">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">عدد الطلبات</span>
+                    عدد فواتير البيع الفريدة التي تضمنت شراء هذا المنتج.
+                    <span class="tooltip-source">المصدر: <strong>website_wc_order_lines</strong></span>
+                  </span>
+                </button>
+              </th>
+              <th>
+                المخزون الحالي
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">المخزون المتاح (Stock)</span>
+                    الرصيد المتبقي الفعلي المتاح للبيع المباشر على منصة ووكومرس لحظياً.
+                    <span class="tooltip-source">المصدر: <strong>WooCommerce Products API</strong></span>
+                  </span>
+                </button>
+              </th>
+              <th>
+                حالة التغطية
+                <button class="kpi-info-btn tooltip-bottom tooltip-align-left" type="button" aria-label="معلومات حالة التغطية">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">حالة التغطية والتنبيه</span>
+                    تقييم آلي: تنبيه باللون الأحمر إذا كان المخزون 3 قطع أو أقل لتفادي نفاد المنتجات الأكثر مبيعاً.
+                    <span class="tooltip-source">المصدر: <strong>محرك التحليلات v2</strong></span>
+                  </span>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody id="products-table-body">
@@ -698,8 +932,18 @@
 
       <!-- Basket Affinity -->
       <div class="affinity-box">
-        <h3>🛒 منتجات تُشترى معاً في نفس السلة (Market Basket Affinity)</h3>
-        <div class="affinity-list" id="affinity-list-container">
+        <div style="display:flex; align-items:center;">
+          <h3 style="margin-bottom:0;">🛒 منتجات تُشترى معاً في نفس السلة (Market Basket Affinity)</h3>
+          <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات ارتباط السلال">
+            i
+            <span class="tooltip-content">
+              <span class="tooltip-title">ارتباط السلال (Basket Affinity)</span>
+              المنتجات التي تكرر شراؤها معاً في نفس فاتورة الطلب لاستخدامها في العروض والحزم المشتركة.
+              <span class="tooltip-source">المصدر: <strong>تحليل سطور الطلبات المشتركة</strong></span>
+            </span>
+          </button>
+        </div>
+        <div class="affinity-list" id="affinity-list-container" style="margin-top:14px;">
           <!-- Injected via JavaScript -->
         </div>
       </div>
@@ -709,7 +953,17 @@
     <div class="tab-pane" id="tab-marketing">
       <div class="table-container">
         <div class="table-tools">
-          <div style="font-weight:700; font-size:16px;">أداء القنوات التسويقية (Default Channel Groups)</div>
+          <div style="font-weight:700; font-size:16px; display:flex; align-items:center;">
+            أداء القنوات التسويقية (Default Channel Groups)
+            <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات القنوات التسويقية">
+              i
+              <span class="tooltip-content">
+                <span class="tooltip-title">القنوات التسويقية (Marketing Channels)</span>
+                تصنيف حركة الزيارات بحسب طريقة وصول العميل (بحث عضوي، إعلانات مدفوعة، تواصل اجتماعي، دخول مباشر).
+                <span class="tooltip-source">المصدر: <strong>Google Analytics 4 (Channel Grouping)</strong></span>
+              </span>
+            </button>
+          </div>
         </div>
         <table>
           <thead>
@@ -733,7 +987,17 @@
     <div class="tab-pane" id="tab-gateways">
       <div class="two-col-grid">
         <div class="card">
-          <h3 style="margin-bottom:16px; font-size:16px; font-weight:700;">وسائل وبوابات الدفع المستخدمة</h3>
+          <h3 style="margin-bottom:16px; font-size:16px; font-weight:700; display:flex; align-items:center;">
+            وسائل وبوابات الدفع المستخدمة
+            <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات وسائل الدفع">
+              i
+              <span class="tooltip-content">
+                <span class="tooltip-title">بوابات الدفع (Payment Gateways)</span>
+                حصة المبيعات والطلبات موزعة حسب وسيلة الدفع (تمارا، تابي، أبل باي، مدى، البطاقات الائتمانية).
+                <span class="tooltip-source">المصدر: <strong>WooCommerce Orders (payment_method)</strong></span>
+              </span>
+            </button>
+          </h3>
           <table>
             <thead>
               <tr>
@@ -749,7 +1013,17 @@
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:16px; font-size:16px; font-weight:700;">حالات الطلبات والتشغيل</h3>
+          <h3 style="margin-bottom:16px; font-size:16px; font-weight:700; display:flex; align-items:center;">
+            حالات الطلبات والتشغيل
+            <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات حالات الطلبات">
+              i
+              <span class="tooltip-content">
+                <span class="tooltip-title">حالات معالجة الطلبات</span>
+                توزيع الطلبات بحسب مسار التنفيذ والشحن (مكتمل، قيد التجهيز، ملغى، مسترجع).
+                <span class="tooltip-source">المصدر: <strong>WooCommerce Orders (status)</strong></span>
+              </span>
+            </button>
+          </h3>
           <table>
             <thead>
               <tr>
@@ -770,7 +1044,17 @@
     <div class="tab-pane" id="tab-daily">
       <div class="table-container">
         <div class="table-tools">
-          <div style="font-weight:700; font-size:16px;">سجل الأداء اليومي ومطابقة المؤشرات</div>
+          <div style="font-weight:700; font-size:16px; display:flex; align-items:center;">
+            سجل الأداء اليومي ومطابقة المؤشرات
+            <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات السجل اليومي">
+              i
+              <span class="tooltip-content">
+                <span class="tooltip-title">السجل اليومي الموحد</span>
+                بيانات الأداء اليومي المفصلة والمطابقة مع سجلات قاعدة بيانات PostgreSQL اليومية.
+                <span class="tooltip-source">المصدر: <strong>website_kpi_daily</strong></span>
+              </span>
+            </button>
+          </div>
           <button class="btn-pill" id="btn-export-csv">تصدير CSV</button>
         </div>
         <table>
@@ -980,22 +1264,93 @@
           return;
         }
 
+        const sCount = funnel.sessions || 1;
+        const vCount = funnel.view_item_users || 0;
+        const aCount = funnel.add_to_cart_users || 0;
+        const bCount = funnel.begin_checkout_users || 0;
+        const pCount = funnel.purchase_users || 0;
+
         const stages = [
-          { name: 'جلسات المتجر (Sessions)', count: funnel.sessions, pct: 100 },
-          { name: 'استعراض منتج (View Item)', count: funnel.view_item_users, pct: (funnel.view_item_users / funnel.sessions * 100).toFixed(1) },
-          { name: 'إضافة للسلة (Add to Cart)', count: funnel.add_to_cart_users, pct: (funnel.add_to_cart_users / funnel.sessions * 100).toFixed(1) },
-          { name: 'بدء الدفع (Begin Checkout)', count: funnel.begin_checkout_users, pct: (funnel.begin_checkout_users / funnel.sessions * 100).toFixed(1) },
-          { name: 'إتمام الشراء (Purchase)', count: funnel.purchase_users, pct: (funnel.purchase_users / funnel.sessions * 100).toFixed(1) },
+          { 
+            name: '1. زيارات المتجر',
+            sub: 'Sessions',
+            count: sCount,
+            pct: 100,
+            note: 'نقطة بداية الزيارات',
+            isDrop: false,
+            desc: 'إجمالي الجلسات والزيارات التي دخلت المتجر الإلكتروني في هذه الفترة.',
+            src: 'GA4 (website_ga4_daily)'
+          },
+          { 
+            name: '2. تصفح المنتجات',
+            sub: 'View Item',
+            count: vCount,
+            pct: ((vCount / sCount) * 100).toFixed(1),
+            note: `غادر ${(100 - (vCount / sCount * 100)).toFixed(1)}% دون تصفح`,
+            isDrop: true,
+            desc: 'الزوار الذين نقروا على صفحة منتج وشاهدوا تفاصيله وصوره.',
+            src: 'حدث view_item في GA4'
+          },
+          { 
+            name: '3. إضافة للسلة',
+            sub: 'Add to Cart',
+            count: aCount,
+            pct: ((aCount / sCount) * 100).toFixed(1),
+            note: vCount ? `أضاف ${(aCount / vCount * 100).toFixed(1)}% من المتصفحين` : '',
+            isDrop: false,
+            desc: 'الزوار الذين أعجبهم المنتج ووضعوه في سلة التسوق.',
+            src: 'حدث add_to_cart في GA4'
+          },
+          { 
+            name: '4. بدء الدفع',
+            sub: 'Begin Checkout',
+            count: bCount,
+            pct: ((bCount / sCount) * 100).toFixed(1),
+            note: aCount ? `سلات متروكة: ${(100 - (bCount / aCount * 100)).toFixed(1)}%` : '',
+            isDrop: true,
+            desc: 'الزبائن الذين فتحوا صفحة إتمام الطلب وأدخلوا عنوان الشحن.',
+            src: 'حدث begin_checkout في GA4'
+          },
+          { 
+            name: '5. إتمام الشراء',
+            sub: 'Purchase',
+            count: pCount,
+            pct: ((pCount / sCount) * 100).toFixed(1),
+            note: bCount ? `نجح ${(pCount / bCount * 100).toFixed(1)}% من الدفع` : '',
+            isDrop: false,
+            desc: 'العملاء الذين دفعوا بنجاح وتم تأكيد طلباتهم رسمياً.',
+            src: 'حدث purchase في GA4'
+          },
         ];
 
         stages.forEach((st, idx) => {
           const div = document.createElement('div');
           div.className = 'funnel-stage';
           div.innerHTML = `
-            <div class="funnel-stage-name">${st.name}</div>
-            <div class="funnel-stage-num">${fmtNum(st.count)}</div>
-            <div class="funnel-bar"><div class="funnel-bar-fill" style="width: ${st.pct}%"></div></div>
-            <div class="funnel-conv-tag">${st.pct}% من الجلسات</div>
+            <div>
+              <div class="funnel-stage-name" style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:4px;">
+                <div>
+                  <div style="font-weight:700; font-size:14px; color:var(--text);">${st.name}</div>
+                  <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">${st.sub}</div>
+                </div>
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات ${st.name}">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">${st.name} (${st.sub})</span>
+                    ${st.desc}
+                    <span class="tooltip-source">المصدر: <strong>${st.src}</strong></span>
+                  </span>
+                </button>
+              </div>
+              <div class="funnel-stage-num">${fmtNum(st.count)}</div>
+            </div>
+            <div>
+              <div class="funnel-bar"><div class="funnel-bar-fill" style="width: ${Math.min(100, Math.max(2, st.pct))}%;"></div></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                <span class="funnel-conv-tag">${st.pct}% من الزيارات</span>
+                <span style="font-size:11px; color:${st.isDrop ? 'var(--red)' : 'var(--text-muted)'}; font-weight:600;">${st.note}</span>
+              </div>
+            </div>
           `;
           container.appendChild(div);
         });
@@ -1020,7 +1375,17 @@
           const card = document.createElement('div');
           card.className = 'cat-card' + (SELECTED_CATEGORY === cat.category_name ? ' active' : '');
           card.innerHTML = `
-            <div class="cat-name">${cat.category_name}</div>
+            <div class="cat-name" style="display:flex; align-items:center; justify-content:space-between;">
+              <span>${cat.category_name}</span>
+              <button class="kpi-info-btn" type="button" onclick="event.stopPropagation();" aria-label="معلومات فئة ${cat.category_name}">
+                i
+                <span class="tooltip-content">
+                  <span class="tooltip-title">قسم: ${cat.category_name}</span>
+                  صافي مبيعات منتجات هذا القسم التجاري وحصتها من إجمالي مبيعات المتجر.
+                  <span class="tooltip-source">المصدر: <strong>سطور طلبات ووكومرس</strong></span>
+                </span>
+              </button>
+            </div>
             <div class="cat-sales">${fmtCurrency(cat.sales_amount)}</div>
             <div class="cat-meta">
               <span>${fmtNum(cat.units_sold)} قطعة</span>
