@@ -1826,10 +1826,11 @@
 
             function getActiveManager() {
                 if (isUserManager()) {
-                    return currentUser ? (currentUser.name || '').trim() : '';
+                    const user = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+                    return user ? (user.name || '').trim() : '';
                 }
                 const mf = document.getElementById('managerFilter');
-                return mf ? mf.value.trim() : 'all';
+                return (mf && typeof mf.value === 'string' ? mf.value : 'all').trim();
             }
 
             function getActiveScopedStoreCodes() {
@@ -4780,6 +4781,9 @@
                 });
 
                 const leadColspan = isAllBranches ? 3 : 2;
+                const activeMgr = getActiveManager();
+                const isSpecificMgr = (activeMgr !== 'all' && activeMgr !== '');
+                const allTotalTitle = isSpecificMgr ? `المجموع العام لمعارض المنطقة (${activeMgr})` : 'المجموع العام لكافة الفروع';
                 rowsHtml += `
                     <tr class="total-row">
                         <td colspan="${leadColspan}" class="text-center">${isAllBranches ? allTotalTitle : 'المجموع العام للمعرض'}</td>
