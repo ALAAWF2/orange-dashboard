@@ -1784,6 +1784,16 @@
             let monthlyTargetsData = {}; // Global for new targets
 
             // Helpers
+            function toLocalYMD(d) {
+                if (!d) return '';
+                const dateObj = (d instanceof Date) ? d : new Date(d);
+                if (isNaN(dateObj.getTime())) return String(d);
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
             function normalizeEmployeeId(rawId) {
                 if (rawId == null) return '';
                 let employeeId = String(rawId).trim();
@@ -2068,14 +2078,6 @@
                 const today = new Date();
                 branchStats = {}; // Reset Global Variable
                 employeeDailyMaps = {}; // Reset Global Variable
-
-                // Local YYYY-MM-DD
-                const toLocalYMD = (d) => {
-                    const y = d.getFullYear();
-                    const m = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${day}`;
-                };
 
                 const todayStr = toLocalYMD(today);
                 let todayYear = today.getFullYear();
