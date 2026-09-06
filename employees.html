@@ -919,6 +919,29 @@
             color: var(--text-muted);
             font-weight: 600;
         }
+
+        /* Print Styles */
+        @media print {
+            .navbar, .tabs-container, .card.border-0.shadow-sm.p-3.mb-4, button, select {
+                display: none !important;
+            }
+            body {
+                background: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .content-box {
+                box-shadow: none !important;
+                border: 1px solid #e2e8f0 !important;
+                padding: 10px !important;
+                margin-bottom: 0 !important;
+            }
+            .hero-board-card, .hero-spotlight-card {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+                break-inside: avoid;
+            }
+        }
     </style>
 </head>
 
@@ -1751,10 +1774,16 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border" id="heroesManagerContainer">
+                            <label for="heroesManagerSelect" class="form-label mb-0 small fw-bold text-muted">مدير المنطقة:</label>
+                            <select id="heroesManagerSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onHeroesManagerChange(this.value)">
+                                <option value="all">كافة مدراء المناطق</option>
+                            </select>
+                        </div>
                         <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
                             <label for="heroesBranchSelect" class="form-label mb-0 small fw-bold text-muted">الفرع:</label>
                             <select id="heroesBranchSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onHeroesBranchChange(this.value)">
-                                <option value="all">كافة الفروع</option>
+                                <option value="all">كافة معارض المنطقة</option>
                             </select>
                         </div>
                         <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
@@ -1769,6 +1798,10 @@
                                 <option value="today">اليوم المباشر (Today)</option>
                             </select>
                         </div>
+                        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 px-2 py-1" onclick="window.print()" title="طباعة أو مشاركة لوحة الشرف">
+                            <i class="bi bi-printer"></i>
+                            <span class="d-none d-sm-inline small fw-bold">طباعة / مشاركة</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1870,7 +1903,7 @@
                     <div class="col-lg-4 col-md-6">
                         <div class="hero-board-card">
                             <div class="hero-board-header">
-                                <h4 class="hero-board-title"><i class="bi bi-lightning-charge-fill text-warning"></i> ⚡ دينامو المبيعات (عدد الفواتير)</h4>
+                                <h4 class="hero-board-title"><i class="bi bi-lightning-charge-fill text-warning"></i> ⚡ بطل عدد الفواتير</h4>
                                 <span class="hero-board-badge">Top 5</span>
                             </div>
                             <div class="hero-board-list" id="boardTopBillsCount">
@@ -1896,7 +1929,7 @@
                     <div class="col-lg-4 col-md-6">
                         <div class="hero-board-card">
                             <div class="hero-board-header">
-                                <h4 class="hero-board-title"><i class="bi bi-basket3-fill" style="color:#7c3aed;"></i> 🧺 سيد السلة العميقة (قطع/فاتورة)</h4>
+                                <h4 class="hero-board-title"><i class="bi bi-basket3-fill" style="color:#7c3aed;"></i> 🧺 بطل متوسط القطع بالفاتورة</h4>
                                 <span class="hero-board-badge">Top 5</span>
                             </div>
                             <div class="hero-board-list" id="boardTopUpt">
@@ -2601,11 +2634,26 @@
             }
 
             function onManagerFilterChange() {
+                const mf = document.getElementById('managerFilter');
+                const hm = document.getElementById('heroesManagerSelect');
+                if (mf && hm && hm.value !== mf.value) {
+                    hm.value = mf.value;
+                }
                 updateBranchFilterOptions();
                 updatePage();
                 if (currentMainTab === 'heroes') {
                     renderOrangeHeroesData();
                 }
+            }
+
+            function onHeroesManagerChange(val) {
+                const mf = document.getElementById('managerFilter');
+                if (mf && mf.value !== val) {
+                    mf.value = val;
+                }
+                updateBranchFilterOptions();
+                updatePage();
+                renderOrangeHeroesData();
             }
 
             function onMainBranchChange() {
@@ -2638,6 +2686,9 @@
 
                 // Managers
                 const managerSelect = document.getElementById('managerFilter');
+                const heroesManagerSelect = document.getElementById('heroesManagerSelect');
+                const heroesManagerContainer = document.getElementById('heroesManagerContainer');
+
                 if (managerSelect) {
                     managerSelect.innerHTML = '<option value="all">الكل</option>';
                     const managers = new Set();
@@ -2646,21 +2697,45 @@
                             managers.add(meta.manager.trim());
                         }
                     });
-                    Array.from(managers).sort().forEach(m => {
+                    const sortedManagers = Array.from(managers).sort();
+
+                    sortedManagers.forEach(m => {
                         const opt = document.createElement('option');
                         opt.value = m;
                         opt.textContent = m;
                         managerSelect.appendChild(opt);
                     });
 
+                    if (heroesManagerSelect) {
+                        heroesManagerSelect.innerHTML = '<option value="all">كافة مدراء المناطق</option>';
+                        sortedManagers.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m;
+                            opt.textContent = m;
+                            heroesManagerSelect.appendChild(opt);
+                        });
+                    }
+
                     if (isMgr) {
                         managerSelect.value = managerName;
                         if (managerSelect.parentElement) {
                             managerSelect.parentElement.style.display = 'none';
                         }
+                        if (heroesManagerSelect) {
+                            heroesManagerSelect.value = managerName;
+                        }
+                        if (heroesManagerContainer) {
+                            heroesManagerContainer.style.display = 'none';
+                        }
                     } else {
                         if (managerSelect.parentElement) {
                             managerSelect.parentElement.style.display = '';
+                        }
+                        if (heroesManagerContainer) {
+                            heroesManagerContainer.style.display = '';
+                        }
+                        if (heroesManagerSelect) {
+                            heroesManagerSelect.value = managerSelect.value || 'all';
                         }
                     }
                 }
@@ -4924,6 +4999,12 @@
                 const monthStr = heroesSelectedMonth || orangeHeroesData.metadata?.available_months?.[0] || toLocalYMD(new Date()).slice(0, 7);
                 const isToday = (heroesScope === 'today');
 
+                // Sync heroesManagerSelect if present
+                const heroesManagerSelect = document.getElementById('heroesManagerSelect');
+                if (heroesManagerSelect && heroesManagerSelect.value !== (isSpecificMgr ? activeMgr : 'all')) {
+                    heroesManagerSelect.value = isSpecificMgr ? activeMgr : 'all';
+                }
+
                 // Update subtitle
                 const subtitleEl = document.getElementById('heroesSubtitle');
                 if (subtitleEl) {
@@ -4931,12 +5012,18 @@
                     if (selectedBranch !== 'all') {
                         branchLabel = `معرض ${storesData[selectedBranch] || selectedBranch}`;
                     } else if (isSpecificMgr) {
-                        branchLabel = `كافة معارض المنطقة (${activeMgr})`;
+                        branchLabel = `كافة معارض المنطقة (${activeMgr}) — [${targetStores.length} معارض]`;
                     } else {
-                        branchLabel = 'كافة الفروع (المملكة)';
+                        branchLabel = `كافة الفروع (${targetStores.length} معرض بالمملكة)`;
                     }
                     const timeLabel = isToday ? `اليوم (${orangeHeroesData.metadata?.today_date || ''})` : `شهر ${formatMonthLabel(monthStr)} (تراكمي)`;
                     subtitleEl.textContent = `عرض أبطال التميز البيعي — ${timeLabel} — ${branchLabel}`;
+                }
+
+                // Update tab badge
+                const badgeEl = document.getElementById('heroesBadgeCount');
+                if (badgeEl) {
+                    badgeEl.textContent = isToday ? 'Live Top 5' : 'Top 5';
                 }
 
                 // Aggregators
@@ -5111,25 +5198,46 @@
 
             function renderHeroesSpotlight(topSales, topAchieve, topBill, topAvg) {
                 // 1. Sales
-                document.getElementById('spotlightSalesName').textContent = topSales ? topSales.name : '—';
+                const salesNameEl = document.getElementById('spotlightSalesName');
+                salesNameEl.textContent = topSales ? topSales.name : '—';
+                if (topSales && (topSales.id || topSales.emp_id)) {
+                    salesNameEl.style.cursor = 'pointer';
+                    salesNameEl.onclick = () => openEmployeeInsights(topSales.id || topSales.emp_id);
+                }
                 document.getElementById('spotlightSalesStore').textContent = topSales ? `(${topSales.store_name})` : '—';
                 document.getElementById('spotlightSalesVal').textContent = topSales ? `${topSales.sales.toLocaleString('en-US', {maximumFractionDigits: 0})} ر.س` : '0 ر.س';
-                document.getElementById('spotlightSalesSub').textContent = topSales ? `${topSales.bills} فاتورة | ${topSales.units} قطعة` : '0 فاتورة';
+                document.getElementById('spotlightSalesSub').textContent = topSales ? `عدد الفواتير: ${topSales.bills} • القطع: ${topSales.units}` : '0 فاتورة';
 
-                // 2. Achieve
-                document.getElementById('spotlightAchieveName').textContent = topAchieve ? topAchieve.name : '—';
+                // 2. Target Achieve
+                const achieveNameEl = document.getElementById('spotlightAchieveName');
+                achieveNameEl.textContent = topAchieve ? topAchieve.name : '—';
+                if (topAchieve && (topAchieve.id || topAchieve.emp_id)) {
+                    achieveNameEl.style.cursor = 'pointer';
+                    achieveNameEl.onclick = () => openEmployeeInsights(topAchieve.id || topAchieve.emp_id);
+                }
                 document.getElementById('spotlightAchieveStore').textContent = topAchieve ? `(${topAchieve.store_name})` : '—';
                 document.getElementById('spotlightAchieveVal').textContent = topAchieve ? `${topAchieve.achieve_pct.toFixed(1)}%` : '0%';
-                document.getElementById('spotlightAchieveSub').textContent = topAchieve ? `المبيع: ${topAchieve.sales.toLocaleString('en-US', {maximumFractionDigits: 0})} / الهدف: ${topAchieve.target.toLocaleString('en-US', {maximumFractionDigits: 0})} ر.س` : 'الهدف: 0 ر.س';
+                document.getElementById('spotlightAchieveSub').textContent = topAchieve ? `مبيعات: ${topAchieve.sales.toLocaleString('en-US', {maximumFractionDigits: 0})} / هدف: ${topAchieve.target.toLocaleString('en-US', {maximumFractionDigits: 0})}` : 'الهدف: 0 ر.س';
 
-                // 3. Bill
-                document.getElementById('spotlightBillName').textContent = topBill ? topBill.emp_name : '—';
+                // 3. Single Bill
+                const billNameEl = document.getElementById('spotlightBillName');
+                const billEmpName = topBill ? (topBill.emp_name || employeeNames[topBill.emp_id] || topBill.name || '—') : '—';
+                billNameEl.textContent = billEmpName;
+                if (topBill && (topBill.emp_id || topBill.id)) {
+                    billNameEl.style.cursor = 'pointer';
+                    billNameEl.onclick = () => openEmployeeInsights(topBill.emp_id || topBill.id);
+                }
                 document.getElementById('spotlightBillStore').textContent = topBill ? `(${topBill.store_name})` : '—';
                 document.getElementById('spotlightBillVal').textContent = topBill ? `${topBill.amount.toLocaleString('en-US', {maximumFractionDigits: 0})} ر.س` : '0 ر.س';
                 document.getElementById('spotlightBillSub').textContent = topBill ? `إيصال: ${topBill.receipt_id || '—'} (${topBill.date})` : 'إيصال: —';
 
                 // 4. Avg Bill
-                document.getElementById('spotlightAvgName').textContent = topAvg ? topAvg.name : '—';
+                const avgNameEl = document.getElementById('spotlightAvgName');
+                avgNameEl.textContent = topAvg ? topAvg.name : '—';
+                if (topAvg && (topAvg.id || topAvg.emp_id)) {
+                    avgNameEl.style.cursor = 'pointer';
+                    avgNameEl.onclick = () => openEmployeeInsights(topAvg.id || topAvg.emp_id);
+                }
                 document.getElementById('spotlightAvgStore').textContent = topAvg ? `(${topAvg.store_name})` : '—';
                 document.getElementById('spotlightAvgVal').textContent = topAvg ? `${topAvg.avg_bill.toLocaleString('en-US', {maximumFractionDigits: 1})} ر.س` : '0 ر.س';
                 document.getElementById('spotlightAvgSub').textContent = topAvg ? `إجمالي الفواتير: ${topAvg.bills}` : 'عدد الفواتير: 0';
@@ -5156,6 +5264,7 @@
                     let mainVal = '';
                     let subVal = '';
                     let empId = item.id || item.emp_id;
+                    let extraProgress = '';
 
                     if (type === 'single_bill') {
                         mainVal = `${Number(item.amount || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} ر.س`;
@@ -5166,6 +5275,13 @@
                     } else if (type === 'achieve') {
                         mainVal = `${Number(item.achieve_pct || 0).toFixed(1)}%`;
                         subVal = `مبيع: ${Number(item.sales || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} / هدف: ${Number(item.target || 0).toLocaleString('en-US', {maximumFractionDigits: 0})}`;
+                        const pctBar = Math.min(Math.max(Number(item.achieve_pct || 0), 0), 100);
+                        const barColor = item.achieve_pct >= 100 ? '#10b981' : (item.achieve_pct >= 75 ? '#fe7900' : '#3b82f6');
+                        extraProgress = `
+                            <div class="progress mt-1" style="height: 4px; width: 100%; background: #e2e8f0; border-radius: 2px;">
+                                <div class="progress-bar" style="width: ${pctBar}%; background-color: ${barColor};"></div>
+                            </div>
+                        `;
                     } else if (type === 'avg_bill') {
                         mainVal = `${Number(item.avg_bill || 0).toLocaleString('en-US', {maximumFractionDigits: 1})} ر.س`;
                         subVal = `${item.bills} فاتورة • مبيع: ${Number(item.sales || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} ر.س`;
@@ -5196,9 +5312,10 @@
                                 <span class="hero-emp-store" title="${escapeHtml(store)}">${escapeHtml(store)}</span>
                             </div>
                         </div>
-                        <div class="hero-metric-col">
+                        <div class="hero-metric-col" style="min-width: 110px;">
                             <div class="hero-metric-val">${mainVal}</div>
                             <div class="hero-metric-sub">${escapeHtml(subVal)}</div>
+                            ${extraProgress}
                         </div>
                     `;
                     el.appendChild(rowEl);
@@ -5227,6 +5344,17 @@
                         ? `مبيع: ${Number(item.sales || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} / هدف: ${Number(item.target || 0).toLocaleString('en-US', {maximumFractionDigits: 0})}` 
                         : `${item.bills} فاتورة • ${item.units} قطعة`;
 
+                    let storeProgress = '';
+                    if (item.target > 0) {
+                        const pctBar = Math.min(Math.max(Number(item.achieve_pct || 0), 0), 100);
+                        const barColor = item.achieve_pct >= 100 ? '#10b981' : (item.achieve_pct >= 75 ? '#fe7900' : '#3b82f6');
+                        storeProgress = `
+                            <div class="progress mt-1" style="height: 4px; width: 100%; background: #e2e8f0; border-radius: 2px;">
+                                <div class="progress-bar" style="width: ${pctBar}%; background-color: ${barColor};"></div>
+                            </div>
+                        `;
+                    }
+
                     const rowEl = document.createElement('div');
                     rowEl.className = rowClass;
                     rowEl.innerHTML = `
@@ -5237,9 +5365,10 @@
                                 <span class="hero-emp-store">${item.bills} فاتورة مسجلة</span>
                             </div>
                         </div>
-                        <div class="hero-metric-col">
+                        <div class="hero-metric-col" style="min-width: 110px;">
                             <div class="hero-metric-val" style="color:var(--primary);">${achieveText}</div>
                             <div class="hero-metric-sub">${escapeHtml(subText)}</div>
+                            ${storeProgress}
                         </div>
                     `;
                     el.appendChild(rowEl);
