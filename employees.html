@@ -1574,6 +1574,12 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border" id="challengeManagerContainer">
+                            <label for="challengeManagerSelect" class="form-label mb-0 small fw-bold text-muted">مدير المنطقة:</label>
+                            <select id="challengeManagerSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onChallengeManagerChange(this.value)">
+                                <option value="all">كافة مدراء المناطق</option>
+                            </select>
+                        </div>
                         <div class="d-flex align-items-center gap-1 bg-light p-1 px-2 rounded-2 border">
                             <label for="challengeBranchSelect" class="form-label mb-0 small fw-bold text-muted">الفرع:</label>
                             <select id="challengeBranchSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: auto; cursor: pointer;" onchange="onChallengeBranchChange(this.value)">
@@ -2639,10 +2645,16 @@
                 if (mf && hm && hm.value !== mf.value) {
                     hm.value = mf.value;
                 }
+                const cm = document.getElementById('challengeManagerSelect');
+                if (mf && cm && cm.value !== mf.value) {
+                    cm.value = mf.value;
+                }
                 updateBranchFilterOptions();
                 updatePage();
                 if (currentMainTab === 'heroes') {
                     renderOrangeHeroesData();
+                } else if (currentMainTab === 'challenge') {
+                    renderTeamChallengeData();
                 }
             }
 
@@ -2651,9 +2663,27 @@
                 if (mf && mf.value !== val) {
                     mf.value = val;
                 }
+                const cm = document.getElementById('challengeManagerSelect');
+                if (cm && cm.value !== val) {
+                    cm.value = val;
+                }
                 updateBranchFilterOptions();
                 updatePage();
                 renderOrangeHeroesData();
+            }
+
+            function onChallengeManagerChange(val) {
+                const mf = document.getElementById('managerFilter');
+                if (mf && mf.value !== val) {
+                    mf.value = val;
+                }
+                const hm = document.getElementById('heroesManagerSelect');
+                if (hm && hm.value !== val) {
+                    hm.value = val;
+                }
+                updateBranchFilterOptions();
+                updatePage();
+                renderTeamChallengeData();
             }
 
             function onMainBranchChange() {
@@ -2688,6 +2718,8 @@
                 const managerSelect = document.getElementById('managerFilter');
                 const heroesManagerSelect = document.getElementById('heroesManagerSelect');
                 const heroesManagerContainer = document.getElementById('heroesManagerContainer');
+                const challengeManagerSelect = document.getElementById('challengeManagerSelect');
+                const challengeManagerContainer = document.getElementById('challengeManagerContainer');
 
                 if (managerSelect) {
                     managerSelect.innerHTML = '<option value="all">الكل</option>';
@@ -2716,6 +2748,16 @@
                         });
                     }
 
+                    if (challengeManagerSelect) {
+                        challengeManagerSelect.innerHTML = '<option value="all">كافة مدراء المناطق</option>';
+                        sortedManagers.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m;
+                            opt.textContent = m;
+                            challengeManagerSelect.appendChild(opt);
+                        });
+                    }
+
                     if (isMgr) {
                         managerSelect.value = managerName;
                         if (managerSelect.parentElement) {
@@ -2727,6 +2769,12 @@
                         if (heroesManagerContainer) {
                             heroesManagerContainer.style.display = 'none';
                         }
+                        if (challengeManagerSelect) {
+                            challengeManagerSelect.value = managerName;
+                        }
+                        if (challengeManagerContainer) {
+                            challengeManagerContainer.style.display = 'none';
+                        }
                     } else {
                         if (managerSelect.parentElement) {
                             managerSelect.parentElement.style.display = '';
@@ -2736,6 +2784,12 @@
                         }
                         if (heroesManagerSelect) {
                             heroesManagerSelect.value = managerSelect.value || 'all';
+                        }
+                        if (challengeManagerContainer) {
+                            challengeManagerContainer.style.display = '';
+                        }
+                        if (challengeManagerSelect) {
+                            challengeManagerSelect.value = managerSelect.value || 'all';
                         }
                     }
                 }
@@ -4945,6 +4999,12 @@
                         chalBranchSelect.value = mainBranch;
                         challengeSelectedBranch = mainBranch;
                     }
+                    const activeMgr = getActiveManager();
+                    const isSpecificMgr = (activeMgr !== 'all' && activeMgr !== '');
+                    const chalManagerSelect = document.getElementById('challengeManagerSelect');
+                    if (chalManagerSelect && chalManagerSelect.value !== (isSpecificMgr ? activeMgr : 'all')) {
+                        chalManagerSelect.value = isSpecificMgr ? activeMgr : 'all';
+                    }
                     renderTeamChallengeData();
                 } else if (tabId === 'heroes') {
                     const heroesBranchSelect = document.getElementById('heroesBranchSelect');
@@ -5506,6 +5566,12 @@
                 const isAllBranches = (selectedBranch === 'all');
                 const activeMgr = getActiveManager();
                 const isSpecificMgr = (activeMgr !== 'all' && activeMgr !== '');
+
+                // Sync challengeManagerSelect if present
+                const chalManagerSelect = document.getElementById('challengeManagerSelect');
+                if (chalManagerSelect && chalManagerSelect.value !== (isSpecificMgr ? activeMgr : 'all')) {
+                    chalManagerSelect.value = isSpecificMgr ? activeMgr : 'all';
+                }
 
                 if (!isAllBranches) {
                     const storeKey = String(selectedBranch);
