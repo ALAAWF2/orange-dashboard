@@ -14,8 +14,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <!-- Orange Common Assets -->
     <link rel="stylesheet" href="assets/orange-ui.css">
@@ -1009,16 +1007,8 @@
         </div>
     </nav>
 
-    <!-- JS Libraries -->
-    <!-- JS Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script src="assets/amiri_font.js"></script>
-    <!-- SheetJS for Excel Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="data.js"></script>
     <script src="users.js"></script>
-    <script src="pdf_export_employees.js"></script>
 
     <script>
         let currentUser = null;
@@ -2008,7 +1998,7 @@
 
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
         <!-- Employee Insight Offcanvas -->
         <div class="offcanvas offcanvas-start" tabindex="-1" id="empInsightPanel"
@@ -2279,7 +2269,13 @@
             let top10Chart, branchChart;
 
             // Team Sales Challenge State
+            const TEAM_CHALLENGE_INDEX_URL = 'data/team_challenge/index.json';
             let teamChallengeData = null;
+            let teamChallengeIndex = null;
+            let challengeIndexPromise = null;
+            let legacyChallengePromise = null;
+            const loadedChallengeMonths = new Set();
+            const challengeMonthPromises = new Map();
             let currentMainTab = 'employees';
             let challengeScope = 'month';
             let challengeSelectedDate = null;
@@ -2295,6 +2291,59 @@
             const QUILT_COLS = ["199", "299", "399", "499_495", "599_595", "699_695", "799_795", "899_895", "999_995", "1199", "1299", "OTHER"];
             const TOPPER_COLS = ["TWIN_179", "FULL_189", "FULL_249", "FULL_299", "QUEEN_189", "KING_199", "KING_399", "KING_499", "OTHER"];
             const PILLOW_COLS = ["49", "59", "69", "89", "99", "129", "149", "159", "194_219", "395", "OTHER"];
+
+            const employeeAssetPromises = new Map();
+
+            function loadEmployeeScript(src, readyCheck) {
+                if (readyCheck()) return Promise.resolve();
+                if (employeeAssetPromises.has(src)) return employeeAssetPromises.get(src);
+
+                const promise = new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.async = true;
+                    script.onload = () => readyCheck()
+                        ? resolve()
+                        : reject(new Error(`Loaded ${src}, but the expected API is missing`));
+                    script.onerror = () => reject(new Error(`Could not load ${src}`));
+                    document.head.appendChild(script);
+                }).catch(error => {
+                    employeeAssetPromises.delete(src);
+                    throw error;
+                });
+
+                employeeAssetPromises.set(src, promise);
+                return promise;
+            }
+
+            async function ensureExcelLibrary() {
+                await loadEmployeeScript(
+                    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+                    () => typeof window.XLSX !== 'undefined'
+                );
+            }
+
+            async function ensurePdfLibraries() {
+                await loadEmployeeScript(
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                    () => Boolean(window.jspdf?.jsPDF)
+                );
+                await loadEmployeeScript(
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js',
+                    () => Boolean(window.jspdf?.jsPDF?.API?.autoTable)
+                );
+                await Promise.all([
+                    loadEmployeeScript('assets/amiri_font.js', () => typeof window.amiriFontBase64 !== 'undefined'),
+                    loadEmployeeScript('pdf_export_employees.js', () => typeof window.generateEmployeePDF === 'function')
+                ]);
+            }
+
+            async function ensureChartLibrary() {
+                await loadEmployeeScript(
+                    'https://cdn.jsdelivr.net/npm/chart.js',
+                    () => typeof window.Chart !== 'undefined'
+                );
+            }
 
             // Sorting State
             let currentSortColumn = 'sales';
@@ -2631,9 +2680,120 @@
             }
 
             let challengeLoading = false;
-            async function ensureTeamChallengeData() {
-                if (teamChallengeData) return true;
-                if (challengeLoading) return false;
+            function mergeTeamChallengePartition(payload) {
+                if (!payload || !payload.stores) return;
+                if (!teamChallengeData) {
+                    teamChallengeData = { metadata: {}, stores: {} };
+                }
+                teamChallengeData.metadata = Object.assign(
+                    {},
+                    teamChallengeData.metadata || {},
+                    payload.metadata || {}
+                );
+                Object.entries(payload.stores).forEach(([storeKey, storeMonths]) => {
+                    if (!teamChallengeData.stores[storeKey]) {
+                        teamChallengeData.stores[storeKey] = {};
+                    }
+                    Object.assign(teamChallengeData.stores[storeKey], storeMonths || {});
+                });
+                const month = payload.metadata?.month;
+                if (month) loadedChallengeMonths.add(month);
+            }
+
+            async function ensureTeamChallengeIndex() {
+                if (teamChallengeIndex) return teamChallengeIndex;
+                if (challengeIndexPromise) return challengeIndexPromise;
+
+                challengeIndexPromise = fetch(TEAM_CHALLENGE_INDEX_URL, { cache: 'no-cache' })
+                    .then(res => {
+                        if (!res.ok) throw new Error(`Challenge index HTTP ${res.status}`);
+                        return res.json();
+                    })
+                    .then(index => {
+                        teamChallengeIndex = index;
+                        if (!teamChallengeData) {
+                            teamChallengeData = { metadata: {}, stores: {} };
+                        }
+                        teamChallengeData.metadata = Object.assign(
+                            {},
+                            teamChallengeData.metadata || {},
+                            index.metadata || {}
+                        );
+                        return index;
+                    })
+                    .finally(() => {
+                        challengeIndexPromise = null;
+                    });
+
+                return challengeIndexPromise;
+            }
+
+            async function loadLegacyTeamChallengeData() {
+                if (legacyChallengePromise) return legacyChallengePromise;
+                legacyChallengePromise = fetch('team_sales_challenge.json')
+                    .then(res => {
+                        if (!res.ok) throw new Error(`Legacy challenge HTTP ${res.status}`);
+                        return res.json();
+                    })
+                    .then(payload => {
+                        teamChallengeData = payload;
+                        Object.values(payload.stores || {}).forEach(storeMonths => {
+                            Object.keys(storeMonths || {}).forEach(month => loadedChallengeMonths.add(month));
+                        });
+                        return true;
+                    })
+                    .finally(() => {
+                        legacyChallengePromise = null;
+                    });
+                return legacyChallengePromise;
+            }
+
+            async function ensureTeamChallengeMonth(month) {
+                try {
+                    const index = await ensureTeamChallengeIndex();
+                    const selectedMonth = month
+                        || challengeSelectedMonth
+                        || index.metadata?.default_month
+                        || index.metadata?.available_months?.[0];
+                    if (!selectedMonth) return false;
+                    if (loadedChallengeMonths.has(selectedMonth)) return true;
+                    if (challengeMonthPromises.has(selectedMonth)) {
+                        return challengeMonthPromises.get(selectedMonth);
+                    }
+
+                    const file = index.files?.[selectedMonth];
+                    if (!file) throw new Error(`No challenge partition for ${selectedMonth}`);
+                    const version = index.metadata?.generated_at || '';
+                    const url = version ? `${file}?v=${encodeURIComponent(version)}` : file;
+                    const monthPromise = fetch(url)
+                        .then(res => {
+                            if (!res.ok) throw new Error(`Challenge month HTTP ${res.status}`);
+                            return res.json();
+                        })
+                        .then(payload => {
+                            mergeTeamChallengePartition(payload);
+                            loadedChallengeMonths.add(selectedMonth);
+                            return true;
+                        })
+                        .finally(() => {
+                            challengeMonthPromises.delete(selectedMonth);
+                        });
+                    challengeMonthPromises.set(selectedMonth, monthPromise);
+                    return monthPromise;
+                } catch (partitionError) {
+                    console.warn('Monthly challenge payload unavailable; using legacy payload.', partitionError);
+                    return loadLegacyTeamChallengeData();
+                }
+            }
+
+            async function ensureTeamChallengeData(month = null) {
+                const requestedMonth = month || challengeSelectedMonth;
+                if (requestedMonth && loadedChallengeMonths.has(requestedMonth)) return true;
+                if (!requestedMonth && loadedChallengeMonths.size > 0) return true;
+                if (challengeLoading) {
+                    const pending = requestedMonth && challengeMonthPromises.get(requestedMonth);
+                    return pending || false;
+                }
                 challengeLoading = true;
                 const subtitle = document.getElementById('challengePeriodSubtitle');
                 const oldSub = subtitle ? subtitle.innerHTML : '';
@@ -2641,9 +2801,8 @@
                     subtitle.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> <strong class="text-primary">جاري تحميل بيانات التحدي...</strong>';
                 }
                 try {
-                    const res = await fetch('team_sales_challenge.json');
-                    if (res.ok) {
-                        teamChallengeData = await res.json();
+                    const loaded = await ensureTeamChallengeMonth(requestedMonth);
+                    if (loaded) {
                         initChallengeFilters();
                         return true;
                     }
@@ -2704,9 +2863,6 @@
                             : Promise.resolve(null)
                     ];
 
-                    if (wantsChallenge) {
-                        initialPromises.push(fetch('team_sales_challenge.json').catch(() => null));
-                    }
                     if (wantsHeroes) {
                         initialPromises.push(fetch('orange_heroes.json').catch(() => null));
                     }
@@ -2716,7 +2872,6 @@
                     const summaryRes = results[1];
                     const incentivesRes = results[2];
                     let nextIdx = 3;
-                    const challengeRes = wantsChallenge ? results[nextIdx++] : null;
                     const heroesRes = wantsHeroes ? results[nextIdx++] : null;
 
                     const empJson = await empRes.json();
@@ -2749,14 +2904,6 @@
                     window.storeMeta = storeMeta;
                     window.storeTargets = summaryJson.targets || [];
 
-                    if (challengeRes && challengeRes.ok) {
-                        try {
-                            teamChallengeData = await challengeRes.json();
-                        } catch (e) {
-                            console.error("Error parsing team_sales_challenge.json:", e);
-                        }
-                    }
-
                     if (heroesRes && heroesRes.ok) {
                         try {
                             orangeHeroesData = await heroesRes.json();
@@ -2766,14 +2913,13 @@
                     }
 
                     populateFilters();
-                    if (teamChallengeData) initChallengeFilters();
                     if (orangeHeroesData) initHeroesFilters();
                     updatePage();
 
                     if (wantsChallenge) {
-                        switchMainTab('challenge');
+                        await switchMainTab('challenge');
                     } else if (wantsHeroes) {
-                        switchMainTab('heroes');
+                        await switchMainTab('heroes');
                     }
 
                     // Debug: Show record count
@@ -5158,12 +5304,15 @@
                 if (!teamChallengeData || !teamChallengeData.stores) return;
 
                 // 1. Collect all unique months
-                const monthsSet = new Set();
-                Object.values(teamChallengeData.stores).forEach(s => {
-                    Object.keys(s).forEach(m => {
-                        if (/^\d{4}-\d{2}$/.test(m)) monthsSet.add(m);
+                const indexedMonths = teamChallengeData.metadata?.available_months || [];
+                const monthsSet = new Set(indexedMonths);
+                if (monthsSet.size === 0) {
+                    Object.values(teamChallengeData.stores).forEach(s => {
+                        Object.keys(s).forEach(m => {
+                            if (/^\d{4}-\d{2}$/.test(m)) monthsSet.add(m);
+                        });
                     });
-                });
+                }
                 const sortedMonths = Array.from(monthsSet).sort().reverse();
                 
                 const monthSelect = document.getElementById('challengeMonthSelect');
@@ -5239,9 +5388,7 @@
                 }
 
                 if (tabId === 'challenge') {
-                    if (!teamChallengeData) {
-                        await ensureTeamChallengeData();
-                    }
+                    await ensureTeamChallengeData(challengeSelectedMonth);
                     const chalBranchSelect = document.getElementById('challengeBranchSelect');
                     if (chalBranchSelect && mainBranch !== chalBranchSelect.value) {
                         chalBranchSelect.value = mainBranch;
@@ -5698,9 +5845,10 @@
                 updatePage();
             }
 
-            function onChallengeMonthChange(val) {
+            async function onChallengeMonthChange(val) {
                 challengeSelectedMonth = val;
                 challengeSelectedDate = null;
+                await ensureTeamChallengeMonth(val);
                 renderTeamChallengeData();
             }
 
