@@ -1915,7 +1915,7 @@ const EMPLOYEES = [
         "employeeId": "3368-محمد مصطفى كورمبي",
         "personnelNumber": "3368",
         "name": "محمد مصطفى كورمبي",
-        "startDate": "2022-10-29",
+        "startDate": "2022-10-30",
         "manager": "اماني عسيري",
         "showroom": "1904-52-Al_Baha Mall",
         "showroomDetails": [
@@ -7472,6 +7472,25 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1001-C;1001-E"
+    },
+    {
+        "employeeId": "5017-محمد عوض القحطاني",
+        "personnelNumber": "5017",
+        "name": "محمد عوض القحطاني",
+        "startDate": "2026-09-06",
+        "manager": "جهاد ايوبي",
+        "showroom": "2102-28-Al Nakheel Mall Dammam",
+        "showroomDetails": [
+            {
+                "name": "2102-28-Al Nakheel Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2102-C",
+                    "2102-E"
+                ]
+            }
+        ],
+        "addressBooks": "2102-C;2102-E"
     }
 ];
 
