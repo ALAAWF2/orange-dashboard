@@ -2333,7 +2333,7 @@
                     () => Boolean(window.jspdf?.jsPDF?.API?.autoTable)
                 );
                 await Promise.all([
-                    loadEmployeeScript('assets/amiri_font.js', () => typeof window.amiriFontBase64 !== 'undefined'),
+                    loadEmployeeScript('assets/amiri_font.js', () => typeof amiriFontBase64 !== 'undefined'),
                     loadEmployeeScript('pdf_export_employees.js', () => typeof window.generateEmployeePDF === 'function')
                 ]);
             }
@@ -3973,10 +3973,20 @@
             let employeeSelectionData = []; // Store employee data with suspected status
             let currentExportMode = 'excel'; // 'excel' or 'pdf'
 
-            function exportExcel(type) {
+            async function exportExcel(type) {
                 if (!currentEmpList || currentEmpList.length === 0) {
                     alert("لا توجد بيانات للتصدير");
                     return;
+                }
+
+                if (type === 'current' || type === 'daily') {
+                    try {
+                        await ensureExcelLibrary();
+                    } catch (error) {
+                        console.error('Excel library failed to load:', error);
+                        alert('تعذر تحميل أداة Excel. تحقق من الاتصال وحاول مرة أخرى.');
+                        return;
+                    }
                 }
 
                 if (type === 'current') {
@@ -4270,7 +4280,7 @@
                 document.getElementById('selectAllCheckbox').checked = allSelected;
             }
 
-            function confirmExportSelection() {
+            async function confirmExportSelection() {
                 const selectedEmps = employeeSelectionData.filter(e => e.selected);
 
                 if (selectedEmps.length === 0) {
@@ -4279,6 +4289,14 @@
                 }
 
                 if (currentExportMode === 'pdf') {
+                    try {
+                        await ensurePdfLibraries();
+                    } catch (error) {
+                        console.error('PDF libraries failed to load:', error);
+                        alert('تعذر تحميل أداة PDF. تحقق من الاتصال وحاول مرة أخرى.');
+                        return;
+                    }
+
                     // Save Selection
                     const selectedIds = selectedEmps.map(e => e.id);
                     localStorage.setItem('pdf_selected_employees', JSON.stringify(selectedIds));
@@ -4292,6 +4310,14 @@
                     // Close Modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('empSelectModal'));
                     if (modal) modal.hide();
+                    return;
+                }
+
+                try {
+                    await ensureExcelLibrary();
+                } catch (error) {
+                    console.error('Excel library failed to load:', error);
+                    alert('تعذر تحميل أداة Excel. تحقق من الاتصال وحاول مرة أخرى.');
                     return;
                 }
 
@@ -4659,7 +4685,13 @@
                 }
             }
 
-            function renderEmpTrendChart(empId) {
+            async function renderEmpTrendChart(empId) {
+                try {
+                    await ensureChartLibrary();
+                } catch (error) {
+                    console.error('Chart library failed to load:', error);
+                    return;
+                }
                 const ctx = document.getElementById('empTrendChart').getContext('2d');
 
                 // Get Daily Data
