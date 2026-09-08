@@ -5626,25 +5626,6 @@ const EMPLOYEES = [
         "addressBooks": "1106-C;1106-E"
     },
     {
-        "employeeId": "4861-منيره العنزي",
-        "personnelNumber": "4861",
-        "name": "منيره العنزي",
-        "startDate": "2026-02-08",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
-        "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            }
-        ],
-        "addressBooks": "1114-C;1114-E"
-    },
-    {
         "employeeId": "4855-مضر علوش",
         "personnelNumber": "4855",
         "name": "مضر علوش",
@@ -6440,25 +6421,6 @@ const EMPLOYEES = [
         "addressBooks": "1114-C;1114-E"
     },
     {
-        "employeeId": "4939-سلطان الهميم",
-        "personnelNumber": "4939",
-        "name": "سلطان الهميم",
-        "startDate": "2026-04-16",
-        "manager": "محمدكلو",
-        "showroom": "1107-38-Al_Riyadh Park",
-        "showroomDetails": [
-            {
-                "name": "1107-38-Al_Riyadh Park",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1107-C",
-                    "1107-E"
-                ]
-            }
-        ],
-        "addressBooks": "1107-C;1107-E"
-    },
-    {
         "employeeId": "4942-رهام جابر",
         "personnelNumber": "4942",
         "name": "رهام جابر",
@@ -6959,25 +6921,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1903-C;1903-E"
-    },
-    {
-        "employeeId": "4984-Abd Almuhsin Saleh",
-        "personnelNumber": "4984",
-        "name": "Abd Almuhsin Saleh",
-        "startDate": "2026-07-01",
-        "manager": "محمدكلو",
-        "showroom": "1114-1114-Malgha Mall",
-        "showroomDetails": [
-            {
-                "name": "1114-1114-Malgha Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1114-C",
-                    "1114-E"
-                ]
-            }
-        ],
-        "addressBooks": "1114-C;1114-E"
     },
     {
         "employeeId": "4985-Najla Hasan",
