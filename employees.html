@@ -2269,7 +2269,11 @@
             let storesData = {};
             let storeMeta = {}; // To store manager info
             let employeeNames = {}; // New: Arabic names map
-            let employeeProductsData = {}; // NEW: Employee Top Products
+            let employeeProductsData = {}; // NEW: Employee Top Products (legacy ref)
+            let currentInsightEmpId = null;
+            let empProductsWorker = null;
+            const empProductsCallbacks = new Map();
+            let empProductsReqCounter = 0;
             let averageBillIncentivesCache = null; // NEW: Average Bill Incentives
             let top10Chart, branchChart;
 
@@ -2529,25 +2533,100 @@
                 }
             }
 
-            let employeeProductsLoading = false;
-            let employeeProductsLoaded = false;
-            async function ensureEmployeeProductsData() {
-                if (employeeProductsLoaded || employeeProductsLoading) return true;
-                employeeProductsLoading = true;
+            function getEmployeeProductsWorker() {
+                if (empProductsWorker) return empProductsWorker;
                 try {
-                    const prodRes = await fetch('data/products/employee_products_data.json');
-                    if (prodRes.ok) {
-                        const prodJson = await prodRes.json();
-                        employeeProductsData = prodJson.periods || {};
-                        employeeProductsLoaded = true;
-                        return true;
+                    empProductsWorker = new Worker('assets/employee-products-worker.js');
+                    empProductsWorker.onmessage = function(e) {
+                        const msg = e.data || {};
+                        if (msg.action === 'employeeProductsLoaded') {
+                            const cb = empProductsCallbacks.get(msg.requestId);
+                            if (cb) {
+                                empProductsCallbacks.delete(msg.requestId);
+                                cb(msg.data);
+                            }
+                        } else if (msg.action === 'employeeProductsError') {
+                            const cb = empProductsCallbacks.get(msg.requestId);
+                            if (cb) {
+                                empProductsCallbacks.delete(msg.requestId);
+                                cb(null);
+                            }
+                        }
+                    };
+                    empProductsWorker.onerror = function(err) {
+                        console.warn("Employee products worker error:", err);
+                    };
+                } catch (err) {
+                    console.warn("Could not create Web Worker for employee products:", err);
+                    empProductsWorker = null;
+                }
+                return empProductsWorker;
+            }
+
+            function requestEmployeeProducts(empId, period, callback) {
+                const worker = getEmployeeProductsWorker();
+                const reqId = ++empProductsReqCounter;
+                empProductsCallbacks.set(reqId, callback);
+
+                if (worker) {
+                    const jsonUrl = new URL('data/products/employee_products_data.json', window.location.href).href;
+                    worker.postMessage({
+                        action: 'getEmployeeProducts',
+                        empId: empId,
+                        period: period,
+                        requestId: reqId,
+                        jsonUrl: jsonUrl
+                    });
+                } else {
+                    fallbackLoadEmployeeProducts(empId, period, reqId);
+                }
+            }
+
+            let fallbackProdData = null;
+            let fallbackProdLoading = false;
+            let fallbackProdWaiters = [];
+            async function fallbackLoadEmployeeProducts(empId, period, reqId) {
+                if (fallbackProdData) {
+                    dispatchFallback(empId, period, reqId);
+                    return;
+                }
+                fallbackProdWaiters.push({ empId, period, reqId });
+                if (fallbackProdLoading) return;
+                fallbackProdLoading = true;
+                try {
+                    const res = await fetch('data/products/employee_products_data.json');
+                    if (res.ok) {
+                        const json = await res.json();
+                        fallbackProdData = json.periods || {};
+                        fallbackProdWaiters.forEach(w => dispatchFallback(w.empId, w.period, w.reqId));
+                        fallbackProdWaiters = [];
                     }
                 } catch (e) {
-                    console.warn("Could not load employee products data:", e);
+                    console.warn("Fallback products load error:", e);
+                    fallbackProdWaiters.forEach(w => {
+                        const cb = empProductsCallbacks.get(w.reqId);
+                        if (cb) {
+                            empProductsCallbacks.delete(w.reqId);
+                            cb(null);
+                        }
+                    });
+                    fallbackProdWaiters = [];
                 } finally {
-                    employeeProductsLoading = false;
+                    fallbackProdLoading = false;
                 }
-                return false;
+            }
+
+            function dispatchFallback(empId, period, reqId) {
+                const cb = empProductsCallbacks.get(reqId);
+                if (!cb) return;
+                empProductsCallbacks.delete(reqId);
+                if (!fallbackProdData) { cb(null); return; }
+                const pKey = period || 'mtd';
+                const pData = fallbackProdData[pKey] || fallbackProdData['mtd'] || {};
+                const cleanId = String(empId).replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
+                const paddedId = cleanId.padStart(4, '0');
+                const empData = pData[empId] || pData[cleanId] || pData[paddedId] || null;
+                cb(empData);
             }
 
             let challengeLoading = false;
@@ -2695,10 +2774,6 @@
                     } else if (wantsHeroes) {
                         switchMainTab('heroes');
                     }
-
-                    // Background prefetching during idle time
-                    setTimeout(ensureFullManagementData, 2500);
-                    setTimeout(ensureEmployeeProductsData, 5000);
 
                     // Debug: Show record count
                     const totalStores = Object.keys(historyData).length;
@@ -4113,6 +4188,8 @@
                 const emp = currentEmpList.find(e => e.id === empId);
                 if (!emp) return;
 
+                currentInsightEmpId = empId;
+
                 // 1. Basic Info
                 document.getElementById('panelEmpName').textContent = emp.name;
                 document.getElementById('panelEmpStore').textContent = emp.storeName;
@@ -4135,8 +4212,6 @@
 
                 if (bStats && bStats.transactions > 0) {
                     bAvgTicket = bStats.current / bStats.transactions;
-                    // Items might be needed to be accumulated in branchStats first, let's assume I added it in loadData
-                    // Checking loadData modification... Yes I added items to branchStats
                     bAvgUPT = bStats.items / bStats.transactions;
                 }
 
@@ -4162,9 +4237,19 @@
                 // Populate Average Bill Incentives
                 populateEmployeeIncentives(empId, emp.storeCode);
 
-                // Show Offcanvas
+                // Show Offcanvas safely reusing instance
                 const offcanvasEl = document.getElementById('empInsightPanel');
-                const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
+                if (offcanvasEl && !offcanvasEl.dataset.listenerAttached) {
+                    offcanvasEl.dataset.listenerAttached = 'true';
+                    offcanvasEl.addEventListener('hide.bs.offcanvas', () => {
+                        currentInsightEmpId = null;
+                        if (empTrendChartInstance) {
+                            try { empTrendChartInstance.destroy(); } catch(e){}
+                            empTrendChartInstance = null;
+                        }
+                    });
+                }
+                const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
                 bsOffcanvas.show();
             }
 
@@ -4294,68 +4379,56 @@
                 const catContainer = document.getElementById('panelTopCategories');
                 const itemContainer = document.getElementById('panelTopItems');
 
-                if (!employeeProductsLoaded) {
-                    if (container) {
-                        container.style.display = 'block';
-                        if (catContainer) catContainer.innerHTML = '<div class="text-muted small py-2"><span class="spinner-border spinner-border-sm text-primary me-1"></span> جاري تحميل أفضل المنتجات...</div>';
-                        if (itemContainer) itemContainer.innerHTML = '';
-                    }
-                    ensureEmployeeProductsData().then(() => {
-                        renderEmpProducts(empId);
-                    });
-                    return;
+                if (container) {
+                    container.style.display = 'block';
+                    if (catContainer) catContainer.innerHTML = '<div class="text-muted small py-2"><span class="spinner-border spinner-border-sm text-primary me-1"></span> جاري تحميل الفئات...</div>';
+                    if (itemContainer) itemContainer.innerHTML = '<div class="text-muted small py-2"><span class="spinner-border spinner-border-sm text-primary me-1"></span> جاري تحميل المنتجات...</div>';
                 }
 
                 const periodFilter = document.getElementById('periodFilter').value || 'mtd';
-
-                // Map filter to json keys ("mtd", "yest", "7d", "14d", "30d")
                 let pKey = 'mtd';
                 if (periodFilter === 'yesterday') pKey = 'yest';
                 else if (periodFilter === 'today') pKey = 'today';
 
-                // Fallback
-                if (!employeeProductsData[pKey]) pKey = 'mtd';
+                requestEmployeeProducts(empId, pKey, function(empProdData) {
+                    // Ignore if modal was closed or changed to another employee
+                    if (currentInsightEmpId !== empId) return;
 
-                const periodData = employeeProductsData[pKey];
+                    if (!empProdData || (!empProdData.categories && !empProdData.items)) {
+                        if (container) container.style.display = 'none';
+                        return;
+                    }
 
-                let empProdData = null;
-                if (periodData) {
-                    const cleanId = empId.toString().replace(/unknown/gi, '').replace(/unkown/gi, '').trim();
-                    const paddedId = cleanId.padStart(4, '0');
+                    if (container) container.style.display = 'block';
 
-                    empProdData = periodData[empId] || periodData[cleanId] || periodData[paddedId];
-                }
+                    // Categories
+                    if (catContainer) {
+                        if (empProdData.categories && empProdData.categories.length > 0) {
+                            catContainer.innerHTML = empProdData.categories.map(c =>
+                                `<div class="d-flex justify-content-between border-bottom border-light py-1">
+                                    <span class="d-inline-block text-truncate ps-1" style="max-width: 58%;" title="${c.name}">${c.name}</span>
+                                    <span class="text-end fw-bold text-dark text-nowrap" style="font-size: 0.82rem;">الكمية: ${c.qty} | المجموع: ${c.amt.toLocaleString()}</span>
+                                </div>`
+                            ).join('');
+                        } else {
+                            catContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للفئات</span>';
+                        }
+                    }
 
-                if (!empProdData || (!empProdData.categories && !empProdData.items)) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                container.style.display = 'block';
-
-                // Cats
-                if (empProdData.categories && empProdData.categories.length > 0) {
-                    catContainer.innerHTML = empProdData.categories.map(c =>
-                        `<div class="d-flex justify-content-between border-bottom border-light py-1">
-                            <span class="d-inline-block text-truncate ps-1" style="max-width: 58%;" title="${c.name}">${c.name}</span>
-                            <span class="text-end fw-bold text-dark text-nowrap" style="font-size: 0.82rem;">الكمية: ${c.qty} | المجموع: ${c.amt.toLocaleString()}</span>
-                        </div>`
-                    ).join('');
-                } else {
-                    catContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للفئات</span>';
-                }
-
-                // Items
-                if (empProdData.items && empProdData.items.length > 0) {
-                    itemContainer.innerHTML = empProdData.items.map(i =>
-                        `<div class="d-flex justify-content-between border-bottom border-light py-1">
-                            <span class="d-inline-block text-truncate ps-1" style="max-width: 58%;" title="${i.name}">${i.name}</span>
-                            <span class="text-end fw-bold text-primary text-nowrap" style="font-size: 0.82rem;">الكمية: ${i.qty} | المجموع: ${i.amt.toLocaleString()}</span>
-                        </div>`
-                    ).join('');
-                } else {
-                    itemContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للمنتجات</span>';
-                }
+                    // Items
+                    if (itemContainer) {
+                        if (empProdData.items && empProdData.items.length > 0) {
+                            itemContainer.innerHTML = empProdData.items.map(i =>
+                                `<div class="d-flex justify-content-between border-bottom border-light py-1">
+                                    <span class="d-inline-block text-truncate ps-1" style="max-width: 58%;" title="${i.name}">${i.name}</span>
+                                    <span class="text-end fw-bold text-primary text-nowrap" style="font-size: 0.82rem;">الكمية: ${i.qty} | المجموع: ${i.amt.toLocaleString()}</span>
+                                </div>`
+                            ).join('');
+                        } else {
+                            itemContainer.innerHTML = '<span class="text-muted">لا توجد بيانات للمنتجات</span>';
+                        }
+                    }
+                });
             }
 
             function renderEmpDailyTable(empId) {
@@ -4458,7 +4531,8 @@
                 const data = filtered.map(d => d.sales);
 
                 if (empTrendChartInstance) {
-                    empTrendChartInstance.destroy();
+                    try { empTrendChartInstance.destroy(); } catch(e){}
+                    empTrendChartInstance = null;
                 }
 
                 empTrendChartInstance = new Chart(ctx, {
@@ -4479,11 +4553,14 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: { duration: 250 },
                         plugins: {
                             legend: { display: false }
                         },
-                        x: {
-                            grid: { display: false }
+                        scales: {
+                            x: {
+                                grid: { display: false }
+                            }
                         }
                     }
                 });
