@@ -1970,7 +1970,7 @@
                             <p class="text-muted small mb-0">تقرير يوضح مبيعات الشهر الحالي (MTD) للعام 2026 مقارنة بالعام السابق مع معدلات الزوار ونسب التحقيق والتحويل الفعلي.</p>
                         </div>
                         <div class="d-flex gap-2">
-                            <input type="month" id="salesMonthFilter" class="form-control form-control-dark select-sm" style="width: 160px;" onchange="loadShowroomPerformance()">
+                            <input type="month" id="salesMonthFilter" class="form-control form-control-dark select-sm" style="width: 160px;" onchange="handleSalesMonthChange()">
                             <button class="btn btn-orange-premium btn-sm" onclick="loadShowroomPerformance()"><i class="fa-solid fa-sync"></i> تحديث</button>
                         </div>
                     </div>
@@ -3479,6 +3479,12 @@
         let currentVersionTimestamp = null;
         let mgmtDataTimestamp = null;
         let empDataTimestamp = null;
+        let mgmtDataSource = null;
+        let mgmtDataLoadPromise = null;
+        let fullMgmtDataLoadPromise = null;
+
+        // Expose only the source marker for diagnostics and browser contracts.
+        window.mgmtDataSource = null;
 
         async function getVersionTimestamp() {
             if (currentVersionTimestamp) {
@@ -3497,41 +3503,120 @@
             }
         }
 
-        async function ensureMgmtDataLoaded() {
+        async function fetchJsonWithCacheRecovery(url, errorMessage) {
+            let response;
             try {
-                const serverTimestamp = await getVersionTimestamp();
-                
-                if (mgmtData && mgmtDataTimestamp === serverTimestamp) {
-                    return; // Already loaded and matches latest server data
-                }
-                
-                const mgmtRes = await fetch('management_data.json?v=' + serverTimestamp);
-                if (!mgmtRes.ok) throw new Error("تعذر جلب ملف البيانات الإدارية");
-                mgmtData = await mgmtRes.json();
-                mgmtDataTimestamp = serverTimestamp;
-                
-                // Clear specific tab load cache since management data changed
-                delete loadedTabs['#sales-content'];
-                delete loadedTabs['#targets-content'];
-                
-                // Set the header KPIs whenever management data is loaded, even
-                // when the Operations Room is the first tab opened.
-                const activeStoreCount = Object.keys(mgmtData.stores || {})
-                    .filter(id => !['0', '1013'].includes(id)).length;
-                document.getElementById('kpiActiveStores').textContent = activeStoreCount;
+                response = await fetch(url);
+            } catch (firstError) {
+                // Chromium can surface a failed 304 as ERR_CACHE_WRITE_FAILURE.
+                // Retry without the HTTP cache so the page remains usable.
+                console.warn(`Cache-backed fetch failed for ${url}; retrying without cache.`, firstError);
+                response = await fetch(url, { cache: 'no-store' });
+            }
 
-                const selectedMonth = document.getElementById('salesMonthFilter')?.value
-                    || new Date().toISOString().slice(0, 7);
-                const monthSales = (mgmtData.sales || []).reduce((total, row) => {
-                    const [date, , amount] = row;
-                    return String(date).startsWith(selectedMonth)
-                        ? total + Number(amount || 0)
-                        : total;
-                }, 0);
-                document.getElementById('kpiMtdSales').textContent = formatSAR(monthSales);
-            } catch (e) {
-                console.error("Failed to load management data:", e);
-                throw e;
+            if (!response.ok) throw new Error(errorMessage);
+            return response.json();
+        }
+
+        function applyMgmtData(data, source, serverTimestamp) {
+            mgmtData = data;
+            mgmtDataSource = source;
+            window.mgmtData = data;
+            window.mgmtDataSource = source;
+            mgmtDataTimestamp = serverTimestamp;
+
+            delete loadedTabs['#sales-content'];
+            delete loadedTabs['#targets-content'];
+
+            const activeStoreCount = Object.keys(mgmtData.stores || {})
+                .filter(id => !['0', '1013'].includes(id)).length;
+            document.getElementById('kpiActiveStores').textContent = activeStoreCount;
+
+            const selectedMonth = document.getElementById('salesMonthFilter')?.value
+                || new Date().toISOString().slice(0, 7);
+            const monthSales = (mgmtData.sales || []).reduce((total, row) => {
+                const [date, , amount] = row;
+                return String(date).startsWith(selectedMonth)
+                    ? total + Number(amount || 0)
+                    : total;
+            }, 0);
+            document.getElementById('kpiMtdSales').textContent = formatSAR(monthSales);
+        }
+
+        async function ensureMgmtDataLoaded() {
+            const serverTimestamp = await getVersionTimestamp();
+
+            if (mgmtData && mgmtDataTimestamp === serverTimestamp) {
+                return;
+            }
+            if (mgmtDataLoadPromise) {
+                return mgmtDataLoadPromise;
+            }
+
+            mgmtDataLoadPromise = (async () => {
+                try {
+                    // summary.json is the current/previous-year window used by
+                    // the default sales view and is much smaller than full history.
+                    const data = await fetchJsonWithCacheRecovery(
+                        'summary.json?v=' + serverTimestamp,
+                        "تعذر جلب ملخص البيانات الإدارية"
+                    );
+                    applyMgmtData(data, 'summary', serverTimestamp);
+                } catch (e) {
+                    console.error("Failed to load management summary:", e);
+                    throw e;
+                } finally {
+                    mgmtDataLoadPromise = null;
+                }
+            })();
+
+            return mgmtDataLoadPromise;
+        }
+
+        function isMonthCoveredBySummary(selectedMonth) {
+            const generatedMonth = String(mgmtData?.metadata?.generated_at || '')
+                .slice(0, 7);
+            const currentMonth = generatedMonth || new Date().toISOString().slice(0, 7);
+            return selectedMonth === currentMonth;
+        }
+
+        async function ensureMgmtDataForMonth(selectedMonth) {
+            await ensureMgmtDataLoaded();
+            if (mgmtDataSource === 'full' || isMonthCoveredBySummary(selectedMonth)) {
+                return;
+            }
+            if (fullMgmtDataLoadPromise) {
+                return fullMgmtDataLoadPromise;
+            }
+
+            const serverTimestamp = await getVersionTimestamp();
+            fullMgmtDataLoadPromise = (async () => {
+                try {
+                    const data = await fetchJsonWithCacheRecovery(
+                        'management_data.json?v=' + serverTimestamp,
+                        "تعذر جلب السجل التاريخي للبيانات الإدارية"
+                    );
+                    applyMgmtData(data, 'full', serverTimestamp);
+                } catch (e) {
+                    console.error("Failed to load full management history:", e);
+                    throw e;
+                } finally {
+                    fullMgmtDataLoadPromise = null;
+                }
+            })();
+
+            return fullMgmtDataLoadPromise;
+        }
+
+        async function handleSalesMonthChange() {
+            const selectedMonth = document.getElementById('salesMonthFilter').value;
+            try {
+                await ensureMgmtDataForMonth(selectedMonth);
+                loadShowroomPerformance();
+                scheduleTableCardLabels();
+            } catch (error) {
+                console.error("Failed to load the selected sales month:", error);
+                showToast("تعذر تحميل بيانات الشهر المحدد", "danger");
             }
         }
 
@@ -3582,7 +3667,9 @@
                     await loadTimesheetData();
                     break;
                 case '#sales-content':
-                    await ensureMgmtDataLoaded();
+                    await ensureMgmtDataForMonth(
+                        document.getElementById('salesMonthFilter').value
+                    );
                     loadShowroomPerformance();
                     break;
                 case '#targets-content':
@@ -3703,13 +3790,76 @@
         // ==========================================
         // TAB 1: Showroom Performance Dashboard
         // ==========================================
+        function buildShowroomPerformanceIndex(data, selectedMonth, yesterdayStr, last14Dates) {
+            const selectedYear = Number(selectedMonth.slice(0, 4));
+            const previousMonth = `${selectedYear - 1}-${selectedMonth.slice(5, 7)}`;
+            const sparklineDateIndex = new Map(
+                last14Dates.map((date, index) => [date, index])
+            );
+            const metricsByStore = Object.create(null);
+
+            const getMetrics = (storeId) => {
+                const normalizedId = String(storeId);
+                if (!metricsByStore[normalizedId]) {
+                    metricsByStore[normalizedId] = {
+                        mtdSales: 0,
+                        yesterdaySales: 0,
+                        prevMtdSales: 0,
+                        visitors: 0,
+                        bills: 0,
+                        storeTarget: 0,
+                        targetFound: false,
+                        sparklineData: Array(last14Dates.length).fill(0)
+                    };
+                }
+                return metricsByStore[normalizedId];
+            };
+
+            for (const [date, storeId, rawAmount] of data.sales || []) {
+                const dateStr = String(date);
+                const metrics = getMetrics(storeId);
+                const amount = Number(rawAmount || 0);
+
+                if (dateStr.startsWith(selectedMonth)) metrics.mtdSales += amount;
+                if (dateStr === yesterdayStr) metrics.yesterdaySales += amount;
+                if (dateStr.startsWith(previousMonth)) metrics.prevMtdSales += amount;
+
+                const sparklineIndex = sparklineDateIndex.get(dateStr);
+                if (sparklineIndex !== undefined) {
+                    metrics.sparklineData[sparklineIndex] += amount;
+                }
+            }
+
+            for (const [date, storeId, rawCount] of data.visitors || []) {
+                if (String(date).startsWith(selectedMonth)) {
+                    getMetrics(storeId).visitors += Number(rawCount || 0);
+                }
+            }
+
+            for (const [date, storeId, rawCount] of data.transactions || []) {
+                if (String(date).startsWith(selectedMonth)) {
+                    getMetrics(storeId).bills += Number(rawCount || 0);
+                }
+            }
+
+            for (const [date, storeId, rawTarget] of data.targets || []) {
+                if (!String(date).startsWith(selectedMonth)) continue;
+                const metrics = getMetrics(storeId);
+                // Preserve the previous Array.find behavior if duplicate rows exist.
+                if (!metrics.targetFound) {
+                    metrics.storeTarget = Number(rawTarget || 0);
+                    metrics.targetFound = true;
+                }
+            }
+
+            return metricsByStore;
+        }
+
         function loadShowroomPerformance() {
             const tbody = document.getElementById('showroomPerformanceBody');
             if (!mgmtData) return;
 
             const selectedMonth = document.getElementById('salesMonthFilter').value; // YYYY-MM
-            const selectedYear = selectedMonth.split('-')[0];
-            const prevYear = String(Number(selectedYear) - 1);
             
             tbody.innerHTML = '';
             
@@ -3742,34 +3892,39 @@
             const dd = String(yesterdayDate.getDate()).padStart(2, '0');
             const yesterdayStr = `${yyyy}-${mm}-${dd}`;
 
-            // Calculate Showroom Metrics from management_data.json
+            const last14Dates = getLast14Dates(selectedMonth, totalDaysInMonth);
+            const metricsByStore = buildShowroomPerformanceIndex(
+                mgmtData,
+                selectedMonth,
+                yesterdayStr,
+                last14Dates
+            );
+
+            // Render from the pre-aggregated in-memory index.
             Object.entries(mgmtData.stores).forEach(([storeId, storeName]) => {
                 if (['0', '1013'].includes(storeId)) return; // Exclude platforms/warehouse
 
-                // MTD Sales current year
-                let mtdSales = 0;
-                let yesterdaySales = 0;
-                mgmtData.sales?.forEach(([date, sid, amt]) => {
-                    if (sid === storeId) {
-                        if (date.startsWith(selectedMonth)) {
-                            mtdSales += amt;
-                        }
-                        if (date === yesterdayStr) {
-                            yesterdaySales += amt;
-                        }
-                    }
-                });
+                const metrics = metricsByStore[storeId] || {
+                    mtdSales: 0,
+                    yesterdaySales: 0,
+                    prevMtdSales: 0,
+                    visitors: 0,
+                    bills: 0,
+                    storeTarget: 0,
+                    sparklineData: Array(last14Dates.length).fill(0)
+                };
+                const {
+                    mtdSales,
+                    yesterdaySales,
+                    prevMtdSales,
+                    visitors,
+                    bills,
+                    storeTarget,
+                    sparklineData
+                } = metrics;
 
                 totalMtdSales += mtdSales;
 
-                // MTD Targets current year
-                let storeTarget = 0;
-                if (mgmtData.targets) {
-                    const targetRow = mgmtData.targets.find(row => row[1] === storeId && row[0].startsWith(selectedMonth));
-                    if (targetRow) {
-                        storeTarget = targetRow[2] || 0;
-                    }
-                }
                 totalTarget += storeTarget;
 
                 const achievement = storeTarget > 0 ? (mtdSales / storeTarget * 100) : 0;
@@ -3781,48 +3936,16 @@
                 }
                 const expectedGap = expectedClose - storeTarget;
 
-                // MTD Sales previous year
-                let prevMtdSales = 0;
-                const prevMonth = `${prevYear}-${selectedMonth.split('-')[1]}`;
-                mgmtData.sales?.forEach(([date, sid, amt]) => {
-                    if (sid === storeId && date.startsWith(prevMonth)) {
-                        prevMtdSales += amt;
-                    }
-                });
                 totalPrevMtdSales += prevMtdSales;
 
                 const growth = prevMtdSales > 0 ? ((mtdSales - prevMtdSales) / prevMtdSales * 100) : 0;
 
-                // Visitors and Bills
-                let visitors = 0;
-                mgmtData.visitors?.forEach(([date, sid, count]) => {
-                    if (sid === storeId && date.startsWith(selectedMonth)) {
-                        visitors += count;
-                    }
-                });
                 totalVisitors += visitors;
 
-                let bills = 0;
-                mgmtData.transactions?.forEach(([date, sid, count]) => {
-                    if (sid === storeId && date.startsWith(selectedMonth)) {
-                        bills += count;
-                    }
-                });
                 totalBills += bills;
 
                 const conversion = visitors > 0 ? (bills / visitors * 100) : 0;
 
-                // Sparkline
-                const last14Dates = getLast14Dates(selectedMonth, totalDaysInMonth);
-                const sparklineData = last14Dates.map(dateStr => {
-                    let dayAmt = 0;
-                    mgmtData.sales?.forEach(([date, sid, amt]) => {
-                        if (sid === storeId && date === dateStr) {
-                            dayAmt += amt;
-                        }
-                    });
-                    return dayAmt;
-                });
                 const sparklineSVG = generateSparklineSVG(sparklineData);
 
                 // Determine Badge Achievement
