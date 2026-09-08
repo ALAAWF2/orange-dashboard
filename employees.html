@@ -1129,11 +1129,11 @@
                 <!-- Custom Date Range -->
                 <div class="col-6 col-md-2 col-lg-2" id="customDateContainer" style="display:none;">
                     <label class="form-label small text-muted fw-bold mb-1">من</label>
-                    <input type="date" id="dateFrom" class="form-control form-control-sm" onchange="updatePage()">
+                    <input type="date" id="dateFrom" class="form-control form-control-sm" onchange="onCustomDateChange()">
                 </div>
                 <div class="col-6 col-md-2 col-lg-2" id="customDateToContainer" style="display:none;">
                     <label class="form-label small text-muted fw-bold mb-1">إلى</label>
-                    <input type="date" id="dateTo" class="form-control form-control-sm" onchange="updatePage()">
+                    <input type="date" id="dateTo" class="form-control form-control-sm" onchange="onCustomDateChange()">
                 </div>
                 <!-- View Mode (HR Only) -->
                 <div class="col-6 col-md-2 col-lg-2" id="viewModeContainer" style="display:none;">
@@ -2256,6 +2256,8 @@
         <script>
             // Global Data
             let historyData = {};
+            let employeeHistoryIsFull = false;
+            let employeeHistoryLoading = null;
             let targetsData = {};
             let storesData = {};
             let storeMeta = {}; // To store manager info
@@ -2550,6 +2552,64 @@
                     await ensureFullManagementData();
                 }
                 updatePage();
+            }
+
+            async function onCustomDateChange() {
+                const customFrom = document.getElementById('dateFrom').value;
+                const availableStartMonth = window.employeesMetadata?.history_start_month || '';
+                const availableStartDate = availableStartMonth ? `${availableStartMonth}-01` : '';
+                if (!employeeHistoryIsFull && customFrom && (!availableStartDate || customFrom < availableStartDate)) {
+                    await ensureFullEmployeeData();
+                }
+                updatePage();
+            }
+
+            function applyEmployeePayload(empJson, isFullHistory) {
+                historyData = empJson.history || {};
+                targetsData = empJson.targets || {};
+                monthlyTargetsData = empJson.monthly_targets || {};
+                employeeNames = empJson.employee_names || {};
+                employeeJoinDates = empJson.employee_join_dates || {};
+                employeeHistoryIsFull = Boolean(isFullHistory || !empJson.metadata?.is_partial_history);
+
+                window.historyData = historyData;
+                window.employeesMetadata = empJson.metadata || {};
+                window.targetsData = targetsData;
+                window.monthlyTargetsData = monthlyTargetsData;
+                window.employeeNames = employeeNames;
+                window.employeeJoinDates = employeeJoinDates;
+            }
+
+            async function fetchInitialEmployeeData() {
+                const recentRes = await fetch('employees_recent.json');
+                if (recentRes.ok) {
+                    return { payload: await recentRes.json(), isFullHistory: false };
+                }
+
+                console.warn('employees_recent.json unavailable; using full employee history.');
+                const fullRes = await fetch('employees_data.json');
+                if (!fullRes.ok) throw new Error(`Employee data request failed (${fullRes.status})`);
+                return { payload: await fullRes.json(), isFullHistory: true };
+            }
+
+            async function ensureFullEmployeeData() {
+                if (employeeHistoryIsFull) return true;
+                if (employeeHistoryLoading) return employeeHistoryLoading;
+
+                employeeHistoryLoading = (async () => {
+                    try {
+                        const res = await fetch('employees_data.json');
+                        if (!res.ok) throw new Error(`Employee history request failed (${res.status})`);
+                        applyEmployeePayload(await res.json(), true);
+                        return true;
+                    } catch (error) {
+                        console.warn('Could not load full employee history:', error);
+                        return false;
+                    } finally {
+                        employeeHistoryLoading = null;
+                    }
+                })();
+                return employeeHistoryLoading;
             }
 
             // Lazy Loading State and Helpers
@@ -2853,10 +2913,10 @@
                         window.ExpectedCommissionVisibility.load()
                     ]);
 
-                    // Fast initial load: employees_data.json + summary.json (+ incentives if enabled)
+                    // Fast initial load: recent employee history + summary.json (+ incentives if enabled)
                     // Large secondary files (29MB products, 17MB challenge) are lazy-loaded!
                     const initialPromises = [
-                        fetch('employees_data.json'),
+                        fetchInitialEmployeeData(),
                         fetch('summary.json'),
                         averageBillProgramState.enabled
                             ? fetch('average_bill_incentives.json').catch(() => null)
@@ -2868,33 +2928,20 @@
                     }
 
                     const results = await Promise.all(initialPromises);
-                    const empRes = results[0];
+                    const employeeResult = results[0];
                     const summaryRes = results[1];
                     const incentivesRes = results[2];
                     let nextIdx = 3;
                     const heroesRes = wantsHeroes ? results[nextIdx++] : null;
 
-                    const empJson = await empRes.json();
+                    const empJson = employeeResult.payload;
                     if (incentivesRes && incentivesRes.ok) {
                         averageBillIncentivesCache = window.AverageBillProgram.filterIncentivesPayload(await incentivesRes.json());
                         console.log("Average bill incentives loaded in employees.html");
                     } else {
                         averageBillIncentivesCache = null;
                     }
-                    historyData = empJson.history;
-
-                    targetsData = empJson.targets; // Legacy (Current Month)
-                    monthlyTargetsData = empJson.monthly_targets || {}; // New (All Months)
-                    employeeNames = empJson.employee_names || {};
-                    employeeJoinDates = empJson.employee_join_dates || {};
-
-                    // Expose to Global Scope for PDF Script
-                    window.historyData = historyData;
-                    window.employeesMetadata = empJson.metadata;
-                    window.targetsData = targetsData;
-                    window.monthlyTargetsData = monthlyTargetsData; // Expose to Window
-                    window.employeeNames = employeeNames;
-                    window.employeeJoinDates = employeeJoinDates;
+                    applyEmployeePayload(empJson, employeeResult.isFullHistory);
 
                     const summaryJson = await summaryRes.json();
                     storesData = summaryJson.stores || {};
@@ -2924,12 +2971,18 @@
 
                     // Debug: Show record count
                     const totalStores = Object.keys(historyData).length;
-                    document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('ar-SA') + ` (Stores: ${totalStores})`;
+                    const lastUpdateEl = document.getElementById('lastUpdate');
+                    if (lastUpdateEl) {
+                        lastUpdateEl.textContent = new Date().toLocaleDateString('ar-SA') + ` (Stores: ${totalStores})`;
+                    }
 
                 } catch (err) {
                     console.error("Error loading data:", err);
-                    document.getElementById('lastUpdate').textContent = "Error loading data: " + err.message;
-                    document.getElementById('lastUpdate').className = "badge bg-danger";
+                    const lastUpdateEl = document.getElementById('lastUpdate');
+                    if (lastUpdateEl) {
+                        lastUpdateEl.textContent = "Error loading data: " + err.message;
+                        lastUpdateEl.className = "badge bg-danger";
+                    }
                 }
             }
 
