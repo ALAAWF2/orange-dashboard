@@ -6999,25 +6999,6 @@ const EMPLOYEES = [
         "addressBooks": "1003-C;1003-E"
     },
     {
-        "employeeId": "4986-Renad Alfahem",
-        "personnelNumber": "4986",
-        "name": "Renad Alfahem",
-        "startDate": "2026-07-01",
-        "manager": "عبدالله السرداح",
-        "showroom": "1108-39-Salam Mall Riyadh",
-        "showroomDetails": [
-            {
-                "name": "1108-39-Salam Mall Riyadh",
-                "manager": "عبدالله السرداح",
-                "codes": [
-                    "1108-C",
-                    "1108-E"
-                ]
-            }
-        ],
-        "addressBooks": "1108-C;1108-E"
-    },
-    {
         "employeeId": "4988-Rabab Mahdi",
         "personnelNumber": "4988",
         "name": "Rabab Mahdi",
