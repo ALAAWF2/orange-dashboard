@@ -13,9 +13,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-  <!-- Supabase & CSV Export -->
+  <!-- Supabase & CSV/Excel Export -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
   <script src="../assets/average-bill-program.js"></script>
   <script src="../assets/commission-visibility.js"></script>
 
@@ -356,6 +357,81 @@
       padding: 2px 8px;
       border-radius: 12px;
       font-size: 0.75rem;
+      font-weight: 900;
+    }
+
+    /* === Showroom Invoices Tab Styles === */
+    .inv-kpi-badge {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-sm);
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
+      box-shadow: var(--shadow-sm);
+    }
+    .inv-kpi-badge .inv-kpi-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .inv-kpi-badge .inv-kpi-val {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--text-main);
+      font-variant-numeric: tabular-nums;
+    }
+    .inv-master-row {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .inv-master-row:hover td {
+      background: #fff8f0 !important;
+    }
+    .inv-chevron {
+      display: inline-block;
+      transition: transform 0.25s ease;
+      color: var(--primary);
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+    .inv-chevron.open {
+      transform: rotate(180deg);
+    }
+    .inv-detail-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-right: 4px solid var(--primary);
+      border-radius: var(--border-radius-sm);
+      padding: 14px 18px;
+      margin: 8px 14px 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .inv-items-table {
+      font-size: 0.82rem;
+      background: #ffffff;
+      border-radius: var(--border-radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      width: 100%;
+    }
+    .inv-items-table thead th {
+      background: #334155 !important;
+      color: #ffffff !important;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 8px 12px;
+      text-align: right;
+    }
+    .inv-items-table tbody td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    .inv-items-table tfoot td {
+      padding: 10px 12px;
       font-weight: 900;
     }
 
@@ -810,6 +886,9 @@
         <button class="tab-btn" id="tabBtnChallenge" onclick="switchTab('challenge')" role="tab">
           <i class="bi bi-fire" style="color:var(--primary);"></i> تحدي مبيعات الفريق (لحافات ولبادات) <span class="tab-badge" id="challengeBadgeCount">0</span>
         </button>
+        <button class="tab-btn" id="tabBtnInvoices" onclick="switchTab('invoices')" role="tab">
+          <i class="bi bi-receipt"></i> الفواتير <span class="tab-badge" id="invoicesBadgeCount">-</span>
+        </button>
       </div>
 
       <!-- TAB 1: Daily Sales -->
@@ -1112,6 +1191,33 @@
                 <!-- Dynamically populated -->
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: Showroom Invoices -->
+      <div id="tabInvoices" class="content-box" style="display: none;">
+        <div class="content-header">
+          <h2>
+            <i class="bi bi-receipt" style="color:var(--primary);"></i> فواتير وحركات المعرض التفصيلية
+          </h2>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" onclick="exportShowroomInvoicesToExcel()" class="btn-action-sm">
+              <i class="bi bi-file-earmark-excel-fill" style="color:#27ae60;"></i> تصدير Excel
+            </button>
+            <button type="button" onclick="exportShowroomInvoicesToCsv()" class="btn-action-sm">
+              <i class="bi bi-filetype-csv" style="color:#27ae60;"></i> تصدير CSV
+            </button>
+            <button type="button" onclick="loadShowroomInvoices(true)" class="btn-action-sm" title="تحديث الفواتير">
+              <i class="bi bi-arrow-clockwise" style="color:var(--primary);"></i> تحديث
+            </button>
+          </div>
+        </div>
+
+        <div id="showroomInvoicesContainer">
+          <div class="text-center py-5">
+            <div class="spinner"></div>
+            <div class="fw-bold mt-2" style="color: var(--text-muted);">جاري جلب فواتير المعرض...</div>
           </div>
         </div>
       </div>
@@ -1618,6 +1724,7 @@
       selectedStoreCode = code;
       selectedStoreName = mgmtData?.stores?.[code] || code;
       populateMonthSelect();
+      invalidateInvoicesCache();
       renderShowroomData();
     }
 
@@ -1705,6 +1812,7 @@
         }
       }
 
+      invalidateInvoicesCache();
       renderShowroomData();
     }
 
@@ -1937,6 +2045,12 @@
 
       // Team Sales Challenge (Quilts & Toppers)
       renderTeamChallengeData();
+
+      // If invoices tab is active, refresh it for current showroom and month
+      const invTabBtn = document.getElementById('tabBtnInvoices');
+      if (invTabBtn && invTabBtn.classList.contains('active')) {
+        loadShowroomInvoices();
+      }
 
       document.getElementById('printReportButton').disabled = false;
     }
@@ -3211,7 +3325,8 @@
         { key: 'daily', divId: 'tabDaily', btnId: 'tabBtnDaily' },
         { key: 'employees', divId: 'tabEmployees', btnId: 'tabBtnEmployees' },
         { key: 'top', divId: 'tabTop', btnId: 'tabBtnTop' },
-        { key: 'challenge', divId: 'tabChallenge', btnId: 'tabBtnChallenge' }
+        { key: 'challenge', divId: 'tabChallenge', btnId: 'tabBtnChallenge' },
+        { key: 'invoices', divId: 'tabInvoices', btnId: 'tabBtnInvoices' }
       ];
 
       tabs.forEach(t => {
@@ -3228,6 +3343,8 @@
 
       if (tabId === 'challenge') {
         renderTeamChallengeData();
+      } else if (tabId === 'invoices') {
+        maybeLoadShowroomInvoices();
       }
     }
 
@@ -3586,6 +3703,558 @@
       const blob = new Blob(["\ufeff" + csvData], { type: 'text/csv;charset=utf-8;' });
       const safeStoreName = String(selectedStoreName || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
       saveAs(blob, `${filename}_${safeStoreName}_${selectedMonthPrefix}.csv`);
+    }
+
+    // ==========================================
+    // SHOWROOM INVOICES TAB IMPLEMENTATION
+    // ==========================================
+    let _showroomInvoicesCache = {};
+
+    function invalidateInvoicesCache() {
+      _showroomInvoicesCache = {};
+      const badge = document.getElementById('invoicesBadgeCount');
+      if (badge) badge.textContent = '-';
+    }
+
+    function getInvoicesApiBase() {
+      if (window.location.protocol === 'file:') return 'http://localhost:5000';
+      return window.location.origin;
+    }
+
+    function maybeLoadShowroomInvoices(forceReload = false) {
+      if (!selectedStoreCode) return;
+      const period = getDashboardPeriod(selectedMonthPrefix);
+      const cacheKey = `${selectedStoreCode}_${period.startYmd}_${period.endYmd}`;
+      if (!forceReload && _showroomInvoicesCache[cacheKey] && _showroomInvoicesCache[cacheKey].loaded) {
+        renderInvoicesView(_showroomInvoicesCache[cacheKey]);
+        return;
+      }
+      loadShowroomInvoices(forceReload);
+    }
+
+    async function loadShowroomInvoices(forceReload = false) {
+      const container = document.getElementById('showroomInvoicesContainer');
+      if (!container || !selectedStoreCode) return;
+
+      const period = getDashboardPeriod(selectedMonthPrefix);
+      const startStr = period.startYmd;
+      const endStr = period.endYmd;
+      const cacheKey = `${selectedStoreCode}_${startStr}_${endStr}`;
+
+      container.innerHTML = `
+        <div class="text-center py-5">
+          <div class="spinner"></div>
+          <div class="fw-bold mt-2" style="color: var(--text-main);">⏳ جاري جلب فواتير المعرض من الخادم...</div>
+          <div class="text-muted small mt-1">المعرض: ${escapeHtml(selectedStoreName || selectedStoreCode)} | الفترة: ${startStr} إلى ${endStr}</div>
+        </div>
+      `;
+
+      try {
+        const apiBase = getInvoicesApiBase();
+        const url = `${apiBase}/api/showroom-invoices?store_id=${encodeURIComponent(selectedStoreCode)}&start_date=${encodeURIComponent(startStr)}&end_date=${encodeURIComponent(endStr)}&limit=3000`;
+
+        const response = await fetch(url, { credentials: 'include' });
+        if (!response.ok) {
+          throw new Error(`تعذر جلب الفواتير (رمز الخطأ: ${response.status})`);
+        }
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        const invoices = data.invoices || [];
+        _showroomInvoicesCache[cacheKey] = {
+          loaded: true,
+          invoices: invoices,
+          filtered: invoices,
+          visibleLimit: 100,
+          storeCode: selectedStoreCode,
+          storeName: selectedStoreName,
+          startStr,
+          endStr,
+          cacheKey
+        };
+
+        const badge = document.getElementById('invoicesBadgeCount');
+        if (badge) {
+          badge.textContent = invoices.length.toLocaleString();
+        }
+
+        renderInvoicesView(_showroomInvoicesCache[cacheKey]);
+      } catch (err) {
+        console.error('Showroom invoices load error:', err);
+        container.innerHTML = `
+          <div class="alert alert-danger my-4 p-4 text-center rounded-3 shadow-sm">
+            <div class="fs-5 fw-bold mb-2">❌ تعذر تحميل فواتير المعرض</div>
+            <div class="text-muted mb-3">${escapeHtml(err.message || 'خطأ غير متوقع أثناء الاتصال بالخادم')}</div>
+            <button type="button" class="btn btn-sm btn-outline-danger px-4 py-2 fw-bold" onclick="loadShowroomInvoices(true)">
+              <i class="bi bi-arrow-clockwise me-1"></i> إعادة المحاولة
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    function renderInvoicesView(state) {
+      const container = document.getElementById('showroomInvoicesContainer');
+      if (!container || !state) return;
+
+      const allInvoices = state.invoices || [];
+      if (allInvoices.length === 0) {
+        container.innerHTML = `
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-receipt" style="font-size: 3rem; opacity: 0.4;"></i>
+            <div class="fs-6 fw-bold mt-2">لا توجد فواتير مسجلة لهذا المعرض في الفترة المحددة</div>
+            <div class="small text-muted mt-1">${state.startStr} إلى ${state.endStr}</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Extract distinct dates for date filter
+      const datesSet = new Set();
+      allInvoices.forEach(inv => { if (inv.bill_date) datesSet.add(inv.bill_date); });
+      const sortedDates = Array.from(datesSet).sort().reverse();
+
+      // Calculate overall KPIs
+      let totalSales = 0;
+      let returnCount = 0;
+      let returnAmount = 0;
+      allInvoices.forEach(inv => {
+        totalSales += (inv.payment_amount || 0);
+        if (inv.is_return) {
+          returnCount++;
+          returnAmount += (inv.payment_amount || 0);
+        }
+      });
+      const avgBill = allInvoices.length > 0 ? (totalSales / allInvoices.length) : 0;
+
+      container.innerHTML = `
+        <!-- KPIs Summary -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <div class="inv-kpi-badge flex-fill">
+            <span class="inv-kpi-title">عدد الفواتير</span>
+            <span class="inv-kpi-val text-primary" id="invKpiCount">${allInvoices.length.toLocaleString()}</span>
+          </div>
+          <div class="inv-kpi-badge flex-fill">
+            <span class="inv-kpi-title">إجمالي المبيعات</span>
+            <span class="inv-kpi-val text-success" id="invKpiSales">${totalSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <small class="fs-6">ر.س</small></span>
+          </div>
+          <div class="inv-kpi-badge flex-fill">
+            <span class="inv-kpi-title">متوسط الفاتورة</span>
+            <span class="inv-kpi-val text-dark" id="invKpiAvg">${avgBill.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} <small class="fs-6">ر.س</small></span>
+          </div>
+          <div class="inv-kpi-badge flex-fill">
+            <span class="inv-kpi-title">المرتجعات</span>
+            <span class="inv-kpi-val text-danger" id="invKpiReturns">${returnCount} (${Math.abs(returnAmount).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})} ر.س)</span>
+          </div>
+        </div>
+
+        <!-- Filters & Search Bar -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 mb-3 bg-light rounded-3 border">
+          <div class="d-flex flex-wrap align-items-center gap-2 flex-fill">
+            <!-- Search -->
+            <div class="position-relative flex-fill" style="min-width: 220px; max-width: 320px;">
+              <input type="text" id="invSearchInput" class="form-control form-control-sm pe-4" 
+                placeholder="🔍 بحث برقم الفاتورة، البائع، أو الصنف..." 
+                oninput="applyShowroomInvoiceFilters()">
+            </div>
+            <!-- Date Filter -->
+            <select id="invDateFilter" class="styled-select" style="padding: 5px 12px; font-size: 0.85rem;" onchange="applyShowroomInvoiceFilters()">
+              <option value="all">📅 كل الأيام (${sortedDates.length})</option>
+              ${sortedDates.map(d => `<option value="${d}">${d}</option>`).join('')}
+            </select>
+            <!-- Type Filter -->
+            <select id="invTypeFilter" class="styled-select" style="padding: 5px 12px; font-size: 0.85rem;" onchange="applyShowroomInvoiceFilters()">
+              <option value="all">كل المعاملات</option>
+              <option value="sale">مبيعات فقط</option>
+              <option value="return">مرتجعات فقط</option>
+            </select>
+            <!-- Sort -->
+            <select id="invSortFilter" class="styled-select" style="padding: 5px 12px; font-size: 0.85rem;" onchange="applyShowroomInvoiceFilters()">
+              <option value="time_desc">الأحدث أولاً</option>
+              <option value="time_asc">الأقدم أولاً</option>
+              <option value="amount_desc">الأعلى قيمة</option>
+              <option value="amount_asc">الأقل قيمة</option>
+            </select>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-success fw-bold text-nowrap" onclick="exportShowroomInvoicesToExcel()">
+              <i class="bi bi-file-earmark-excel me-1"></i> Excel
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success fw-bold text-nowrap" onclick="exportShowroomInvoicesToCsv()">
+              <i class="bi bi-filetype-csv me-1"></i> CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Invoices Table Container -->
+        <div id="invTableWrapper">
+          ${renderInvoicesTableHtml(state)}
+        </div>
+      `;
+    }
+
+    function applyShowroomInvoiceFilters() {
+      const period = getDashboardPeriod(selectedMonthPrefix);
+      const cacheKey = `${selectedStoreCode}_${period.startYmd}_${period.endYmd}`;
+      const state = _showroomInvoicesCache[cacheKey];
+      if (!state) return;
+
+      const q = (document.getElementById('invSearchInput')?.value || '').trim().toLowerCase();
+      const selectedDate = document.getElementById('invDateFilter')?.value || 'all';
+      const selectedType = document.getElementById('invTypeFilter')?.value || 'all';
+      const sortMode = document.getElementById('invSortFilter')?.value || 'time_desc';
+
+      let list = state.invoices.filter(inv => {
+        if (selectedDate !== 'all' && inv.bill_date !== selectedDate) return false;
+        if (selectedType === 'sale' && inv.is_return) return false;
+        if (selectedType === 'return' && !inv.is_return) return false;
+
+        if (q) {
+          const matchId = (inv.receipt_id || '').toLowerCase().includes(q) || (inv.transaction_id || '').toLowerCase().includes(q);
+          const matchSeller = (inv.seller || '').toLowerCase().includes(q);
+          const matchCustomer = (inv.customer_name || '').toLowerCase().includes(q);
+          const matchItem = (inv.items || []).some(it => 
+            (it.item_id || '').toLowerCase().includes(q) || 
+            (it.item_name || '').toLowerCase().includes(q) ||
+            (it.employee_name || '').toLowerCase().includes(q)
+          );
+          if (!matchId && !matchSeller && !matchCustomer && !matchItem) return false;
+        }
+        return true;
+      });
+
+      if (sortMode === 'time_desc') {
+        list.sort((a, b) => (b.begin_datetime || b.bill_date || '').localeCompare(a.begin_datetime || a.bill_date || ''));
+      } else if (sortMode === 'time_asc') {
+        list.sort((a, b) => (a.begin_datetime || a.bill_date || '').localeCompare(b.begin_datetime || b.bill_date || ''));
+      } else if (sortMode === 'amount_desc') {
+        list.sort((a, b) => (b.payment_amount || 0) - (a.payment_amount || 0));
+      } else if (sortMode === 'amount_asc') {
+        list.sort((a, b) => (a.payment_amount || 0) - (b.payment_amount || 0));
+      }
+
+      state.filtered = list;
+      state.visibleLimit = 100;
+
+      const countEl = document.getElementById('invKpiCount');
+      const salesEl = document.getElementById('invKpiSales');
+      const avgEl = document.getElementById('invKpiAvg');
+      const returnsEl = document.getElementById('invKpiReturns');
+
+      let fSales = 0, fReturns = 0, fRetAmt = 0;
+      list.forEach(inv => {
+        fSales += (inv.payment_amount || 0);
+        if (inv.is_return) {
+          fReturns++;
+          fRetAmt += (inv.payment_amount || 0);
+        }
+      });
+      const fAvg = list.length > 0 ? (fSales / list.length) : 0;
+
+      if (countEl) countEl.textContent = list.length.toLocaleString();
+      if (salesEl) salesEl.innerHTML = `${fSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <small class="fs-6">ر.س</small>`;
+      if (avgEl) avgEl.innerHTML = `${fAvg.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} <small class="fs-6">ر.س</small>`;
+      if (returnsEl) returnsEl.textContent = `${fReturns} (${Math.abs(fRetAmt).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})} ر.س)`;
+
+      const wrap = document.getElementById('invTableWrapper');
+      if (wrap) {
+        wrap.innerHTML = renderInvoicesTableHtml(state);
+      }
+    }
+
+    function renderInvoicesTableHtml(state) {
+      if (!state) return '';
+      const list = state.filtered || [];
+
+      if (list.length === 0) {
+        return '<div class="text-center text-muted py-4">لا توجد نتائج مطابقة لخيارات البحث أو الفلترة.</div>';
+      }
+
+      const visibleCount = Math.min(state.visibleLimit || 100, list.length);
+      const visibleRows = list.slice(0, visibleCount);
+
+      let html = `
+        <div class="table-responsive" style="max-height: 560px; overflow-y: auto;">
+          <table class="data-table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th style="width: 140px;">رقم الفاتورة</th>
+                <th style="width: 95px; text-align: center;">التاريخ</th>
+                <th style="width: 85px; text-align: center;">الوقت</th>
+                <th style="width: 110px; text-align: right;">المبلغ</th>
+                <th style="width: 75px; text-align: center;">الأصناف</th>
+                <th>البائع</th>
+                <th style="width: 70px; text-align: center;">تفاصيل</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      visibleRows.forEach((inv, idx) => {
+        const isRet = inv.is_return;
+        const amtClass = isRet ? 'text-danger' : 'text-success';
+        const typeBadge = isRet ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size:0.75rem;">مرتجع</span>' : '';
+
+        html += `
+          <tr class="inv-master-row" id="invMasterRow-${idx}" onclick="toggleInvoiceDetails(${idx})">
+            <td class="text-center text-muted small fw-bold">${idx + 1}</td>
+            <td class="fw-bold font-monospace text-dark">
+              ${escapeHtml(inv.receipt_id || inv.transaction_id)}
+              ${typeBadge}
+            </td>
+            <td class="text-center text-nowrap text-muted small">${inv.bill_date || '-'}</td>
+            <td class="text-center text-nowrap">
+              <span class="badge bg-light text-dark border">${inv.time || '-'}</span>
+            </td>
+            <td class="text-end fw-bold ${amtClass} text-nowrap" style="direction:ltr; text-align:right;">
+              ${inv.payment_amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ر.س
+            </td>
+            <td class="text-center">
+              <span class="badge bg-secondary-subtle text-secondary border px-2">${inv.item_lines_count}</span>
+            </td>
+            <td class="fw-semibold text-dark text-truncate" style="max-width: 180px;" title="${escapeHtml(inv.seller)}">
+              ${escapeHtml(inv.seller)}
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-light border py-0 px-2 inv-toggle-btn" 
+                onclick="event.stopPropagation(); toggleInvoiceDetails(${idx})">
+                <span class="inv-chevron" id="invChevron-${idx}">▼</span>
+              </button>
+            </td>
+          </tr>
+          <!-- Dropdown Details Row -->
+          <tr id="invDetailRow-${idx}" class="inv-detail-row" style="display: none; background: #fafbfc;">
+            <td colspan="8" class="p-0 border-0">
+              ${renderInvoiceDetailCard(inv)}
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table></div>`;
+
+      if (visibleCount < list.length) {
+        html += `
+          <div class="text-center py-2 bg-light border-top">
+            <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-4" onclick="loadMoreInvoices()">
+              عرض المزيد (+100) — متبقي ${(list.length - visibleCount).toLocaleString()} فاتورة
+            </button>
+          </div>
+        `;
+      }
+
+      return html;
+    }
+
+    function toggleInvoiceDetails(idx) {
+      const row = document.getElementById(`invDetailRow-${idx}`);
+      const chevron = document.getElementById(`invChevron-${idx}`);
+      if (!row) return;
+
+      const isHidden = row.style.display === 'none';
+      row.style.display = isHidden ? 'table-row' : 'none';
+      if (chevron) {
+        if (isHidden) chevron.classList.add('open');
+        else chevron.classList.remove('open');
+      }
+    }
+
+    function renderInvoiceDetailCard(inv) {
+      const items = inv.items || [];
+      let totalQty = 0;
+      let totalNet = 0;
+      let totalDiscount = 0;
+      let totalTax = 0;
+
+      items.forEach(it => {
+        totalQty += Math.abs(it.quantity || 0);
+        totalNet += (it.net_amount || 0);
+        totalDiscount += (it.discount_amount || 0);
+        totalTax += (it.tax_amount || 0);
+      });
+
+      let cardHtml = `
+        <div class="inv-detail-card">
+          <!-- Meta info banner -->
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-2 mb-2 border-bottom">
+            <div class="d-flex flex-wrap align-items-center gap-3 small">
+              <span><strong>رقم الإيصال:</strong> <code class="text-dark bg-white px-2 py-1 border rounded">${escapeHtml(inv.receipt_id)}</code></span>
+              <span><strong>رقم الحركة:</strong> <code class="text-muted bg-white px-2 py-1 border rounded">${escapeHtml(inv.transaction_id)}</code></span>
+              ${inv.terminal ? `<span><strong>الكاشير/الجهاز:</strong> ${escapeHtml(inv.terminal)}</span>` : ''}
+              ${inv.customer_name ? `<span><strong>العميل:</strong> <span class="text-primary fw-bold">${escapeHtml(inv.customer_name)}</span> ${inv.customer_account ? '(' + escapeHtml(inv.customer_account) + ')' : ''}</span>` : ''}
+            </div>
+            <div class="small text-muted fw-semibold">
+              <i class="bi bi-clock me-1"></i> ${inv.bill_date} ${inv.time}
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div class="table-responsive">
+            <table class="inv-items-table mb-2">
+              <thead>
+                <tr>
+                  <th style="width: 35px; text-align: center;">#</th>
+                  <th style="width: 110px;">كود الصنف</th>
+                  <th>اسم المنتج</th>
+                  <th style="width: 70px; text-align: center;">الكمية</th>
+                  <th style="width: 90px; text-align: right;">سعر الوحدة</th>
+                  <th style="width: 80px; text-align: right;">الخصم</th>
+                  <th style="width: 80px; text-align: right;">الضريبة</th>
+                  <th style="width: 100px; text-align: right;">الإجمالي</th>
+                  <th style="width: 140px;">بائع الصنف</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      if (items.length === 0) {
+        cardHtml += `<tr><td colspan="9" class="text-center text-muted py-2">لا توجد أصناف مسجلة لهذه الفاتورة</td></tr>`;
+      } else {
+        items.forEach((it, i) => {
+          const q = Math.abs(it.quantity || 0);
+          const unitPrice = q > 0 ? (it.net_amount / q) : it.net_amount;
+          cardHtml += `
+            <tr>
+              <td class="text-center text-muted small">${i + 1}</td>
+              <td><span class="badge bg-secondary-subtle text-dark border font-monospace">${escapeHtml(it.item_id)}</span></td>
+              <td class="fw-semibold text-dark">${escapeHtml(it.item_name)}</td>
+              <td class="text-center fw-bold ${it.quantity < 0 ? 'text-danger' : 'text-primary'}">${q}</td>
+              <td class="text-end text-muted" style="direction:ltr; text-align:right;">${unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td class="text-end ${it.discount_amount > 0 ? 'text-warning fw-bold' : 'text-muted'}" style="direction:ltr; text-align:right;">${it.discount_amount > 0 ? it.discount_amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+              <td class="text-end text-muted" style="direction:ltr; text-align:right;">${it.tax_amount ? it.tax_amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+              <td class="text-end fw-bold ${it.net_amount < 0 ? 'text-danger' : 'text-success'}" style="direction:ltr; text-align:right;">${it.net_amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td class="small fw-semibold text-truncate" title="${escapeHtml(it.employee_name)}">${escapeHtml(it.employee_name)}</td>
+            </tr>
+          `;
+        });
+      }
+
+      cardHtml += `
+              </tbody>
+              <tfoot class="bg-light fw-bold border-top">
+                <tr>
+                  <td colspan="3" class="text-end">الإجمالي:</td>
+                  <td class="text-center text-primary">${totalQty}</td>
+                  <td></td>
+                  <td class="text-end text-warning" style="direction:ltr; text-align:right;">${totalDiscount > 0 ? totalDiscount.toFixed(2) : '-'}</td>
+                  <td class="text-end text-muted" style="direction:ltr; text-align:right;">${totalTax.toFixed(2)}</td>
+                  <td class="text-end text-success" style="direction:ltr; text-align:right;">${inv.payment_amount.toFixed(2)} ر.س</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      `;
+      return cardHtml;
+    }
+
+    function loadMoreInvoices() {
+      const period = getDashboardPeriod(selectedMonthPrefix);
+      const cacheKey = `${selectedStoreCode}_${period.startYmd}_${period.endYmd}`;
+      const state = _showroomInvoicesCache[cacheKey];
+      if (!state) return;
+      state.visibleLimit = (state.visibleLimit || 100) + 100;
+      const wrap = document.getElementById('invTableWrapper');
+      if (wrap) {
+        wrap.innerHTML = renderInvoicesTableHtml(state);
+      }
+    }
+
+    function exportShowroomInvoicesToExcel() {
+      const period = getDashboardPeriod(selectedMonthPrefix);
+      const cacheKey = `${selectedStoreCode}_${period.startYmd}_${period.endYmd}`;
+      const state = _showroomInvoicesCache[cacheKey];
+      if (!state || !state.filtered || state.filtered.length === 0) {
+        alert('لا توجد فواتير لتصديرها.');
+        return;
+      }
+
+      if (typeof XLSX === 'undefined') {
+        exportShowroomInvoicesToCsv();
+        return;
+      }
+
+      // Sheet 1: Invoices Summary
+      const invoicesSheetData = state.filtered.map((inv, i) => ({
+        "م": i + 1,
+        "رقم الفاتورة": inv.receipt_id || inv.transaction_id,
+        "رقم الحركة": inv.transaction_id,
+        "التاريخ": inv.bill_date,
+        "الوقت": inv.time,
+        "نوع المعاملة": inv.is_return ? "مرتجع" : "بيع",
+        "المبلغ الإجمالي": inv.payment_amount,
+        "عدد الأصناف": inv.item_lines_count,
+        "البائع": inv.seller,
+        "جهاز الكاشير": inv.terminal,
+        "اسم العميل": inv.customer_name,
+        "حساب العميل": inv.customer_account
+      }));
+
+      // Sheet 2: Items Details
+      const itemsSheetData = [];
+      state.filtered.forEach(inv => {
+        (inv.items || []).forEach(it => {
+          const q = Math.abs(it.quantity || 0);
+          itemsSheetData.push({
+            "رقم الفاتورة": inv.receipt_id || inv.transaction_id,
+            "التاريخ": inv.bill_date,
+            "كود الصنف": it.item_id,
+            "اسم المنتج": it.item_name,
+            "الكمية": it.quantity,
+            "سعر الوحدة": q > 0 ? Number((it.net_amount / q).toFixed(2)) : it.net_amount,
+            "الخصم": it.discount_amount,
+            "الضريبة": it.tax_amount,
+            "الإجمالي": it.net_amount,
+            "بائع الصنف": it.employee_name
+          });
+        });
+      });
+
+      const wb = XLSX.utils.book_new();
+      const wsInvoices = XLSX.utils.json_to_sheet(invoicesSheetData);
+      const wsItems = XLSX.utils.json_to_sheet(itemsSheetData);
+
+      XLSX.utils.book_append_sheet(wb, wsInvoices, "الفواتير");
+      XLSX.utils.book_append_sheet(wb, wsItems, "تفاصيل الأصناف");
+
+      const safeStoreName = String(selectedStoreName || selectedStoreCode || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
+      XLSX.writeFile(wb, `فواتير_${safeStoreName}_${state.startStr}_${state.endStr}.xlsx`);
+    }
+
+    function exportShowroomInvoicesToCsv() {
+      const period = getDashboardPeriod(selectedMonthPrefix);
+      const cacheKey = `${selectedStoreCode}_${period.startYmd}_${period.endYmd}`;
+      const state = _showroomInvoicesCache[cacheKey];
+      if (!state || !state.filtered || state.filtered.length === 0) {
+        alert('لا توجد فواتير لتصديرها.');
+        return;
+      }
+
+      const headers = ["م", "رقم الفاتورة", "رقم الحركة", "التاريخ", "الوقت", "نوع المعاملة", "المبلغ الإجمالي", "عدد الأصناف", "البائع", "جهاز الكاشير", "اسم العميل", "حساب العميل"];
+      const rows = state.filtered.map((inv, i) => [
+        i + 1,
+        inv.receipt_id || inv.transaction_id,
+        inv.transaction_id,
+        inv.bill_date,
+        inv.time,
+        inv.is_return ? "مرتجع" : "بيع",
+        inv.payment_amount,
+        inv.item_lines_count,
+        inv.seller,
+        inv.terminal,
+        inv.customer_name,
+        inv.customer_account
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const safeStoreName = String(selectedStoreName || selectedStoreCode || 'showroom').replace(/[\\/:*?"<>|]/g, '_');
+      saveAs(blob, `فواتير_${safeStoreName}_${state.startStr}_${state.endStr}.csv`);
     }
   </script>
 </body>
