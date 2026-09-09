@@ -1649,6 +1649,25 @@ const EMPLOYEES = [
         "addressBooks": "2101-C;2101-E"
     },
     {
+        "employeeId": "2821-عبدالسليم كابيل",
+        "personnelNumber": "2821",
+        "name": "عبدالسليم كابيل",
+        "startDate": "2021-12-26",
+        "manager": "عبدالله السرداح",
+        "showroom": "1108-39-Salam Mall Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1108-39-Salam Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1108-C",
+                    "1108-E"
+                ]
+            }
+        ],
+        "addressBooks": "1108-C;1108-E"
+    },
+    {
         "employeeId": "3029-محمد شان",
         "personnelNumber": "3029",
         "name": "محمد شان",
@@ -7401,7 +7420,7 @@ const EMPLOYEES = [
         "employeeId": "5017-محمد عوض القحطاني",
         "personnelNumber": "5017",
         "name": "محمد عوض القحطاني",
-        "startDate": "2026-09-06",
+        "startDate": "2026-09-07",
         "manager": "جهاد ايوبي",
         "showroom": "2102-28-Al Nakheel Mall Dammam",
         "showroomDetails": [
@@ -7415,6 +7434,44 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "2102-C;2102-E"
+    },
+    {
+        "employeeId": "5018-نهله محمد العنزي",
+        "personnelNumber": "5018",
+        "name": "نهله محمد العنزي",
+        "startDate": "2026-09-07",
+        "manager": "عبدالله السرداح",
+        "showroom": "2401-47-Al-Nakheel Plaza",
+        "showroomDetails": [
+            {
+                "name": "2401-47-Al-Nakheel Plaza",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "2401-C",
+                    "2401-E"
+                ]
+            }
+        ],
+        "addressBooks": "2401-C;2401-E"
+    },
+    {
+        "employeeId": "5019-ريمه حسن الحربي",
+        "personnelNumber": "5019",
+        "name": "ريمه حسن الحربي",
+        "startDate": "2026-09-07",
+        "manager": "المنطقة الغربية",
+        "showroom": "1010-54-THE VILLAGE",
+        "showroomDetails": [
+            {
+                "name": "1010-54-THE VILLAGE",
+                "manager": "المنطقة الغربية",
+                "codes": [
+                    "1010-C",
+                    "1010-E"
+                ]
+            }
+        ],
+        "addressBooks": "1010-C;1010-E"
     }
 ];
 
