@@ -3177,7 +3177,10 @@
         }
         body.replaceChildren(...rows.map(branch => {
             const row = document.createElement('tr');
-            const marginClass = Number(branch.net_margin_pct) >= 0 ? 'text-success' : 'text-danger';
+            const margin = Number(branch.net_margin_pct);
+            const marginClass = Number.isFinite(margin)
+                ? (margin >= 0 ? 'text-success' : 'text-danger')
+                : '';
             [
                 branch.branch_dimension_value || '—',
                 branch.branch_name || branch.branch_dimension_value || '—',
@@ -3193,7 +3196,10 @@
                 if (index === 5) {
                     cell.classList.add(Number(branch.net_profit) >= 0 ? 'text-success' : 'text-danger', 'fw-bold');
                 }
-                if (index === 6) cell.classList.add(marginClass, 'fw-bold');
+                if (index === 6) {
+                    if (marginClass) cell.classList.add(marginClass);
+                    cell.classList.add('fw-bold');
+                }
                 row.append(cell);
             });
             return row;
@@ -3233,6 +3239,8 @@
 
         const summary = payload.summary || {};
         const variance = payload.variance || {};
+        const comparisonCoverage = payload.comparison_coverage || {};
+        const comparisonHasData = Number(comparisonCoverage.months_with_data || 0) > 0;
         setMetric('financeIncomeRevenue', accountingMoney(summary.revenue));
         setMetric('financeIncomeGrossProfit', accountingMoney(summary.gross_profit));
         setMetric('financeIncomeOpex', accountingMoney(summary.operating_expenses));
@@ -3241,7 +3249,9 @@
         setMetric('financeIncomeNetMargin', `الهامش ${percentValue(summary.net_margin_pct)}`);
         setMetric(
             'financeIncomeRevenueVariance',
-            `الفرق عن السنة السابقة ${accountingMoney(variance.revenue)}`
+            comparisonHasData
+                ? `الفرق عن السنة السابقة ${accountingMoney(variance.revenue)}`
+                : 'لا تتوفر بيانات للفترة المقارنة'
         );
         const netElement = element('financeIncomeNetProfit');
         netElement?.classList.toggle('is-positive', Number(summary.net_profit) >= 0);
@@ -3254,9 +3264,12 @@
 
         const unmapped = payload.coverage?.unmapped_accounts || [];
         const missingMonths = Number(payload.coverage?.requested_months || 0) - Number(payload.coverage?.months_with_data || 0);
-        if (unmapped.length || missingMonths > 0) {
+        const missingComparisonMonths = Number(comparisonCoverage.requested_months || 0)
+            - Number(comparisonCoverage.months_with_data || 0);
+        if (unmapped.length || missingMonths > 0 || missingComparisonMonths > 0) {
             const parts = [];
-            if (missingMonths > 0) parts.push(`${missingMonths} شهر بدون بيانات`);
+            if (missingMonths > 0) parts.push(`${missingMonths} شهر بدون بيانات في الفترة الحالية`);
+            if (missingComparisonMonths > 0) parts.push(`${missingComparisonMonths} شهر بدون بيانات في فترة المقارنة`);
             if (unmapped.length) parts.push(`${unmapped.length} حساب غير مصنف`);
             alertBox.hidden = false;
             alertBox.className = 'finance-income-alert';
@@ -3271,8 +3284,8 @@
         statementBody.replaceChildren(...(payload.lines || []).map(line => {
             const previous = previousByKey.get(line.key);
             const currentValue = Number(line.total) || 0;
-            const previousValue = Number(previous?.total) || 0;
-            const delta = currentValue - previousValue;
+            const previousValue = comparisonHasData ? (Number(previous?.total) || 0) : null;
+            const delta = comparisonHasData ? currentValue - previousValue : null;
             const row = document.createElement('tr');
             if (line.calculated) row.classList.add('is-calculated');
             if (line.key === 'net_profit') row.classList.add('is-net-result');
@@ -3287,9 +3300,11 @@
                 'text-end'
             );
             [previousCell, currentCell, varianceCell, ratioCell].forEach(cell => { cell.dir = 'ltr'; });
-            const expenseLine = line.kind === 'expense';
-            const favorable = expenseLine ? delta <= 0 : delta >= 0;
-            varianceCell.classList.add(favorable ? 'is-favorable' : 'is-unfavorable');
+            if (delta !== null) {
+                const expenseLine = line.kind === 'expense';
+                const favorable = expenseLine ? delta <= 0 : delta >= 0;
+                varianceCell.classList.add(favorable ? 'is-favorable' : 'is-unfavorable');
+            }
             row.append(label, previousCell, currentCell, varianceCell, ratioCell);
             return row;
         }));
@@ -3314,7 +3329,11 @@
                 const cell = textElement('td', value, cellIndex ? 'text-end' : '');
                 if (cellIndex) cell.dir = 'ltr';
                 if (cellIndex === 4) {
-                    cell.classList.add(Number(currentNet?.values?.[index]) >= 0 ? 'text-success' : 'text-danger', 'fw-bold');
+                    const netValue = Number(currentNet?.values?.[index]);
+                    if (Number.isFinite(netValue) && Math.abs(netValue) >= 0.5) {
+                        cell.classList.add(netValue >= 0 ? 'text-success' : 'text-danger');
+                    }
+                    cell.classList.add('fw-bold');
                 }
                 row.append(cell);
             });
