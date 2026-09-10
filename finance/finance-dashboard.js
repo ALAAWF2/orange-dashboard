@@ -19,6 +19,8 @@
     let currentInventory = [];
     let currentTreasury = {};
     let currentTaxHub = {};
+    let currentIncomeStatement = {};
+    let currentIncomeBranches = [];
     let currentExpenseScopeStatus = 'approved';
     let currentMaintenance = {};
     let currentShowroomPayload = null;
@@ -47,7 +49,8 @@
         purchases: { search: '', status: 'all' },
         inventory: { search: '' },
         maintenance: { search: '' },
-        cashRecon: { search: '', status: 'all' }
+        cashRecon: { search: '', status: 'all' },
+        incomeStatement: { search: '' }
     };
 
     function element(id) {
@@ -3134,6 +3137,203 @@
         }));
     }
 
+    function accountingMoney(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount)) return '—';
+        if (Math.abs(amount) < 0.5) return '—';
+        return amount < 0 ? `(${money.format(Math.abs(amount))})` : money.format(amount);
+    }
+
+    function percentValue(value) {
+        const amount = Number(value);
+        return Number.isFinite(amount) ? `${amount.toFixed(1)}%` : '—';
+    }
+
+    function periodCaption(start, end) {
+        if (!start || !end) return '—';
+        return `${start.slice(0, 7)} — ${end.slice(0, 7)}`;
+    }
+
+    function incomeLineByKey(lines, key) {
+        return (lines || []).find(line => line.key === key) || null;
+    }
+
+    function renderIncomeStatementBranches() {
+        const body = element('financeIncomeBranchesBody');
+        if (!body) return;
+        const search = String(filters.incomeStatement.search || '').trim().toLowerCase();
+        const rows = currentIncomeBranches.filter(row => {
+            if (!search) return true;
+            return [row.branch_dimension_value, row.branch_name]
+                .some(value => String(value || '').toLowerCase().includes(search));
+        });
+        setMetric(
+            'financeIncomeBranchCount',
+            `${integer.format(rows.length)} من ${integer.format(currentIncomeBranches.length)} مركز/فرع`
+        );
+        if (!rows.length) {
+            tableMessage(body, 7, search ? 'لا توجد نتائج مطابقة للبحث.' : 'لا توجد بيانات فروع ضمن الفترة.');
+            return;
+        }
+        body.replaceChildren(...rows.map(branch => {
+            const row = document.createElement('tr');
+            const marginClass = Number(branch.net_margin_pct) >= 0 ? 'text-success' : 'text-danger';
+            [
+                branch.branch_dimension_value || '—',
+                branch.branch_name || branch.branch_dimension_value || '—',
+                accountingMoney(branch.revenue),
+                accountingMoney(branch.gross_profit),
+                accountingMoney(branch.operating_expenses),
+                accountingMoney(branch.net_profit),
+                percentValue(branch.net_margin_pct)
+            ].forEach((value, index) => {
+                const cell = textElement('td', value);
+                if (index === 0 || index >= 2) cell.dir = 'ltr';
+                if (index >= 2) cell.className = 'text-end';
+                if (index === 5) {
+                    cell.classList.add(Number(branch.net_profit) >= 0 ? 'text-success' : 'text-danger', 'fw-bold');
+                }
+                if (index === 6) cell.classList.add(marginClass, 'fw-bold');
+                row.append(cell);
+            });
+            return row;
+        }));
+    }
+
+    function renderMonthlyIncomeStatement(payload) {
+        currentIncomeStatement = payload || {};
+        currentIncomeBranches = payload?.branches || [];
+        const alertBox = element('financeIncomeStatementAlert');
+        const statementBody = element('financeIncomeStatementBody');
+        const monthlyBody = element('financeIncomeMonthlyBody');
+        const ratios = element('financeIncomeRatios');
+
+        if (payload?.state === 'schema_missing') {
+            alertBox.hidden = false;
+            alertBox.className = 'finance-income-alert';
+            alertBox.textContent = 'التقرير جاهز في الواجهة، ويحتاج تطبيق migration ثم تعبئة التاريخ الشهري من Dynamics.';
+            tableMessage(statementBody, 5, 'بانتظار تفعيل جدول التقرير المالي الشهري.');
+            tableMessage(monthlyBody, 5, 'بانتظار تفعيل جدول التقرير المالي الشهري.');
+            ratios.innerHTML = '<div class="finance-empty-state">النسب تظهر بعد تفعيل التقرير.</div>';
+            currentIncomeBranches = [];
+            renderIncomeStatementBranches();
+            return;
+        }
+        if (payload?.state !== 'ready') {
+            alertBox.hidden = false;
+            alertBox.className = 'finance-income-alert is-error';
+            alertBox.textContent = 'لا توجد بيانات قائمة دخل ضمن الفترة المحددة.';
+            tableMessage(statementBody, 5, 'لا توجد بيانات ضمن الفترة المحددة.');
+            tableMessage(monthlyBody, 5, 'لا توجد بيانات شهرية ضمن الفترة المحددة.');
+            ratios.innerHTML = '<div class="finance-empty-state">لا توجد نسب متاحة.</div>';
+            currentIncomeBranches = [];
+            renderIncomeStatementBranches();
+            return;
+        }
+
+        const summary = payload.summary || {};
+        const variance = payload.variance || {};
+        setMetric('financeIncomeRevenue', accountingMoney(summary.revenue));
+        setMetric('financeIncomeGrossProfit', accountingMoney(summary.gross_profit));
+        setMetric('financeIncomeOpex', accountingMoney(summary.operating_expenses));
+        setMetric('financeIncomeNetProfit', accountingMoney(summary.net_profit));
+        setMetric('financeIncomeGrossMargin', `الهامش ${percentValue(summary.gross_margin_pct)}`);
+        setMetric('financeIncomeNetMargin', `الهامش ${percentValue(summary.net_margin_pct)}`);
+        setMetric(
+            'financeIncomeRevenueVariance',
+            `الفرق عن السنة السابقة ${accountingMoney(variance.revenue)}`
+        );
+        const netElement = element('financeIncomeNetProfit');
+        netElement?.classList.toggle('is-positive', Number(summary.net_profit) >= 0);
+        netElement?.classList.toggle('is-negative', Number(summary.net_profit) < 0);
+
+        const period = payload.period || {};
+        setMetric('financeIncomeCurrentHeader', periodCaption(period.start, period.end));
+        setMetric('financeIncomePreviousHeader', periodCaption(period.comparison_start, period.comparison_end));
+        setMetric('financeIncomePeriodLabel', `${periodCaption(period.start, period.end)} · مقارنة ${periodCaption(period.comparison_start, period.comparison_end)}`);
+
+        const unmapped = payload.coverage?.unmapped_accounts || [];
+        const missingMonths = Number(payload.coverage?.requested_months || 0) - Number(payload.coverage?.months_with_data || 0);
+        if (unmapped.length || missingMonths > 0) {
+            const parts = [];
+            if (missingMonths > 0) parts.push(`${missingMonths} شهر بدون بيانات`);
+            if (unmapped.length) parts.push(`${unmapped.length} حساب غير مصنف`);
+            alertBox.hidden = false;
+            alertBox.className = 'finance-income-alert';
+            alertBox.textContent = `تغطية التقرير تحتاج مراجعة: ${parts.join('، ')}. الأرقام المتاحة لم تُستبدل بأصفار تخمينية.`;
+        } else {
+            alertBox.hidden = true;
+            alertBox.textContent = '';
+        }
+
+        const previousByKey = new Map((payload.comparison_lines || []).map(line => [line.key, line]));
+        const revenueTotal = Number(summary.revenue) || 0;
+        statementBody.replaceChildren(...(payload.lines || []).map(line => {
+            const previous = previousByKey.get(line.key);
+            const currentValue = Number(line.total) || 0;
+            const previousValue = Number(previous?.total) || 0;
+            const delta = currentValue - previousValue;
+            const row = document.createElement('tr');
+            if (line.calculated) row.classList.add('is-calculated');
+            if (line.key === 'net_profit') row.classList.add('is-net-result');
+
+            const label = textElement('td', line.name_ar || line.key, line.calculated ? 'fw-bold' : '');
+            const previousCell = textElement('td', accountingMoney(previousValue), 'text-end');
+            const currentCell = textElement('td', accountingMoney(currentValue), 'text-end fw-semibold');
+            const varianceCell = textElement('td', accountingMoney(delta), 'text-end fw-semibold');
+            const ratioCell = textElement(
+                'td',
+                revenueTotal ? percentValue((currentValue / revenueTotal) * 100) : '—',
+                'text-end'
+            );
+            [previousCell, currentCell, varianceCell, ratioCell].forEach(cell => { cell.dir = 'ltr'; });
+            const expenseLine = line.kind === 'expense';
+            const favorable = expenseLine ? delta <= 0 : delta >= 0;
+            varianceCell.classList.add(favorable ? 'is-favorable' : 'is-unfavorable');
+            row.append(label, previousCell, currentCell, varianceCell, ratioCell);
+            return row;
+        }));
+
+        const currentRevenue = incomeLineByKey(payload.lines, 'sales_revenue');
+        const currentGross = incomeLineByKey(payload.lines, 'gross_profit');
+        const currentNet = incomeLineByKey(payload.lines, 'net_profit');
+        const previousRevenue = incomeLineByKey(payload.comparison_lines, 'sales_revenue');
+        const monthFormatter = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { month: 'short' });
+        const months = payload.months || [];
+        monthlyBody.replaceChildren(...months.map((month, index) => {
+            const row = document.createElement('tr');
+            const monthDate = new Date(`${month}-01T00:00:00`);
+            const values = [
+                `${monthFormatter.format(monthDate)} ${month.slice(0, 4)}`,
+                accountingMoney(previousRevenue?.values?.[index]),
+                accountingMoney(currentRevenue?.values?.[index]),
+                accountingMoney(currentGross?.values?.[index]),
+                accountingMoney(currentNet?.values?.[index])
+            ];
+            values.forEach((value, cellIndex) => {
+                const cell = textElement('td', value, cellIndex ? 'text-end' : '');
+                if (cellIndex) cell.dir = 'ltr';
+                if (cellIndex === 4) {
+                    cell.classList.add(Number(currentNet?.values?.[index]) >= 0 ? 'text-success' : 'text-danger', 'fw-bold');
+                }
+                row.append(cell);
+            });
+            return row;
+        }));
+
+        ratios.replaceChildren(...(payload.ratios || []).map(item => {
+            const card = document.createElement('div');
+            card.className = 'finance-income-ratio';
+            card.append(
+                textElement('span', item.name_ar || item.key),
+                textElement('strong', percentValue(item.value))
+            );
+            return card;
+        }));
+
+        renderIncomeStatementBranches();
+    }
+
     function renderAdditionalAnalytics(payload) {
         const sections = payload?.sections || {};
         const po = sections.purchase_commitments || {};
@@ -3966,7 +4166,7 @@
             const params = periodParams();
             const [
                 overview, showrooms, vendorInvoices, leases, leaseInsights, apAging,
-                vendorAnalytics, trend, additional, fixedAssets, advances, purchases,
+                vendorAnalytics, trend, incomeStatement, additional, fixedAssets, advances, purchases,
                 inventory, treasury, taxHub, maintData
             ] = await Promise.all([
                 window.FinancePlatformApi.overview(params),
@@ -3982,6 +4182,8 @@
                 window.FinancePlatformApi.trialBalanceTrend({
                     start: '2025-01-01', end: endVal || element('financePlatformEnd').value
                 }).catch(() => ({ state: 'unavailable', data: [] })),
+                window.FinancePlatformApi.monthlyIncomeStatement(params)
+                    .catch(() => ({ state: 'unavailable', lines: [], branches: [] })),
                 window.FinancePlatformApi.additionalAnalytics({
                     as_of: endVal || element('financePlatformEnd').value,
                     month: (endVal || element('financePlatformEnd').value).slice(0, 7)
@@ -4017,6 +4219,7 @@
             renderApAging(apAging);
             renderVendorAnalytics(vendorAnalytics);
             renderTrialBalanceTrend(trend);
+            renderMonthlyIncomeStatement(incomeStatement);
             renderAdditionalAnalytics(additional);
             renderFixedAssets(fixedAssets);
             renderEmployeeAdvances(advances);
@@ -4083,7 +4286,7 @@
     }
 
     function switchSubtab(tabName) {
-        const validTabs = ['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'];
+        const validTabs = ['overview', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'];
         if (!validTabs.includes(tabName)) tabName = 'overview';
 
         document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
@@ -4117,7 +4320,7 @@
         });
 
         const initialHash = (window.location.hash || '').replace('#', '');
-        if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(initialHash)) {
+        if (['overview', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(initialHash)) {
             switchSubtab(initialHash);
         } else {
             switchSubtab('overview');
@@ -4125,7 +4328,7 @@
 
         window.addEventListener('hashchange', () => {
             const currentHash = (window.location.hash || '').replace('#', '');
-            if (['overview', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(currentHash)) {
+            if (['overview', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(currentHash)) {
                 switchSubtab(currentHash);
             }
         });
@@ -4202,6 +4405,24 @@
             showroomsStatus.addEventListener('change', () => {
                 filters.showrooms.status = showroomsStatus.value;
                 filterAndRenderShowrooms();
+            });
+        }
+
+        const incomeBranchSearch = element('financeIncomeBranchSearch');
+        const incomeBranchSearchClear = element('financeIncomeBranchSearchClear');
+        if (incomeBranchSearch) {
+            incomeBranchSearch.addEventListener('input', () => {
+                filters.incomeStatement.search = incomeBranchSearch.value;
+                if (incomeBranchSearchClear) incomeBranchSearchClear.hidden = !incomeBranchSearch.value;
+                renderIncomeStatementBranches();
+            });
+        }
+        if (incomeBranchSearchClear) {
+            incomeBranchSearchClear.addEventListener('click', () => {
+                if (incomeBranchSearch) incomeBranchSearch.value = '';
+                filters.incomeStatement.search = '';
+                incomeBranchSearchClear.hidden = true;
+                renderIncomeStatementBranches();
             });
         }
 

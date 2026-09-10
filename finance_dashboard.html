@@ -400,7 +400,7 @@
             .review-command-center .table { min-width: 900px; }
         }
     </style>
-    <link rel="stylesheet" href="finance/finance.css?v=20260821-1">
+    <link rel="stylesheet" href="finance/finance.css?v=20260910-1">
     <script src="users.js"></script>
     <script src="assets/average-bill-program.js"></script>
 </head>
@@ -514,6 +514,11 @@
                         <button type="button" class="finance-subnav-btn active" data-subtab="overview" role="tab">
                             <i class="fa-solid fa-chart-pie"></i>
                             <span>نظرة عامة وقائمة الدخل</span>
+                        </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="income_statement" role="tab">
+                            <i class="fa-solid fa-table-columns"></i>
+                            <span>التقرير المالي الشهري</span>
+                            <span class="finance-subnav-badge">بدون ضريبة</span>
                         </button>
                         <button type="button" class="finance-subnav-btn" data-subtab="showrooms" role="tab">
                             <i class="fa-solid fa-store"></i>
@@ -691,7 +696,132 @@
                     </div>
                 </div>
 
-                <!-- Pane 2: Showrooms Hub -->
+                <!-- Pane 2: Finance team's monthly income statement -->
+                <div class="finance-tab-pane" id="financePaneIncomeStatement" data-pane="income_statement" hidden>
+                    <section class="finance-income-hero mb-4">
+                        <div>
+                            <span class="finance-section-kicker">MONTHLY INCOME STATEMENT</span>
+                            <h2>التقرير المالي الشهري</h2>
+                            <p>قائمة دخل شهرية حسب ميزان المراجعة من Dynamics، تشمل المعارض والمكاتب والمستودعات والمنصات.</p>
+                        </div>
+                        <div class="finance-income-basis">
+                            <span><i class="fa-solid fa-database"></i> Dynamics 365</span>
+                            <span><i class="fa-solid fa-receipt"></i> بدون ضريبة القيمة المضافة</span>
+                            <span><i class="fa-solid fa-coins"></i> SAR</span>
+                        </div>
+                    </section>
+
+                    <div class="finance-income-alert" id="financeIncomeStatementAlert" hidden></div>
+
+                    <div class="finance-income-kpis mb-4" aria-live="polite">
+                        <article>
+                            <span>إيراد المبيعات</span>
+                            <strong id="financeIncomeRevenue">—</strong>
+                            <small id="financeIncomeRevenueVariance">مقارنة بالفترة السابقة</small>
+                        </article>
+                        <article>
+                            <span>إجمالي الربح</span>
+                            <strong id="financeIncomeGrossProfit">—</strong>
+                            <small id="financeIncomeGrossMargin">الهامش —</small>
+                        </article>
+                        <article>
+                            <span>المصاريف التشغيلية</span>
+                            <strong id="financeIncomeOpex">—</strong>
+                            <small>باستثناء تكلفة البضاعة</small>
+                        </article>
+                        <article class="is-result">
+                            <span>صافي الربح</span>
+                            <strong id="financeIncomeNetProfit">—</strong>
+                            <small id="financeIncomeNetMargin">الهامش —</small>
+                        </article>
+                    </div>
+
+                    <section class="finance-ledger-panel mb-4">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">PERIOD COMPARISON</span>
+                                <h2>ملخص قائمة الدخل ومقارنة السنة السابقة</h2>
+                            </div>
+                            <span class="finance-register-note" id="financeIncomePeriodLabel">—</span>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-income-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>البند المالي</th>
+                                        <th class="text-end" id="financeIncomePreviousHeader">الفترة السابقة</th>
+                                        <th class="text-end" id="financeIncomeCurrentHeader">الفترة الحالية</th>
+                                        <th class="text-end">الفرق</th>
+                                        <th class="text-end">% من المبيعات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financeIncomeStatementBody">
+                                    <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل التقرير الشهري…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <div class="finance-analytics-grid mb-4">
+                        <section class="finance-ledger-panel">
+                            <header>
+                                <div>
+                                    <span class="finance-section-kicker">MONTHLY COMPARISON</span>
+                                    <h2>المبيعات والربح شهرياً</h2>
+                                </div>
+                                <span class="finance-register-note">مقارنة كل شهر بنفس الشهر من السنة السابقة</span>
+                            </header>
+                            <div class="table-responsive">
+                                <table class="table finance-register-table finance-compact-table align-middle">
+                                    <thead><tr><th>الشهر</th><th class="text-end">مبيعات السنة السابقة</th><th class="text-end">مبيعات السنة الحالية</th><th class="text-end">إجمالي الربح</th><th class="text-end">صافي الربح</th></tr></thead>
+                                    <tbody id="financeIncomeMonthlyBody">
+                                        <tr><td colspan="5" class="finance-empty-state">جارٍ تحميل المقارنة الشهرية…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section class="finance-ledger-panel">
+                            <header>
+                                <div>
+                                    <span class="finance-section-kicker">FINANCIAL RATIOS</span>
+                                    <h2>النسب المالية</h2>
+                                </div>
+                                <span class="finance-register-note">محسوبة من مبيعات الفترة بدون ضريبة</span>
+                            </header>
+                            <div class="finance-income-ratios" id="financeIncomeRatios">
+                                <div class="finance-empty-state">جارٍ حساب النسب…</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <section class="finance-ledger-panel">
+                        <header>
+                            <div>
+                                <span class="finance-section-kicker">ALL BRANCHES DIMENSION</span>
+                                <h2>النتيجة حسب الفرع ومركز التكلفة</h2>
+                            </div>
+                            <span class="finance-register-note" id="financeIncomeBranchCount">—</span>
+                        </header>
+                        <div class="finance-table-toolbar">
+                            <div class="finance-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="financeIncomeBranchSearch" placeholder="البحث برقم أو اسم الفرع، المكتب، المستودع أو المنصة…">
+                                <button type="button" id="financeIncomeBranchSearchClear" class="finance-clear-btn" hidden><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table finance-register-table finance-compact-table align-middle">
+                                <thead><tr><th>كود Branches</th><th>الفرع / مركز التكلفة</th><th class="text-end">المبيعات</th><th class="text-end">إجمالي الربح</th><th class="text-end">المصاريف التشغيلية</th><th class="text-end">صافي الربح</th><th class="text-end">هامش الربح</th></tr></thead>
+                                <tbody id="financeIncomeBranchesBody">
+                                    <tr><td colspan="7" class="finance-empty-state">جارٍ تحميل نتائج الفروع…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Pane 3: Showrooms Hub -->
                 <div class="finance-tab-pane" id="financePaneShowrooms" data-pane="showrooms" hidden>
                     <section class="finance-ledger-panel">
                         <header>
@@ -3307,8 +3437,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260821-4"></script>
-    <script src="finance/finance-dashboard.js?v=20260821-4"></script>
+    <script src="finance/finance-api.js?v=20260910-1"></script>
+    <script src="finance/finance-dashboard.js?v=20260910-1"></script>
 
 </body>
 

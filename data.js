@@ -2031,7 +2031,7 @@ const EMPLOYEES = [
         "name": "احمد مجاب",
         "startDate": "2022-12-13",
         "manager": "محمدكلو",
-        "showroom": "1115-1115-Alrabie Mall",
+        "showroom": "1115-1115-Alrabie Mall و 1114-1114-Malgha Mall",
         "showroomDetails": [
             {
                 "name": "1115-1115-Alrabie Mall",
@@ -2040,9 +2040,17 @@ const EMPLOYEES = [
                     "1115-C",
                     "1115-E"
                 ]
+            },
+            {
+                "name": "1114-1114-Malgha Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1114-C",
+                    "1114-E"
+                ]
             }
         ],
-        "addressBooks": "1115-C;1115-E"
+        "addressBooks": "1115-C;1115-E;1114-C;1114-E"
     },
     {
         "employeeId": "3410-فيصل احمد العمري",
@@ -3857,7 +3865,7 @@ const EMPLOYEES = [
         "name": "خالد خندش",
         "startDate": "2025-02-25",
         "manager": "محمدكلو",
-        "showroom": "1111-46-Khaleej Mall Riyadh و 1114-1114-Malgha Mall",
+        "showroom": "1111-46-Khaleej Mall Riyadh و 1114-1114-Malgha Mall و 1107-38-Al_Riyadh Park",
         "showroomDetails": [
             {
                 "name": "1111-46-Khaleej Mall Riyadh",
@@ -3874,9 +3882,17 @@ const EMPLOYEES = [
                     "1114-C",
                     "1114-E"
                 ]
+            },
+            {
+                "name": "1107-38-Al_Riyadh Park",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1107-C",
+                    "1107-E"
+                ]
             }
         ],
-        "addressBooks": "1111-C;1111-E;1114-C;1114-E"
+        "addressBooks": "1111-C;1111-E;1114-C;1114-E;1107-C;1107-E"
     },
     {
         "employeeId": "4516-حوراء عبدالله",

@@ -91,6 +91,7 @@
         vendorAnalytics: params => request('/api/finance/vendor-analytics', params),
         additionalAnalytics: params => request('/api/finance/additional-analytics', params),
         trialBalanceTrend: params => request('/api/finance/trial-balance-trend', params),
+        monthlyIncomeStatement: params => request('/api/finance/monthly-income-statement', params),
         showroomPnl: (number, params) => request(
             `/api/finance/showrooms/${encodeURIComponent(number)}/pnl`,
             params
