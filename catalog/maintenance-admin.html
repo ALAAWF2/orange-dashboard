@@ -1212,7 +1212,7 @@
           <div style="display:flex; gap:10px;">
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الفرع *</label>
-              <input type="text" id="newExpMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required>
+              <input type="text" id="newExpMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required autocomplete="off" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}">
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التاريخ *</label>
@@ -1231,7 +1231,7 @@
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المقاول / الشركة *</label>
-              <input type="text" id="newExpCompany" list="expContractorsDatalist" placeholder="مثال: الإنتاج الدائم" required>
+              <input type="text" id="newExpCompany" list="expContractorsDatalist" placeholder="مثال: الإنتاج الدائم" required autocomplete="off" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}">
             </div>
           </div>
           <div>
@@ -1291,7 +1291,7 @@
           <div style="display:flex; gap:10px;">
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المعرض / الفرع *</label>
-              <input type="text" id="editExpMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required>
+              <input type="text" id="editExpMall" list="expMallsDatalist" placeholder="مثال: 05-Haifa Mall" required autocomplete="off" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}">
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">التاريخ *</label>
@@ -1310,7 +1310,7 @@
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">المقاول / الشركة *</label>
-              <input type="text" id="editExpCompany" list="expContractorsDatalist" placeholder="مثال: الإنتاج الدائم" required>
+              <input type="text" id="editExpCompany" list="expContractorsDatalist" placeholder="مثال: الإنتاج الدائم" required autocomplete="off" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}">
             </div>
           </div>
           <div>
@@ -1520,7 +1520,7 @@
             </div>
             <div style="flex:1;">
               <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">شركة الصيانة / الفني *</label>
-              <input type="text" id="newVisitCompany" list="expContractorsDatalist" placeholder="درة المباني / حسن..." required>
+              <input type="text" id="newVisitCompany" list="expContractorsDatalist" placeholder="درة المباني / حسن..." required autocomplete="off" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}">
             </div>
           </div>
           <div style="display:flex; gap:10px;">
@@ -1613,7 +1613,7 @@
             </div>
             <div>
               <label style="font-weight:700; font-size:0.8rem; display:block; margin-bottom:3px;">شركة الصيانة / الفني *</label>
-              <input type="text" id="editVisitCompany" list="expContractorsDatalist" required>
+              <input type="text" id="editVisitCompany" list="expContractorsDatalist" required autocomplete="off" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}">
             </div>
             <div>
               <label style="font-weight:700; font-size:0.8rem; display:block; margin-bottom:3px;">إجمالي مبلغ الفاتورة (ر.س)</label>
@@ -1879,8 +1879,8 @@
       await loadMalls();
       await loadRequests();
       await fetchAcDataFromSupabase();
-      await fetchExpensesFromSupabase();
       await fetchContractorsFromSupabase();
+      await fetchExpensesFromSupabase();
       renderAnalytics();
     }
 
@@ -3240,36 +3240,59 @@
     }
 
     function populateExpensesDropdowns() {
-      const compSel = document.getElementById('expCompanyFilter');
-      compSel.innerHTML = '<option value="all">كافة المقاولين والشركات</option>';
-      const contractorNames = (dbContractors || []).map(c => c.name).filter(Boolean);
-      const expenseCompanies = dbExpenses.map(e => e.company).filter(Boolean);
-      const companies = [...new Set([...contractorNames, ...expenseCompanies])].sort();
-      companies.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        compSel.appendChild(opt);
-      });
+      const contractorNames = (dbContractors || []).map(c => (c.name || '').trim()).filter(Boolean);
+      const expenseCompanies = (dbExpenses || []).map(e => (e.company || '').trim()).filter(Boolean);
+      const companies = [...new Set([...contractorNames, ...expenseCompanies])].sort((a, b) => a.localeCompare(b, 'ar'));
 
+      const compSel = document.getElementById('expCompanyFilter');
+      if (compSel) {
+        const currentCompVal = compSel.value;
+        compSel.innerHTML = '<option value="all">كافة المقاولين والشركات</option>';
+        companies.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          compSel.appendChild(opt);
+        });
+        if (currentCompVal && [...compSel.options].some(o => o.value === currentCompVal)) {
+          compSel.value = currentCompVal;
+        }
+      }
+
+      const allMalls = [...new Set([...(mallsList || []), ...(dbExpenses || []).map(e => (e.mall || '').trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'ar'));
       const mallSel = document.getElementById('expMallFilter');
-      mallSel.innerHTML = '<option value="all">كافة المعارض</option>';
-      const allMalls = [...new Set([...(mallsList || []), ...dbExpenses.map(e => e.mall).filter(Boolean)])].sort();
-      allMalls.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        mallSel.appendChild(opt);
-      });
+      if (mallSel) {
+        const currentMallVal = mallSel.value;
+        mallSel.innerHTML = '<option value="all">كافة المعارض</option>';
+        allMalls.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          mallSel.appendChild(opt);
+        });
+        if (currentMallVal && [...mallSel.options].some(o => o.value === currentMallVal)) {
+          mallSel.value = currentMallVal;
+        }
+      }
 
       // Populate datalists for add/edit autocomplete
       const mallDatalist = document.getElementById('expMallsDatalist');
       if (mallDatalist) {
-        mallDatalist.innerHTML = allMalls.map(m => `<option value="${escapeHtml(m)}"></option>`).join('');
+        mallDatalist.innerHTML = '';
+        allMalls.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          mallDatalist.appendChild(opt);
+        });
       }
       const compDatalist = document.getElementById('expContractorsDatalist');
       if (compDatalist) {
-        compDatalist.innerHTML = companies.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+        compDatalist.innerHTML = '';
+        companies.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          compDatalist.appendChild(opt);
+        });
       }
     }
 
@@ -3432,6 +3455,7 @@
     }
 
     function openAddExpenseModal() {
+      populateExpensesDropdowns();
       document.getElementById('newExpMall').value = '';
       document.getElementById('newExpDate').value = new Date().toISOString().split('T')[0];
       document.getElementById('newExpCompany').value = '';
@@ -3477,6 +3501,7 @@
     }
 
     function openEditExpenseModal(id) {
+      populateExpensesDropdowns();
       const item = dbExpenses.find(e => e.id === id);
       if (!item) return;
 
@@ -3549,6 +3574,7 @@
           dbContractors = data;
           document.getElementById('contractorsBadge').textContent = `${dbContractors.length} شركات`;
           renderContractors();
+          populateExpensesDropdowns();
         }
       } catch(e) {
         console.error("Error fetching contractors from Supabase:", e);
