@@ -6307,6 +6307,25 @@ const EMPLOYEES = [
         "addressBooks": "1111-C;1111-E"
     },
     {
+        "employeeId": "4909-AFHAM CHERLAKUNDIL",
+        "personnelNumber": "4909",
+        "name": "AFHAM CHERLAKUNDIL",
+        "startDate": "2026-03-12",
+        "manager": "محمدكلو",
+        "showroom": "1101-12-Al_Hamra Mall",
+        "showroomDetails": [
+            {
+                "name": "1101-12-Al_Hamra Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1101-C",
+                    "1101-E"
+                ]
+            }
+        ],
+        "addressBooks": "1101-C;1101-E"
+    },
+    {
         "employeeId": "4911-محمد شبيب شيكازيت فا",
         "personnelNumber": "4911",
         "name": "محمد شبيب شيكازيت فا",
@@ -7439,7 +7458,7 @@ const EMPLOYEES = [
         "employeeId": "5018-نهله محمد العنزي",
         "personnelNumber": "5018",
         "name": "نهله محمد العنزي",
-        "startDate": "2026-09-07",
+        "startDate": "2026-09-08",
         "manager": "عبدالله السرداح",
         "showroom": "2401-47-Al-Nakheel Plaza",
         "showroomDetails": [
@@ -7458,7 +7477,7 @@ const EMPLOYEES = [
         "employeeId": "5019-ريمه حسن الحربي",
         "personnelNumber": "5019",
         "name": "ريمه حسن الحربي",
-        "startDate": "2026-09-07",
+        "startDate": "2026-09-08",
         "manager": "المنطقة الغربية",
         "showroom": "1010-54-THE VILLAGE",
         "showroomDetails": [
