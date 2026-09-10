@@ -1033,7 +1033,7 @@ const EMPLOYEES = [
         "name": "فدوى الدوسري",
         "startDate": "2021-02-27",
         "manager": "جهاد ايوبي",
-        "showroom": "2101-27-Dhahran Mall khobar و 2103-42-Dareen Mall Dammam",
+        "showroom": "2101-27-Dhahran Mall khobar",
         "showroomDetails": [
             {
                 "name": "2101-27-Dhahran Mall khobar",
@@ -1042,17 +1042,9 @@ const EMPLOYEES = [
                     "2101-C",
                     "2101-E"
                 ]
-            },
-            {
-                "name": "2103-42-Dareen Mall Dammam",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "2103-C",
-                    "2103-E"
-                ]
             }
         ],
-        "addressBooks": "2101-C;2101-E;2103-C;2103-E"
+        "addressBooks": "2101-C;2101-E"
     },
     {
         "employeeId": "1342-فراس رتعان الحسن",
@@ -2541,7 +2533,7 @@ const EMPLOYEES = [
         "name": "سيرين بشير هوساوي",
         "startDate": "2024-02-01",
         "manager": "المنطقة الشمالية",
-        "showroom": "1401-23-Alia Mall Madinah",
+        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
             {
                 "name": "1401-23-Alia Mall Madinah",
@@ -2550,9 +2542,17 @@ const EMPLOYEES = [
                     "1401-C",
                     "1401-E"
                 ]
+            },
+            {
+                "name": "1402-26-Al-Noor Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1402-C",
+                    "1402-E"
+                ]
             }
         ],
-        "addressBooks": "1401-C;1401-E"
+        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
     },
     {
         "employeeId": "4025-أسماء عبدالله الحجور",
@@ -3914,25 +3914,6 @@ const EMPLOYEES = [
         "addressBooks": "1601-C;1601-E"
     },
     {
-        "employeeId": "4517-ولاء المعيوف",
-        "personnelNumber": "4517",
-        "name": "ولاء المعيوف",
-        "startDate": "2025-02-26",
-        "manager": "جهاد ايوبي",
-        "showroom": "2103-42-Dareen Mall Dammam",
-        "showroomDetails": [
-            {
-                "name": "2103-42-Dareen Mall Dammam",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "2103-C",
-                    "2103-E"
-                ]
-            }
-        ],
-        "addressBooks": "2103-C;2103-E"
-    },
-    {
         "employeeId": "4519-هدى الفهمي",
         "personnelNumber": "4519",
         "name": "هدى الفهمي",
@@ -4532,7 +4513,7 @@ const EMPLOYEES = [
         "name": "رويده سالم الحربي",
         "startDate": "2025-08-18",
         "manager": "المنطقة الشمالية",
-        "showroom": "1402-26-Al-Noor Mall Madinah",
+        "showroom": "1402-26-Al-Noor Mall Madinah و 1401-23-Alia Mall Madinah",
         "showroomDetails": [
             {
                 "name": "1402-26-Al-Noor Mall Madinah",
@@ -4541,9 +4522,17 @@ const EMPLOYEES = [
                     "1402-C",
                     "1402-E"
                 ]
+            },
+            {
+                "name": "1401-23-Alia Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1401-C",
+                    "1401-E"
+                ]
             }
         ],
-        "addressBooks": "1402-C;1402-E"
+        "addressBooks": "1402-C;1402-E;1401-C;1401-E"
     },
     {
         "employeeId": "4664-نجد درزى الحربي",
