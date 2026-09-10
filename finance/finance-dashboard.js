@@ -5231,6 +5231,7 @@
             history.replaceState(null, '', `#${tabName}`);
         }
     }
+    window.switchFinanceSubtab = switchSubtab;
 
     function initSubnav() {
         document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
@@ -5307,6 +5308,7 @@
         initialized = true;
         setDefaultPeriod();
         initSubnav();
+        initCfoEvents();
 
         document.querySelectorAll('.finance-preset-btn').forEach(btn => {
             btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
