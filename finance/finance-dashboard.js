@@ -3353,6 +3353,916 @@
         renderIncomeStatementBranches();
     }
 
+    // ==========================================================================
+    // CFO Workbook Model & P&L Engine (تقرير الإدارة المالية - نموذج الإكسل)
+    // ==========================================================================
+    let cfoBasis = 'real';
+    let cfoActiveSheet = 'summary';
+    let cfoYear = 'all';
+    let cfoSelectedBranch = '';
+    let cfoSearchTerm = '';
+    let cfoWorkbookData = null;
+    let cfoEventsBound = false;
+
+    const CFO_ARABIC_MONTHS = {
+        '01': 'يناير', '02': 'فبراير', '03': 'مارس', '04': 'أبريل',
+        '05': 'مايو', '06': 'يونيو', '07': 'يوليو', '08': 'أغسطس',
+        '09': 'سبتمبر', '10': 'أكتوبر', '11': 'نوفمبر', '12': 'ديسمبر'
+    };
+
+    function formatCfoMonthTitle(m) {
+        if (!m || typeof m !== 'string') return m || '—';
+        const parts = m.split('-');
+        if (parts.length >= 2) {
+            const yr = parts[0];
+            const mo = parts[1];
+            const name = CFO_ARABIC_MONTHS[mo] || mo;
+            return `${name} ${yr}`;
+        }
+        return m;
+    }
+
+    function initCfoEvents() {
+        if (cfoEventsBound) return;
+        cfoEventsBound = true;
+
+        // 1. Basis switchers
+        const realBtn = element('cfoBasisRealBtn');
+        const testBtn = element('cfoBasisTestBtn');
+        realBtn?.addEventListener('click', () => {
+            if (cfoBasis === 'real') return;
+            cfoBasis = 'real';
+            reloadCfoData();
+        });
+        testBtn?.addEventListener('click', () => {
+            if (cfoBasis === 'test') return;
+            cfoBasis = 'test';
+            reloadCfoData();
+        });
+
+        // 2. Subsheet pills
+        const sheetNav = element('cfoSubsheetTabs');
+        sheetNav?.querySelectorAll('[data-cfo-sheet]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                sheetNav.querySelectorAll('[data-cfo-sheet]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                cfoActiveSheet = btn.dataset.cfoSheet;
+
+                const summaryEl = element('cfoSheetSummary');
+                const detailedEl = element('cfoSheetDetailed');
+                const branchesEl = element('cfoSheetBranches');
+                const singleBranchEl = element('cfoSheetSingleBranch');
+                if (summaryEl) summaryEl.style.display = (cfoActiveSheet === 'summary') ? 'block' : 'none';
+                if (detailedEl) detailedEl.style.display = (cfoActiveSheet === 'detailed') ? 'block' : 'none';
+                if (branchesEl) branchesEl.style.display = (cfoActiveSheet === 'branches') ? 'block' : 'none';
+                if (singleBranchEl) singleBranchEl.style.display = (cfoActiveSheet === 'single_branch') ? 'block' : 'none';
+
+                const branchWrap = element('cfoBranchSelectorWrap');
+                if (branchWrap) {
+                    branchWrap.style.display = (cfoActiveSheet === 'single_branch') ? 'block' : 'none';
+                }
+
+                renderCfoActiveSheet();
+            });
+        });
+
+        // 3. Year selector
+        const yearGroup = element('cfoYearGroup');
+        yearGroup?.querySelectorAll('[data-cfo-year]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                yearGroup.querySelectorAll('[data-cfo-year]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                cfoYear = btn.dataset.cfoYear;
+                renderCfoActiveSheet();
+            });
+        });
+
+        // 4. Branch selector
+        const branchSelect = element('cfoBranchSelect');
+        branchSelect?.addEventListener('change', () => {
+            cfoSelectedBranch = branchSelect.value;
+            if (cfoActiveSheet === 'single_branch') {
+                renderCfoSingleBranchSheet(cfoWorkbookData);
+            }
+        });
+
+        // 5. Search input
+        const searchInput = element('cfoTableSearch');
+        searchInput?.addEventListener('input', () => {
+            cfoSearchTerm = searchInput.value.trim().toLowerCase();
+            renderCfoActiveSheet();
+        });
+
+        // 6. Excel Export
+        const exportBtn = element('cfoExportExcelBtn');
+        exportBtn?.addEventListener('click', () => {
+            exportCfoActiveSheetToExcel();
+        });
+    }
+
+    async function reloadCfoData() {
+        const bannerText = element('cfoBasisBannerText');
+        const badge = element('cfoBasisBadge');
+        const banner = element('cfoBasisBanner');
+        const realBtn = element('cfoBasisRealBtn');
+        const testBtn = element('cfoBasisTestBtn');
+
+        if (cfoBasis === 'real') {
+            realBtn?.classList.add('active', 'btn-outline-success');
+            realBtn?.classList.remove('btn-outline-secondary');
+            testBtn?.classList.remove('active', 'btn-outline-warning');
+            testBtn?.classList.add('btn-outline-secondary');
+            if (banner) banner.className = 'alert alert-success d-flex align-items-center justify-content-between py-2 px-3 mb-3';
+            if (bannerText) bannerText.innerHTML = 'أنت تشاهد حالياً <strong>الأرقام الحقيقية المعتمدة (D365)</strong> مطابقة 100% للنظام المحاسبي بدون أي قسمة.';
+            if (badge) {
+                badge.className = 'badge bg-white text-success border border-success fw-bold';
+                badge.textContent = 'D365 REAL 1:1';
+            }
+        } else {
+            testBtn?.classList.add('active', 'btn-outline-warning');
+            testBtn?.classList.remove('btn-outline-secondary');
+            realBtn?.classList.remove('active', 'btn-outline-success');
+            realBtn?.classList.add('btn-outline-secondary');
+            if (banner) banner.className = 'alert alert-warning d-flex align-items-center justify-content-between py-2 px-3 mb-3';
+            if (bannerText) bannerText.innerHTML = 'أنت تشاهد حالياً <strong>أرقام ملف الاختبار (مقسمة على 1.495)</strong> لمطابقة أرقام ملف الإكسل تقرير شهري 2026 - test.xlsx بدقة.';
+            if (badge) {
+                badge.className = 'badge bg-white text-warning-emphasis border border-warning fw-bold';
+                badge.textContent = 'TEST RATIO 1.495';
+            }
+        }
+
+        try {
+            const params = periodParams();
+            params.basis = cfoBasis;
+            const newData = await window.FinancePlatformApi.monthlyIncomeStatement(params);
+            renderCfoWorkbook(newData);
+        } catch (err) {
+            console.error('Failed to reload CFO data with basis', cfoBasis, err);
+        }
+    }
+
+    function renderCfoWorkbook(payload) {
+        if (!payload) return;
+        cfoWorkbookData = payload;
+        initCfoEvents();
+
+        // Populate Branch Dropdown if needed
+        const branchSelect = element('cfoBranchSelect');
+        if (branchSelect && branchSelect.options.length <= 1) {
+            const branchOptions = payload.branch_options || [];
+            branchSelect.innerHTML = '<option value="">اختر الفرع / مركز التكلفة…</option>';
+            branchOptions.forEach(opt => {
+                const optEl = document.createElement('option');
+                optEl.value = opt.value;
+                optEl.textContent = `${opt.value} - ${opt.label}`;
+                branchSelect.append(optEl);
+            });
+            if (!cfoSelectedBranch && branchOptions.length > 0) {
+                cfoSelectedBranch = branchOptions[0].value;
+                branchSelect.value = cfoSelectedBranch;
+            }
+        }
+
+        renderCfoActiveSheet();
+    }
+
+    function renderCfoActiveSheet() {
+        if (!cfoWorkbookData) return;
+        if (cfoActiveSheet === 'summary') {
+            renderCfoSummarySheet(cfoWorkbookData);
+        } else if (cfoActiveSheet === 'detailed') {
+            renderCfoDetailedSheet(cfoWorkbookData);
+        } else if (cfoActiveSheet === 'branches') {
+            renderCfoBranchesSheet(cfoWorkbookData);
+        } else if (cfoActiveSheet === 'single_branch') {
+            renderCfoSingleBranchSheet(cfoWorkbookData);
+        }
+    }
+
+    function renderCfoSummarySheet(payload) {
+        const thead = element('cfoSummaryThead');
+        const tbody = element('cfoSummaryTbody');
+        const ratiosThead = element('cfoRatiosThead');
+        const ratiosTbody = element('cfoRatiosTbody');
+        if (!thead || !tbody) return;
+
+        const allMonths = payload.all_months || payload.months || [];
+        const lines = payload.all_lines || payload.lines || [];
+        if (!allMonths.length || !lines.length) {
+            tableMessage(tbody, 10, 'لا توجد بيانات متاحة لملخص قائمة الدخل.');
+            return;
+        }
+
+        const monthCols = [];
+        allMonths.forEach((m, idx) => {
+            if (cfoYear === 'all' || m.startsWith(cfoYear)) {
+                monthCols.push({ month: m, index: idx });
+            }
+        });
+
+        // 1. Build Header
+        const trHead = document.createElement('tr');
+        const thLine = document.createElement('th');
+        thLine.className = 'cfo-sticky-col';
+        thLine.textContent = 'البند المالي (المصفوفة الشهرية)';
+        trHead.append(thLine);
+
+        monthCols.forEach(col => {
+            const th = document.createElement('th');
+            th.className = 'cfo-col-month';
+            th.textContent = formatCfoMonthTitle(col.month);
+            trHead.append(th);
+        });
+
+        if (cfoYear === 'all') {
+            const th25 = document.createElement('th');
+            th25.className = 'cfo-col-total text-end';
+            th25.textContent = 'إجمالي 2025';
+            const th26 = document.createElement('th');
+            th26.className = 'cfo-col-total text-end';
+            th26.textContent = 'إجمالي 2026';
+            const thAll = document.createElement('th');
+            thAll.className = 'cfo-col-total text-end';
+            thAll.textContent = 'الإجمالي الكلي';
+            trHead.append(th25, th26, thAll);
+        } else {
+            const thYear = document.createElement('th');
+            thYear.className = 'cfo-col-total text-end';
+            thYear.textContent = `إجمالي ${cfoYear}`;
+            trHead.append(thYear);
+        }
+        thead.replaceChildren(trHead);
+
+        // 2. Build Rows
+        let filteredLines = lines;
+        if (cfoSearchTerm) {
+            filteredLines = lines.filter(l =>
+                (l.name_ar || '').toLowerCase().includes(cfoSearchTerm) ||
+                (l.key || '').toLowerCase().includes(cfoSearchTerm)
+            );
+        }
+
+        const rows = filteredLines.map(line => {
+            const tr = document.createElement('tr');
+            if (line.calculated) tr.classList.add('cfo-row-calculated');
+            if (line.key === 'net_profit') tr.classList.add('cfo-row-net-profit');
+
+            const tdLabel = document.createElement('td');
+            tdLabel.className = 'cfo-sticky-col';
+            tdLabel.textContent = line.name_ar || line.key;
+            tr.append(tdLabel);
+
+            let total25 = 0;
+            let total26 = 0;
+            let totalOverall = 0;
+
+            monthCols.forEach(col => {
+                const val = Number(line.values?.[col.index]) || 0;
+                if (col.month.startsWith('2025')) total25 += val;
+                if (col.month.startsWith('2026')) total26 += val;
+                totalOverall += val;
+
+                const td = document.createElement('td');
+                td.className = 'text-end';
+                td.dir = 'ltr';
+                td.textContent = accountingMoney(val);
+                if (line.key === 'net_profit') {
+                    td.classList.add(val >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+                tr.append(td);
+            });
+
+            if (cfoYear === 'all') {
+                const td25 = document.createElement('td');
+                td25.className = 'cfo-col-total text-end';
+                td25.dir = 'ltr';
+                td25.textContent = accountingMoney(total25);
+
+                const td26 = document.createElement('td');
+                td26.className = 'cfo-col-total text-end';
+                td26.dir = 'ltr';
+                td26.textContent = accountingMoney(total26);
+
+                const tdAll = document.createElement('td');
+                tdAll.className = 'cfo-col-total text-end fw-bold';
+                tdAll.dir = 'ltr';
+                tdAll.textContent = accountingMoney(totalOverall);
+                if (line.key === 'net_profit') {
+                    tdAll.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+
+                tr.append(td25, td26, tdAll);
+            } else {
+                const tdYear = document.createElement('td');
+                tdYear.className = 'cfo-col-total text-end fw-bold';
+                tdYear.dir = 'ltr';
+                tdYear.textContent = accountingMoney(totalOverall);
+                if (line.key === 'net_profit') {
+                    tdYear.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+                tr.append(tdYear);
+            }
+
+            return tr;
+        });
+
+        tbody.replaceChildren(...rows);
+
+        // 3. Build Financial Ratios Table
+        if (ratiosThead && ratiosTbody) {
+            const trRatiosHead = document.createElement('tr');
+            const thRLabel = document.createElement('th');
+            thRLabel.className = 'cfo-sticky-col';
+            thRLabel.textContent = 'المؤشر المالي (% من المبيعات)';
+            trRatiosHead.append(thRLabel);
+
+            monthCols.forEach(col => {
+                const th = document.createElement('th');
+                th.className = 'cfo-col-month';
+                th.textContent = formatCfoMonthTitle(col.month);
+                trRatiosHead.append(th);
+            });
+
+            if (cfoYear === 'all') {
+                const th25 = document.createElement('th');
+                th25.className = 'cfo-col-total text-end';
+                th25.textContent = 'متوسط 2025';
+                const th26 = document.createElement('th');
+                th26.className = 'cfo-col-total text-end';
+                th26.textContent = 'متوسط 2026';
+                const thAll = document.createElement('th');
+                thAll.className = 'cfo-col-total text-end';
+                thAll.textContent = 'المعدل الكلي';
+                trRatiosHead.append(th25, th26, thAll);
+            } else {
+                const thYr = document.createElement('th');
+                thYr.className = 'cfo-col-total text-end';
+                thYr.textContent = `معدل ${cfoYear}`;
+                trRatiosHead.append(thYr);
+            }
+            ratiosThead.replaceChildren(trRatiosHead);
+
+            const salesLine = lines.find(l => l.key === 'sales_revenue');
+            const grossLine = lines.find(l => l.key === 'gross_profit');
+            const opexLine = lines.find(l => l.key === 'operating_expenses');
+            const netLine = lines.find(l => l.key === 'net_profit');
+
+            const ratioDefs = [
+                { label: 'هامش مجمل الربح % (Gross Margin)', line: grossLine },
+                { label: 'نسبة المصاريف التشغيلية % (Opex Ratio)', line: opexLine },
+                { label: 'هامش صافي الربح % (Net Margin)', line: netLine, isNet: true }
+            ];
+
+            const ratioRows = ratioDefs.map(def => {
+                const tr = document.createElement('tr');
+                if (def.isNet) tr.classList.add('cfo-row-net-profit');
+
+                const tdLabel = document.createElement('td');
+                tdLabel.className = 'cfo-sticky-col';
+                tdLabel.textContent = def.label;
+                tr.append(tdLabel);
+
+                let sumSales25 = 0, sumNum25 = 0;
+                let sumSales26 = 0, sumNum26 = 0;
+                let sumSalesAll = 0, sumNumAll = 0;
+
+                monthCols.forEach(col => {
+                    const salesVal = Number(salesLine?.values?.[col.index]) || 0;
+                    const numVal = Number(def.line?.values?.[col.index]) || 0;
+                    const pct = salesVal ? (numVal / salesVal) * 100 : null;
+
+                    if (col.month.startsWith('2025')) {
+                        sumSales25 += salesVal;
+                        sumNum25 += numVal;
+                    }
+                    if (col.month.startsWith('2026')) {
+                        sumSales26 += salesVal;
+                        sumNum26 += numVal;
+                    }
+                    sumSalesAll += salesVal;
+                    sumNumAll += numVal;
+
+                    const td = document.createElement('td');
+                    td.className = 'text-end';
+                    td.dir = 'ltr';
+                    td.textContent = pct !== null ? `${pct.toFixed(1)}%` : '—';
+                    if (def.isNet && pct !== null) {
+                        td.classList.add(pct >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    }
+                    tr.append(td);
+                });
+
+                if (cfoYear === 'all') {
+                    const pct25 = sumSales25 ? (sumNum25 / sumSales25) * 100 : null;
+                    const pct26 = sumSales26 ? (sumNum26 / sumSales26) * 100 : null;
+                    const pctAll = sumSalesAll ? (sumNumAll / sumSalesAll) * 100 : null;
+
+                    const td25 = document.createElement('td');
+                    td25.className = 'cfo-col-total text-end';
+                    td25.dir = 'ltr';
+                    td25.textContent = pct25 !== null ? `${pct25.toFixed(1)}%` : '—';
+
+                    const td26 = document.createElement('td');
+                    td26.className = 'cfo-col-total text-end';
+                    td26.dir = 'ltr';
+                    td26.textContent = pct26 !== null ? `${pct26.toFixed(1)}%` : '—';
+
+                    const tdAll = document.createElement('td');
+                    tdAll.className = 'cfo-col-total text-end fw-bold';
+                    tdAll.dir = 'ltr';
+                    tdAll.textContent = pctAll !== null ? `${pctAll.toFixed(1)}%` : '—';
+                    if (def.isNet && pctAll !== null) {
+                        tdAll.classList.add(pctAll >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    }
+
+                    tr.append(td25, td26, tdAll);
+                } else {
+                    const pctYear = sumSalesAll ? (sumNumAll / sumSalesAll) * 100 : null;
+                    const tdYear = document.createElement('td');
+                    tdYear.className = 'cfo-col-total text-end fw-bold';
+                    tdYear.dir = 'ltr';
+                    tdYear.textContent = pctYear !== null ? `${pctYear.toFixed(1)}%` : '—';
+                    if (def.isNet && pctYear !== null) {
+                        tdYear.classList.add(pctYear >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    }
+                    tr.append(tdYear);
+                }
+
+                return tr;
+            });
+
+            ratiosTbody.replaceChildren(...ratioRows);
+        }
+    }
+
+    function renderCfoDetailedSheet(payload) {
+        const thead = element('cfoDetailedThead');
+        const tbody = element('cfoDetailedTbody');
+        if (!thead || !tbody) return;
+
+        const allMonths = payload.all_months || payload.months || [];
+        const lines = payload.all_detailed_lines || payload.detailed_lines || [];
+        if (!allMonths.length || !lines.length) {
+            tableMessage(tbody, 10, 'لا توجد بيانات متاحة لقائمة الدخل التفصيلية.');
+            return;
+        }
+
+        const monthCols = [];
+        allMonths.forEach((m, idx) => {
+            if (cfoYear === 'all' || m.startsWith(cfoYear)) {
+                monthCols.push({ month: m, index: idx });
+            }
+        });
+
+        // 1. Header
+        const trHead = document.createElement('tr');
+        const thNum = document.createElement('th');
+        thNum.className = 'text-center';
+        thNum.textContent = '#';
+        thNum.style.width = '40px';
+
+        const thLine = document.createElement('th');
+        thLine.className = 'cfo-sticky-col';
+        thLine.textContent = 'البند المحاسبي التفصيلي (55 بند)';
+        trHead.append(thNum, thLine);
+
+        monthCols.forEach(col => {
+            const th = document.createElement('th');
+            th.className = 'cfo-col-month';
+            th.textContent = formatCfoMonthTitle(col.month);
+            trHead.append(th);
+        });
+
+        if (cfoYear === 'all') {
+            const th25 = document.createElement('th');
+            th25.className = 'cfo-col-total text-end';
+            th25.textContent = 'إجمالي 2025';
+            const th26 = document.createElement('th');
+            th26.className = 'cfo-col-total text-end';
+            th26.textContent = 'إجمالي 2026';
+            const thAll = document.createElement('th');
+            thAll.className = 'cfo-col-total text-end';
+            thAll.textContent = 'الإجمالي الكلي';
+            trHead.append(th25, th26, thAll);
+        } else {
+            const thYear = document.createElement('th');
+            thYear.className = 'cfo-col-total text-end';
+            thYear.textContent = `إجمالي ${cfoYear}`;
+            trHead.append(thYear);
+        }
+        thead.replaceChildren(trHead);
+
+        // 2. Rows
+        let filteredLines = lines;
+        if (cfoSearchTerm) {
+            filteredLines = lines.filter(l =>
+                (l.name_ar || '').toLowerCase().includes(cfoSearchTerm) ||
+                (l.key || '').toLowerCase().includes(cfoSearchTerm)
+            );
+        }
+
+        const rows = filteredLines.map((line, idx) => {
+            const tr = document.createElement('tr');
+            if (line.calculated) tr.classList.add('cfo-row-calculated');
+            if (line.key === 'net_profit') tr.classList.add('cfo-row-net-profit');
+
+            const tdNum = document.createElement('td');
+            tdNum.className = 'text-center text-muted small';
+            tdNum.textContent = line.line_no || (idx + 1);
+
+            const tdLabel = document.createElement('td');
+            tdLabel.className = 'cfo-sticky-col';
+            tdLabel.textContent = line.name_ar || line.key;
+            tr.append(tdNum, tdLabel);
+
+            let total25 = 0;
+            let total26 = 0;
+            let totalOverall = 0;
+
+            monthCols.forEach(col => {
+                const val = Number(line.values?.[col.index]) || 0;
+                if (col.month.startsWith('2025')) total25 += val;
+                if (col.month.startsWith('2026')) total26 += val;
+                totalOverall += val;
+
+                const td = document.createElement('td');
+                td.className = 'text-end';
+                td.dir = 'ltr';
+                td.textContent = accountingMoney(val);
+                if (line.key === 'net_profit') {
+                    td.classList.add(val >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+                tr.append(td);
+            });
+
+            if (cfoYear === 'all') {
+                const td25 = document.createElement('td');
+                td25.className = 'cfo-col-total text-end';
+                td25.dir = 'ltr';
+                td25.textContent = accountingMoney(total25);
+
+                const td26 = document.createElement('td');
+                td26.className = 'cfo-col-total text-end';
+                td26.dir = 'ltr';
+                td26.textContent = accountingMoney(total26);
+
+                const tdAll = document.createElement('td');
+                tdAll.className = 'cfo-col-total text-end fw-bold';
+                tdAll.dir = 'ltr';
+                tdAll.textContent = accountingMoney(totalOverall);
+                if (line.key === 'net_profit') {
+                    tdAll.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+
+                tr.append(td25, td26, tdAll);
+            } else {
+                const tdYear = document.createElement('td');
+                tdYear.className = 'cfo-col-total text-end fw-bold';
+                tdYear.dir = 'ltr';
+                tdYear.textContent = accountingMoney(totalOverall);
+                if (line.key === 'net_profit') {
+                    tdYear.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+                tr.append(tdYear);
+            }
+
+            return tr;
+        });
+
+        tbody.replaceChildren(...rows);
+    }
+
+    function renderCfoBranchesSheet(payload) {
+        const thead = element('cfoBranchesThead');
+        const tbody = element('cfoBranchesTbody');
+        if (!thead || !tbody) return;
+
+        const branches = payload.branches || [];
+        if (!branches.length) {
+            tableMessage(tbody, 10, 'لا توجد بيانات فروع متاحة.');
+            return;
+        }
+
+        // 1. Header
+        thead.innerHTML = `
+            <tr>
+                <th class="text-center" style="width: 40px;">#</th>
+                <th class="text-center" style="width: 100px;">كود الفرع</th>
+                <th class="cfo-sticky-col">اسم المعرض / مركز التكلفة</th>
+                <th class="text-end">المبيعات (SAR)</th>
+                <th class="text-end">تكلفة البضاعة المباعة (SAR)</th>
+                <th class="text-end">مجمل الربح (SAR)</th>
+                <th class="text-end">هامش مجمل الربح</th>
+                <th class="text-end">المصاريف التشغيلية (SAR)</th>
+                <th class="text-end">صافي الربح / الخسارة (SAR)</th>
+                <th class="text-end">هامش صافي الربح %</th>
+                <th class="text-center" style="width: 90px;">الإجراء</th>
+            </tr>
+        `;
+
+        // 2. Filter rows
+        let filteredBranches = branches;
+        if (cfoSearchTerm) {
+            filteredBranches = branches.filter(b =>
+                (b.branch_dimension_value || '').toLowerCase().includes(cfoSearchTerm) ||
+                (b.branch_name || '').toLowerCase().includes(cfoSearchTerm)
+            );
+        }
+
+        let totalRev = 0, totalCogs = 0, totalGross = 0, totalOpex = 0, totalNet = 0;
+
+        const rows = filteredBranches.map((branch, idx) => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.title = 'انقر لعرض التحليل الشهري الكامل لهذا الفرع';
+
+            const rev = Number(branch.revenue) || 0;
+            const cogs = Number(branch.cogs) || 0;
+            const gross = Number(branch.gross_profit) || 0;
+            const opex = Number(branch.operating_expenses) || 0;
+            const net = Number(branch.net_profit) || 0;
+            const grossMargin = rev ? (gross / rev) * 100 : 0;
+            const netMargin = Number(branch.net_margin_pct);
+
+            totalRev += rev;
+            totalCogs += cogs;
+            totalGross += gross;
+            totalOpex += opex;
+            totalNet += net;
+
+            const tdNum = document.createElement('td');
+            tdNum.className = 'text-center text-muted small';
+            tdNum.textContent = idx + 1;
+
+            const tdCode = document.createElement('td');
+            tdCode.className = 'text-center font-monospace fw-bold';
+            tdCode.dir = 'ltr';
+            tdCode.textContent = branch.branch_dimension_value || '—';
+
+            const tdName = document.createElement('td');
+            tdName.className = 'cfo-sticky-col';
+            tdName.innerHTML = `<strong class="text-primary">${branch.branch_name || branch.branch_dimension_value || '—'}</strong>`;
+
+            const tdRev = document.createElement('td');
+            tdRev.className = 'text-end fw-semibold';
+            tdRev.dir = 'ltr';
+            tdRev.textContent = accountingMoney(rev);
+
+            const tdCogs = document.createElement('td');
+            tdCogs.className = 'text-end text-muted';
+            tdCogs.dir = 'ltr';
+            tdCogs.textContent = accountingMoney(cogs);
+
+            const tdGross = document.createElement('td');
+            tdGross.className = 'text-end fw-semibold text-primary';
+            tdGross.dir = 'ltr';
+            tdGross.textContent = accountingMoney(gross);
+
+            const tdGrossMargin = document.createElement('td');
+            tdGrossMargin.className = 'text-end text-muted small';
+            tdGrossMargin.dir = 'ltr';
+            tdGrossMargin.textContent = rev ? `${grossMargin.toFixed(1)}%` : '—';
+
+            const tdOpex = document.createElement('td');
+            tdOpex.className = 'text-end text-muted';
+            tdOpex.dir = 'ltr';
+            tdOpex.textContent = accountingMoney(opex);
+
+            const tdNet = document.createElement('td');
+            tdNet.className = 'text-end fw-bold';
+            tdNet.dir = 'ltr';
+            tdNet.textContent = accountingMoney(net);
+            tdNet.classList.add(net >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+
+            const tdNetMargin = document.createElement('td');
+            tdNetMargin.className = 'text-end fw-bold';
+            tdNetMargin.dir = 'ltr';
+            tdNetMargin.textContent = percentValue(netMargin);
+            if (Number.isFinite(netMargin)) {
+                tdNetMargin.classList.add(netMargin >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+            }
+
+            const tdAction = document.createElement('td');
+            tdAction.className = 'text-center';
+            const openBtn = document.createElement('button');
+            openBtn.type = 'button';
+            openBtn.className = 'btn btn-outline-primary btn-sm py-0 px-2';
+            openBtn.innerHTML = '<i class="fa-solid fa-chart-column me-1"></i> التحليل';
+            openBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectBranchAndShowAnalysis(branch.branch_dimension_value);
+            });
+            tdAction.append(openBtn);
+
+            tr.append(tdNum, tdCode, tdName, tdRev, tdCogs, tdGross, tdGrossMargin, tdOpex, tdNet, tdNetMargin, tdAction);
+            tr.addEventListener('click', () => {
+                selectBranchAndShowAnalysis(branch.branch_dimension_value);
+            });
+            return tr;
+        });
+
+        // Add Summary Footer Row
+        const trFooter = document.createElement('tr');
+        trFooter.className = 'cfo-row-calculated table-light';
+        const totalGrossMargin = totalRev ? (totalGross / totalRev) * 100 : 0;
+        const totalNetMargin = totalRev ? (totalNet / totalRev) * 100 : 0;
+
+        trFooter.innerHTML = `
+            <td colspan="3" class="cfo-sticky-col text-center fw-bold">الإجمالي العام لكافة الفروع (${filteredBranches.length} فرع)</td>
+            <td class="text-end fw-bold" dir="ltr">${accountingMoney(totalRev)}</td>
+            <td class="text-end fw-bold" dir="ltr">${accountingMoney(totalCogs)}</td>
+            <td class="text-end fw-bold text-primary" dir="ltr">${accountingMoney(totalGross)}</td>
+            <td class="text-end fw-bold small text-muted" dir="ltr">${totalRev ? totalGrossMargin.toFixed(1) + '%' : '—'}</td>
+            <td class="text-end fw-bold text-muted" dir="ltr">${accountingMoney(totalOpex)}</td>
+            <td class="text-end fw-bold ${totalNet >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg'}" dir="ltr">${accountingMoney(totalNet)}</td>
+            <td class="text-end fw-bold ${totalNetMargin >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg'}" dir="ltr">${totalRev ? totalNetMargin.toFixed(1) + '%' : '—'}</td>
+            <td></td>
+        `;
+
+        tbody.replaceChildren(...rows, trFooter);
+    }
+
+    function selectBranchAndShowAnalysis(branchCode) {
+        cfoSelectedBranch = branchCode;
+        const branchSelect = element('cfoBranchSelect');
+        if (branchSelect) branchSelect.value = branchCode;
+
+        // Activate Subsheet 4
+        const sheetNav = element('cfoSubsheetTabs');
+        sheetNav?.querySelectorAll('[data-cfo-sheet]').forEach(b => {
+            b.classList.toggle('active', b.dataset.cfoSheet === 'single_branch');
+        });
+        cfoActiveSheet = 'single_branch';
+
+        const summaryEl = element('cfoSheetSummary');
+        const detailedEl = element('cfoSheetDetailed');
+        const branchesEl = element('cfoSheetBranches');
+        const singleBranchEl = element('cfoSheetSingleBranch');
+        if (summaryEl) summaryEl.style.display = 'none';
+        if (detailedEl) detailedEl.style.display = 'none';
+        if (branchesEl) branchesEl.style.display = 'none';
+        if (singleBranchEl) singleBranchEl.style.display = 'block';
+
+        const branchWrap = element('cfoBranchSelectorWrap');
+        if (branchWrap) branchWrap.style.display = 'block';
+
+        renderCfoSingleBranchSheet(cfoWorkbookData);
+    }
+
+    function renderCfoSingleBranchSheet(payload) {
+        const thead = element('cfoSingleBranchThead');
+        const tbody = element('cfoSingleBranchTbody');
+        const badge = element('cfoSingleBranchBadge');
+        const subtitle = element('cfoSingleBranchSubtitle');
+        if (!thead || !tbody) return;
+
+        const branches = payload.branches || [];
+        const branch = branches.find(b => b.branch_dimension_value === cfoSelectedBranch) ||
+                       branches[0];
+
+        if (!branch) {
+            tableMessage(tbody, 10, 'يرجى اختيار فرع لعرض قائمة الدخل الخاصة به.');
+            return;
+        }
+
+        const bCode = branch.branch_dimension_value || '—';
+        const bName = branch.branch_name || bCode;
+        if (badge) badge.textContent = `${bCode} - ${bName}`;
+        if (subtitle) subtitle.textContent = `قائمة دخل المعرض: ${bName} (${bCode}) مع تطور الربحية شهرياً`;
+
+        // Update KPI cards
+        const rev = Number(branch.revenue) || 0;
+        const gross = Number(branch.gross_profit) || 0;
+        const opex = Number(branch.operating_expenses) || 0;
+        const net = Number(branch.net_profit) || 0;
+        const netMargin = Number(branch.net_margin_pct);
+
+        const kpiSales = element('cfoSbKpiSales');
+        const kpiGross = element('cfoSbKpiGross');
+        const kpiOpex = element('cfoSbKpiOpex');
+        const kpiNet = element('cfoSbKpiNet');
+
+        if (kpiSales) kpiSales.textContent = money.format(rev) + ' SAR';
+        if (kpiGross) kpiGross.textContent = money.format(gross) + ' SAR';
+        if (kpiOpex) kpiOpex.textContent = money.format(opex) + ' SAR';
+        if (kpiNet) {
+            kpiNet.textContent = `${money.format(net)} SAR (${percentValue(netMargin)})`;
+            kpiNet.className = `fs-5 ${net >= 0 ? 'text-success' : 'text-danger'}`;
+        }
+
+        const lineTotals = branch.line_totals || {};
+        const allMonths = payload.all_months || payload.months || [];
+        const monthCols = [];
+        allMonths.forEach((m, idx) => {
+            if (cfoYear === 'all' || m.startsWith(cfoYear)) {
+                monthCols.push({ month: m, index: idx });
+            }
+        });
+
+        // Header
+        const trHead = document.createElement('tr');
+        const thLine = document.createElement('th');
+        thLine.className = 'cfo-sticky-col';
+        thLine.textContent = 'البند المالي للفرع';
+        trHead.append(thLine);
+
+        monthCols.forEach(col => {
+            const th = document.createElement('th');
+            th.className = 'cfo-col-month';
+            th.textContent = formatCfoMonthTitle(col.month);
+            trHead.append(th);
+        });
+
+        const thTot = document.createElement('th');
+        thTot.className = 'cfo-col-total text-end';
+        thTot.textContent = 'إجمالي الفترة';
+        trHead.append(thTot);
+        thead.replaceChildren(trHead);
+
+        // Standard Branch P&L Lines
+        const pnlLineDefs = [
+            { key: 'sales_revenue', name: 'إيرادات المبيعات', val: rev, isCalc: false },
+            { key: 'cogs', name: 'تكلفة البضاعة المباعة', val: branch.cogs, isCalc: false },
+            { key: 'gross_profit', name: 'مجمل الربح التجاري', val: gross, isCalc: true },
+            { key: 'operating_expenses', name: 'المصاريف التشغيلية للفرع', val: opex, isCalc: false },
+            { key: 'net_profit', name: 'صافي الربح التشغيلي للفرع', val: net, isCalc: true, isNet: true }
+        ];
+
+        const pnlRows = pnlLineDefs.map(def => {
+            const tr = document.createElement('tr');
+            if (def.isCalc) tr.classList.add('cfo-row-calculated');
+            if (def.isNet) tr.classList.add('cfo-row-net-profit');
+
+            const tdLabel = document.createElement('td');
+            tdLabel.className = 'cfo-sticky-col';
+            tdLabel.textContent = def.name;
+            tr.append(tdLabel);
+
+            let rowSum = 0;
+            monthCols.forEach(col => {
+                const mVal = Number(lineTotals[def.key]?.[col.month] || lineTotals[def.key]?.[col.index] || 0);
+                rowSum += mVal;
+
+                const td = document.createElement('td');
+                td.className = 'text-end';
+                td.dir = 'ltr';
+                td.textContent = mVal ? accountingMoney(mVal) : '—';
+                if (def.isNet && mVal) {
+                    td.classList.add(mVal >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                }
+                tr.append(td);
+            });
+
+            const tdTotVal = document.createElement('td');
+            tdTotVal.className = 'cfo-col-total text-end fw-bold';
+            tdTotVal.dir = 'ltr';
+            const displayTot = rowSum || Number(def.val) || 0;
+            tdTotVal.textContent = accountingMoney(displayTot);
+            if (def.isNet) {
+                tdTotVal.classList.add(displayTot >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+            }
+            tr.append(tdTotVal);
+
+            return tr;
+        });
+
+        tbody.replaceChildren(...pnlRows);
+    }
+
+    function exportCfoActiveSheetToExcel() {
+        if (typeof XLSX === 'undefined') {
+            alert('مكتبة تصدير Excel غير محملة.');
+            return;
+        }
+
+        let tableId = 'cfoSummaryTable';
+        let sheetTitle = 'ملخص قائمة الدخل';
+        if (cfoActiveSheet === 'detailed') {
+            tableId = 'cfoDetailedTable';
+            sheetTitle = 'قائمة الدخل التفصيلية';
+        } else if (cfoActiveSheet === 'branches') {
+            tableId = 'cfoBranchesTable';
+            sheetTitle = 'أداء المعارض والفروع';
+        } else if (cfoActiveSheet === 'single_branch') {
+            tableId = 'cfoSingleBranchTable';
+            sheetTitle = `تحليل فرع ${cfoSelectedBranch || ''}`;
+        }
+
+        const tableEl = element(tableId);
+        if (!tableEl) {
+            alert('الجدول غير متاح للتصدير.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.table_to_sheet(tableEl);
+        XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
+
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `Orange_CFO_${cfoActiveSheet}_${cfoYear}_${cfoBasis}_${dateStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
     function renderAdditionalAnalytics(payload) {
         const sections = payload?.sections || {};
         const po = sections.purchase_commitments || {};
@@ -4239,6 +5149,7 @@
             renderVendorAnalytics(vendorAnalytics);
             renderTrialBalanceTrend(trend);
             renderMonthlyIncomeStatement(incomeStatement);
+            renderCfoWorkbook(incomeStatement);
             renderAdditionalAnalytics(additional);
             renderFixedAssets(fixedAssets);
             renderEmployeeAdvances(advances);
@@ -4305,7 +5216,7 @@
     }
 
     function switchSubtab(tabName) {
-        const validTabs = ['overview', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'];
+        const validTabs = ['overview', 'cfo_workbook', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'];
         if (!validTabs.includes(tabName)) tabName = 'overview';
 
         document.querySelectorAll('.finance-subnav-btn').forEach(btn => {
@@ -4339,7 +5250,7 @@
         });
 
         const initialHash = (window.location.hash || '').replace('#', '');
-        if (['overview', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(initialHash)) {
+        if (['overview', 'cfo_workbook', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(initialHash)) {
             switchSubtab(initialHash);
         } else {
             switchSubtab('overview');
@@ -4347,7 +5258,7 @@
 
         window.addEventListener('hashchange', () => {
             const currentHash = (window.location.hash || '').replace('#', '');
-            if (['overview', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(currentHash)) {
+            if (['overview', 'cfo_workbook', 'income_statement', 'showrooms', 'ap', 'leases', 'assets', 'advances', 'purchases', 'inventory', 'treasury', 'tax', 'maintenance'].includes(currentHash)) {
                 switchSubtab(currentHash);
             }
         });

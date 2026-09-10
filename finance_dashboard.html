@@ -520,6 +520,11 @@
                             <span>التقرير المالي الشهري</span>
                             <span class="finance-subnav-badge">بدون ضريبة</span>
                         </button>
+                        <button type="button" class="finance-subnav-btn" data-subtab="cfo_workbook" role="tab" id="financeSubnavCfoWorkbookBtn">
+                            <i class="fa-solid fa-file-excel text-success"></i>
+                            <span>تقرير الإدارة المالية (نموذج الإكسل)</span>
+                            <span class="finance-subnav-badge" style="background:#198754; color:#fff;">D365 مباشر</span>
+                        </button>
                         <button type="button" class="finance-subnav-btn" data-subtab="showrooms" role="tab">
                             <i class="fa-solid fa-store"></i>
                             <span>أداء المعارض</span>
@@ -818,6 +823,212 @@
                                 </tbody>
                             </table>
                         </div>
+                    </section>
+                </div>
+
+                <!-- Pane: CFO Workbook Model (تقرير الإدارة المالية - نموذج الإكسل) -->
+                <div class="finance-tab-pane" id="financePaneCfoWorkbook" data-pane="cfo_workbook" hidden>
+                    <section class="finance-ledger-panel">
+                        <header class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                            <div>
+                                <span class="finance-section-kicker text-success"><i class="fa-solid fa-file-excel me-1"></i> CFO FINANCIAL MODEL &amp; P&amp;L WORKBOOK</span>
+                                <h2 class="mb-1">تقرير الإدارة المالية ومطابقة نموذج الإكسل (بدون ضريبة)</h2>
+                                <p class="text-muted small mb-0">مطابق تماماً لهيكل ومعادلات ملف الإكسل الشهري للمدير المالي، مع إمكانية عرض الأرقام الفعلية من D365 أو أرقام التيست</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Basis Mode Switcher -->
+                                <div class="btn-group cfo-basis-group" role="group" aria-label="Basis Mode">
+                                    <button type="button" class="btn btn-sm btn-outline-success active" id="cfoBasisRealBtn" title="عرض الأرقام الحقيقية المعتمدة المستخرجة من نظام Dynamics 365">
+                                        <i class="fa-solid fa-database me-1"></i> الأرقام الفعلية (D365)
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="cfoBasisTestBtn" title="عرض أرقام ملف الاختبار (مقسمة على 1.495 لمطابقة الإكسل)">
+                                        <i class="fa-solid fa-flask me-1"></i> أرقام ملف الاختبار (÷ 1.495)
+                                    </button>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="cfoExportExcelBtn">
+                                    <i class="fa-solid fa-file-arrow-down me-1"></i> تصدير Excel
+                                </button>
+                            </div>
+                        </header>
+
+                        <!-- Basis Notice Banner -->
+                        <div id="cfoBasisBanner" class="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-circle-check fs-5"></i>
+                                <span id="cfoBasisBannerText">أنت تشاهد حالياً <strong>الأرقام الحقيقية المعتمدة (D365)</strong> مطابقة 100% للنظام المحاسبي بدون أي قسمة.</span>
+                            </div>
+                            <span class="badge bg-white text-success border border-success fw-bold" id="cfoBasisBadge">D365 REAL 1:1</span>
+                        </div>
+
+                        <!-- Sub-sheet Navigation Pills & Filter Bar -->
+                        <div class="cfo-subsheets-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                            <ul class="nav nav-pills cfo-nav-pills gap-1" id="cfoSubsheetTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" data-cfo-sheet="summary" type="button">
+                                        <i class="fa-solid fa-table me-1"></i> 1. ملخص قائمة الدخل (Sum Monthly IS)
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" data-cfo-sheet="detailed" type="button">
+                                        <i class="fa-solid fa-list-check me-1"></i> 2. قائمة الدخل التفصيلية (55 بند)
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" data-cfo-sheet="branches" type="button">
+                                        <i class="fa-solid fa-store me-1"></i> 3. أداء المعارض والفروع (61 فرع)
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" data-cfo-sheet="single_branch" type="button">
+                                        <i class="fa-solid fa-chart-column me-1"></i> 4. تحليل فرع محدد (Branch P&amp;L)
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <!-- Filters Toolbar -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Year Selector -->
+                                <div class="btn-group btn-group-sm" role="group" id="cfoYearGroup">
+                                    <button type="button" class="btn btn-outline-dark active" data-cfo-year="all">الكل (2025-2026)</button>
+                                    <button type="button" class="btn btn-outline-dark" data-cfo-year="2026">2026</button>
+                                    <button type="button" class="btn btn-outline-dark" data-cfo-year="2025">2025</button>
+                                </div>
+
+                                <!-- Branch Dropdown Selector (Active for Single Branch Sheet) -->
+                                <div id="cfoBranchSelectorWrap" style="display: none;">
+                                    <select class="form-select form-select-sm" id="cfoBranchSelect" style="min-width: 220px;">
+                                        <option value="">اختر الفرع / مركز التكلفة…</option>
+                                    </select>
+                                </div>
+
+                                <!-- Search Box -->
+                                <div class="input-group input-group-sm" style="width: 200px;">
+                                    <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                    <input type="text" class="form-control" id="cfoTableSearch" placeholder="بحث في البنود…">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub-sheet Container 1: Summary Monthly IS -->
+                        <div class="cfo-sheet-content" id="cfoSheetSummary">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-layer-group me-1 text-primary"></i> ملخص قائمة الدخل الشهري (مطابق لشيت Sum Monthly IS B)</h5>
+                                <span class="badge bg-light text-secondary border" id="cfoSummaryMeta">18 بند رئيسي + مجمل الربح + صافي الربح</span>
+                            </div>
+                            <div class="table-responsive cfo-table-wrapper mb-4">
+                                <table class="table table-bordered table-hover cfo-matrix-table align-middle" id="cfoSummaryTable">
+                                    <thead class="table-light" id="cfoSummaryThead">
+                                        <!-- Dynamic Headers -->
+                                    </thead>
+                                    <tbody id="cfoSummaryTbody">
+                                        <tr><td colspan="15" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>جارٍ تحميل ملخص قائمة الدخل…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Financial Ratios Section -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+                                <h6 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-percent me-1 text-warning"></i> المؤشرات والنسب المالية كنسبة من المبيعات (% of Sales)</h6>
+                                <span class="badge bg-light text-secondary border">Financial Ratios Analysis</span>
+                            </div>
+                            <div class="table-responsive cfo-table-wrapper">
+                                <table class="table table-bordered table-sm cfo-matrix-table align-middle" id="cfoRatiosTable">
+                                    <thead class="table-light" id="cfoRatiosThead">
+                                        <!-- Dynamic Headers -->
+                                    </thead>
+                                    <tbody id="cfoRatiosTbody">
+                                        <tr><td colspan="15" class="text-center py-3 text-muted">جارٍ تحميل النسب المالية…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sub-sheet Container 2: Detailed Monthly IS -->
+                        <div class="cfo-sheet-content" id="cfoSheetDetailed" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-list-ol me-1 text-info"></i> قائمة الدخل التفصيلية (مطابق لشيت Monthly IS - 55 بند)</h5>
+                                <span class="badge bg-light text-secondary border" id="cfoDetailedMeta">55 بند تفصيلي يغطي كافة الحسابات الـ 118</span>
+                            </div>
+                            <div class="table-responsive cfo-table-wrapper">
+                                <table class="table table-bordered table-hover cfo-matrix-table align-middle" id="cfoDetailedTable">
+                                    <thead class="table-light" id="cfoDetailedThead">
+                                        <!-- Dynamic Headers -->
+                                    </thead>
+                                    <tbody id="cfoDetailedTbody">
+                                        <tr><td colspan="15" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>جارٍ تحميل قائمة الدخل التفصيلية…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sub-sheet Container 3: Branches Performance -->
+                        <div class="cfo-sheet-content" id="cfoSheetBranches" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-shop me-1 text-success"></i> أداء المعارض والفروع (مطابق لشيت Sum IS per Bar - 61 فرع)</h5>
+                                <span class="badge bg-light text-secondary border" id="cfoBranchesMeta">61 مركز تكلفة / فرع</span>
+                            </div>
+                            <div class="table-responsive cfo-table-wrapper">
+                                <table class="table table-bordered table-hover cfo-matrix-table align-middle" id="cfoBranchesTable">
+                                    <thead class="table-light" id="cfoBranchesThead">
+                                        <!-- Dynamic Headers -->
+                                    </thead>
+                                    <tbody id="cfoBranchesTbody">
+                                        <tr><td colspan="10" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>جارٍ تحميل أداء الفروع…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sub-sheet Container 4: Single Branch Analysis -->
+                        <div class="cfo-sheet-content" id="cfoSheetSingleBranch" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h5 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-diagram-project me-1 text-warning"></i> تحليل أداء فرع محدد (مطابق لشيت IS ber one berance)</h5>
+                                    <span class="text-muted small" id="cfoSingleBranchSubtitle">اختر الفرع من القائمة أعلاه لعرض قائمة دخله الشهرية وتطوره عبر الشهور</span>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-bold" id="cfoSingleBranchBadge">لم يتم اختيار فرع</span>
+                            </div>
+
+                            <!-- Single Branch KPI summary cards -->
+                            <div class="row g-2 mb-3" id="cfoSingleBranchKpis">
+                                <div class="col-md-3 col-6">
+                                    <div class="card border-0 bg-light p-3 text-center">
+                                        <span class="text-muted small d-block">إجمالي المبيعات</span>
+                                        <strong class="fs-5 text-dark" id="cfoSbKpiSales">—</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="card border-0 bg-light p-3 text-center">
+                                        <span class="text-muted small d-block">مجمل الربح التجاري</span>
+                                        <strong class="fs-5 text-primary" id="cfoSbKpiGross">—</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="card border-0 bg-light p-3 text-center">
+                                        <span class="text-muted small d-block">المصاريف التشغيلية</span>
+                                        <strong class="fs-5 text-secondary" id="cfoSbKpiOpex">—</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="card border-0 bg-light p-3 text-center">
+                                        <span class="text-muted small d-block">صافي الربح والهامش</span>
+                                        <strong class="fs-5" id="cfoSbKpiNet">—</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive cfo-table-wrapper">
+                                <table class="table table-bordered table-hover cfo-matrix-table align-middle" id="cfoSingleBranchTable">
+                                    <thead class="table-light" id="cfoSingleBranchThead">
+                                        <!-- Dynamic Monthly Headers -->
+                                    </thead>
+                                    <tbody id="cfoSingleBranchTbody">
+                                        <tr><td colspan="15" class="text-center py-4 text-muted">يرجى اختيار فرع لعرض قائمة الدخل الخاصة به.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </section>
                 </div>
 
@@ -3437,8 +3648,8 @@
         </div>
     </div>
 
-    <script src="finance/finance-api.js?v=20260910-1"></script>
-    <script src="finance/finance-dashboard.js?v=20260910-1"></script>
+    <script src="finance/finance-api.js?v=20260910-2"></script>
+    <script src="finance/finance-dashboard.js?v=20260910-2"></script>
 
 </body>
 
