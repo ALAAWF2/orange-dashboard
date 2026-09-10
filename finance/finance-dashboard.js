@@ -3980,7 +3980,15 @@
                 monthIndices.forEach(idx => {
                     rev += Number(linesByKey['sales_revenue']?.values?.[idx]) || 0;
                     cogs += Number(linesByKey['cogs']?.values?.[idx]) || 0;
-                    opex += Number(linesByKey['operating_expenses']?.values?.[idx]) || 0;
+                    if (linesByKey['operating_expenses'] && linesByKey['operating_expenses'].values) {
+                        opex += Number(linesByKey['operating_expenses'].values[idx]) || 0;
+                    } else {
+                        branch.monthly_lines.forEach(l => {
+                            if (l.kind === 'expense' && l.key !== 'cogs') {
+                                opex += Number(l.values?.[idx]) || 0;
+                            }
+                        });
+                    }
                 });
             } else {
                 rev = Number(branch.revenue) || 0;
@@ -4253,7 +4261,14 @@
             const lineObj = linesByKey[def.key] || {};
 
             monthCols.forEach(col => {
-                const mVal = Number(lineObj.values?.[col.index]) || 0;
+                let mVal = Number(lineObj.values?.[col.index]) || 0;
+                if (!mVal && def.key === 'operating_expenses') {
+                    (branch.monthly_lines || []).forEach(l => {
+                        if (l.kind === 'expense' && l.key !== 'cogs') {
+                            mVal += Number(l.values?.[col.index]) || 0;
+                        }
+                    });
+                }
                 if (col.month.startsWith('2025')) total25 += mVal;
                 if (col.month.startsWith('2026')) total26 += mVal;
                 totalOverall += mVal;
