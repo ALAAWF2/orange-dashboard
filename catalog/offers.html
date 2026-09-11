@@ -1300,6 +1300,8 @@
     // Exact Creation Order Mapping in Dynamics 365 (DiscountRecordId sequence)
     // Higher RecId = more recently created in Dynamics
     const OFFER_CREATION_RECIDS = {
+      "ORNG-000401": 5637173077,
+      "ORNG-00294":  5637172335,
       "ORNG-000396": 5637172334,
       "ORNG-000395": 5637172333,
       "ORNG-00292":  5637172331,
@@ -1352,9 +1354,13 @@
       if (recId) return Number(recId);
       const cleanId = String(offerId || '').trim();
       if (OFFER_CREATION_RECIDS[cleanId]) return OFFER_CREATION_RECIDS[cleanId];
-      // Fallback for new offers: extract integer number from offer ID
+      // Fallback for new offers: if an offer ID has numbers (e.g. ORNG-000405), normalize to a high baseline
       const m = cleanId.match(/\d+/);
-      return m ? parseInt(m[0], 10) : 0;
+      if (m) {
+        const num = parseInt(m[0], 10);
+        return num >= 200 ? (5637172000 + num) : num;
+      }
+      return 0;
     }
 
     // Format numeric price: preserve decimal places if present (e.g. 499.99), otherwise integer (e.g. 799)
