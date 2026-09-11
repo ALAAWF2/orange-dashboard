@@ -1234,25 +1234,6 @@ const EMPLOYEES = [
         "addressBooks": "2001-C;2001-E"
     },
     {
-        "employeeId": "1587-شمس الدين كونغاث",
-        "personnelNumber": "1587",
-        "name": "شمس الدين كونغاث",
-        "startDate": "2021-08-21",
-        "manager": "جهاد ايوبي",
-        "showroom": "2103-42-Dareen Mall Dammam",
-        "showroomDetails": [
-            {
-                "name": "2103-42-Dareen Mall Dammam",
-                "manager": "جهاد ايوبي",
-                "codes": [
-                    "2103-C",
-                    "2103-E"
-                ]
-            }
-        ],
-        "addressBooks": "2103-C;2103-E"
-    },
-    {
         "employeeId": "1589-محمد جونيس ميمبار",
         "personnelNumber": "1589",
         "name": "محمد جونيس ميمبار",
