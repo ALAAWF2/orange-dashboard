@@ -1845,10 +1845,10 @@
       <label style="display:inline-flex; align-items:center; gap:5px;">
         <span>الموسم:</span>
         <select id="smartInlineSeason" onchange="syncSmartSettings('season', this.value)">
-          <option value="1.0" selected>عادي (1.0x)</option>
+          <option value="1" selected>عادي (1.0x)</option>
           <option value="1.5">رمضان (1.5x)</option>
-          <option value="2.0">العيد (2.0x)</option>
-          <option value="1.5">اليوم الوطني (1.5x)</option>
+          <option value="2">العيد (2.0x)</option>
+          <option value="1.5-nd">اليوم الوطني (1.5x)</option>
         </select>
       </label>
       <button type="button" onclick="openSmartReviewModal()" class="btn-smart-action" style="margin-right:auto;">أصناف ناقصة بحاجة للمراجعة</button>
@@ -1998,10 +1998,10 @@
           <label style="font-size:0.88rem; font-weight:700; color:var(--text-main); display:inline-flex; align-items:center; gap:6px;">
             <span>الموسم:</span>
             <select id="smartSeasonSelect" onchange="syncSmartSettings('season', this.value)" class="styled-select" style="padding:4px 8px; font-size:0.85rem;">
-              <option value="1.0" selected>عادي (1.0x)</option>
+              <option value="1" selected>عادي (1.0x)</option>
               <option value="1.5">رمضان (1.5x)</option>
-              <option value="2.0">العيد (2.0x)</option>
-              <option value="1.5">اليوم الوطني (1.5x)</option>
+              <option value="2">العيد (2.0x)</option>
+              <option value="1.5-nd">اليوم الوطني (1.5x)</option>
             </select>
           </label>
         </div>
@@ -2796,18 +2796,34 @@
 
     function syncSmartSettings(type, value) {
       if (type === 'days') {
-        smartTargetDays = parseInt(value, 10) || 14;
-        const sel1 = document.getElementById('smartTargetDaysSelect');
-        const sel2 = document.getElementById('smartInlineDays');
-        if (sel1 && sel1.value !== String(smartTargetDays)) sel1.value = String(smartTargetDays);
-        if (sel2 && sel2.value !== String(smartTargetDays)) sel2.value = String(smartTargetDays);
+        const days = parseInt(value, 10) || 14;
+        smartTargetDays = days;
+        ['smartTargetDaysSelect', 'smartInlineDays'].forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          for (let i = 0; i < el.options.length; i++) {
+            if (parseInt(el.options[i].value, 10) === days) {
+              el.selectedIndex = i;
+              break;
+            }
+          }
+        });
       } else if (type === 'season') {
-        smartSeasonMultiplier = parseFloat(value) || 1.0;
-        const sel1 = document.getElementById('smartSeasonSelect');
-        const sel2 = document.getElementById('smartInlineSeason');
-        if (sel1 && sel1.value !== String(smartSeasonMultiplier)) sel1.value = String(smartSeasonMultiplier);
-        if (sel2 && sel2.value !== String(smartSeasonMultiplier)) sel2.value = String(smartSeasonMultiplier);
+        const mult = parseFloat(value) || 1.0;
+        smartSeasonMultiplier = mult;
+        ['smartSeasonSelect', 'smartInlineSeason'].forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          for (let i = 0; i < el.options.length; i++) {
+            if (parseFloat(el.options[i].value) === mult) {
+              el.selectedIndex = i;
+              break;
+            }
+          }
+        });
       }
+      currentPage = 1;
+      updateActiveFiltersSummary();
       renderProducts();
       if (document.getElementById('smartReviewModal')?.style.display === 'flex') {
         renderSmartReviewTable();
@@ -2917,6 +2933,16 @@
       ['newOnly', 'topMoversOnly', 'lowStockOnly', 'promoOnly', 'favOnly', 'showroomStockOnly', 'smartReplenishOnly'].forEach(id => {
         const cb = document.getElementById(id); if (cb) cb.checked = false;
       });
+      smartTargetDays = 14;
+      smartSeasonMultiplier = 1.0;
+      ['smartTargetDaysSelect', 'smartInlineDays'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.selectedIndex = 1;
+      });
+      ['smartSeasonSelect', 'smartInlineSeason'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.selectedIndex = 0;
+      });
       handleSearchInput(false);
       resetFiltersAndRender();
     }
@@ -2956,7 +2982,10 @@
       if (topMoversOnly) activeTags.push(`أكثر طلباً`);
       if (lowStockOnly) activeTags.push(`نفاد وشيك`);
       if (promoOnly) activeTags.push(`🏷️ عروض`);
-      if (smartReplenishOnly) activeTags.push(`مقترح للطلب`);
+      if (smartReplenishOnly) {
+        const seasonLabel = smartSeasonMultiplier === 1.5 ? 'رمضان' : (smartSeasonMultiplier === 2.0 ? 'العيد' : 'عادي');
+        activeTags.push(`مقترح للطلب (${smartTargetDays} يوم - ${seasonLabel})`);
+      }
       if (favOnly) activeTags.push(`⭐ مفضلة`);
       if (showroomStockOnly) activeTags.push(`📦 متوفر بالمعرض`);
 
@@ -3955,63 +3984,63 @@
                        <span class="stat-value">${getStockForWarehouse(d, 'Jeddah Warehouse')}</span>
                    </div>
               ` : (userWarehouse === 'TOTAL_WAREHOUSES' ? `
-                   <div class="stat-item">
-                       <span class="stat-label">مبيعات توتال</span>
-                       <span class="stat-value highlight-orange">${d.sales || 0}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">مبيعات المعرض</span>
-                       <span class="stat-value highlight-green">${getSalesInMall(d.code)}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">مستودع جدة</span>
-                       <span class="stat-value">${getStockForWarehouse(d, 'Jeddah Warehouse')}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">مستودع الرياض</span>
-                       <span class="stat-value">${getStockForWarehouse(d, 'Riyadh Warehouse')}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">الكمية بالمعرض</span>
-                       <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
-                   </div>
-                   ${smartRec.qty > 0 ? `
-                   <div class="stat-item highlight-smart-stat" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 6px;">
-                       <span class="stat-label" style="color:#1d4ed8; font-weight:700;">مقترح للطلب</span>
-                       <span class="stat-value" style="color:#1d4ed8; font-weight:900;">${smartRec.qty}</span>
-                   </div>
-                   ` : ''}
-              ` : `
-                   <div class="stat-item">
-                       <span class="stat-label">مبيعات توتال</span>
-                       <span class="stat-value highlight-orange">${d.sales || 0}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">مبيعات المعرض</span>
-                       <span class="stat-value highlight-green">${getSalesInMall(d.code)}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">مخزون المستودع</span>
-                       <span class="stat-value">${d.stock ?? 0}</span>
-                   </div>
-                   <div class="stat-item">
-                       <span class="stat-label">الكمية بالمعرض</span>
-                       <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
-                   </div>
-                   ${smartRec.qty > 0 ? `
-                   <div class="stat-item highlight-smart-stat" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 6px;">
-                       <span class="stat-label" style="color:#1d4ed8; font-weight:700;">مقترح للطلب</span>
-                       <span class="stat-value" style="color:#1d4ed8; font-weight:900;">${smartRec.qty}</span>
-                   </div>
-                   ` : ''}
-              `))}
+                    <div class="stat-item">
+                        <span class="stat-label">مبيعات توتال</span>
+                        <span class="stat-value highlight-orange">${d.sales || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">مبيعات 7 أيام</span>
+                        <span class="stat-value highlight-green">${getSalesInMall(d.code)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">مستودع جدة</span>
+                        <span class="stat-value">${getStockForWarehouse(d, 'Jeddah Warehouse')}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">مستودع الرياض</span>
+                        <span class="stat-value">${getStockForWarehouse(d, 'Riyadh Warehouse')}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">الكمية بالمعرض</span>
+                        <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
+                    </div>
+                    ${smartRec.qty > 0 ? `
+                    <div class="stat-item highlight-smart-stat" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 6px;">
+                        <span class="stat-label" style="color:#1d4ed8; font-weight:700;">مقترح للطلب</span>
+                        <span class="stat-value" style="color:#1d4ed8; font-weight:900;">${smartRec.qty}</span>
+                    </div>
+                    ` : ''}
+               ` : `
+                    <div class="stat-item">
+                        <span class="stat-label">مبيعات توتال</span>
+                        <span class="stat-value highlight-orange">${d.sales || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">مبيعات 7 أيام</span>
+                        <span class="stat-value highlight-green">${getSalesInMall(d.code)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">مخزون المستودع</span>
+                        <span class="stat-value">${d.stock ?? 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">الكمية بالمعرض</span>
+                        <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
+                    </div>
+                    ${smartRec.qty > 0 ? `
+                    <div class="stat-item highlight-smart-stat" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 6px;">
+                        <span class="stat-label" style="color:#1d4ed8; font-weight:700;">مقترح للطلب</span>
+                        <span class="stat-value" style="color:#1d4ed8; font-weight:900;">${smartRec.qty}</span>
+                    </div>
+                    ` : ''}
+               `))}
               </div>
 
               ${isGuestMode ? '' : `
               <div class="qty-input-group" style="${userWarehouse === 'TOTAL_WAREHOUSES' ? 'display:flex; flex-direction:column; gap:5px;' : ''}">
                  <div style="display:flex; align-items:center; gap:5px; width:100%;">
                     <button type="button" class="qty-step-btn" onclick="stepCardQty('${d.code}', '${safeName}', 1, this)" aria-label="زيادة كمية ${safeName}" title="زيادة الكمية">+</button>
-                    <input type="number" min="1" placeholder="${smartRec.qty > 0 ? `مقترح ${smartRec.qty}` : 'الكمية'}" style="width:100%;"
+                    <input type="number" min="1" placeholder="0" style="width:100%;"
                       aria-label="الكمية المطلوبة من ${safeName}"
                       value="${cart[d.code]?.qty ?? ''}"
                       onchange="addToCart('${d.code}', '${safeName}', this.value, document.getElementById('whSelect_' + '${d.code}')?.value)">
@@ -4086,7 +4115,7 @@
             <td style="font-weight:800; color:${qtyInMall>0?'var(--accent)':'var(--danger)'};">${qtyInMall}</td>
             <td style="font-weight:700;">${d.stock || 0}</td>
             <td style="width:120px;">
-              <input type="number" min="1" placeholder="${smartRec.qty > 0 ? `مقترح ${smartRec.qty}` : '0'}" value="${cartQty}" aria-label="الكمية المطلوبة من ${safeName}" style="width:100%; text-align:center; padding:6px; border:1.5px solid var(--border-color); border-radius:6px; font-weight:bold;"
+              <input type="number" min="1" placeholder="0" value="${cartQty}" aria-label="الكمية المطلوبة من ${safeName}" style="width:100%; text-align:center; padding:6px; border:1.5px solid var(--border-color); border-radius:6px; font-weight:bold;"
                 oninput="addToCart('${d.code}', '${safeName}', this.value, document.getElementById('tableWhSelect_' + '${d.code}')?.value || userWarehouse)">
               ${smartRec.qty > 0 ? `
                 <button type="button" class="btn-fill-smart-qty" style="margin-top:4px; width:100%;" onclick="this.previousElementSibling.value='${smartRec.qty}'; addToCart('${d.code}', '${safeName}', '${smartRec.qty}', document.getElementById('tableWhSelect_' + '${d.code}')?.value || userWarehouse);" title="تطبيق الكمية المقترحة">${smartRec.qty} مقترح</button>
@@ -4272,8 +4301,22 @@
 
       const daysSel = document.getElementById('smartTargetDaysSelect');
       const seasonSel = document.getElementById('smartSeasonSelect');
-      if (daysSel) daysSel.value = String(smartTargetDays);
-      if (seasonSel) seasonSel.value = String(smartSeasonMultiplier);
+      if (daysSel) {
+        for (let i = 0; i < daysSel.options.length; i++) {
+          if (parseInt(daysSel.options[i].value, 10) === smartTargetDays) {
+            daysSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+      if (seasonSel) {
+        for (let i = 0; i < seasonSel.options.length; i++) {
+          if (parseFloat(seasonSel.options[i].value) === smartSeasonMultiplier) {
+            seasonSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
 
       renderSmartReviewTable();
       modal.style.display = 'flex';
@@ -4303,9 +4346,10 @@
 
       const totalItemsCount = suggestedItems.length;
       const totalPiecesCount = suggestedItems.reduce((sum, item) => sum + item.rec.qty, 0);
+      const totalExpected = suggestedItems.reduce((sum, item) => sum + (item.rec.expectedDemand || 0), 0);
 
       if (stats) {
-        stats.textContent = `الأصناف المقترحة: ${totalItemsCount} صنف | إجمالي القطع: ${totalPiecesCount} قطعة`;
+        stats.textContent = `الأصناف المقترحة: ${totalItemsCount} صنف | إجمالي القطع المقترحة: ${totalPiecesCount} قطعة | الطلب المتوقع للفترة: ${totalExpected} قطعة`;
       }
 
       if (suggestedItems.length === 0) {
@@ -4324,6 +4368,8 @@
               <th style="padding:8px 6px; text-align:center;">مبيعات 7 أيام</th>
               <th style="padding:8px 6px; text-align:center;">رصيد المعرض</th>
               <th style="padding:8px 6px; text-align:center;">التغطية</th>
+              <th style="padding:8px 6px; text-align:center;">الطلب المتوقع</th>
+              <th style="padding:8px 6px; text-align:center;">العجز</th>
               <th style="padding:8px 6px; text-align:center;">متاح بالمستودع</th>
               <th style="padding:8px 10px; text-align:center; width:120px;">الكمية المقترحة</th>
             </tr>
@@ -4343,6 +4389,8 @@
             <td style="padding:8px 6px; text-align:center; font-weight:700; color:#e67e22;">${rec.sales7}</td>
             <td style="padding:8px 6px; text-align:center; font-weight:700; color:${rec.showroomStock > 0 ? 'var(--text-main)' : '#dc2626'};">${rec.showroomStock}</td>
             <td style="padding:8px 6px; text-align:center; font-weight:700; font-size:0.8rem; color:#64748b;">${rec.daysCover} يوم</td>
+            <td style="padding:8px 6px; text-align:center; font-weight:700; color:#2563eb;">${rec.expectedDemand}</td>
+            <td style="padding:8px 6px; text-align:center; font-weight:700; color:#dc2626;">${rec.deficit}</td>
             <td style="padding:8px 6px; text-align:center; font-weight:700; color:#059669;">${rec.whStock}</td>
             <td style="padding:8px 10px; text-align:center;">
               <input type="number" min="0" max="${rec.whStock}" value="${currentInCart}"
@@ -4350,6 +4398,7 @@
                 class="smart-review-qty-input"
                 style="width:80px; text-align:center; padding:5px; border:1.5px solid #2563eb; border-radius:6px; font-weight:800; color:#1d4ed8;"
                 aria-label="الكمية المقترحة للصنف ${p.code}">
+              ${rec.deficit > rec.whStock ? `<div style="font-size:0.7rem; color:#d97706; margin-top:2px;">محدود بالمستودع</div>` : ''}
             </td>
           </tr>
         `;
