@@ -37,7 +37,10 @@
         advances: { key: 'start_date', dir: 'desc' },
         purchases: { key: 'accounting_date', dir: 'desc' },
         inventory: { key: 'total_retail_value', dir: 'desc' },
-        maintenance: { key: 'total_maintenance_amount', dir: 'desc' }
+        maintenance: { key: 'total_maintenance_amount', dir: 'desc' },
+        cfoBranches: { key: 'calc_rev', dir: 'desc' },
+        cfoSummary: { key: 'default_idx', dir: 'asc' },
+        cfoDetailed: { key: 'default_idx', dir: 'asc' }
     };
 
     const filters = {
@@ -3539,6 +3542,42 @@
         }
     }
 
+    function sortCfoLines(preparedLines, sort) {
+        if (!sort || !sort.key) return preparedLines;
+        const dir = sort.dir || 'asc';
+        return preparedLines.sort((a, b) => {
+            let diff = 0;
+            if (sort.key === 'default_idx') {
+                diff = (Number(a.default_idx) || 0) - (Number(b.default_idx) || 0);
+            } else if (sort.key === 'name') {
+                diff = (a.name_for_sort || '').localeCompare(b.name_for_sort || '', 'ar', { numeric: true });
+            } else if (sort.key === 'total_overall') {
+                diff = (a.total_overall || 0) - (b.total_overall || 0);
+            } else if (sort.key === 'total_2025') {
+                diff = (a.total_2025 || 0) - (b.total_2025 || 0);
+            } else if (sort.key === 'total_2026') {
+                diff = (a.total_2026 || 0) - (b.total_2026 || 0);
+            } else if (sort.key.startsWith('month_')) {
+                const mKey = sort.key.slice(6);
+                diff = (a.valuesByMonth?.[mKey] || 0) - (b.valuesByMonth?.[mKey] || 0);
+            }
+            return dir === 'asc' ? diff : -diff;
+        });
+    }
+
+    function renderCfoSortableTh(tableName, key, label, extraClass = '', extraStyle = '') {
+        const sort = sortState[tableName] || { key: 'default_idx', dir: 'asc' };
+        const isSorted = sort.key === key;
+        const iconClass = isSorted
+            ? (sort.dir === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down')
+            : 'fa-solid fa-sort';
+        const sortedClass = isSorted ? (sort.dir === 'asc' ? ' is-sorted-asc' : ' is-sorted-desc') : '';
+        return `<th class="finance-sortable ${extraClass}${sortedClass}" data-table="${tableName}" data-sort="${key}" style="${extraStyle}" title="انقر للترتيب حسب ${label}">
+            <span>${label}</span>
+            <i class="${iconClass}"></i>
+        </th>`;
+    }
+
     function renderCfoSummarySheet(payload) {
         const thead = element('cfoSummaryThead');
         const tbody = element('cfoSummaryTbody');
@@ -3560,68 +3599,103 @@
             }
         });
 
-        // 1. Build Header
-        const trHead = document.createElement('tr');
-        const thLine = document.createElement('th');
-        thLine.className = 'cfo-sticky-col';
-        thLine.textContent = 'البند المالي (المصفوفة الشهرية)';
-        trHead.append(thLine);
+        const sort = sortState.cfoSummary || { key: 'default_idx', dir: 'asc' };
 
-        monthCols.forEach(col => {
-            const th = document.createElement('th');
-            th.className = 'cfo-col-month';
-            th.textContent = formatCfoMonthTitle(col.month);
-            trHead.append(th);
+        // 1. Build Header with Sorting
+        let thMonthsHtml = monthCols.map(col => {
+            const mTitle = formatCfoMonthTitle(col.month);
+            return renderCfoSortableTh('cfoSummary', `month_${col.month}`, mTitle, 'cfo-col-month text-end');
+        }).join('');
+
+        let thTotalsHtml = '';
+        if (cfoYear === 'all') {
+            thTotalsHtml = `
+                ${renderCfoSortableTh('cfoSummary', 'total_2025', 'إجمالي 2025', 'cfo-col-total text-end')}
+                ${renderCfoSortableTh('cfoSummary', 'total_2026', 'إجمالي 2026', 'cfo-col-total text-end')}
+                ${renderCfoSortableTh('cfoSummary', 'total_overall', 'الإجمالي الكلي', 'cfo-col-total text-end')}
+            `;
+        } else {
+            thTotalsHtml = `
+                ${renderCfoSortableTh('cfoSummary', 'total_overall', `إجمالي ${cfoYear}`, 'cfo-col-total text-end')}
+            `;
+        }
+
+        thead.innerHTML = `
+            <tr>
+                ${renderCfoSortableTh('cfoSummary', 'default_idx', '#', 'text-center', 'width: 45px;')}
+                ${renderCfoSortableTh('cfoSummary', 'name', 'البند المالي (المصفوفة الشهرية)', 'cfo-sticky-col')}
+                ${thMonthsHtml}
+                ${thTotalsHtml}
+            </tr>
+        `;
+
+        thead.querySelectorAll('th.finance-sortable[data-table="cfoSummary"]').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                if (!key) return;
+                if (sortState.cfoSummary?.key === key) {
+                    sortState.cfoSummary.dir = sortState.cfoSummary.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    const isNum = key.startsWith('month_') || key.startsWith('total_');
+                    sortState.cfoSummary = { key, dir: isNum ? 'desc' : 'asc' };
+                }
+                renderCfoSummarySheet(cfoWorkbookData);
+            });
         });
 
-        if (cfoYear === 'all') {
-            const th25 = document.createElement('th');
-            th25.className = 'cfo-col-total text-end';
-            th25.textContent = 'إجمالي 2025';
-            const th26 = document.createElement('th');
-            th26.className = 'cfo-col-total text-end';
-            th26.textContent = 'إجمالي 2026';
-            const thAll = document.createElement('th');
-            thAll.className = 'cfo-col-total text-end';
-            thAll.textContent = 'الإجمالي الكلي';
-            trHead.append(th25, th26, thAll);
-        } else {
-            const thYear = document.createElement('th');
-            thYear.className = 'cfo-col-total text-end';
-            thYear.textContent = `إجمالي ${cfoYear}`;
-            trHead.append(thYear);
-        }
-        thead.replaceChildren(trHead);
+        // 2. Pre-calculate values & sort
+        const preparedLines = lines.map((line, idx) => {
+            let total25 = 0;
+            let total26 = 0;
+            let totalOverall = 0;
+            const valuesByMonth = {};
 
-        // 2. Build Rows
-        let filteredLines = lines;
+            monthCols.forEach(col => {
+                const val = Number(line.values?.[col.index]) || 0;
+                valuesByMonth[col.month] = val;
+                if (col.month.startsWith('2025')) total25 += val;
+                if (col.month.startsWith('2026')) total26 += val;
+                totalOverall += val;
+            });
+
+            return {
+                ...line,
+                default_idx: line.line_no ? Number(line.line_no) : (idx + 1),
+                name_for_sort: line.name_ar || line.key || '',
+                total_2025: total25,
+                total_2026: total26,
+                total_overall: totalOverall,
+                valuesByMonth
+            };
+        });
+
+        sortCfoLines(preparedLines, sort);
+
+        // Filter by search term
+        let filteredLines = preparedLines;
         if (cfoSearchTerm) {
-            filteredLines = lines.filter(l =>
+            filteredLines = preparedLines.filter(l =>
                 (l.name_ar || '').toLowerCase().includes(cfoSearchTerm) ||
                 (l.key || '').toLowerCase().includes(cfoSearchTerm)
             );
         }
 
-        const rows = filteredLines.map(line => {
+        const rows = filteredLines.map((line, idx) => {
             const tr = document.createElement('tr');
             if (line.calculated) tr.classList.add('cfo-row-calculated');
             if (line.key === 'net_profit') tr.classList.add('cfo-row-net-profit');
 
+            const tdNum = document.createElement('td');
+            tdNum.className = 'text-center text-muted small';
+            tdNum.textContent = line.default_idx || (idx + 1);
+
             const tdLabel = document.createElement('td');
             tdLabel.className = 'cfo-sticky-col';
             tdLabel.textContent = line.name_ar || line.key;
-            tr.append(tdLabel);
-
-            let total25 = 0;
-            let total26 = 0;
-            let totalOverall = 0;
+            tr.append(tdNum, tdLabel);
 
             monthCols.forEach(col => {
-                const val = Number(line.values?.[col.index]) || 0;
-                if (col.month.startsWith('2025')) total25 += val;
-                if (col.month.startsWith('2026')) total26 += val;
-                totalOverall += val;
-
+                const val = line.valuesByMonth?.[col.month] || 0;
                 const td = document.createElement('td');
                 td.className = 'text-end';
                 td.dir = 'ltr';
@@ -3636,19 +3710,19 @@
                 const td25 = document.createElement('td');
                 td25.className = 'cfo-col-total text-end';
                 td25.dir = 'ltr';
-                td25.textContent = accountingMoney(total25);
+                td25.textContent = accountingMoney(line.total_2025);
 
                 const td26 = document.createElement('td');
                 td26.className = 'cfo-col-total text-end';
                 td26.dir = 'ltr';
-                td26.textContent = accountingMoney(total26);
+                td26.textContent = accountingMoney(line.total_2026);
 
                 const tdAll = document.createElement('td');
                 tdAll.className = 'cfo-col-total text-end fw-bold';
                 tdAll.dir = 'ltr';
-                tdAll.textContent = accountingMoney(totalOverall);
+                tdAll.textContent = accountingMoney(line.total_overall);
                 if (line.key === 'net_profit') {
-                    tdAll.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    tdAll.classList.add(line.total_overall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
                 }
 
                 tr.append(td25, td26, tdAll);
@@ -3656,9 +3730,9 @@
                 const tdYear = document.createElement('td');
                 tdYear.className = 'cfo-col-total text-end fw-bold';
                 tdYear.dir = 'ltr';
-                tdYear.textContent = accountingMoney(totalOverall);
+                tdYear.textContent = accountingMoney(line.total_overall);
                 if (line.key === 'net_profit') {
-                    tdYear.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    tdYear.classList.add(line.total_overall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
                 }
                 tr.append(tdYear);
             }
@@ -3671,10 +3745,15 @@
         // 3. Build Financial Ratios Table
         if (ratiosThead && ratiosTbody) {
             const trRatiosHead = document.createElement('tr');
+            const thRNum = document.createElement('th');
+            thRNum.className = 'text-center';
+            thRNum.style.width = '45px';
+            thRNum.textContent = '%';
+
             const thRLabel = document.createElement('th');
             thRLabel.className = 'cfo-sticky-col';
             thRLabel.textContent = 'المؤشر المالي (% من المبيعات)';
-            trRatiosHead.append(thRLabel);
+            trRatiosHead.append(thRNum, thRLabel);
 
             monthCols.forEach(col => {
                 const th = document.createElement('th');
@@ -3717,10 +3796,14 @@
                 const tr = document.createElement('tr');
                 if (def.isNet) tr.classList.add('cfo-row-net-profit');
 
+                const tdRNum = document.createElement('td');
+                tdRNum.className = 'text-center text-muted small';
+                tdRNum.textContent = '•';
+
                 const tdLabel = document.createElement('td');
                 tdLabel.className = 'cfo-sticky-col';
                 tdLabel.textContent = def.label;
-                tr.append(tdLabel);
+                tr.append(tdRNum, tdLabel);
 
                 let sumSales25 = 0, sumNum25 = 0;
                 let sumSales26 = 0, sumNum26 = 0;
@@ -3814,48 +3897,82 @@
             }
         });
 
-        // 1. Header
-        const trHead = document.createElement('tr');
-        const thNum = document.createElement('th');
-        thNum.className = 'text-center';
-        thNum.textContent = '#';
-        thNum.style.width = '40px';
+        const sort = sortState.cfoDetailed || { key: 'default_idx', dir: 'asc' };
 
-        const thLine = document.createElement('th');
-        thLine.className = 'cfo-sticky-col';
-        thLine.textContent = 'البند المحاسبي التفصيلي (55 بند)';
-        trHead.append(thNum, thLine);
+        // 1. Build Header with Sorting
+        let thMonthsHtml = monthCols.map(col => {
+            const mTitle = formatCfoMonthTitle(col.month);
+            return renderCfoSortableTh('cfoDetailed', `month_${col.month}`, mTitle, 'cfo-col-month text-end');
+        }).join('');
 
-        monthCols.forEach(col => {
-            const th = document.createElement('th');
-            th.className = 'cfo-col-month';
-            th.textContent = formatCfoMonthTitle(col.month);
-            trHead.append(th);
+        let thTotalsHtml = '';
+        if (cfoYear === 'all') {
+            thTotalsHtml = `
+                ${renderCfoSortableTh('cfoDetailed', 'total_2025', 'إجمالي 2025', 'cfo-col-total text-end')}
+                ${renderCfoSortableTh('cfoDetailed', 'total_2026', 'إجمالي 2026', 'cfo-col-total text-end')}
+                ${renderCfoSortableTh('cfoDetailed', 'total_overall', 'الإجمالي الكلي', 'cfo-col-total text-end')}
+            `;
+        } else {
+            thTotalsHtml = `
+                ${renderCfoSortableTh('cfoDetailed', 'total_overall', `إجمالي ${cfoYear}`, 'cfo-col-total text-end')}
+            `;
+        }
+
+        thead.innerHTML = `
+            <tr>
+                ${renderCfoSortableTh('cfoDetailed', 'default_idx', '#', 'text-center', 'width: 45px;')}
+                ${renderCfoSortableTh('cfoDetailed', 'name', 'البند المحاسبي التفصيلي (55 بند)', 'cfo-sticky-col')}
+                ${thMonthsHtml}
+                ${thTotalsHtml}
+            </tr>
+        `;
+
+        thead.querySelectorAll('th.finance-sortable[data-table="cfoDetailed"]').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                if (!key) return;
+                if (sortState.cfoDetailed?.key === key) {
+                    sortState.cfoDetailed.dir = sortState.cfoDetailed.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    const isNum = key.startsWith('month_') || key.startsWith('total_');
+                    sortState.cfoDetailed = { key, dir: isNum ? 'desc' : 'asc' };
+                }
+                renderCfoDetailedSheet(cfoWorkbookData);
+            });
         });
 
-        if (cfoYear === 'all') {
-            const th25 = document.createElement('th');
-            th25.className = 'cfo-col-total text-end';
-            th25.textContent = 'إجمالي 2025';
-            const th26 = document.createElement('th');
-            th26.className = 'cfo-col-total text-end';
-            th26.textContent = 'إجمالي 2026';
-            const thAll = document.createElement('th');
-            thAll.className = 'cfo-col-total text-end';
-            thAll.textContent = 'الإجمالي الكلي';
-            trHead.append(th25, th26, thAll);
-        } else {
-            const thYear = document.createElement('th');
-            thYear.className = 'cfo-col-total text-end';
-            thYear.textContent = `إجمالي ${cfoYear}`;
-            trHead.append(thYear);
-        }
-        thead.replaceChildren(trHead);
+        // 2. Pre-calculate values & sort
+        const preparedLines = lines.map((line, idx) => {
+            let total25 = 0;
+            let total26 = 0;
+            let totalOverall = 0;
+            const valuesByMonth = {};
 
-        // 2. Rows
-        let filteredLines = lines;
+            monthCols.forEach(col => {
+                const val = Number(line.values?.[col.index]) || 0;
+                valuesByMonth[col.month] = val;
+                if (col.month.startsWith('2025')) total25 += val;
+                if (col.month.startsWith('2026')) total26 += val;
+                totalOverall += val;
+            });
+
+            return {
+                ...line,
+                default_idx: line.line_no ? Number(line.line_no) : (idx + 1),
+                name_for_sort: line.name_ar || line.key || '',
+                total_2025: total25,
+                total_2026: total26,
+                total_overall: totalOverall,
+                valuesByMonth
+            };
+        });
+
+        sortCfoLines(preparedLines, sort);
+
+        // Filter by search term
+        let filteredLines = preparedLines;
         if (cfoSearchTerm) {
-            filteredLines = lines.filter(l =>
+            filteredLines = preparedLines.filter(l =>
                 (l.name_ar || '').toLowerCase().includes(cfoSearchTerm) ||
                 (l.key || '').toLowerCase().includes(cfoSearchTerm)
             );
@@ -3868,23 +3985,15 @@
 
             const tdNum = document.createElement('td');
             tdNum.className = 'text-center text-muted small';
-            tdNum.textContent = line.line_no || (idx + 1);
+            tdNum.textContent = line.default_idx || (idx + 1);
 
             const tdLabel = document.createElement('td');
             tdLabel.className = 'cfo-sticky-col';
             tdLabel.textContent = line.name_ar || line.key;
             tr.append(tdNum, tdLabel);
 
-            let total25 = 0;
-            let total26 = 0;
-            let totalOverall = 0;
-
             monthCols.forEach(col => {
-                const val = Number(line.values?.[col.index]) || 0;
-                if (col.month.startsWith('2025')) total25 += val;
-                if (col.month.startsWith('2026')) total26 += val;
-                totalOverall += val;
-
+                const val = line.valuesByMonth?.[col.month] || 0;
                 const td = document.createElement('td');
                 td.className = 'text-end';
                 td.dir = 'ltr';
@@ -3899,19 +4008,19 @@
                 const td25 = document.createElement('td');
                 td25.className = 'cfo-col-total text-end';
                 td25.dir = 'ltr';
-                td25.textContent = accountingMoney(total25);
+                td25.textContent = accountingMoney(line.total_2025);
 
                 const td26 = document.createElement('td');
                 td26.className = 'cfo-col-total text-end';
                 td26.dir = 'ltr';
-                td26.textContent = accountingMoney(total26);
+                td26.textContent = accountingMoney(line.total_2026);
 
                 const tdAll = document.createElement('td');
                 tdAll.className = 'cfo-col-total text-end fw-bold';
                 tdAll.dir = 'ltr';
-                tdAll.textContent = accountingMoney(totalOverall);
+                tdAll.textContent = accountingMoney(line.total_overall);
                 if (line.key === 'net_profit') {
-                    tdAll.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    tdAll.classList.add(line.total_overall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
                 }
 
                 tr.append(td25, td26, tdAll);
@@ -3919,9 +4028,9 @@
                 const tdYear = document.createElement('td');
                 tdYear.className = 'cfo-col-total text-end fw-bold';
                 tdYear.dir = 'ltr';
-                tdYear.textContent = accountingMoney(totalOverall);
+                tdYear.textContent = accountingMoney(line.total_overall);
                 if (line.key === 'net_profit') {
-                    tdYear.classList.add(totalOverall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
+                    tdYear.classList.add(line.total_overall >= 0 ? 'cfo-cell-pos' : 'cfo-cell-neg');
                 }
                 tr.append(tdYear);
             }
@@ -3953,23 +4062,50 @@
         });
 
         const yearTitle = cfoYear === 'all' ? 'كافة السنوات (2025-2026)' : cfoYear;
+        const sort = sortState.cfoBranches || { key: 'calc_rev', dir: 'desc' };
+
+        function cfoThSort(key, label, extraClass = '', extraStyle = '') {
+            const isSorted = sort.key === key;
+            const iconClass = isSorted
+                ? (sort.dir === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down')
+                : 'fa-solid fa-sort';
+            const sortedClass = isSorted ? (sort.dir === 'asc' ? ' is-sorted-asc' : ' is-sorted-desc') : '';
+            return `<th class="finance-sortable ${extraClass}${sortedClass}" data-table="cfoBranches" data-sort="${key}" style="${extraStyle}" title="انقر للترتيب حسب ${label}">
+                <span>${label}</span>
+                <i class="${iconClass}"></i>
+            </th>`;
+        }
 
         // 1. Header
         thead.innerHTML = `
             <tr>
-                <th class="text-center" style="width: 40px;">#</th>
-                <th class="text-center" style="width: 100px;">كود الفرع</th>
-                <th class="cfo-sticky-col">اسم المعرض / مركز التكلفة (${yearTitle})</th>
-                <th class="text-end">المبيعات (SAR)</th>
-                <th class="text-end">تكلفة البضاعة المباعة (SAR)</th>
-                <th class="text-end">مجمل الربح (SAR)</th>
-                <th class="text-end">هامش مجمل الربح</th>
-                <th class="text-end">المصاريف التشغيلية (SAR)</th>
-                <th class="text-end">صافي الربح / الخسارة (SAR)</th>
-                <th class="text-end">هامش صافي الربح %</th>
+                <th class="text-center" style="width: 45px;">#</th>
+                ${cfoThSort('branch_dimension_value', 'كود الفرع', 'text-center', 'width: 110px;')}
+                ${cfoThSort('branch_name', `اسم المعرض / مركز التكلفة (${yearTitle})`, 'cfo-sticky-col')}
+                ${cfoThSort('calc_rev', 'المبيعات (SAR)', 'text-end')}
+                ${cfoThSort('calc_cogs', 'تكلفة البضاعة المباعة (SAR)', 'text-end')}
+                ${cfoThSort('calc_gross', 'مجمل الربح (SAR)', 'text-end')}
+                ${cfoThSort('calc_gross_margin', 'هامش مجمل الربح', 'text-end')}
+                ${cfoThSort('calc_opex', 'المصاريف التشغيلية (SAR)', 'text-end')}
+                ${cfoThSort('calc_net', 'صافي الربح / الخسارة (SAR)', 'text-end')}
+                ${cfoThSort('calc_net_margin', 'هامش صافي الربح %', 'text-end')}
                 <th class="text-center" style="width: 90px;">الإجراء</th>
             </tr>
         `;
+
+        thead.querySelectorAll('th.finance-sortable[data-table="cfoBranches"]').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                if (!key) return;
+                if (sortState.cfoBranches?.key === key) {
+                    sortState.cfoBranches.dir = sortState.cfoBranches.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    const isStr = key === 'branch_name' || key === 'branch_dimension_value';
+                    sortState.cfoBranches = { key, dir: isStr ? 'asc' : 'desc' };
+                }
+                renderCfoBranchesSheet(cfoWorkbookData);
+            });
+        });
 
         // 2. Pre-calculate values for selected year for all branches
         const preparedBranches = branches.map(branch => {
@@ -4012,8 +4148,15 @@
             };
         });
 
-        // Sort branches by calculated revenue descending
-        preparedBranches.sort((a, b) => b.calc_rev - a.calc_rev);
+        // Sort branches by active sort criteria
+        preparedBranches.sort((a, b) => {
+            if (sort.key === 'branch_name') {
+                const nameA = a.branch_name || a.branch_dimension_value || '';
+                const nameB = b.branch_name || b.branch_dimension_value || '';
+                return compareValues({ val: nameA }, { val: nameB }, 'val', sort.dir);
+            }
+            return compareValues(a, b, sort.key, sort.dir);
+        });
 
         // 3. Filter rows by search term
         let filteredBranches = preparedBranches;
@@ -5758,6 +5901,9 @@
                 else if (table === 'purchases') filterAndRenderPurchases();
                 else if (table === 'inventory') filterAndRenderInventory();
                 else if (table === 'maintenance') filterAndRenderMaintenanceShowrooms();
+                else if (table === 'cfoBranches') renderCfoBranchesSheet(cfoWorkbookData);
+                else if (table === 'cfoSummary') renderCfoSummarySheet(cfoWorkbookData);
+                else if (table === 'cfoDetailed') renderCfoDetailedSheet(cfoWorkbookData);
             });
         });
 
