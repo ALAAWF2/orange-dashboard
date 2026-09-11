@@ -1654,6 +1654,156 @@
       }
     }
 
+    /* POS & Medium/Small Laptops Optimization (e.g. 1366x768, 1024x768, or small height) */
+    @media screen and (min-width: 769px) and (max-width: 1440px), screen and (min-width: 769px) and (max-height: 850px) {
+      .top-notice {
+        padding: 4px 12px;
+        font-size: 0.8rem;
+      }
+      .sticky-header {
+        padding: 6px 14px;
+      }
+      .header-main-row {
+        gap: 6px;
+      }
+      .search-container {
+        max-width: 320px;
+        min-width: 200px;
+      }
+      .search-container input {
+        padding: 6px 45px 6px 12px;
+        font-size: 0.85rem;
+      }
+      .header-actions {
+        gap: 5px;
+      }
+      .btn-primary-action,
+      .btn-purple-action,
+      .tools-btn {
+        padding: 6px 11px;
+        font-size: 0.8rem;
+        border-radius: 9px;
+        gap: 4px;
+      }
+      .view-btn {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+      }
+      .all-filters-bar {
+        margin-top: 6px;
+        gap: 4px;
+      }
+      .styled-select {
+        padding: 4px 8px 4px 22px;
+        font-size: 0.8rem;
+        background-size: 11px;
+      }
+      .styled-checkbox-label {
+        padding: 4px 8px;
+        font-size: 0.76rem;
+        gap: 4px;
+      }
+      .category-pills-bar {
+        padding: 3px 0 2px 0;
+        margin-top: 2px;
+        gap: 4px;
+      }
+      .pill-btn {
+        padding: 3px 10px;
+        font-size: 0.75rem;
+      }
+      .smart-replenish-bar {
+        padding: 5px 12px;
+        margin: 5px auto;
+        font-size: 0.8rem;
+        gap: 8px;
+      }
+      .smart-replenish-bar select {
+        padding: 3px 6px;
+        font-size: 0.8rem;
+      }
+      .btn-smart-action {
+        padding: 4px 10px;
+        font-size: 0.8rem;
+      }
+      #userInfo {
+        margin: 6px auto 2px auto;
+        padding: 4px 14px;
+        font-size: 0.85rem;
+      }
+      #galleryNameBanner {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+      }
+      .products {
+        grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
+        gap: 12px;
+        padding: 10px 14px;
+      }
+      .product-image-container {
+        padding-top: 72%;
+      }
+      .product-image-container img {
+        padding: 8px;
+      }
+      .product-content {
+        padding: 10px;
+      }
+      .product-title {
+        font-size: 0.86rem;
+        min-height: 2.4em;
+        margin-bottom: 5px;
+        line-height: 1.3;
+      }
+      .product-price-row {
+        margin-bottom: 5px;
+        padding-bottom: 5px;
+      }
+      .product-price {
+        font-size: 1.05rem;
+      }
+      .product-tags {
+        margin-bottom: 5px;
+        gap: 3px;
+      }
+      .tag {
+        padding: 1px 5px;
+        font-size: 0.68rem;
+      }
+      .product-stats-grid {
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+      .stat-item {
+        padding: 3px 4px;
+      }
+      .stat-label {
+        font-size: 0.66rem;
+        margin-bottom: 1px;
+      }
+      .stat-value {
+        font-size: 0.82rem;
+      }
+      .qty-step-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.95rem;
+      }
+      .qty-input-group input[type="number"] {
+        padding: 3px;
+        font-size: 0.86rem;
+        height: 30px;
+      }
+      .btn-fill-smart-qty {
+        padding: 2px 6px;
+        font-size: 0.72rem;
+      }
+    }
+
+    body.pos-compact-mode {
+      zoom: 0.78;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *,
       *::before,
@@ -1708,6 +1858,7 @@
         <div class="view-mode-toggle">
           <button class="view-btn active" id="btnViewGrid" onclick="setViewMode('grid')" aria-pressed="true" title="عرض المنتجات كبطاقات">📱 <span class="view-label">كروت</span></button>
           <button class="view-btn" id="btnViewTable" onclick="setViewMode('table')" aria-pressed="false" title="عرض المنتجات كقائمة">📋 <span class="view-label">قائمة سريعة</span></button>
+          <button type="button" class="view-btn" id="btnPosCompact" onclick="togglePosCompactMode()" title="تبديل حجم العرض (75% / 100%)" style="border-right:1px solid #cbd5e1; margin-right:2px; font-weight:800;"><span id="posCompactLabel">75%</span></button>
         </div>
 
         <!-- Showroom Tools Dropdown Button -->
@@ -1733,6 +1884,7 @@
             <button id="exportGuestBtn" onclick="openGuestExportModal()" style="display:none;">📥 تصدير البضاعة</button>
             <div class="dropdown-divider"></div>
             <div class="dropdown-section-header">الحساب والأدوات</div>
+            <button type="button" id="posCompactModeBtn" onclick="togglePosCompactMode()">تصغير العرض لشاشات المعارض (75%)</button>
             <button id="loginBtn" onclick="login()">🔑 تسجيل الدخول</button>
           </div>
         </div>
@@ -3604,7 +3756,51 @@
       renderProducts();
     };
 
+    function initPosCompactMode() {
+      const saved = localStorage.getItem('orange_catalog_pos_compact');
+      if (saved === 'true') {
+        applyPosCompactMode(true);
+      } else if (saved === 'false') {
+        applyPosCompactMode(false);
+      } else {
+        const isSmallScreen = window.innerWidth <= 1366 && window.innerHeight <= 820;
+        if (isSmallScreen) {
+          applyPosCompactMode(true);
+        }
+      }
+    }
+
+    function togglePosCompactMode() {
+      const isCurrentlyCompact = document.body.classList.contains('pos-compact-mode');
+      const target = !isCurrentlyCompact;
+      applyPosCompactMode(target);
+      try {
+        localStorage.setItem('orange_catalog_pos_compact', target ? 'true' : 'false');
+      } catch (e) {}
+      showToast(target ? "تم تفعيل عرض شاشات المعارض (75%)" : "تمت استعادة العرض القياسي (100%)", "success");
+    }
+
+    function applyPosCompactMode(enable) {
+      if (enable) {
+        document.body.classList.add('pos-compact-mode');
+      } else {
+        document.body.classList.remove('pos-compact-mode');
+      }
+      const label = document.getElementById('posCompactLabel');
+      const btn = document.getElementById('btnPosCompact');
+      const menuBtn = document.getElementById('posCompactModeBtn');
+      if (label) label.textContent = enable ? '100%' : '75%';
+      if (btn) {
+        btn.classList.toggle('active', enable);
+        btn.title = enable ? 'استعادة العرض القياسي (100%)' : 'تصغير العرض لشاشات المعارض (75%)';
+      }
+      if (menuBtn) {
+        menuBtn.textContent = enable ? 'استعادة العرض القياسي (100%)' : 'تصغير العرض لشاشات المعارض (75%)';
+      }
+    }
+
     (async () => {
+      initPosCompactMode();
       try {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         if (error) throw error;
