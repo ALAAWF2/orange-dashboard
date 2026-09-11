@@ -2023,16 +2023,8 @@ const EMPLOYEES = [
         "name": "احمد مجاب",
         "startDate": "2022-12-13",
         "manager": "محمدكلو",
-        "showroom": "1115-1115-Alrabie Mall و 1114-1114-Malgha Mall",
+        "showroom": "1114-1114-Malgha Mall و 1115-1115-Alrabie Mall",
         "showroomDetails": [
-            {
-                "name": "1115-1115-Alrabie Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1115-C",
-                    "1115-E"
-                ]
-            },
             {
                 "name": "1114-1114-Malgha Mall",
                 "manager": "محمدكلو",
@@ -2040,9 +2032,17 @@ const EMPLOYEES = [
                     "1114-C",
                     "1114-E"
                 ]
+            },
+            {
+                "name": "1115-1115-Alrabie Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1115-C",
+                    "1115-E"
+                ]
             }
         ],
-        "addressBooks": "1115-C;1115-E;1114-C;1114-E"
+        "addressBooks": "1114-C;1114-E;1115-C;1115-E"
     },
     {
         "employeeId": "3410-فيصل احمد العمري",
@@ -3865,8 +3865,16 @@ const EMPLOYEES = [
         "name": "خالد خندش",
         "startDate": "2025-02-25",
         "manager": "محمدكلو",
-        "showroom": "1111-46-Khaleej Mall Riyadh و 1114-1114-Malgha Mall و 1107-38-Al_Riyadh Park",
+        "showroom": "1107-38-Al_Riyadh Park و 1111-46-Khaleej Mall Riyadh و 1114-1114-Malgha Mall",
         "showroomDetails": [
+            {
+                "name": "1107-38-Al_Riyadh Park",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1107-C",
+                    "1107-E"
+                ]
+            },
             {
                 "name": "1111-46-Khaleej Mall Riyadh",
                 "manager": "محمدكلو",
@@ -3882,17 +3890,9 @@ const EMPLOYEES = [
                     "1114-C",
                     "1114-E"
                 ]
-            },
-            {
-                "name": "1107-38-Al_Riyadh Park",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1107-C",
-                    "1107-E"
-                ]
             }
         ],
-        "addressBooks": "1111-C;1111-E;1114-C;1114-E;1107-C;1107-E"
+        "addressBooks": "1107-C;1107-E;1111-C;1111-E;1114-C;1114-E"
     },
     {
         "employeeId": "4516-حوراء عبدالله",
@@ -4513,16 +4513,8 @@ const EMPLOYEES = [
         "name": "رويده سالم الحربي",
         "startDate": "2025-08-18",
         "manager": "المنطقة الشمالية",
-        "showroom": "1402-26-Al-Noor Mall Madinah و 1401-23-Alia Mall Madinah",
+        "showroom": "1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah",
         "showroomDetails": [
-            {
-                "name": "1402-26-Al-Noor Mall Madinah",
-                "manager": "المنطقة الشمالية",
-                "codes": [
-                    "1402-C",
-                    "1402-E"
-                ]
-            },
             {
                 "name": "1401-23-Alia Mall Madinah",
                 "manager": "المنطقة الشمالية",
@@ -4530,9 +4522,17 @@ const EMPLOYEES = [
                     "1401-C",
                     "1401-E"
                 ]
+            },
+            {
+                "name": "1402-26-Al-Noor Mall Madinah",
+                "manager": "المنطقة الشمالية",
+                "codes": [
+                    "1402-C",
+                    "1402-E"
+                ]
             }
         ],
-        "addressBooks": "1402-C;1402-E;1401-C;1401-E"
+        "addressBooks": "1401-C;1401-E;1402-C;1402-E"
     },
     {
         "employeeId": "4664-نجد درزى الحربي",
