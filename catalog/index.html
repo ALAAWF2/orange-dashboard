@@ -735,6 +735,66 @@
       box-shadow: 0 3px 8px rgba(139, 92, 246, 0.35);
     }
 
+    .badge-smart {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-fill-smart-qty {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      color: #1d4ed8;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .btn-fill-smart-qty:hover {
+      background: #dbeafe;
+      border-color: #3b82f6;
+    }
+
+    .smart-replenish-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--border-radius-sm);
+      margin: 10px auto;
+      max-width: 1400px;
+      font-size: 0.88em;
+      color: var(--text-main);
+    }
+    .smart-replenish-bar select {
+      padding: 5px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: #fff;
+      font-weight: 700;
+      font-size: 0.9em;
+      color: var(--text-main);
+    }
+    .btn-smart-action {
+      background: #1d4ed8;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.88em;
+      transition: var(--transition);
+    }
+    .btn-smart-action:hover {
+      background: #1e40af;
+    }
+
     @keyframes pulseGlow {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.03); }
@@ -1641,6 +1701,7 @@
         <a id="showroomSalesHeaderBtn" href="showroom-sales.html" onclick="openShowroomSales(event)" class="btn-primary-action" style="background: linear-gradient(135deg, #fe7900, #d86600); text-decoration: none; color: white;">📊 مبيعات المعرض</a>
         <button id="taxInvoiceBtn" onclick="openTaxInvoiceModal()" class="btn-purple-action" style="display:none; background:linear-gradient(135deg,#34495e,#1f2d3a);">🧾 فاتورة ضريبية</button>
         <button id="sendOrderBtn" onclick="openOrderModal()" class="btn-primary-action" style="display:none;"><span id="sendOrderBtnLabel">🛒 إرسال الطلبية</span></button>
+        <button id="smartReviewBtn" onclick="openSmartReviewModal()" class="btn-purple-action" style="display:none; background:linear-gradient(135deg,#1d4ed8,#1e3a8a);"><span id="smartReviewBtnLabel">أصناف ناقصة بحاجة للمراجعة</span></button>
         <button id="printBarcodeBtn" onclick="openPrintBarcodeModal()" class="btn-purple-action" style="display:none;">🖨️ طباعة الباركود</button>
 
         <!-- Grid vs Table View Mode -->
@@ -1659,6 +1720,7 @@
             <a id="activeOffersMenuBtn" href="offers.html">🏷️ عروض المعارض النشطة</a>
             <a id="showroomSalesMenuBtn" href="showroom-sales.html" onclick="openShowroomSales(event)">📊 مبيعات المعرض</a>
             <button id="taxInvoiceMenuBtn" onclick="openTaxInvoiceModal()" style="display:none;">🧾 استخراج فاتورة ضريبية</button>
+            <button id="smartReviewMenuBtn" onclick="openSmartReviewModal()" style="display:none;">أصناف ناقصة بحاجة للمراجعة</button>
             <a id="quotationBtn" href="quotation.html">📄 عمل عرض سعر</a>
             <a id="myOrdersBtn" href="outlet-orders-supabase.html" style="display:none;">📋 طلباتي السابقة</a>
             <button id="crossOutletSearchBtn" onclick="location.href='cross-outlet-search.html'" style="display:none;">🌐 بحث متعدد الفروع</button>
@@ -1715,6 +1777,7 @@
       <!-- Sort Filter -->
       <select id="sortFilter" onchange="resetFiltersAndRender()" class="styled-select" aria-label="ترتيب المنتجات">
         <option value="sales-desc">الأكثر مبيعاً</option>
+        <option value="smart-desc">الأعلى حاجة للطلب (مقترح)</option>
         <option value="alias-asc">ترتيب الشجرة</option>
         <option value="price-asc">الأقل سعراً</option>
         <option value="price-desc">الأعلى سعراً</option>
@@ -1742,6 +1805,11 @@
         <span>🏷️ العروض فقط</span>
       </label>
 
+      <label class="styled-checkbox-label" id="smartReplenishOnlyLabel" style="display:none;">
+        <input type="checkbox" id="smartReplenishOnly" onchange="resetFiltersAndRender()">
+        <span>أصناف مقترحة للطلب</span>
+      </label>
+
       <label class="styled-checkbox-label" id="favOnlyLabel" style="display:none;">
         <input type="checkbox" id="favOnly" onchange="resetFiltersAndRender()">
         <span>⭐ المفضلة فقط</span>
@@ -1760,6 +1828,30 @@
     <div id="activeFiltersSummary" class="active-filters-summary" style="display:none;">
       <span id="activeFiltersText">فلاتر نشطة</span>
       <button type="button" class="btn-reset-filters" onclick="resetAllFilters()">إعادة ضبط الفلاتر ↺</button>
+    </div>
+
+    <!-- Smart Settings Inline Bar (shown when smart filter is active) -->
+    <div id="smartInlineSettingsBar" class="smart-replenish-bar" style="display:none;">
+      <span style="font-weight:700;">معايير الاحتساب:</span>
+      <label style="display:inline-flex; align-items:center; gap:5px;">
+        <span>مدة التغطية:</span>
+        <select id="smartInlineDays" onchange="syncSmartSettings('days', this.value)">
+          <option value="7">7 أيام</option>
+          <option value="14" selected>14 يوماً (افتراضي)</option>
+          <option value="21">21 يوماً</option>
+          <option value="30">30 يوماً</option>
+        </select>
+      </label>
+      <label style="display:inline-flex; align-items:center; gap:5px;">
+        <span>الموسم:</span>
+        <select id="smartInlineSeason" onchange="syncSmartSettings('season', this.value)">
+          <option value="1.0" selected>عادي (1.0x)</option>
+          <option value="1.5">رمضان (1.5x)</option>
+          <option value="2.0">العيد (2.0x)</option>
+          <option value="1.5">اليوم الوطني (1.5x)</option>
+        </select>
+      </label>
+      <button type="button" onclick="openSmartReviewModal()" class="btn-smart-action" style="margin-right:auto;">أصناف ناقصة بحاجة للمراجعة</button>
     </div>
   </header>
 
@@ -1876,6 +1968,58 @@
       <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
         <button id="confirmOrderBtn" onclick="submitOrder()" style="background:var(--primary); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; flex:1; font-weight:bold;">تأكيد وإرسال</button>
         <button onclick="closeOrderModal()" style="background:#ecf0f1; color:#333; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; flex:1;">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal مراجعة الأصناف الناقصة المقترحة للطلب -->
+  <div id="smartReviewModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="smartReviewModalTitle">
+    <div class="modal-content" style="max-width:960px; width:95%; max-height:90vh; display:flex; flex-direction:column; text-align:right;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); padding-bottom:12px; margin-bottom:12px;">
+        <div>
+          <h3 id="smartReviewModalTitle" style="margin:0; color:var(--primary); font-size:1.35rem; font-weight:800;">أصناف ناقصة بحاجة للمراجعة</h3>
+          <p id="smartReviewSubTitle" style="margin:4px 0 0 0; color:var(--text-muted); font-size:0.88rem; font-weight:600;"></p>
+        </div>
+        <button class="modal-close" onclick="closeSmartReviewModal()" aria-label="إغلاق" style="position:static; font-size:1.6rem; cursor:pointer;">×</button>
+      </div>
+
+      <!-- Controls & Parameters Toolbar -->
+      <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:12px;">
+        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+          <label style="font-size:0.88rem; font-weight:700; color:var(--text-main); display:inline-flex; align-items:center; gap:6px;">
+            <span>مدة التغطية:</span>
+            <select id="smartTargetDaysSelect" onchange="syncSmartSettings('days', this.value)" class="styled-select" style="padding:4px 8px; font-size:0.85rem;">
+              <option value="7">7 أيام</option>
+              <option value="14" selected>14 يوماً (افتراضي)</option>
+              <option value="21">21 يوماً</option>
+              <option value="30">30 يوماً</option>
+            </select>
+          </label>
+          <label style="font-size:0.88rem; font-weight:700; color:var(--text-main); display:inline-flex; align-items:center; gap:6px;">
+            <span>الموسم:</span>
+            <select id="smartSeasonSelect" onchange="syncSmartSettings('season', this.value)" class="styled-select" style="padding:4px 8px; font-size:0.85rem;">
+              <option value="1.0" selected>عادي (1.0x)</option>
+              <option value="1.5">رمضان (1.5x)</option>
+              <option value="2.0">العيد (2.0x)</option>
+              <option value="1.5">اليوم الوطني (1.5x)</option>
+            </select>
+          </label>
+        </div>
+        <div id="smartReviewSummaryStats" style="font-size:0.88rem; font-weight:700; color:var(--primary);"></div>
+      </div>
+
+      <!-- Table Container -->
+      <div id="smartReviewTableContainer" style="overflow-y:auto; flex:1; border:1px solid #eee; border-radius:8px; padding:5px;">
+        <!-- Table Injected Here -->
+      </div>
+
+      <!-- Footer Buttons -->
+      <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding-top:14px; margin-top:12px;">
+        <span style="font-size:0.82rem; color:var(--text-muted); font-weight:600;">يمكنك تعديل الكميات المقترحة في الجدول مباشرة قبل الإضافة للسلة.</span>
+        <div style="display:flex; gap:10px;">
+          <button type="button" onclick="applySmartReviewToCart()" class="btn-primary-action" style="background:var(--primary); color:#fff; font-weight:700; padding:9px 20px;">تعبئة السلة بالأصناف المقترحة</button>
+          <button type="button" onclick="closeSmartReviewModal()" style="background:#ecf0f1; border:none; padding:9px 18px; color:#333; border-radius:6px; cursor:pointer; font-weight:600;">إلغاء</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2605,6 +2749,78 @@
     let batchPrintItems = [];
     let submitting = false;
 
+    let smartTargetDays = 14;
+    let smartSeasonMultiplier = 1.0;
+
+    function getSmartOrderRecommendation(product) {
+      if (!product) return { qty: 0, reason: '' };
+      if (!userMall || userMall === 'إجمالي المستودعات' || isGuestMode) {
+        return { qty: 0, reason: 'يتطلب تحديد معرض' };
+      }
+
+      const sales7 = getSalesInMall(product.code) || 0;
+      const showroomStock = getQtyInMall(product) || 0;
+      const whStock = (userWarehouse === 'TOTAL_WAREHOUSES')
+        ? (Number(product.stock) || 0)
+        : getStockForWarehouse(product, userWarehouse);
+
+      if (whStock <= 0) {
+        return { qty: 0, sales7, showroomStock, whStock, deficit: 0, reason: 'المستودع غير متوفر' };
+      }
+
+      const dailyVelocity = sales7 / 7.0;
+      if (dailyVelocity <= 0) {
+        return { qty: 0, sales7, showroomStock, whStock, deficit: 0, reason: 'لا توجد مبيعات حديثة' };
+      }
+
+      const expectedDemand = dailyVelocity * smartTargetDays * smartSeasonMultiplier;
+      const deficit = Math.ceil(expectedDemand - showroomStock);
+
+      if (deficit <= 0) {
+        return { qty: 0, sales7, showroomStock, whStock, deficit: 0, reason: 'مغطى للفترة' };
+      }
+
+      const suggestedQty = Math.min(deficit, whStock);
+      const daysCover = showroomStock > 0 ? (showroomStock / dailyVelocity).toFixed(1) : '0';
+
+      return {
+        qty: suggestedQty,
+        sales7,
+        showroomStock,
+        whStock,
+        deficit,
+        daysCover,
+        expectedDemand: Math.round(expectedDemand)
+      };
+    }
+
+    function syncSmartSettings(type, value) {
+      if (type === 'days') {
+        smartTargetDays = parseInt(value, 10) || 14;
+        const sel1 = document.getElementById('smartTargetDaysSelect');
+        const sel2 = document.getElementById('smartInlineDays');
+        if (sel1 && sel1.value !== String(smartTargetDays)) sel1.value = String(smartTargetDays);
+        if (sel2 && sel2.value !== String(smartTargetDays)) sel2.value = String(smartTargetDays);
+      } else if (type === 'season') {
+        smartSeasonMultiplier = parseFloat(value) || 1.0;
+        const sel1 = document.getElementById('smartSeasonSelect');
+        const sel2 = document.getElementById('smartInlineSeason');
+        if (sel1 && sel1.value !== String(smartSeasonMultiplier)) sel1.value = String(smartSeasonMultiplier);
+        if (sel2 && sel2.value !== String(smartSeasonMultiplier)) sel2.value = String(smartSeasonMultiplier);
+      }
+      renderProducts();
+      if (document.getElementById('smartReviewModal')?.style.display === 'flex') {
+        renderSmartReviewTable();
+      }
+    }
+
+    function fillCardSmartQty(code, name, qty, btn) {
+      const input = btn.closest('.qty-input-group')?.querySelector('input[type="number"]');
+      if (input) input.value = qty;
+      const warehouse = document.getElementById(`whSelect_${code}`)?.value || userWarehouse;
+      addToCart(code, name, String(qty), warehouse);
+    }
+
     const productsPerPage = 40;
     let filteredProducts = [], currentPage = 1;
 
@@ -2698,7 +2914,7 @@
       const cat = document.getElementById('categoryFilter'); if (cat) cat.value = '';
       const price = document.getElementById('priceFilter'); if (price) price.value = '';
       const sort = document.getElementById('sortFilter'); if (sort) sort.value = 'sales-desc';
-      ['newOnly', 'topMoversOnly', 'lowStockOnly', 'promoOnly', 'favOnly', 'showroomStockOnly'].forEach(id => {
+      ['newOnly', 'topMoversOnly', 'lowStockOnly', 'promoOnly', 'favOnly', 'showroomStockOnly', 'smartReplenishOnly'].forEach(id => {
         const cb = document.getElementById(id); if (cb) cb.checked = false;
       });
       handleSearchInput(false);
@@ -2727,6 +2943,10 @@
       const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
       const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
+      const smartReplenishOnly = document.getElementById('smartReplenishOnly')?.checked;
+
+      const smartInlineBar = document.getElementById('smartInlineSettingsBar');
+      if (smartInlineBar) smartInlineBar.style.display = smartReplenishOnly ? 'flex' : 'none';
 
       const activeTags = [];
       if (searchVal) activeTags.push(`بحث: "${searchVal}"`);
@@ -2736,6 +2956,7 @@
       if (topMoversOnly) activeTags.push(`أكثر طلباً`);
       if (lowStockOnly) activeTags.push(`نفاد وشيك`);
       if (promoOnly) activeTags.push(`🏷️ عروض`);
+      if (smartReplenishOnly) activeTags.push(`مقترح للطلب`);
       if (favOnly) activeTags.push(`⭐ مفضلة`);
       if (showroomStockOnly) activeTags.push(`📦 متوفر بالمعرض`);
 
@@ -2977,7 +3198,7 @@
             <span>يرجى مراجعة ملف المستخدم في النظام ثم إعادة تسجيل الدخول.</span>
           </div>`;
       }
-      ['sendOrderBtn', 'customProductBtn', 'checklistBtn', 'checklistReportBtn', 'exportGuestBtn', 'taxInvoiceBtn', 'taxInvoiceMenuBtn']
+      ['sendOrderBtn', 'smartReviewBtn', 'smartReviewMenuBtn', 'smartReplenishOnlyLabel', 'customProductBtn', 'checklistBtn', 'checklistReportBtn', 'exportGuestBtn', 'taxInvoiceBtn', 'taxInvoiceMenuBtn']
         .forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = 'none';
@@ -2989,6 +3210,9 @@
       isGuestMode = false;
 
       const sendBtn = document.getElementById('sendOrderBtn');
+      const smartReviewBtn = document.getElementById('smartReviewBtn');
+      const smartReviewMenuBtn = document.getElementById('smartReviewMenuBtn');
+      const smartReplenishOnlyLabel = document.getElementById('smartReplenishOnlyLabel');
       const crossBtn = document.getElementById('crossOutletSearchBtn');
       const maintenanceLink = document.getElementById('maintenanceBtn');
       const loginBtn = document.getElementById('loginBtn');
@@ -3004,6 +3228,9 @@
       const showroomStockOnlyLabel = document.getElementById('showroomStockOnlyLabel');
 
       if (sendBtn) sendBtn.style.display = user ? 'inline-flex' : 'none';
+      if (smartReviewBtn) smartReviewBtn.style.display = 'none';
+      if (smartReviewMenuBtn) smartReviewMenuBtn.style.display = 'none';
+      if (smartReplenishOnlyLabel) smartReplenishOnlyLabel.style.display = 'none';
       if (printBarcodeBtn) printBarcodeBtn.style.display = user ? 'inline-flex' : 'none';
       if (crossBtn) crossBtn.style.display = user ? 'flex' : 'none';
       if (maintenanceLink) maintenanceLink.style.display = user ? 'flex' : 'none';
@@ -3243,6 +3470,9 @@
         const isValidShowroom = userMall && userMall !== 'إجمالي المستودعات';
 
         if (showroomStockOnlyLabel) showroomStockOnlyLabel.style.display = 'inline-flex';
+        if (smartReplenishOnlyLabel) smartReplenishOnlyLabel.style.display = isValidShowroom ? 'inline-flex' : 'none';
+        if (smartReviewBtn) smartReviewBtn.style.display = isValidShowroom ? 'inline-flex' : 'none';
+        if (smartReviewMenuBtn) smartReviewMenuBtn.style.display = isValidShowroom ? 'flex' : 'none';
         if (checklistBtn) checklistBtn.style.display = isValidShowroom ? 'flex' : 'none';
         if (checklistReportBtn) checklistReportBtn.style.display = (isManager || isAdmin) ? 'flex' : 'none';
         if (exportGuestBtn) exportGuestBtn.style.display = userWarehouse === 'TOTAL_WAREHOUSES' ? 'flex' : 'none';
@@ -3259,6 +3489,12 @@
         window.data = [];
         updateCartBadge();
         setSendOrderButtonLabel('🛒 إرسال الطلبية');
+
+        if (smartReplenishOnlyLabel) smartReplenishOnlyLabel.style.display = 'none';
+        if (smartReviewBtn) smartReviewBtn.style.display = 'none';
+        if (smartReviewMenuBtn) smartReviewMenuBtn.style.display = 'none';
+        const smartInlineBar = document.getElementById('smartInlineSettingsBar');
+        if (smartInlineBar) smartInlineBar.style.display = 'none';
 
         const info = document.getElementById('userInfo');
         if (info) {
@@ -3325,8 +3561,15 @@
       rebuildSalesLookupIfNeeded();
       const exportButton = document.getElementById('exportGuestBtn');
       const checklistButton = document.getElementById('checklistBtn');
+      const isValid = userMall && userMall !== 'إجمالي المستودعات';
+      const smartReviewBtnEl = document.getElementById('smartReviewBtn');
+      const smartReviewMenuBtnEl = document.getElementById('smartReviewMenuBtn');
+      const smartReplenishOnlyLabelEl = document.getElementById('smartReplenishOnlyLabel');
+      if (smartReviewBtnEl) smartReviewBtnEl.style.display = isValid ? 'inline-flex' : 'none';
+      if (smartReviewMenuBtnEl) smartReviewMenuBtnEl.style.display = isValid ? 'flex' : 'none';
+      if (smartReplenishOnlyLabelEl) smartReplenishOnlyLabelEl.style.display = isValid ? 'inline-flex' : 'none';
       if (exportButton) exportButton.style.display = userWarehouse === 'TOTAL_WAREHOUSES' ? 'flex' : 'none';
-      if (checklistButton) checklistButton.style.display = userMall !== 'إجمالي المستودعات' ? 'flex' : 'none';
+      if (checklistButton) checklistButton.style.display = isValid ? 'flex' : 'none';
       renderCategoryPills();
       updateActiveFiltersSummary();
       renderProducts();
@@ -3531,6 +3774,7 @@
       const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
       const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
+      const smartReplenishOnly = document.getElementById('smartReplenishOnly')?.checked;
 
       let list = Array.isArray(window.data) ? [...window.data] : [];
 
@@ -3545,6 +3789,7 @@
       if (promoOnly) list = list.filter(p => isActiveDeal(p));
       if (favOnly) list = list.filter(p => favorites.has(String(p.code)));
       if (showroomStockOnly) list = list.filter(p => getQtyInMall(p) > 0);
+      if (smartReplenishOnly) list = list.filter(p => getSmartOrderRecommendation(p).qty > 0);
 
       if (searchVal) {
         list = list.filter(p => 
@@ -3574,7 +3819,8 @@
         ?? 0
       ) || 0;
 
-      if (sortBy === 'sales-desc') list.sort((a, b) => (getSalesInMall(b.code) || 0) - (getSalesInMall(a.code) || 0));
+      if (sortBy === 'smart-desc') list.sort((a, b) => (getSmartOrderRecommendation(b).qty || 0) - (getSmartOrderRecommendation(a).qty || 0));
+      else if (sortBy === 'sales-desc') list.sort((a, b) => (getSalesInMall(b.code) || 0) - (getSalesInMall(a.code) || 0));
       else if (sortBy === 'alias-asc') list.sort((a, b) =>
         String(a.alias ?? '').localeCompare(String(b.alias ?? ''), 'ar', { numeric: true, sensitivity: 'base' })
       );
@@ -3637,12 +3883,14 @@
         const isTop = isTopMover(d);
         const isLow = isLowCentralStock(d);
         const isDeal = (effectivePromoPrice !== null) || (dynOffer !== null);
+        const smartRec = getSmartOrderRecommendation(d);
 
         let badgesHtml = '';
         if (isNew) badgesHtml += '<span class="velocity-badge badge-new" title="وصل حديثاً خلال آخر 14 يوماً">✨ جديد</span>';
         if (isTop) badgesHtml += '<span class="velocity-badge badge-top-mover" title="الأكثر طلباً ومبيعاً هذا الأسبوع">الأكثر طلباً</span>';
         if (isLow) badgesHtml += '<span class="velocity-badge badge-low-stock" title="المخزون المتبقي قليل بالمستودع">نفاد وشيك</span>';
         if (isDeal) badgesHtml += `<span class="velocity-badge badge-deal" title="${safeOffer || 'عرض ترويجي نشط'}">🏷️ عرض خاص</span>`;
+        if (smartRec.qty > 0) badgesHtml += `<span class="velocity-badge badge-smart" title="كمية مقترحة: تغطية ${smartRec.daysCover} يوم">مقترح: ${smartRec.qty} قطعة</span>`;
 
         return `
           <div class="product">
@@ -3727,6 +3975,12 @@
                        <span class="stat-label">الكمية بالمعرض</span>
                        <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
                    </div>
+                   ${smartRec.qty > 0 ? `
+                   <div class="stat-item highlight-smart-stat" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 6px;">
+                       <span class="stat-label" style="color:#1d4ed8; font-weight:700;">مقترح للطلب</span>
+                       <span class="stat-value" style="color:#1d4ed8; font-weight:900;">${smartRec.qty}</span>
+                   </div>
+                   ` : ''}
               ` : `
                    <div class="stat-item">
                        <span class="stat-label">مبيعات توتال</span>
@@ -3744,6 +3998,12 @@
                        <span class="stat-label">الكمية بالمعرض</span>
                        <span class="stat-value ${getSalesInMall(d.code) > getQtyInMall(d) ? 'danger' : ''}">${getQtyInMall(d)}</span>
                    </div>
+                   ${smartRec.qty > 0 ? `
+                   <div class="stat-item highlight-smart-stat" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 6px;">
+                       <span class="stat-label" style="color:#1d4ed8; font-weight:700;">مقترح للطلب</span>
+                       <span class="stat-value" style="color:#1d4ed8; font-weight:900;">${smartRec.qty}</span>
+                   </div>
+                   ` : ''}
               `))}
               </div>
 
@@ -3751,11 +4011,12 @@
               <div class="qty-input-group" style="${userWarehouse === 'TOTAL_WAREHOUSES' ? 'display:flex; flex-direction:column; gap:5px;' : ''}">
                  <div style="display:flex; align-items:center; gap:5px; width:100%;">
                     <button type="button" class="qty-step-btn" onclick="stepCardQty('${d.code}', '${safeName}', 1, this)" aria-label="زيادة كمية ${safeName}" title="زيادة الكمية">+</button>
-                    <input type="number" min="1" placeholder="الكمية" style="width:100%;"
+                    <input type="number" min="1" placeholder="${smartRec.qty > 0 ? `مقترح ${smartRec.qty}` : 'الكمية'}" style="width:100%;"
                       aria-label="الكمية المطلوبة من ${safeName}"
                       value="${cart[d.code]?.qty ?? ''}"
                       onchange="addToCart('${d.code}', '${safeName}', this.value, document.getElementById('whSelect_' + '${d.code}')?.value)">
                     <button type="button" class="qty-step-btn" onclick="stepCardQty('${d.code}', '${safeName}', -1, this)" aria-label="إنقاص كمية ${safeName}" title="إنقاص الكمية">−</button>
+                    ${smartRec.qty > 0 ? `<button type="button" class="btn-fill-smart-qty" onclick="fillCardSmartQty('${d.code}', '${safeName}', ${smartRec.qty}, this)" title="تطبيق الكمية المقترحة">${smartRec.qty}</button>` : ''}
                  </div>
                  ${userWarehouse === 'TOTAL_WAREHOUSES' ? `
                    <select id="whSelect_${d.code}" class="card-warehouse-select"
@@ -3796,12 +4057,14 @@
         const isTop = isTopMover(d);
         const isLow = isLowCentralStock(d);
         const isDeal = (getPromoPrice(d.code, d.alias) !== null) || (getDynamicsOffer(d.code) !== null) || (getDynamicsDealPrice(d.code) !== null);
+        const smartRec = getSmartOrderRecommendation(d);
 
         let tableBadgesHtml = '';
         if (isNew) tableBadgesHtml += '<span class="table-badge badge-new" title="وصل حديثاً خلال 14 يوماً">✨ جديد</span>';
         if (isTop) tableBadgesHtml += '<span class="table-badge badge-top-mover" title="الأكثر طلباً ومبيعاً هذا الأسبوع">الأكثر طلباً</span>';
         if (isLow) tableBadgesHtml += '<span class="table-badge badge-low-stock" title="نفاد وشيك بالمستودع">نفاد وشيك</span>';
         if (isDeal) tableBadgesHtml += '<span class="table-badge badge-deal" title="عرض ترويجي نشط">🏷️ عرض</span>';
+        if (smartRec.qty > 0) tableBadgesHtml += `<span class="table-badge badge-smart" title="كمية مقترحة: تغطية ${smartRec.daysCover} يوم">مقترح: ${smartRec.qty}</span>`;
 
         const imgSrc = d.image_path
           ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + d.image_path
@@ -3823,8 +4086,11 @@
             <td style="font-weight:800; color:${qtyInMall>0?'var(--accent)':'var(--danger)'};">${qtyInMall}</td>
             <td style="font-weight:700;">${d.stock || 0}</td>
             <td style="width:120px;">
-              <input type="number" min="1" placeholder="0" value="${cartQty}" aria-label="الكمية المطلوبة من ${safeName}" style="width:100%; text-align:center; padding:6px; border:1.5px solid var(--border-color); border-radius:6px; font-weight:bold;"
+              <input type="number" min="1" placeholder="${smartRec.qty > 0 ? `مقترح ${smartRec.qty}` : '0'}" value="${cartQty}" aria-label="الكمية المطلوبة من ${safeName}" style="width:100%; text-align:center; padding:6px; border:1.5px solid var(--border-color); border-radius:6px; font-weight:bold;"
                 oninput="addToCart('${d.code}', '${safeName}', this.value, document.getElementById('tableWhSelect_' + '${d.code}')?.value || userWarehouse)">
+              ${smartRec.qty > 0 ? `
+                <button type="button" class="btn-fill-smart-qty" style="margin-top:4px; width:100%;" onclick="this.previousElementSibling.value='${smartRec.qty}'; addToCart('${d.code}', '${safeName}', '${smartRec.qty}', document.getElementById('tableWhSelect_' + '${d.code}')?.value || userWarehouse);" title="تطبيق الكمية المقترحة">${smartRec.qty} مقترح</button>
+              ` : ''}
               ${userWarehouse === 'TOTAL_WAREHOUSES' ? `
                 <select id="tableWhSelect_${d.code}" aria-label="اختيار مستودع ${safeName}" class="table-warehouse-select"
                   onchange="updateCartItemWarehouse('${d.code}', this.value)">
@@ -3991,6 +4257,128 @@
     }
 
     function closeOrderModal() { document.getElementById('orderModal').style.display = 'none'; }
+
+    function openSmartReviewModal() {
+      if (!userMall || userMall === 'إجمالي المستودعات') {
+        showToast("يرجى تحديد معرض لحساب النواقص المقترحة", "warning");
+        return;
+      }
+      const modal = document.getElementById('smartReviewModal');
+      if (!modal) return;
+
+      const subTitle = document.getElementById('smartReviewSubTitle');
+      const whLabel = userWarehouse === 'warehouse riyadh' ? 'مستودع الرياض' : (userWarehouse === 'Warehouse' ? 'مستودع جدة' : (userWarehouse || 'المستودع الرئيسي'));
+      if (subTitle) subTitle.textContent = `المعرض: ${userMall} | المستودع المغذي: ${whLabel}`;
+
+      const daysSel = document.getElementById('smartTargetDaysSelect');
+      const seasonSel = document.getElementById('smartSeasonSelect');
+      if (daysSel) daysSel.value = String(smartTargetDays);
+      if (seasonSel) seasonSel.value = String(smartSeasonMultiplier);
+
+      renderSmartReviewTable();
+      modal.style.display = 'flex';
+    }
+
+    function closeSmartReviewModal() {
+      const modal = document.getElementById('smartReviewModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function renderSmartReviewTable() {
+      const container = document.getElementById('smartReviewTableContainer');
+      const stats = document.getElementById('smartReviewSummaryStats');
+      if (!container) return;
+
+      const allProducts = Array.isArray(window.data) ? window.data : [];
+      const suggestedItems = [];
+
+      allProducts.forEach(p => {
+        const rec = getSmartOrderRecommendation(p);
+        if (rec.qty > 0) {
+          suggestedItems.push({ product: p, rec });
+        }
+      });
+
+      suggestedItems.sort((a, b) => b.rec.qty - a.rec.qty);
+
+      const totalItemsCount = suggestedItems.length;
+      const totalPiecesCount = suggestedItems.reduce((sum, item) => sum + item.rec.qty, 0);
+
+      if (stats) {
+        stats.textContent = `الأصناف المقترحة: ${totalItemsCount} صنف | إجمالي القطع: ${totalPiecesCount} قطعة`;
+      }
+
+      if (suggestedItems.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:40px 20px; color:var(--text-muted); font-weight:700;">
+            لا توجد أصناف ناقصة بحاجة للمراجعة حالياً لمعرض ${userMall} وفق معايير التغطية الحالية.
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:right;">
+          <thead>
+            <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+              <th style="padding:8px 10px;">الصنف</th>
+              <th style="padding:8px 6px; text-align:center;">مبيعات 7 أيام</th>
+              <th style="padding:8px 6px; text-align:center;">رصيد المعرض</th>
+              <th style="padding:8px 6px; text-align:center;">التغطية</th>
+              <th style="padding:8px 6px; text-align:center;">متاح بالمستودع</th>
+              <th style="padding:8px 10px; text-align:center; width:120px;">الكمية المقترحة</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      suggestedItems.forEach(({ product: p, rec }) => {
+        const safeName = String(p.name || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+        const currentInCart = cart[p.code]?.qty || rec.qty;
+        html += `
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:8px 10px;">
+              <div style="font-weight:700; color:var(--text-main);">${p.name}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">الكود: ${p.code} | Alias: ${p.alias || '—'}</div>
+            </td>
+            <td style="padding:8px 6px; text-align:center; font-weight:700; color:#e67e22;">${rec.sales7}</td>
+            <td style="padding:8px 6px; text-align:center; font-weight:700; color:${rec.showroomStock > 0 ? 'var(--text-main)' : '#dc2626'};">${rec.showroomStock}</td>
+            <td style="padding:8px 6px; text-align:center; font-weight:700; font-size:0.8rem; color:#64748b;">${rec.daysCover} يوم</td>
+            <td style="padding:8px 6px; text-align:center; font-weight:700; color:#059669;">${rec.whStock}</td>
+            <td style="padding:8px 10px; text-align:center;">
+              <input type="number" min="0" max="${rec.whStock}" value="${currentInCart}"
+                data-code="${p.code}" data-name="${safeName}" data-alias="${p.alias || ''}"
+                class="smart-review-qty-input"
+                style="width:80px; text-align:center; padding:5px; border:1.5px solid #2563eb; border-radius:6px; font-weight:800; color:#1d4ed8;"
+                aria-label="الكمية المقترحة للصنف ${p.code}">
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    function applySmartReviewToCart() {
+      const inputs = document.querySelectorAll('.smart-review-qty-input');
+      let addedCount = 0;
+      inputs.forEach(input => {
+        const code = input.dataset.code;
+        const name = input.dataset.name;
+        const alias = input.dataset.alias;
+        const qty = parseInt(input.value, 10) || 0;
+        if (code && name && qty > 0) {
+          const wh = (userWarehouse === 'TOTAL_WAREHOUSES') ? 'Warehouse' : userWarehouse;
+          addToCart(code, name, qty, wh, alias);
+          addedCount++;
+        }
+      });
+
+      closeSmartReviewModal();
+      renderProducts();
+      showToast(`تم إضافة ${addedCount} صنف مقترح إلى السلة بنجاح.`, 'success');
+      updateCartBadge();
+    }
 
     async function submitOrder() {
       if (submitting) return;
