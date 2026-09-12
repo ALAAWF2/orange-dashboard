@@ -3955,6 +3955,9 @@
                 case '#dispatch-content':
                     await loadDispatchShowroomsData();
                     break;
+                case '#offer-dispatch-content':
+                    await loadOfferDispatchData(forceRefresh);
+                    break;
                 case '#emails-content':
                     await loadEmailHubData(forceRefresh);
                     break;
@@ -10913,6 +10916,877 @@
                 console.error("Error summarizing:", e);
             } finally {
                 if (btnEl) btnEl.innerHTML = '<i class="fa-solid fa-robot text-dark"></i>';
+            }
+        }
+
+    
+        // =========================================================================
+        // 🏷️✉️ Dynamics 365 Offer Dispatcher (إرسال تفعيل العروض الترويجية)
+        // =========================================================================
+
+        let allDynamicsOffersForDispatch = [];
+        let offerDispatchShowroomsDirectory = [];
+        let offerDispatchAreaManagers = [];
+        let offerDispatchSelectedShowrooms = new Set();
+        let offerDispatchSelectedImages = []; // { id, name, filename, data, isCatalog, url }
+        let isOfferDispatchTestMode = true;
+        let currentSelectedOffer = null;
+        let offerDispatchListenersBound = false;
+
+        function toggleOfferDispatchTestMode(checked) {
+            isOfferDispatchTestMode = checked;
+            const label = document.getElementById('offerDispatchTestModeLabel');
+            const modeTag = document.getElementById('offerRecipientsModeTag');
+            const sendBtnLabel = document.getElementById('btnSendOfferEmailLabel');
+
+            if (checked) {
+                if (label) label.textContent = '🧪 وضع التجربة (إرسال لإيميل علاء فقط)';
+                if (modeTag) {
+                    modeTag.className = 'badge bg-warning text-dark ms-2';
+                    modeTag.textContent = 'وضع التجربة (علاء فقط)';
+                }
+                if (sendBtnLabel) sendBtnLabel.textContent = 'إرسال تجريبي لعلاء 🧪';
+            } else {
+                if (label) label.textContent = '🚀 وضع الإنتاج المباشر (إرسال لكافة المعارض)';
+                if (modeTag) {
+                    modeTag.className = 'badge bg-danger ms-2';
+                    modeTag.textContent = 'بث حي ومباشر (كافة المعارض)';
+                }
+                if (sendBtnLabel) sendBtnLabel.textContent = 'إرسال الرسالة لكافة المعارض 🚀';
+            }
+            updateOfferRecipientsBadges();
+        }
+
+        async function loadOfferDispatchData(forceRefresh = false) {
+            const tbody = document.getElementById('offerDispatchListBody');
+            const refreshIcon = document.getElementById('offerDispatchRefreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+            if (tbody && (!allDynamicsOffersForDispatch.length || forceRefresh)) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="spinner-border text-orange mb-2" role="status"></div>
+                            <div class="fw-bold">جاري جلب عروض Dynamics 365 وقائمة المعارض...</div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            try {
+                // 1. Ensure Showrooms Directory is loaded
+                if (offerDispatchShowroomsDirectory.length === 0 || forceRefresh) {
+                    await fetchOfferDispatchShowrooms();
+                }
+
+                // 2. Fetch Dynamics Offers
+                const searchInput = document.getElementById('offerDispatchSearchInput');
+                const statusSelect = document.getElementById('offerDispatchStatusFilter');
+                const searchVal = searchInput ? searchInput.value.trim() : '';
+                const statusVal = statusSelect ? statusSelect.value : 'Enabled';
+
+                const url = new URL(`${API_BASE}/api/admin/dynamics-offers`);
+                if (searchVal) url.searchParams.set('search', searchVal);
+                if (statusVal) url.searchParams.set('status', statusVal);
+                url.searchParams.set('limit', '80');
+
+                const res = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
+                });
+
+                if (!res.ok) {
+                    throw new Error(`خطأ في جلب العروض (${res.status})`);
+                }
+
+                const data = await res.json();
+                allDynamicsOffersForDispatch = data.offers || [];
+                renderOfferDispatchTable(allDynamicsOffersForDispatch);
+
+                // 3. Bind drag & drop and paste listeners once
+                initOfferDispatchDropZone();
+
+            } catch (err) {
+                console.error("Error in loadOfferDispatchData:", err);
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-danger">
+                                <i class="fa-solid fa-triangle-exclamation fa-2x mb-2 d-block"></i>
+                                <strong>تعذر تحميل عروض دايناميك:</strong> ${err.message}
+                                <div class="mt-2">
+                                    <button class="btn btn-outline-orange-premium btn-sm" onclick="loadOfferDispatchData(true)">
+                                        <i class="fa-solid fa-rotate-right me-1"></i> إعادة المحاولة
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            }
+        }
+
+        async function fetchOfferDispatchShowrooms() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emails/showrooms-list`, {
+                    headers: { 'Authorization': authHeader, 'ngrok-skip-browser-warning': 'true' },
+                    credentials: 'include'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    offerDispatchShowroomsDirectory = data.showrooms || [];
+                }
+            } catch (e) {
+                console.warn("Could not fetch email showrooms-list from API, falling back to local ALL_SHOWROOMS:", e);
+            }
+
+            // Fallback to ALL_SHOWROOMS if API returned empty
+            if (offerDispatchShowroomsDirectory.length === 0 && typeof ALL_SHOWROOMS !== 'undefined') {
+                offerDispatchShowroomsDirectory = ALL_SHOWROOMS.map(s => ({
+                    code: s.code || s.id,
+                    name: s.name,
+                    email: s.email || `${(s.code || s.name).toLowerCase().replace(/\s+/g, '')}@orangebedbath.com`,
+                    area_manager: s.area_manager || ''
+                }));
+            }
+
+            // By default, select all showrooms
+            offerDispatchSelectedShowrooms = new Set(
+                offerDispatchShowroomsDirectory.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean)
+            );
+
+            renderOfferShowroomCheckboxes();
+            updateOfferRecipientsBadges();
+        }
+
+        function renderOfferDispatchTable(offers) {
+            const tbody = document.getElementById('offerDispatchListBody');
+            if (!tbody) return;
+
+            if (!offers || offers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-tags fa-2x mb-2 d-block opacity-50"></i>
+                            لا توجد عروض مطابقة للبحث أو الفلتر المختار في Dynamics.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            offers.forEach(off => {
+                const isEnabled = off.status === 'Enabled';
+                const statusBadge = isEnabled 
+                    ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-check-circle me-1"></i> فعال (Enabled)</span>'
+                    : `<span class="badge bg-secondary px-2 py-1">${off.status || 'معطل'}</span>`;
+
+                // Date formatting
+                const vFrom = off.valid_from ? String(off.valid_from).split('T')[0] : 'غير محدد';
+                const vTo = off.valid_to ? String(off.valid_to).split('T')[0] : 'مستمر';
+                const dateDisplay = `<span class="small font-monospace">${vFrom} ⬅ ${vTo}</span>`;
+
+                // Items summary snippet
+                let itemsSummary = '<span class="text-muted small">لا توجد أصناف مرتبطة</span>';
+                if (off.items && off.items.length > 0) {
+                    const firstFew = off.items.slice(0, 2).map(it => {
+                        const code = it.old_item || it.item_id;
+                        const priceInfo = it.sales_price ? ` (${it.sales_price} ر.س)` : '';
+                        return `<span class="badge bg-light text-dark border me-1">${code} - ${it.product_name || 'صنف'}${priceInfo}</span>`;
+                    }).join(' ');
+                    const moreCount = off.items.length > 2 ? `<small class="text-orange fw-bold">+${off.items.length - 2} أصناف أخرى</small>` : '';
+                    itemsSummary = `<div class="text-start small">${firstFew} ${moreCount}</div>`;
+                }
+
+                // Check if any items have catalog images
+                const hasCatalogImg = off.items && off.items.some(it => it.has_image);
+                const catalogImgBadge = hasCatalogImg ? '<span class="badge bg-warning text-dark ms-1" title="تتوفر صور للمنتج بالكتالوج"><i class="fa-solid fa-image"></i> صور متاحة</span>' : '';
+
+                html += `
+                    <tr>
+                        <td><span class="badge bg-dark font-monospace">${off.id}</span></td>
+                        <td class="text-start ps-3">
+                            <strong class="text-dark d-block">${off.name || 'بدون اسم'}</strong>
+                            ${catalogImgBadge}
+                        </td>
+                        <td>${dateDisplay}</td>
+                        <td>${statusBadge}</td>
+                        <td>${itemsSummary}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-orange-premium fw-bold px-3 shadow-sm d-inline-flex align-items-center gap-1" onclick="selectOfferForEmail('${off.id}')">
+                                <i class="fa-solid fa-wand-magic-sparkles text-orange"></i>
+                                <span>اختيار وتجهيز</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function filterOfferDispatchList() {
+            const searchInput = document.getElementById('offerDispatchSearchInput');
+            const statusSelect = document.getElementById('offerDispatchStatusFilter');
+            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const st = statusSelect ? statusSelect.value : 'all';
+
+            const filtered = allDynamicsOffersForDispatch.filter(off => {
+                const matchStatus = (st === 'all') || (off.status === st);
+                if (!matchStatus) return false;
+
+                if (!q) return true;
+                const matchId = String(off.id || '').toLowerCase().includes(q);
+                const matchName = String(off.name || '').toLowerCase().includes(q);
+                const matchItems = off.items && off.items.some(it => 
+                    String(it.old_item || '').toLowerCase().includes(q) ||
+                    String(it.item_id || '').toLowerCase().includes(q) ||
+                    String(it.product_name || '').toLowerCase().includes(q)
+                );
+                return matchId || matchName || matchItems;
+            });
+
+            renderOfferDispatchTable(filtered);
+        }
+
+        function selectOfferForEmail(offerId) {
+            const offer = allDynamicsOffersForDispatch.find(o => String(o.id) === String(offerId));
+            if (!offer) return;
+            currentSelectedOffer = offer;
+
+            // 1. Badge in form header
+            const badgeContainer = document.getElementById('offerSelectedBadgeContainer');
+            if (badgeContainer) {
+                badgeContainer.innerHTML = `
+                    <span class="badge bg-warning text-dark px-3 py-2 fs-6 border shadow-sm">
+                        <i class="fa-solid fa-tag me-1 text-dark"></i> العرض المحدد: <b>${offer.name}</b> (${offer.id})
+                    </span>
+                `;
+            }
+
+            // 2. Auto-generate Subject (Exact Alaa pattern: "تفعيل عرض [اسم العرض]")
+            const subjectInput = document.getElementById('offerEmailSubject');
+            if (subjectInput) {
+                subjectInput.value = `تفعيل عرض ${offer.name || ''}`.trim();
+            }
+
+            // 3. Auto-generate Body text according to verified Alaa emails
+            let bodyText = `السادة/ المحترمون\nتحية طيبة,,,\n\nتم تفعيل العرض التالي في جميع المعارض:\n\n`;
+
+            if (offer.items && offer.items.length > 0) {
+                offer.items.forEach(it => {
+                    const pname = it.product_name || 'المنتج';
+                    const origPrice = it.sales_price ? `${it.sales_price}` : '';
+                    const dealPrice = it.deal_price ? `${it.deal_price}` : '';
+
+                    if (dealPrice && origPrice) {
+                        bodyText += `اشتري ${pname} بسعر ${dealPrice} ريال بدلاً من ${origPrice} ريال\n`;
+                    } else if (origPrice) {
+                        bodyText += `عرض ترويجي على ${pname} بسعر ${origPrice} ريال\n`;
+                    } else {
+                        bodyText += `عرض خاص على ${pname}\n`;
+                    }
+                });
+
+                // Validity note if available
+                if (offer.valid_to) {
+                    const toDateStr = String(offer.valid_to).split('T')[0];
+                    bodyText += `العرض ساري حتى تاريخ ${toDateStr}\n`;
+                }
+
+                // Product codes list
+                const codes = offer.items
+                    .map(it => it.old_item || it.item_id)
+                    .filter(Boolean);
+
+                if (codes.length > 0) {
+                    bodyText += `\nأرقام المنتجات:\n${codes.join('-')}\n`;
+                }
+            } else {
+                bodyText += `اشتري منتجات العرض المشمولة بخصم خاص.\n`;
+            }
+
+            const bodyInput = document.getElementById('offerEmailBodyText');
+            if (bodyInput) {
+                bodyInput.value = bodyText;
+            }
+
+            // 4. Check for matching catalog images
+            const noticeEl = document.getElementById('offerCatalogImageNotice');
+            const noticeText = document.getElementById('offerCatalogImageNoticeText');
+            const catalogItems = (offer.items || []).filter(it => it.has_image);
+
+            if (catalogItems.length > 0 && noticeEl) {
+                noticeEl.style.removeProperty('display');
+                noticeEl.style.display = 'flex';
+                if (noticeText) {
+                    noticeText.textContent = `عثرنا على ${catalogItems.length} صورة مطابقة لأصناف هذا العرض في الكتالوج (${catalogItems.map(i => i.old_item).join(', ')}).`;
+                }
+            } else if (noticeEl) {
+                noticeEl.style.display = 'none';
+            }
+
+            // 5. Scroll down to email editor smoothly
+            const formSection = document.getElementById('offerEmailFormSection');
+            if (formSection) {
+                formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            showToast(`تم تجهيز قالب الإيميل للعرض: ${offer.name}`, 'success');
+        }
+
+        // =========================================================
+        // Recipient Selection & Directory Handlers
+        // =========================================================
+
+        function renderOfferShowroomCheckboxes() {
+            const container = document.getElementById('offerShowroomsChecklistContainer');
+            if (!container) return;
+
+            let html = '';
+            offerDispatchShowroomsDirectory.forEach(s => {
+                const em = (s.email || '').toLowerCase().trim();
+                const isChecked = offerDispatchSelectedShowrooms.has(em);
+                html += `
+                    <div class="col-12 col-sm-6 col-md-4 showroom-check-item" data-name="${(s.name || '').toLowerCase()}" data-code="${s.code}">
+                        <div class="form-check text-start p-1 bg-white rounded border border-light">
+                            <input class="form-check-input ms-1" type="checkbox" value="${em}" id="chk_shw_${s.code}" ${isChecked ? 'checked' : ''} onchange="toggleOfferShowroomSelection('${em}', this.checked)">
+                            <label class="form-check-label small text-dark w-100" for="chk_shw_${s.code}" style="cursor: pointer;">
+                                <strong>${s.code}</strong> - ${s.name}
+                                <small class="text-muted d-block font-monospace" style="font-size: 0.72rem;">${em}</small>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleOfferShowroomSelection(email, isChecked) {
+            email = email.toLowerCase().trim();
+            if (isChecked) {
+                offerDispatchSelectedShowrooms.add(email);
+            } else {
+                offerDispatchSelectedShowrooms.delete(email);
+            }
+            updateOfferRecipientsBadges();
+        }
+
+        function filterOfferShowroomCheckboxes() {
+            const input = document.getElementById('offerShowroomFilterInput');
+            const q = input ? input.value.toLowerCase().trim() : '';
+            const items = document.querySelectorAll('#offerShowroomsChecklistContainer .showroom-check-item');
+
+            items.forEach(it => {
+                const name = it.getAttribute('data-name') || '';
+                const code = it.getAttribute('data-code') || '';
+                if (!q || name.includes(q) || code.includes(q)) {
+                    it.style.display = '';
+                } else {
+                    it.style.display = 'none';
+                }
+            });
+        }
+
+        function updateOfferRecipientsBadges() {
+            const countBadge = document.getElementById('offerRecipientsCountBadge');
+            if (countBadge) {
+                const totalShowrooms = offerDispatchShowroomsDirectory.length;
+                countBadge.textContent = `المستلمون المختارون: ${offerDispatchSelectedShowrooms.size} من أصل ${totalShowrooms} معرض`;
+            }
+        }
+
+        function selectAllShowroomsForOffer(selectAll) {
+            if (selectAll) {
+                offerDispatchSelectedShowrooms = new Set(
+                    offerDispatchShowroomsDirectory.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean)
+                );
+            } else {
+                offerDispatchSelectedShowrooms.clear();
+            }
+
+            // Sync all checkboxes in DOM
+            const checkboxes = document.querySelectorAll('#offerShowroomsChecklistContainer input[type="checkbox"]');
+            checkboxes.forEach(chk => {
+                chk.checked = selectAll;
+            });
+
+            updateOfferRecipientsBadges();
+            showToast(selectAll ? 'تم تحديد كافة المعارض' : 'تم إلغاء تحديد كافة المعارض', 'info');
+        }
+
+        function toggleAreaManagersForOffer() {
+            const defaultManagers = ['radwan@orangebedbath.com', 'mohannad@orangebedbath.com', 'lina@orangebedbath.com'];
+            const ccInput = document.getElementById('offerEmailExtraCc');
+            if (!ccInput) return;
+
+            let existing = ccInput.value.split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+            let addedCount = 0;
+
+            defaultManagers.forEach(m => {
+                if (!existing.includes(m)) {
+                    existing.push(m);
+                    addedCount++;
+                }
+            });
+
+            ccInput.value = existing.join(', ');
+            showToast(`تمت إضافة ${addedCount} من مدراء المناطق إلى قائمة النسخة (CC)`, 'success');
+        }
+
+        function setOfferTestRecipientOnly() {
+            const toggle = document.getElementById('offerDispatchTestModeToggle');
+            if (toggle) {
+                toggle.checked = true;
+                toggleOfferDispatchTestMode(true);
+            }
+            showToast('تم تفعيل وضع التجربة (إرسال لإيميل علاء فقط)', 'warning');
+        }
+
+        // =========================================================
+        // Image Management (Upload, Clipboard Paste, Catalog Match)
+        // =========================================================
+
+        function initOfferDispatchDropZone() {
+            if (offerDispatchListenersBound) return;
+            offerDispatchListenersBound = true;
+
+            const dropZone = document.getElementById('offerImageDropZone');
+            if (!dropZone) return;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('bg-warning-subtle'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('bg-warning-subtle'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleOfferImageFiles(files);
+            }, false);
+
+            // Clipboard paste listener on window
+            window.addEventListener('paste', (e) => {
+                const offerTab = document.getElementById('offer-dispatch-content');
+                if (!offerTab || !offerTab.classList.contains('active')) return;
+
+                const items = (e.clipboardData || window.clipboardData).items;
+                const imageFiles = [];
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        if (blob) imageFiles.push(blob);
+                    }
+                }
+
+                if (imageFiles.length > 0) {
+                    handleOfferImageFiles(imageFiles);
+                    showToast(`تم استيراد ${imageFiles.length} صورة من الحافظة (Paste)`, 'success');
+                }
+            });
+        }
+
+        function handleOfferImageFiles(files) {
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach((file) => {
+                if (!file.type.startsWith('image/')) {
+                    showToast(`الملف ${file.name} ليس صورة صالحة`, 'warning');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    const imgObj = {
+                        id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                        name: file.name || `image_${offerDispatchSelectedImages.length + 1}.jpg`,
+                        filename: file.name || `image_${offerDispatchSelectedImages.length + 1}.jpg`,
+                        data: dataUrl,
+                        size: file.size,
+                        isCatalog: false
+                    };
+                    offerDispatchSelectedImages.push(imgObj);
+                    renderOfferAttachedImages();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function attachAutoCatalogImages() {
+            if (!currentSelectedOffer || !currentSelectedOffer.items) {
+                showToast('الرجاء اختيار عرض أولاً', 'warning');
+                return;
+            }
+
+            const catalogItems = currentSelectedOffer.items.filter(it => it.has_image);
+            let attachedCount = 0;
+
+            catalogItems.forEach(it => {
+                const fn = it.image_filename || `${it.old_item}.webp`;
+                const exists = offerDispatchSelectedImages.some(img => img.filename === fn);
+                if (!exists) {
+                    offerDispatchSelectedImages.push({
+                        id: 'cat_img_' + (it.old_item || it.item_id),
+                        name: `${it.old_item} (${it.product_name || ''})`,
+                        filename: fn,
+                        image_filename: fn,
+                        isCatalog: true,
+                        catalogItem: it.old_item,
+                        url: it.image_url
+                    });
+                    attachedCount++;
+                }
+            });
+
+            renderOfferAttachedImages();
+            showToast(`تم إدراج ${attachedCount} صورة من الكتالوج بنجاح`, 'success');
+        }
+
+        function renderOfferAttachedImages() {
+            const countEl = document.getElementById('offerAttachedImagesCount');
+            const grid = document.getElementById('offerImagesPreviewGrid');
+            if (!grid) return;
+
+            if (countEl) {
+                countEl.textContent = `الصور المرفقة (${offerDispatchSelectedImages.length}):`;
+            }
+
+            if (offerDispatchSelectedImages.length === 0) {
+                grid.innerHTML = '<span class="text-muted small">لم يتم إرفاق صور بعد. يمكنك سحب الصور أو لصقها مباشرة.</span>';
+                return;
+            }
+
+            let html = '';
+            offerDispatchSelectedImages.forEach((img, idx) => {
+                const src = img.data || img.url || `/images/${img.filename}`;
+                const isCat = img.isCatalog ? '<span class="badge bg-warning text-dark position-absolute bottom-0 start-0 m-1 small">كتالوج</span>' : '';
+
+                html += `
+                    <div class="position-relative border rounded p-1 bg-white shadow-sm text-center" style="width: 110px;">
+                        <img src="${src}" alt="${img.name}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 4px;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\' fill=\\'%23ccc\\'><rect width=\\'100\\' height=\\'100\\' fill=\\'%23f0f0f0\\'/><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23999\\'>صورة</text></svg>'">
+                        ${isCat}
+                        <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-1" style="width: 22px; height: 22px; line-height: 1;" onclick="removeOfferImage(${idx})" title="حذف الصورة">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <div class="text-truncate small mt-1 text-muted" style="max-width: 100px; font-size: 0.7rem;" title="${img.name}">${img.name}</div>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function removeOfferImage(index) {
+            if (index >= 0 && index < offerDispatchSelectedImages.length) {
+                offerDispatchSelectedImages.splice(index, 1);
+                renderOfferAttachedImages();
+            }
+        }
+
+        function resetOfferDispatchForm() {
+            if (!confirm('هل تريد بالتأكيد إعادة تعيين نموذج الرسالة؟')) return;
+
+            currentSelectedOffer = null;
+            const badgeContainer = document.getElementById('offerSelectedBadgeContainer');
+            if (badgeContainer) badgeContainer.innerHTML = '';
+
+            const subjectInput = document.getElementById('offerEmailSubject');
+            if (subjectInput) subjectInput.value = '';
+
+            const bodyInput = document.getElementById('offerEmailBodyText');
+            if (bodyInput) bodyInput.value = '';
+
+            const extraTo = document.getElementById('offerEmailExtraTo');
+            if (extraTo) extraTo.value = '';
+
+            const extraCc = document.getElementById('offerEmailExtraCc');
+            if (extraCc) extraCc.value = '';
+
+            const noticeEl = document.getElementById('offerCatalogImageNotice');
+            if (noticeEl) noticeEl.style.display = 'none';
+
+            offerDispatchSelectedImages = [];
+            renderOfferAttachedImages();
+
+            selectAllShowroomsForOffer(true);
+            showToast('تمت إعادة تعيين النموذج بنجاح', 'info');
+        }
+
+        // =========================================================
+        // Email HTML Generator (Aligned with Alaa's Real Template)
+        // =========================================================
+
+        function buildOfferEmailHtml(bodyText, images, isPreview = false) {
+            const escapeHtml = (str) => {
+                return (str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            };
+
+            const formattedBody = escapeHtml(bodyText)
+                .split('\n')
+                .map(line => line.trim() ? `<div style="margin-bottom: 6px;">${line}</div>` : `<div style="height: 10px;"></div>`)
+                .join('\n');
+
+            let imagesHtml = '';
+            if (images && images.length > 0) {
+                imagesHtml += '<div style="margin: 25px auto; text-align: center;">\n';
+                images.forEach((img, idx) => {
+                    let imgSrc = '';
+                    if (isPreview) {
+                        imgSrc = img.data || img.url || `/images/${img.filename}`;
+                    } else {
+                        const cid = img.cid || `offer_img_${idx}@orangebedbath.com`;
+                        imgSrc = `cid:${cid}`;
+                    }
+                    imagesHtml += `  <div style="margin: 15px auto; text-align: center;">\n`;
+                    imagesHtml += `    <img src="${imgSrc}" alt="${img.name || 'صورة العرض'}" style="max-width: 380px; width: 90%; height: auto; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.08);" />\n`;
+                    imagesHtml += `  </div>\n`;
+                });
+                imagesHtml += '</div>\n';
+            }
+
+            const signatureHtml = `
+                <div id="signature" style="margin-top: 35px; padding-top: 15px; border-top: 1px solid #fe7900; direction: ltr; text-align: left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; color: #444;">
+                    <div style="font-weight: bold; color: #333; font-size: 14px; margin-bottom: 3px;">Best Regards,</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fe7900; margin-bottom: 4px;">Alaa Wafae</div>
+                    <div style="color: #666; font-size: 12px; margin-bottom: 4px;">Technical Support Specialist, Orange Bed&Bath</div>
+                    <div style="color: #555; font-size: 12px;">Email: <a href="mailto:alaa.wafae@orangebedbath.com" style="color: #fe7900; text-decoration: none;">alaa.wafae@orangebedbath.com</a></div>
+                    <div style="color: #555; font-size: 12px;">Mobile: +966553377408</div>
+                    <div style="color: #555; font-size: 12px;">Website: <a href="https://www.orangebedbath.com" target="_blank" style="color: #fe7900; text-decoration: none;">www.orangebedbath.com</a></div>
+                </div>
+            `;
+
+            return `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Tahoma, Arial, 'Segoe UI', sans-serif; font-size: 14px; color: #222; line-height: 1.7; direction: rtl; text-align: right; margin: 0; padding: 20px; background-color: #ffffff; }
+        .email-container { max-width: 650px; margin: 0 auto; padding: 20px; background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 8px; }
+        .email-content { font-size: 14px; color: #333333; }
+        .highlight { color: #fe7900; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-content">
+            ${formattedBody}
+        </div>
+        ${imagesHtml}
+        ${signatureHtml}
+    </div>
+</body>
+</html>
+            `.trim();
+        }
+
+        // =========================================================
+        // Live Preview Modal
+        // =========================================================
+
+        function openOfferEmailPreviewModal() {
+            const subjectInput = document.getElementById('offerEmailSubject');
+            const bodyInput = document.getElementById('offerEmailBodyText');
+            const subject = subjectInput ? subjectInput.value.trim() : '';
+            const bodyText = bodyInput ? bodyInput.value.trim() : '';
+
+            if (!subject) {
+                showToast('يرجى كتابة موضوع الرسالة أولاً', 'warning');
+                if (subjectInput) subjectInput.focus();
+                return;
+            }
+            if (!bodyText) {
+                showToast('يرجى كتابة نص الرسالة أولاً', 'warning');
+                if (bodyInput) bodyInput.focus();
+                return;
+            }
+
+            const subjEl = document.getElementById('previewModalSubject');
+            if (subjEl) {
+                const testPrefix = isOfferDispatchTestMode ? '<span class="badge bg-warning text-dark me-2">🧪 تجريبي</span> ' : '';
+                subjEl.innerHTML = `${testPrefix}${subject}`;
+            }
+
+            const recEl = document.getElementById('previewModalRecipientsList');
+            if (recEl) {
+                if (isOfferDispatchTestMode) {
+                    recEl.innerHTML = `
+                        <span class="badge bg-warning text-dark px-2 py-1 fs-6">
+                            <i class="fa-solid fa-flask me-1"></i> وضع تجريبي: علاء وفائي &lt;alaa.wafae@orangebedbath.com&gt;
+                        </span>
+                        <div class="small text-muted mt-1">(لن يتم إرسال أي رسالة للمعارض في هذا الوضع)</div>
+                    `;
+                } else {
+                    const extraTo = (document.getElementById('offerEmailExtraTo')?.value || '')
+                        .split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+                    const allTo = Array.from(offerDispatchSelectedShowrooms).concat(extraTo);
+                    recEl.innerHTML = `
+                        <div class="d-flex flex-wrap gap-1" style="max-height: 80px; overflow-y: auto;">
+                            ${allTo.map(e => `<span class="badge bg-light text-dark border font-monospace small">${e}</span>`).join(' ')}
+                        </div>
+                        <div class="small text-muted mt-1">المجموع: <b>${allTo.length}</b> مستلم مباشر</div>
+                    `;
+                }
+            }
+
+            const ccRow = document.getElementById('previewModalCcRow');
+            const ccEl = document.getElementById('previewModalCcList');
+            const extraCc = (document.getElementById('offerEmailExtraCc')?.value || '')
+                .split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+
+            if (ccRow && ccEl) {
+                if (!isOfferDispatchTestMode && extraCc.length > 0) {
+                    ccRow.style.display = 'flex';
+                    ccEl.innerHTML = extraCc.map(c => `<span class="badge bg-light text-primary border font-monospace small">${c}</span>`).join(' ');
+                } else {
+                    ccRow.style.display = 'none';
+                }
+            }
+
+            const bodyContainer = document.getElementById('previewModalRenderedBody');
+            if (bodyContainer) {
+                bodyContainer.innerHTML = buildOfferEmailHtml(bodyText, offerDispatchSelectedImages, true);
+            }
+
+            const modalEl = document.getElementById('offerEmailPreviewModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        function confirmSendFromPreviewModal() {
+            const modalEl = document.getElementById('offerEmailPreviewModal');
+            const bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+
+            submitSendOfferEmail();
+        }
+
+        // =========================================================
+        // Submit Send Email
+        // =========================================================
+
+        async function submitSendOfferEmail() {
+            const subjectInput = document.getElementById('offerEmailSubject');
+            const bodyInput = document.getElementById('offerEmailBodyText');
+            const subject = subjectInput ? subjectInput.value.trim() : '';
+            const bodyText = bodyInput ? bodyInput.value.trim() : '';
+
+            if (!subject) {
+                showToast('يرجى كتابة موضوع الرسالة أولاً', 'warning');
+                if (subjectInput) subjectInput.focus();
+                return;
+            }
+            if (!bodyText) {
+                showToast('يرجى كتابة نص الرسالة أولاً', 'warning');
+                if (bodyInput) bodyInput.focus();
+                return;
+            }
+
+            const extraTo = (document.getElementById('offerEmailExtraTo')?.value || '')
+                .split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+            const extraCc = (document.getElementById('offerEmailExtraCc')?.value || '')
+                .split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+
+            const allRecipients = Array.from(offerDispatchSelectedShowrooms).concat(extraTo);
+
+            if (!isOfferDispatchTestMode && allRecipients.length === 0) {
+                showToast('يرجى تحديد معرض واحد على الأقل أو تفعيل وضع الإرسال التجريبي', 'danger');
+                return;
+            }
+
+            if (!isOfferDispatchTestMode) {
+                const confirmMsg = `⚠️ تنبيه هام ورسمي:\n\nأنت على وشك إرسال إيميل رسمي مباشر إلى (${allRecipients.length}) معرض وفرع في الشركة!\n\nالموضوع: ${subject}\n\nهل أنت متأكد تماماً من رغبتك بالإرسال الفوري الآن؟`;
+                if (!confirm(confirmMsg)) return;
+            }
+
+            const mainBtn = document.getElementById('btnSendOfferEmailMain');
+            const labelEl = document.getElementById('btnSendOfferEmailLabel');
+            if (mainBtn) mainBtn.disabled = true;
+            if (labelEl) labelEl.textContent = 'جاري الإرسال عبر المخدم... ⏳';
+
+            try {
+                const imagesPayload = offerDispatchSelectedImages.map((img, idx) => {
+                    const cid = `offer_img_${idx}_${Date.now()}@orangebedbath.com`;
+                    img.cid = cid;
+                    return {
+                        filename: img.filename,
+                        image_filename: img.image_filename || img.filename,
+                        data: img.data || null,
+                        is_catalog: Boolean(img.isCatalog),
+                        cid: cid
+                    };
+                });
+
+                const finalHtml = buildOfferEmailHtml(bodyText, offerDispatchSelectedImages, false);
+
+                const payload = {
+                    subject: subject,
+                    recipients: isOfferDispatchTestMode ? ['alaa.wafae@orangebedbath.com'] : allRecipients,
+                    cc_recipients: isOfferDispatchTestMode ? [] : extraCc,
+                    body_html: finalHtml,
+                    body_text: bodyText,
+                    images: imagesPayload,
+                    is_test: isOfferDispatchTestMode
+                };
+
+                const res = await fetch(`${API_BASE}/api/admin/send-offer-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader,
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                const resData = await res.json();
+
+                if (!res.ok || resData.error) {
+                    throw new Error(resData.error || `فشل الإرسال (${res.status})`);
+                }
+
+                const targetCount = resData.recipients_count || 1;
+                const modeStr = resData.mode === 'test' ? 'في الوضع التجريبي (إيميل علاء)' : `إلى ${targetCount} معرض`;
+
+                showToast(`✅ تم إرسال إيميل تفعيل العرض بنجاح ${modeStr}!`, 'success');
+                alert(`✅ تم إرسال إيميل تفعيل العرض بنجاح!\n\nطريقة الإرسال: ${resData.send_method}\nالمستلمون: ${resData.recipients?.join(', ') || ''}`);
+
+            } catch (err) {
+                console.error("Error sending offer email:", err);
+                showToast(`فشل إرسال الإيميل: ${err.message}`, 'danger');
+                alert(`❌ حدث خطأ أثناء محاولة إرسال الإيميل:\n\n${err.message}`);
+            } finally {
+                if (mainBtn) mainBtn.disabled = false;
+                if (labelEl) {
+                    labelEl.textContent = isOfferDispatchTestMode ? 'إرسال تجريبي لعلاء 🧪' : 'إرسال الرسالة لكافة المعارض 🚀';
+                }
             }
         }
 
