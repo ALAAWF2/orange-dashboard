@@ -514,6 +514,7 @@
       <button class="tab-btn active" onclick="switchTab('tabBlocked')">🚫 إخفاء وحجب المنتجات</button>
       <button class="tab-btn" onclick="switchTab('tabSync')">⏳ تحديث الكاتالوج الفوري</button>
       <button class="tab-btn" onclick="switchTab('tabImages')">🖼️ المنتجات بدون صور</button>
+      <button class="tab-btn" onclick="switchTab('tabWebsiteImport')">🌐 استيراد الصور من الموقع</button>
       <button class="tab-btn" id="tabOrdersBtn" onclick="switchTab('tabOrders')">🛒 سجل طلبيات المعارض</button>
       <button class="tab-btn" onclick="switchTab('tabTopItems')">📊 الأصناف الأكثر طلباً</button>
       <button class="tab-btn" onclick="switchTab('tabPromoBarcodes')">🏷️ إدارة العروض والباركود</button>
@@ -637,6 +638,124 @@
             <tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- TAB: Website Image Import -->
+    <div id="tabWebsiteImport" class="tab-content">
+      <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--secondary); margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+              <span>🌐 استيراد ومزامنة الصور من المتجر الإلكتروني</span>
+              <span class="badge" style="background: var(--primary-soft); color: var(--primary); font-size: 0.8rem; font-weight: 700; padding: 4px 10px; border-radius: 20px;">WooCommerce Store</span>
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; line-height: 1.6;">
+              مقارنة المنتجات مع متجر Orange الإلكتروني وتنزيل الصور عالية الجودة بصيغة WebP وحفظها تلقائياً بالاسم المعتمد (Alias) في مستودع صور الكاتالوج.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button id="btnRefreshWebsiteCandidates" onclick="loadWebsiteCandidates(true)" class="btn btn-outline" style="height: 42px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-rotate"></i> 🔄 إعادة فحص المتجر
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Summary Badges -->
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 18px; margin-bottom: 0;">
+          <div class="stat-card" style="padding: 12px 16px; border-radius: var(--radius-sm);">
+            <div class="stat-value" id="statWebsiteTotal" style="font-size: 1.5rem; color: var(--secondary);">0</div>
+            <div class="stat-title" style="font-size: 0.85rem;">إجمالي المطابقات بالمتجر</div>
+          </div>
+          <div class="stat-card" style="padding: 12px 16px; border-radius: var(--radius-sm); border-right: 4px solid var(--danger);">
+            <div class="stat-value" id="statWebsiteMissing" style="font-size: 1.5rem; color: var(--danger);">0</div>
+            <div class="stat-title" style="font-size: 0.85rem;">منتجات بدون صور بالكاتالوج ⚡</div>
+          </div>
+          <div class="stat-card" style="padding: 12px 16px; border-radius: var(--radius-sm); border-right: 4px solid var(--success);">
+            <div class="stat-value" id="statWebsiteHasImage" style="font-size: 1.5rem; color: var(--success);">0</div>
+            <div class="stat-title" style="font-size: 0.85rem;">صور متوفرة حالياً بالكاتالوج</div>
+          </div>
+          <div class="stat-card" style="padding: 12px 16px; border-radius: var(--radius-sm); border-right: 4px solid var(--primary);">
+            <div class="stat-value" id="statWebsiteNew" style="font-size: 1.5rem; color: var(--primary);">0</div>
+            <div class="stat-title" style="font-size: 0.85rem;">منتجات جديدة في المتجر فقط</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters & Actions Card -->
+      <div class="controls-container">
+        <div class="controls-row" style="align-items: flex-end;">
+          <div class="control-group" style="flex: 2;">
+            <label>بحث بالاسم أو الكود أو الـ SKU</label>
+            <input type="text" id="websiteSearchInput" placeholder="ابحث بكود المنتج، الـ Alias، اسم المنتج، أو SKU الموقع..." oninput="onWebsiteSearchInput()">
+          </div>
+          <div class="control-group" style="flex: 1.2;">
+            <label>التصنيف</label>
+            <select id="websiteCategoryFilter" onchange="applyWebsiteFilter()">
+              <option value="all">كل التصنيفات</option>
+            </select>
+          </div>
+          <div class="control-group" style="flex: 1.5;">
+            <label>فلترة حسب حالة الصورة</label>
+            <select id="websiteStatusFilter" onchange="applyWebsiteFilter()">
+              <option value="missing">المنتجات بدون صور فقط (الموصى بها) ⚡</option>
+              <option value="all">عرض كافة المنتجات المطابقة</option>
+              <option value="has_image">منتجات لها صور بالفعل (للمراجعة والاستبدال)</option>
+              <option value="new_on_website">منتجات جديدة في المتجر الإلكتروني فقط</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; user-select: none;">
+              <input type="checkbox" id="selectAllWebsiteCheckbox" onchange="toggleSelectAllWebsite(this)" style="width: 18px; height: 18px; cursor: pointer;">
+              <span>تحديد كل النتائج المعروضة</span>
+            </label>
+            <span id="websiteSelectionBadge" class="badge" style="background: #e2e8f0; color: #334155; font-size: 0.85rem; padding: 5px 12px; border-radius: 6px; font-weight: 700;">
+              المحدد: 0 صنف
+            </span>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.88rem; color: var(--text-muted); user-select: none;">
+              <input type="checkbox" id="websiteAutoGitPush" checked style="width: 16px; height: 16px; cursor: pointer;">
+              <span>رفع التغييرات إلى Git (GitHub) تلقائياً</span>
+            </label>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="btnBulkImportWebsite" onclick="executeWebsiteImport()" class="btn btn-primary" style="height: 42px; display: flex; align-items: center; gap: 8px; padding: 0 20px;">
+              🚀 استيراد وتنزيل الصور المحددة
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Candidates Table -->
+      <div class="table-responsive" style="margin-top: 15px; background: white; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 45px; text-align: center;">اختيار</th>
+              <th style="width: 90px; text-align: center;">صورة المتجر</th>
+              <th style="width: 90px; text-align: center;">صورة الكاتالوج</th>
+              <th style="width: 130px;">كود الصنف / Alias</th>
+              <th>اسم المنتج والمواصفات</th>
+              <th style="width: 110px;">التصنيف</th>
+              <th style="width: 80px; text-align: center;">المخزون</th>
+              <th style="width: 160px;">اسم الملف المستهدف</th>
+              <th style="width: 110px; text-align: center;">إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="websiteCandidatesTableBody">
+            <tr><td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">انقر على تبويب استيراد الصور لبدء التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-controls" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <button onclick="changeWebsitePage(-1)" id="btnPrevWebsitePage" class="btn btn-outline" style="padding: 6px 16px;">السابق</button>
+        <span id="websitePageInfo" style="font-weight: 700; color: var(--secondary);">الصفحة 1 من 1</span>
+        <button onclick="changeWebsitePage(1)" id="btnNextWebsitePage" class="btn btn-outline" style="padding: 6px 16px;">التالي</button>
       </div>
     </div>
 
@@ -1429,6 +1548,33 @@
     </div>
   </div>
 
+  <!-- Website Image Import Progress & Result Modal -->
+  <div class="modal-overlay" id="websiteImportModal">
+    <div class="modal-content" style="max-width: 520px; width: 90%; text-align: center;">
+      <div class="modal-header">
+        <h3 id="websiteImportModalTitle">🚀 جاري استيراد صور المتجر</h3>
+        <button class="modal-close" onclick="closeWebsiteImportModal()">×</button>
+      </div>
+      <div style="padding: 20px 10px;">
+        <div id="websiteImportSpinner" style="margin-bottom: 20px;">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 3rem; color: var(--primary);"></i>
+        </div>
+        <h4 id="websiteImportStatusHeading" style="font-size: 1.1rem; margin-bottom: 10px; color: var(--secondary);">جاري تنزيل الصور وتحويلها إلى صيغة WebP...</h4>
+        <p id="websiteImportStatusText" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.6;">
+          يتم الآن تحميل الصور المحددة بجودة عالية، وتحويلها لملفات WebP، وحفظها في مستودع صور الكاتالوج تلقائياً.
+        </p>
+        <div id="websiteImportProgressBarContainer" style="background: #e2e8f0; border-radius: 10px; height: 12px; overflow: hidden; margin-bottom: 20px; display: none;">
+          <div id="websiteImportProgressBar" style="background: var(--primary); width: 100%; height: 100%; transition: width 0.3s ease;"></div>
+        </div>
+        <div id="websiteImportResults" style="display: none; text-align: right; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 0.9rem; max-height: 200px; overflow-y: auto;">
+        </div>
+        <div id="websiteImportActionButtons" style="display: none; justify-content: center; gap: 10px;">
+          <button onclick="closeWebsiteImportModal()" class="btn btn-primary" style="padding: 8px 24px;">حسناً، إغلاق</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Toast -->
   <div class="toast" id="toast"></div>
 
@@ -1521,7 +1667,7 @@
         
         // Hide tabs that managers should not access
         if (userRole === 'manager') {
-          const adminOnlyTabs = ['tabBlocked', 'tabSync', 'tabImages', 'tabUsers', 'tabMediaLibrary', 'tabAuditLogs', 'tabTaxInvoices', 'tabPromoBarcodes'];
+          const adminOnlyTabs = ['tabBlocked', 'tabSync', 'tabImages', 'tabWebsiteImport', 'tabUsers', 'tabMediaLibrary', 'tabAuditLogs', 'tabTaxInvoices', 'tabPromoBarcodes'];
           document.querySelectorAll('.tab-btn').forEach(btn => {
             const onclickAttr = btn.getAttribute('onclick') || '';
             const match = onclickAttr.match(/'([^']+)'/);
@@ -1603,7 +1749,7 @@
       const categories = [...new Set(productsList.map(p => p.category))].filter(Boolean).sort();
       
       // Populate category filters
-      ['blockedCategoryFilter', 'imagesCategoryFilter'].forEach(id => {
+      ['blockedCategoryFilter', 'imagesCategoryFilter', 'websiteCategoryFilter'].forEach(id => {
          const select = document.getElementById(id);
          if (select) {
             select.innerHTML = '<option value="all">كل التصنيفات</option>' + 
@@ -1641,6 +1787,8 @@
          pollSyncStatus();
       } else if (tabId === 'tabImages') {
          renderMissingImagesTable();
+      } else if (tabId === 'tabWebsiteImport') {
+         loadWebsiteCandidates();
       } else if (tabId === 'tabOrders') {
          clearNewOrdersBadge();
          loadSupabaseOrders();
@@ -2501,6 +2649,451 @@
             btn.textContent = 'إعادة محاولة الرفع للفاشلة 🚀';
          }
       }
+    }
+
+    // === TAB: Website Image Importer ===
+    let websiteCandidatesData = null;
+    let websiteFilteredItems = [];
+    let websiteCurrentPage = 1;
+    const websitePerPage = 50;
+    let websiteSelectedItems = new Map(); // key: target_filename, value: item object
+    let websiteSearchDebounceTimer = null;
+
+    async function loadWebsiteCandidates(forceRefresh = false) {
+      if (!userSessionToken) return;
+      const tbody = document.getElementById('websiteCandidatesTableBody');
+      const btnRefresh = document.getElementById('btnRefreshWebsiteCandidates');
+      
+      if (btnRefresh) {
+        btnRefresh.disabled = true;
+        btnRefresh.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري الفحص...';
+      }
+
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center; padding:40px 20px;">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:2rem; color:var(--primary); margin-bottom:12px; display:block;"></i>
+            <span style="font-weight:700; color:var(--secondary); font-size:1.05rem;">جاري فحص ومطابقة منتجات المتجر الإلكتروني...</span>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">يرجى الانتظار، يتم جلب وتحليل بيانات المتجر والكاتالوج...</p>
+          </td>
+        </tr>
+      `;
+
+      try {
+        const url = '/api/catalog/website/candidates' + (forceRefresh ? '?refresh=true' : '');
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${userSessionToken}`
+          }
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'تعذر تحميل بيانات المتجر');
+        }
+
+        websiteCandidatesData = await res.json();
+        
+        // Update stats
+        document.getElementById('statWebsiteTotal').textContent = (websiteCandidatesData.total_items || 0).toLocaleString();
+        document.getElementById('statWebsiteMissing').textContent = (websiteCandidatesData.missing_count || 0).toLocaleString();
+        document.getElementById('statWebsiteHasImage').textContent = (websiteCandidatesData.has_image_count || 0).toLocaleString();
+        document.getElementById('statWebsiteNew').textContent = (websiteCandidatesData.new_website_count || 0).toLocaleString();
+
+        // Populate Category Filter
+        const cats = [...new Set((websiteCandidatesData.items || []).map(i => i.category).filter(Boolean))].sort();
+        const catSelect = document.getElementById('websiteCategoryFilter');
+        if (catSelect) {
+          const curVal = catSelect.value || 'all';
+          catSelect.innerHTML = '<option value="all">كل التصنيفات</option>' + 
+            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+          if (cats.includes(curVal)) {
+            catSelect.value = curVal;
+          }
+        }
+
+        // Apply filters & render
+        applyWebsiteFilter();
+
+        if (forceRefresh) {
+          showToast('✅ تم إعادة فحص المتجر الإلكتروني وتحديث القائمة بنجاح!', 'success');
+        }
+      } catch (err) {
+        console.error("Website candidates error:", err);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align:center; padding:30px; color:var(--danger);">
+              <i class="fa-solid fa-triangle-exclamation" style="font-size:1.8rem; margin-bottom:10px; display:block;"></i>
+              <strong>خطأ في فحص المتجر: ${err.message}</strong>
+              <div style="margin-top:10px;">
+                <button onclick="loadWebsiteCandidates(false)" class="btn btn-outline" style="padding:6px 16px; font-size:0.9rem;">إعادة المحاولة</button>
+              </div>
+            </td>
+          </tr>
+        `;
+        showToast('❌ ' + err.message, 'error');
+      } finally {
+        if (btnRefresh) {
+          btnRefresh.disabled = false;
+          btnRefresh.innerHTML = '<i class="fa-solid fa-rotate"></i> 🔄 إعادة فحص المتجر';
+        }
+      }
+    }
+
+    function onWebsiteSearchInput() {
+      clearTimeout(websiteSearchDebounceTimer);
+      websiteSearchDebounceTimer = setTimeout(() => {
+        applyWebsiteFilter();
+      }, 300);
+    }
+
+    function applyWebsiteFilter() {
+      if (!websiteCandidatesData || !websiteCandidatesData.items) return;
+
+      const q = (document.getElementById('websiteSearchInput')?.value || '').trim().toLowerCase();
+      const cat = document.getElementById('websiteCategoryFilter')?.value || 'all';
+      const statusFilter = document.getElementById('websiteStatusFilter')?.value || 'missing';
+
+      websiteFilteredItems = websiteCandidatesData.items.filter(item => {
+        // Status filter
+        if (statusFilter !== 'all') {
+          if (statusFilter === 'missing' && item.status !== 'missing') return false;
+          if (statusFilter === 'has_image' && item.status !== 'has_image') return false;
+          if (statusFilter === 'new_on_website' && item.status !== 'new_on_website') return false;
+        }
+
+        // Category filter
+        if (cat !== 'all' && item.category !== cat) return false;
+
+        // Search text
+        if (q) {
+          const matchCode = String(item.code || '').toLowerCase().includes(q);
+          const matchAlias = String(item.alias || '').toLowerCase().includes(q);
+          const matchName = String(item.name || '').toLowerCase().includes(q);
+          const matchWcName = String(item.wc_name || '').toLowerCase().includes(q);
+          const matchWcSku = String(item.wc_sku || '').toLowerCase().includes(q);
+          const matchTarget = String(item.target_filename || '').toLowerCase().includes(q);
+          if (!matchCode && !matchAlias && !matchName && !matchWcName && !matchWcSku && !matchTarget) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      websiteCurrentPage = 1;
+      renderWebsiteCandidatesTable();
+    }
+
+    function renderWebsiteCandidatesTable() {
+      const tbody = document.getElementById('websiteCandidatesTableBody');
+      if (!tbody) return;
+
+      if (!websiteFilteredItems || websiteFilteredItems.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+              <i class="fa-regular fa-folder-open" style="font-size:2.5rem; margin-bottom:12px; display:block; opacity:0.5;"></i>
+              <strong style="font-size:1.05rem;">لا توجد منتجات مطابقة لخيارات الفلترة الحالية</strong>
+              <p style="font-size:0.85rem; margin-top:5px;">جرب تغيير خيار حالة الصورة أو مسح عبارة البحث لتصفح باقي المنتجات.</p>
+            </td>
+          </tr>
+        `;
+        document.getElementById('websitePageInfo').textContent = 'لا توجد نتائج';
+        document.getElementById('btnPrevWebsitePage').disabled = true;
+        document.getElementById('btnNextWebsitePage').disabled = true;
+        updateWebsiteSelectionBadge();
+        return;
+      }
+
+      const totalItems = websiteFilteredItems.length;
+      const totalPages = Math.ceil(totalItems / websitePerPage) || 1;
+      if (websiteCurrentPage > totalPages) websiteCurrentPage = totalPages;
+      if (websiteCurrentPage < 1) websiteCurrentPage = 1;
+
+      const startIndex = (websiteCurrentPage - 1) * websitePerPage;
+      const endIndex = Math.min(startIndex + websitePerPage, totalItems);
+      const pageItems = websiteFilteredItems.slice(startIndex, endIndex);
+
+      tbody.innerHTML = '';
+      pageItems.forEach(item => {
+        const tr = document.createElement('tr');
+        const key = item.target_filename;
+        const isChecked = websiteSelectedItems.has(key);
+
+        // Website Image cell
+        const wcImgSrc = item.wc_image_url || '';
+        const wcImgHtml = wcImgSrc ? `
+          <div style="position:relative; width:60px; height:60px; margin:0 auto;">
+            <a href="${wcImgSrc}" target="_blank" title="انقر لعرض صورة المتجر بالحجم الكامل">
+              <img src="${wcImgSrc}" loading="lazy" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:pointer;" onerror="this.onerror=null;this.src='';this.alt='خطأ تحميل'">
+            </a>
+          </div>
+        ` : `<span style="color:var(--text-muted); font-size:0.8rem;">—</span>`;
+
+        // Catalog Image cell
+        let catImgHtml = '';
+        if (item.current_image) {
+          catImgHtml = `
+            <div style="position:relative; width:60px; height:60px; margin:0 auto;">
+              <a href="/images/${encodeURIComponent(item.current_image)}" target="_blank" title="الصورة الحالية بالكاتالوج">
+                <img src="/images/${encodeURIComponent(item.current_image)}" loading="lazy" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); box-shadow:0 1px 3px rgba(0,0,0,0.1);" onerror="this.onerror=null;this.parentElement.innerHTML='<span style=\\'color:var(--danger);font-size:0.75rem;\\'>مفقودة</span>';">
+              </a>
+            </div>
+          `;
+        } else {
+          catImgHtml = `<span class="badge" style="background:#fee2e2; color:#ef4444; font-size:0.75rem; padding:4px 8px; border-radius:4px; font-weight:700; display:inline-block;">❌ بدون صورة</span>`;
+        }
+
+        // Code and Alias
+        const codeDisplay = item.code || `<span style="color:var(--text-muted); font-size:0.8rem;">—</span>`;
+        const aliasBadge = item.alias ? `<span style="display:inline-block; font-size:0.8rem; background:#fff0e8; color:var(--primary); font-weight:800; padding:2px 6px; border-radius:4px; margin-top:2px;">Alias: ${item.alias}</span>` : '';
+
+        // Target file badge
+        let fileBadge = '';
+        if (item.already_exists_locally) {
+          fileBadge = `<div style="font-size:10px; color:#d97706; background:#fef3c7; padding:2px 6px; border-radius:4px; margin-top:3px; display:inline-block; font-weight:700;">⚠️ سيتم عمل نسخة احتياطية</div>`;
+        } else {
+          fileBadge = `<div style="font-size:10px; color:#16a34a; background:#dcfce7; padding:2px 6px; border-radius:4px; margin-top:3px; display:inline-block; font-weight:700;">✨ صورة جديدة بالكامل</div>`;
+        }
+
+        // Item names & specs
+        const titleArabic = item.name || item.wc_name || '—';
+        const wcSubtitle = (item.wc_name && item.wc_name !== item.name) ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">متجر: ${item.wc_name}</div>` : '';
+        const skuInfo = item.wc_sku ? `<span style="font-size:0.75rem; color:#64748b; margin-top:2px; display:inline-block;">SKU: ${item.wc_sku}</span>` : '';
+
+        tr.innerHTML = `
+          <td style="text-align:center;">
+            <input type="checkbox" class="website-row-checkbox" data-key="${encodeURIComponent(key)}" ${isChecked ? 'checked' : ''} onchange="toggleWebsiteRowSelection('${encodeURIComponent(key)}', this.checked)" style="width:18px; height:18px; cursor:pointer;">
+          </td>
+          <td style="text-align:center;">${wcImgHtml}</td>
+          <td style="text-align:center;">${catImgHtml}</td>
+          <td>
+            <div style="font-weight:800; color:var(--secondary); font-size:0.95rem;">${codeDisplay}</div>
+            ${aliasBadge}
+          </td>
+          <td>
+            <div style="font-weight:700; color:var(--text-main); font-size:0.92rem; line-height:1.4;">${titleArabic}</div>
+            ${wcSubtitle}
+            ${skuInfo}
+          </td>
+          <td style="font-size:0.85rem; color:var(--text-muted);">${item.category || '—'}</td>
+          <td style="text-align:center; font-weight:700; color:${item.stock > 0 ? 'var(--accent)' : 'var(--text-muted)'}; font-size:0.9rem;">
+            ${item.stock || 0}
+          </td>
+          <td>
+            <code style="font-size:0.82rem; font-weight:700; color:var(--secondary); background:#f1f5f9; padding:2px 6px; border-radius:4px; direction:ltr; display:inline-block;">${item.target_filename}</code>
+            ${fileBadge}
+          </td>
+          <td style="text-align:center;">
+            <button onclick="importSingleWebsiteCandidate('${encodeURIComponent(key)}')" class="btn btn-outline" style="padding:5px 10px; font-size:0.8rem; border-color:var(--primary); color:var(--primary); font-weight:700;" title="استيراد وتنزيل هذه الصورة فقط">
+              📥 استيراد
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      // Update pagination info
+      document.getElementById('websitePageInfo').textContent = `الصفحة ${websiteCurrentPage} من ${totalPages} (إجمالي النتائج: ${totalItems.toLocaleString()})`;
+      document.getElementById('btnPrevWebsitePage').disabled = (websiteCurrentPage <= 1);
+      document.getElementById('btnNextWebsitePage').disabled = (websiteCurrentPage >= totalPages);
+
+      updateWebsiteSelectionBadge();
+    }
+
+    function changeWebsitePage(direction) {
+      const totalPages = Math.ceil(websiteFilteredItems.length / websitePerPage) || 1;
+      const newPage = websiteCurrentPage + direction;
+      if (newPage >= 1 && newPage <= totalPages) {
+        websiteCurrentPage = newPage;
+        renderWebsiteCandidatesTable();
+        const tabEl = document.getElementById('tabWebsiteImport');
+        if (tabEl) {
+          window.scrollTo({ top: tabEl.offsetTop - 80, behavior: 'smooth' });
+        }
+      }
+    }
+
+    function toggleWebsiteRowSelection(encodedKey, isChecked) {
+      const key = decodeURIComponent(encodedKey);
+      if (isChecked) {
+        const item = websiteFilteredItems.find(i => i.target_filename === key) || (websiteCandidatesData?.items || []).find(i => i.target_filename === key);
+        if (item) websiteSelectedItems.set(key, item);
+      } else {
+        websiteSelectedItems.delete(key);
+      }
+      updateWebsiteSelectionBadge();
+    }
+
+    function toggleSelectAllWebsite(masterCheckbox) {
+      const isChecked = masterCheckbox.checked;
+      if (isChecked) {
+        websiteFilteredItems.forEach(item => {
+          websiteSelectedItems.set(item.target_filename, item);
+        });
+      } else {
+        websiteFilteredItems.forEach(item => {
+          websiteSelectedItems.delete(item.target_filename);
+        });
+      }
+      renderWebsiteCandidatesTable();
+    }
+
+    function updateWebsiteSelectionBadge() {
+      const count = websiteSelectedItems.size;
+      const badge = document.getElementById('websiteSelectionBadge');
+      const btnBulk = document.getElementById('btnBulkImportWebsite');
+      const masterCheckbox = document.getElementById('selectAllWebsiteCheckbox');
+
+      if (badge) {
+        badge.textContent = `المحدد: ${count.toLocaleString()} صنف`;
+        badge.style.background = count > 0 ? 'var(--primary-soft)' : '#e2e8f0';
+        badge.style.color = count > 0 ? 'var(--primary)' : '#334155';
+      }
+
+      if (btnBulk) {
+        btnBulk.innerHTML = count > 0 ? `🚀 استيراد وتنزيل الصور المحددة (${count.toLocaleString()})` : '🚀 استيراد وتنزيل الصور المحددة';
+      }
+
+      if (masterCheckbox && websiteFilteredItems.length > 0) {
+        const allFilteredSelected = websiteFilteredItems.every(i => websiteSelectedItems.has(i.target_filename));
+        masterCheckbox.checked = allFilteredSelected;
+      }
+    }
+
+    async function importSingleWebsiteCandidate(encodedKey) {
+      const key = decodeURIComponent(encodedKey);
+      const item = (websiteCandidatesData?.items || []).find(i => i.target_filename === key);
+      if (!item) {
+        showToast('❌ لم يتم العثور على بيانات المنتج المحدد', 'error');
+        return;
+      }
+      await executeWebsiteImport([item]);
+    }
+
+    async function executeWebsiteImport(itemsOverride = null) {
+      if (!userSessionToken) return;
+
+      const itemsToImport = itemsOverride || Array.from(websiteSelectedItems.values());
+      if (!itemsToImport || itemsToImport.length === 0) {
+        showToast('⚠️ يرجى تحديد المنتجات التي ترغب في استيراد صورها أولاً', 'error');
+        return;
+      }
+
+      const count = itemsToImport.length;
+      const confirmMsg = count === 1 
+        ? `هل أنت متأكد من استيراد وتنزيل صورة المنتج (${itemsToImport[0].alias || itemsToImport[0].code}) من المتجر وتحويلها إلى صيغة WebP؟`
+        : `هل أنت متأكد من استيراد وتنزيل عدد ${count.toLocaleString()} صورة من المتجر وتحويلها إلى WebP وحفظها بالسيرفر؟`;
+
+      if (!confirm(confirmMsg)) return;
+
+      const autoGitPush = document.getElementById('websiteAutoGitPush')?.checked ?? true;
+
+      // Open Modal
+      const modal = document.getElementById('websiteImportModal');
+      const spinner = document.getElementById('websiteImportSpinner');
+      const heading = document.getElementById('websiteImportStatusHeading');
+      const statusText = document.getElementById('websiteImportStatusText');
+      const progBarContainer = document.getElementById('websiteImportProgressBarContainer');
+      const progBar = document.getElementById('websiteImportProgressBar');
+      const resultsContainer = document.getElementById('websiteImportResults');
+      const actionButtons = document.getElementById('websiteImportActionButtons');
+
+      modal.style.display = 'flex';
+      spinner.style.display = 'block';
+      progBarContainer.style.display = 'block';
+      progBar.style.width = '100%';
+      resultsContainer.style.display = 'none';
+      actionButtons.style.display = 'none';
+
+      heading.textContent = `جاري استيراد وتنزيل ${count.toLocaleString()} صورة من المتجر...`;
+      statusText.textContent = 'يتم الآن الاتصال بسيرفر المتجر لتحميل الصور الأصلية بأعلى دقة، وتحويلها لـ WebP، وضغطها بأعلى معايير الجودة...';
+
+      try {
+        const res = await fetch('/api/catalog/website/import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userSessionToken}`
+          },
+          body: JSON.stringify({
+            items: itemsToImport,
+            auto_git_push: autoGitPush
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'حدث خطأ أثناء استيراد الصور');
+        }
+
+        const data = await res.json();
+        spinner.style.display = 'none';
+        progBarContainer.style.display = 'none';
+        actionButtons.style.display = 'flex';
+        resultsContainer.style.display = 'block';
+
+        const imported = data.imported_count || 0;
+        const failed = data.failed_count || 0;
+        const gitStatus = data.git_status || 'skipped';
+
+        let gitStatusText = '';
+        if (gitStatus === 'pushed_successfully') {
+          gitStatusText = '✅ تم رفع الصور بنجاح إلى مستودع Git (GitHub)';
+        } else if (gitStatus === 'skipped') {
+          gitStatusText = 'ℹ️ تم تخطي الرفع إلى Git';
+        } else {
+          gitStatusText = `⚠️ حالة Git: ${gitStatus}`;
+        }
+
+        heading.textContent = imported > 0 ? '🎉 اكتملت عملية الاستيراد بنجاح!' : '⚠️ اكتملت العملية مع وجود تنبيهات';
+        statusText.textContent = `تم معالجة وتنزيل الصور وحفظها في مجلد الصور المعتمد (C:\\Users\\ALAA-ORANGE\\Desktop\\catalog\\images).`;
+
+        resultsContainer.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span>عدد الصور الناجحة:</span>
+            <strong style="color:var(--success); font-size:1.1em;">${imported.toLocaleString()}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span>عدد الصور الفاشلة:</span>
+            <strong style="color:${failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${failed.toLocaleString()}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span>مزامنة مستودع Git:</span>
+            <span style="font-weight:700;">${gitStatusText}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid var(--border-color); font-size:0.8rem; color:var(--text-muted);">
+            <span>النسخ الاحتياطية المحفوظة:</span>
+            <code>images_backup</code>
+          </div>
+        `;
+
+        showToast(`✅ تم استيراد ${imported} صورة بنجاح!`, 'success');
+
+        // Clear imported items from selection
+        itemsToImport.forEach(it => {
+          websiteSelectedItems.delete(it.target_filename);
+        });
+
+        // Refresh dataset and general catalog counts in background
+        await loadWebsiteCandidates(false);
+        await initializeCatalogAdmin();
+
+      } catch (err) {
+        console.error("Website import error:", err);
+        spinner.style.display = 'none';
+        progBarContainer.style.display = 'none';
+        actionButtons.style.display = 'flex';
+        heading.textContent = '❌ فشلت عملية الاستيراد';
+        statusText.textContent = err.message;
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+
+    function closeWebsiteImportModal() {
+      document.getElementById('websiteImportModal').style.display = 'none';
     }
 
     // === TAB 4: Malls Orders from Supabase ===
