@@ -2777,8 +2777,8 @@
                 <div class="glass-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
-                            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-tags text-orange me-2"></i> الخطوة 1: اختيار العرض من دايناميك (Dynamics 365 Offers)</h5>
-                            <small class="text-muted">اختر العرض المراد تفعيله وسيقوم النظام بتعبئة الموضوع وتفاصيل الأسعار والأصناف تلقائياً.</small>
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-database text-orange me-2"></i> الخطوة 1: اختيار العرض الترويجي (من قاعدة البيانات المحلية)</h5>
+                            <small class="text-muted">يتم جلب العروض والأصناف والأسعار المعتمدة وصور الكتالوج مباشرة من قاعدة بيانات النظام المحلية (PostgreSQL).</small>
                         </div>
                         <div class="d-flex gap-2 flex-wrap align-items-center">
                             <input type="text" id="offerDispatchSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو كود العرض..." oninput="filterOfferDispatchList()" style="width: 250px;">
@@ -2837,9 +2837,10 @@
                             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                 <label class="form-label fw-bold text-dark small mb-0"><i class="fa-solid fa-users text-orange me-1"></i> المستلمون (Recipients TO & CC):</label>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="selectAllShowroomsForOffer(true)"><i class="fa-solid fa-check-double me-1"></i> تحديد كافة المعارض (45+ فرع)</button>
-                                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="selectAllShowroomsForOffer(false)"><i class="fa-solid fa-xmark me-1"></i> إلغاء تحديد الكل</button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAreaManagersForOffer()"><i class="fa-solid fa-user-tie me-1"></i> + مدراء المناطق</button>
+                                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="selectAllShowroomsForOffer(true)"><i class="fa-solid fa-check-double me-1"></i> تحديد كافة المعارض</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectCategoryForOffer('area_manager')"><i class="fa-solid fa-user-tie me-1"></i> + مدراء المناطق</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="selectCategoryForOffer('management')"><i class="fa-solid fa-building-user me-1"></i> + الإدارة وخدمة العملاء</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllShowroomsForOffer(false)"><i class="fa-solid fa-xmark me-1"></i> إلغاء تحديد الكل</button>
                                     <button type="button" class="btn btn-sm btn-outline-warning text-dark" onclick="setOfferTestRecipientOnly()"><i class="fa-solid fa-flask me-1"></i> علاء فقط (تجريبي)</button>
                                 </div>
                             </div>
@@ -11038,22 +11039,16 @@
                 if (res.ok) {
                     const data = await res.json();
                     offerDispatchShowroomsDirectory = data.showrooms || [];
+                    offerDispatchAreaManagers = data.management || [];
                 }
             } catch (e) {
                 console.warn("Could not fetch email showrooms-list from API, falling back to local ALL_SHOWROOMS:", e);
             }
 
-            // Fallback to ALL_SHOWROOMS if API returned empty
-            if (offerDispatchShowroomsDirectory.length === 0 && typeof ALL_SHOWROOMS !== 'undefined') {
-                offerDispatchShowroomsDirectory = ALL_SHOWROOMS.map(s => ({
-                    code: s.code || s.id,
-                    name: s.name,
-                    email: s.email || `${(s.code || s.name).toLowerCase().replace(/\s+/g, '')}@orangebedbath.com`,
-                    area_manager: s.area_manager || ''
-                }));
-            }
+            // Combine all contacts
+            let allContacts = [...offerDispatchShowroomsDirectory, ...offerDispatchAreaManagers];
 
-            // By default, select all showrooms
+            // By default, select all showrooms from the verified list
             offerDispatchSelectedShowrooms = new Set(
                 offerDispatchShowroomsDirectory.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean)
             );
@@ -11247,24 +11242,79 @@
             const container = document.getElementById('offerShowroomsChecklistContainer');
             if (!container) return;
 
+            let allContacts = [
+                ...offerDispatchShowroomsDirectory.map(s => ({ ...s, cat: 'showroom' })),
+                ...offerDispatchAreaManagers.map(m => ({ ...m, cat: m.category || 'management' }))
+            ];
+
             let html = '';
-            offerDispatchShowroomsDirectory.forEach(s => {
+
+            // 1. Showrooms Section
+            html += '<div class="col-12 mt-1 mb-1"><span class="badge bg-dark px-2 py-1"><i class="fa-solid fa-store me-1"></i> معارض ومحلات التجزئة (' + offerDispatchShowroomsDirectory.length + ')</span></div>';
+            offerDispatchShowroomsDirectory.forEach((s, idx) => {
                 const em = (s.email || '').toLowerCase().trim();
                 const isChecked = offerDispatchSelectedShowrooms.has(em);
                 html += `
-                    <div class="col-12 col-sm-6 col-md-4 showroom-check-item" data-name="${(s.name || '').toLowerCase()}" data-code="${s.code}">
-                        <div class="form-check text-start p-1 bg-white rounded border border-light">
-                            <input class="form-check-input ms-1" type="checkbox" value="${em}" id="chk_shw_${s.code}" ${isChecked ? 'checked' : ''} onchange="toggleOfferShowroomSelection('${em}', this.checked)">
-                            <label class="form-check-label small text-dark w-100" for="chk_shw_${s.code}" style="cursor: pointer;">
-                                <strong>${s.code}</strong> - ${s.name}
-                                <small class="text-muted d-block font-monospace" style="font-size: 0.72rem;">${em}</small>
+                    <div class="col-12 col-sm-6 col-md-4 showroom-check-item" data-cat="showroom" data-name="${(s.name || '').toLowerCase()}" data-email="${em}">
+                        <div class="form-check text-start p-2 bg-white rounded border shadow-xs h-100">
+                            <input class="form-check-input ms-1" type="checkbox" value="${em}" id="chk_shw_${idx}" ${isChecked ? 'checked' : ''} onchange="toggleOfferShowroomSelection('${em}', this.checked)">
+                            <label class="form-check-label small text-dark w-100" for="chk_shw_${idx}" style="cursor: pointer;">
+                                <strong class="text-dark d-block">${s.name}</strong>
+                                <span class="text-muted font-monospace d-block" style="font-size: 0.75rem;">${em}</span>
                             </label>
                         </div>
                     </div>
                 `;
             });
 
+            // 2. Management & Area Managers Section
+            if (offerDispatchAreaManagers.length > 0) {
+                html += '<div class="col-12 mt-3 mb-1"><span class="badge bg-primary px-2 py-1"><i class="fa-solid fa-user-tie me-1"></i> مدراء المناطق والإدارة وخدمة العملاء (' + offerDispatchAreaManagers.length + ')</span></div>';
+                offerDispatchAreaManagers.forEach((m, idx) => {
+                    const em = (m.email || '').toLowerCase().trim();
+                    const isChecked = offerDispatchSelectedShowrooms.has(em);
+                    const isAm = m.category === 'area_manager';
+                    const badge = isAm ? '<span class="badge bg-info-subtle text-info border font-monospace me-1" style="font-size:0.65rem;">مدير منطقة</span>' : '';
+                    html += `
+                        <div class="col-12 col-sm-6 col-md-4 showroom-check-item" data-cat="${m.category || 'management'}" data-name="${(m.name || '').toLowerCase()}" data-email="${em}">
+                            <div class="form-check text-start p-2 bg-white rounded border border-primary-subtle shadow-xs h-100">
+                                <input class="form-check-input ms-1" type="checkbox" value="${em}" id="chk_mgr_${idx}" ${isChecked ? 'checked' : ''} onchange="toggleOfferShowroomSelection('${em}', this.checked)">
+                                <label class="form-check-label small text-dark w-100" for="chk_mgr_${idx}" style="cursor: pointer;">
+                                    ${badge}<strong class="text-dark">${m.name}</strong>
+                                    <span class="text-primary font-monospace d-block" style="font-size: 0.75rem;">${em}</span>
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
             container.innerHTML = html;
+        }
+
+        function selectCategoryForOffer(categoryKey) {
+            let targetList = [];
+            if (categoryKey === 'area_manager') {
+                targetList = offerDispatchAreaManagers.filter(m => m.category === 'area_manager');
+            } else if (categoryKey === 'management') {
+                targetList = offerDispatchAreaManagers.filter(m => m.category !== 'area_manager');
+            } else if (categoryKey === 'showroom') {
+                targetList = offerDispatchShowroomsDirectory;
+            }
+
+            let anyAdded = false;
+            targetList.forEach(item => {
+                const em = (item.email || '').toLowerCase().trim();
+                if (em) {
+                    offerDispatchSelectedShowrooms.add(em);
+                    anyAdded = true;
+                }
+            });
+
+            // Sync checkboxes in DOM
+            renderOfferShowroomCheckboxes();
+            updateOfferRecipientsBadges();
+            showToast(`تمت إضافة جهات الاتصال المحددة (${targetList.length}) إلى المستلمين`, 'success');
         }
 
         function toggleOfferShowroomSelection(email, isChecked) {
