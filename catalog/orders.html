@@ -1056,13 +1056,6 @@
                 <label class="bc-toggle"><input type="checkbox" id="optAlias" checked onchange="updateLabelOption('showAlias', this.checked)"> Alias</label>
                 <label class="bc-toggle"><input type="checkbox" id="optCode" checked onchange="updateLabelOption('showCode', this.checked)"> الكود</label>
               </div>
-              <div class="bc-price-row" style="margin-top: 8px;">
-                <span class="bc-controls-title" style="margin: 0;"><i class="fa-solid fa-barcode"></i> نوع الباركود:</span>
-                <select id="optBarcodeType" onchange="onBarcodeTypeChange(this.value)">
-                  <option value="dynamics" selected>كود دايناميك (Dynamics)</option>
-                  <option value="gofrugal">باركود غوفروغال (Gofrugal - يبدأ بـ 0)</option>
-                </select>
-              </div>
               <div class="bc-price-row">
                 <span class="bc-controls-title" style="margin: 0;">السعر:</span>
                 <select id="optPriceSource" onchange="onPriceSourceChange(this.value)">
@@ -1136,34 +1129,6 @@
     let isFetching = false;
     let ordersTotalCount = 0;
     let sortState = { field: 'date', dir: 'desc' };
-
-    let gofrugalBarcodesMap = null;
-
-    async function loadGofrugalBarcodes() {
-      if (gofrugalBarcodesMap !== null) return gofrugalBarcodesMap;
-      try {
-        const res = await fetch('gofrugal_barcodes.json?_=' + Date.now(), { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        gofrugalBarcodesMap = await res.json();
-      } catch (e) {
-        console.warn('Could not load gofrugal_barcodes.json:', e);
-        gofrugalBarcodesMap = {};
-      }
-      return gofrugalBarcodesMap;
-    }
-
-    function getGofrugalCode(code, alias) {
-      if (!gofrugalBarcodesMap) return '';
-      let c = String(code || '').trim();
-      if (c.toUpperCase().startsWith('KIT-')) {
-        c = c.substring(4);
-      }
-      let bc = gofrugalBarcodesMap[c] || (alias ? gofrugalBarcodesMap[String(alias).trim()] : null);
-      if (bc && String(bc).startsWith('0') && !(String(bc).length === 8 && String(bc).endsWith('44'))) {
-        return String(bc);
-      }
-      return '';
-    }
 
     function showToast(message, type = 'info', duration = 3500) {
       const container = document.getElementById('toastContainer');
@@ -1485,8 +1450,7 @@
     function formatOrderForExcel(data) {
       return getItems(data).map(item => {
         const [nameAr, nameEn] = splitName(item.name);
-        const gfCode = getGofrugalCode(item.code, item.alias) || String(item.gofrugal_code ?? '');
-        return [item.code, gfCode, nameAr, nameEn, item.alias ?? '', item.qty];
+        return [item.code, String(item.gofrugal_code ?? ''), nameAr, nameEn, item.alias ?? '', item.qty];
       });
     }
 
@@ -1528,13 +1492,12 @@
       return wb;
     }
 
-    async function downloadSelected() {
+    function downloadSelected() {
       const selectedIds = [...document.querySelectorAll('.orderCheckbox:checked')].map(el => el.value);
       if (selectedIds.length === 0) {
         showToast('يرجى تحديد طلب واحد على الأقل', 'info');
         return;
       }
-      await loadGofrugalBarcodes();
       const selected = selectedIds.map(id => currentOrdersList.find(o => o.id === id)).filter(Boolean);
       XLSX.writeFile(createWorkbookForOrders(selected), 'selected_orders.xlsx');
       showToast(`تم تحميل ${selected.length} طلب`, 'success');
@@ -1550,7 +1513,6 @@
       exportBtn.disabled = true;
 
       try {
-        await loadGofrugalBarcodes();
         const warehouse = document.getElementById('warehouseFilter').value;
         const status = document.getElementById('statusFilter').value;
         const startDate = document.getElementById('startDateFilter').value;
@@ -1642,20 +1604,18 @@
       document.getElementById('modal').classList.remove('active');
     }
 
-    async function downloadExcelDirect(docId) {
+    function downloadExcelDirect(docId) {
       const data = currentOrdersList.find(o => o.id === docId);
       if (!data) return;
-      await loadGofrugalBarcodes();
       XLSX.writeFile(createWorkbookForOrders([data]), `order_${data.mall || 'item'}.xlsx`);
       showToast('تم تحميل الطلب', 'success');
     }
 
-    async function downloadExcel() {
+    function downloadExcel() {
       if (!currentOrder) {
         showToast('لم يتم اختيار طلب', 'info');
         return;
       }
-      await loadGofrugalBarcodes();
       XLSX.writeFile(createWorkbookForOrders([currentOrder]), `order_${currentOrder.mall || 'item'}.xlsx`);
       showToast('تم تحميل الطلب', 'success');
     }
@@ -2025,8 +1985,7 @@
     function formatTransferForExcel(data) {
       return getItems(data).map(item => {
         const [nameAr, nameEn] = splitName(item.name);
-        const gfCode = getGofrugalCode(item.code, item.alias);
-        return [item.code, gfCode, nameAr, nameEn, item.alias ?? '', item.qty];
+        return [item.code, '', nameAr, nameEn, item.alias ?? '', item.qty];
       });
     }
 
@@ -2054,22 +2013,20 @@
       return wb;
     }
 
-    window.downloadSelectedTransfers = async function () {
+    window.downloadSelectedTransfers = function () {
       const selectedIds = [...document.querySelectorAll('.transferCheckbox:checked')].map(el => el.value);
       if (selectedIds.length === 0) {
         showToast('يرجى تحديد تحويل واحد على الأقل', 'info');
         return;
       }
-      await loadGofrugalBarcodes();
       const selected = selectedIds.map(id => currentTransfersList.find(t => t.id === id)).filter(Boolean);
       XLSX.writeFile(createWorkbookForTransfers(selected), 'selected_transfers.xlsx');
       showToast(`تم تحميل ${selected.length} تحويل`, 'success');
     };
 
-    window.downloadExcelTransferDirect = async function (docId) {
+    window.downloadExcelTransferDirect = function (docId) {
       const data = currentTransfersList.find(t => t.id === docId);
       if (!data) return;
-      await loadGofrugalBarcodes();
       XLSX.writeFile(createWorkbookForTransfers([data]), `transfer_${data.from_mall}_to_${data.to_mall}.xlsx`);
       showToast('تم تحميل التحويل', 'success');
     };
@@ -2084,7 +2041,6 @@
       exportBtn.disabled = true;
 
       try {
-        await loadGofrugalBarcodes();
         const fromMall = document.getElementById('transferFromFilter').value;
         const toMall = document.getElementById('transferToFilter').value;
         const status = document.getElementById('transferStatusFilter').value;
@@ -2134,8 +2090,7 @@
     let barcodeQueue = [];
     let labelOptions = {
       showBrand: true, showName: true, showAlias: true, showCode: true,
-      priceSource: 'promo', customPrice: '', separatorPerMall: true,
-      barcodeType: 'dynamics'
+      priceSource: 'promo', customPrice: '', separatorPerMall: true
     };
     let promoPriceMap = null;
     let catalogIndex = null;
@@ -2230,11 +2185,6 @@
     }
 
     function resolveBarcodeValue(item) {
-      if (labelOptions.barcodeType === 'gofrugal') {
-        const gf = getGofrugalCode(item.code, item.alias);
-        if (gf) return gf;
-      }
-
       let v = String(item.code || '');
       if (v.toUpperCase().startsWith('KIT-')) {
         if (item.alias && String(item.alias).trim() !== '') return String(item.alias).trim();
@@ -2358,17 +2308,9 @@
       document.getElementById('barcodeModal').classList.add('active');
       renderBarcodeQueue();
       renderBarcodePreview();
-      const promises = [];
       if (labelOptions.priceSource === 'promo' && (promoPriceMap === null || catalogIndex === null)) {
-        promises.push(loadPromoPrices(), loadCatalog());
-      }
-      if (gofrugalBarcodesMap === null) {
-        promises.push(loadGofrugalBarcodes());
-      }
-      if (promises.length) {
-        document.getElementById('bcPreviewNote').textContent = 'جاري التحميل...';
-        await Promise.all(promises);
-        document.getElementById('bcPreviewNote').textContent = '';
+        document.getElementById('bcPreviewNote').textContent = 'جاري تحميل الأسعار...';
+        await Promise.all([loadPromoPrices(), loadCatalog()]);
         renderBarcodePreview();
       }
     }
@@ -2401,16 +2343,6 @@
       renderBarcodePreview();
     }
 
-    async function onBarcodeTypeChange(val) {
-      labelOptions.barcodeType = val;
-      if (val === 'gofrugal' && gofrugalBarcodesMap === null) {
-        document.getElementById('bcPreviewNote').textContent = 'جاري تحميل باركودات غوفروغال...';
-        await loadGofrugalBarcodes();
-        document.getElementById('bcPreviewNote').textContent = '';
-      }
-      renderBarcodePreview();
-    }
-
     async function onPriceSourceChange(val) {
       labelOptions.priceSource = val;
       document.getElementById('optCustomPrice').style.display = val === 'custom' ? '' : 'none';
@@ -2438,17 +2370,13 @@
     }
 
     function buildLabelInner(item) {
-      const bcVal = resolveBarcodeValue(item);
       let inner = '';
       if (labelOptions.showBrand) inner += '<div class="lc-brand">ORANGE</div><div class="lc-sub">BED&amp;BATH</div>';
       if (labelOptions.showName) inner += `<div class="lc-name">${escapeHtml(item.name)}</div>`;
-      inner += `<div class="lc-bar"><svg data-value="${escapeHtml(bcVal)}"></svg></div>`;
+      inner += `<div class="lc-bar"><svg data-value="${escapeHtml(resolveBarcodeValue(item))}"></svg></div>`;
       const foot = [];
       if (labelOptions.showAlias && item.alias) foot.push(`<span>${escapeHtml(item.alias)}</span>`);
-      if (labelOptions.showCode) {
-        const displayCode = (labelOptions.barcodeType === 'gofrugal' && bcVal && bcVal.startsWith('0')) ? bcVal : item.code;
-        foot.push(`<span>${escapeHtml(displayCode)}</span>`);
-      }
+      if (labelOptions.showCode) foot.push(`<span>${escapeHtml(item.code)}</span>`);
       const price = resolveLabelPrice(item);
       if (price !== null) foot.push(`<span>${Number(price).toFixed(2)}</span>`);
       if (foot.length) inner += `<div class="lc-foot">${foot.join('')}</div>`;
@@ -2542,10 +2470,7 @@
         inner += `<div class="barcode-container"><svg class="barcode-svg" data-value="${escapeHtml(item.barcodeVal)}"></svg></div>`;
         const foot = [];
         if (labelOptions.showAlias && item.alias) foot.push(`<span>${escapeHtml(item.alias)}</span>`);
-        if (labelOptions.showCode) {
-          const displayCode = (labelOptions.barcodeType === 'gofrugal' && item.barcodeVal && item.barcodeVal.startsWith('0')) ? item.barcodeVal : item.code;
-          foot.push(`<span>${escapeHtml(displayCode)}</span>`);
-        }
+        if (labelOptions.showCode) foot.push(`<span>${escapeHtml(item.code)}</span>`);
         const price = resolveLabelPrice(item);
         if (price !== null) foot.push(`<span>${Number(price).toFixed(2)}</span>`);
         if (foot.length) inner += `<div class="footer">${foot.join('')}</div>`;
@@ -2587,7 +2512,6 @@
 
     // Initial Load
     loadOrders('first');
-    loadGofrugalBarcodes();
   </script>
 
 </body>
