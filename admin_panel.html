@@ -1070,6 +1070,10 @@
                         <i class="fa-solid fa-envelope-open-text text-primary"></i>
                         <span class="nav-text">البريد الإلكتروني 📬 <span class="badge bg-primary rounded-pill ms-1" id="emailSidebarUnreadBadge" style="display:none; font-size:0.7rem; padding: 2px 6px;">0</span></span>
                     </button>
+                    <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="offer-dispatch-tab" data-bs-toggle="tab" data-bs-target="#offer-dispatch-content" type="button" role="tab">
+                        <i class="fa-solid fa-bullhorn text-warning"></i>
+                        <span class="nav-text">إرسال تفعيل العروض 🏷️✉️ <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.68rem; padding: 2px 6px;">جديد</span></span>
+                    </button>
                     <button class="nav-link text-start mb-2 d-flex align-items-center gap-3" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance-content" type="button" role="tab">
                         <i class="fa-solid fa-fingerprint text-warning"></i>
                         <span class="nav-text">سجل البصمات والدوام 🕒 <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.68rem; padding: 2px 6px;">مباشر</span></span>
@@ -2745,12 +2749,260 @@
                 </div>
             </div>
 
+            <!-- Tab [NEW]: إرسال تفعيل العروض الترويجية في دايناميك -->
+            <div class="tab-pane fade" id="offer-dispatch-content" role="tabpanel">
+                
+                <!-- 1. Header Card -->
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-orange"><i class="fa-solid fa-bullhorn me-2"></i> إرسال تفعيل العروض والخصومات الترويجية | Offer Dispatcher</h4>
+                            <p class="text-muted small mb-0">
+                                استعراض عروض <b>Microsoft Dynamics 365</b>، وتوليد صيغة الإيميل المعتمدة تلقائياً، وتضمين صور المنتجات وإرسالها مباشرة لجميع المعارض ومدراء المناطق.
+                            </p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <div class="form-check form-switch d-flex align-items-center gap-2 px-3 py-1 bg-light rounded border border-warning" style="cursor: pointer;">
+                                <input class="form-check-input ms-0" type="checkbox" role="switch" id="offerDispatchTestModeToggle" checked onchange="toggleOfferDispatchTestMode(this.checked)">
+                                <label class="form-check-label fw-bold small text-dark mb-0" for="offerDispatchTestModeToggle" id="offerDispatchTestModeLabel">🧪 وضع التجربة (إرسال لإيميل علاء فقط)</label>
+                            </div>
+                            <button class="btn btn-orange-premium btn-sm px-3 shadow-sm" onclick="loadOfferDispatchData(true)">
+                                <i class="fa-solid fa-rotate" id="offerDispatchRefreshIcon"></i> تحديث العروض
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Section 1: Choose Dynamics Offer -->
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-tags text-orange me-2"></i> الخطوة 1: اختيار العرض من دايناميك (Dynamics 365 Offers)</h5>
+                            <small class="text-muted">اختر العرض المراد تفعيله وسيقوم النظام بتعبئة الموضوع وتفاصيل الأسعار والأصناف تلقائياً.</small>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <input type="text" id="offerDispatchSearchInput" class="form-control form-control-dark" placeholder="🔍 بحث باسم أو كود العرض..." oninput="filterOfferDispatchList()" style="width: 250px;">
+                            <select id="offerDispatchStatusFilter" class="form-select form-control-dark" onchange="filterOfferDispatchList()" style="width: 170px;">
+                                <option value="Enabled" selected>عروض فعالة (Enabled)</option>
+                                <option value="all">كل العروض</option>
+                                <option value="Disabled">معطلة (Disabled)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Offers Table / List -->
+                    <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                        <table class="table table-premium text-center align-middle" id="offerDispatchTable">
+                            <thead>
+                                <tr>
+                                    <th>كود العرض</th>
+                                    <th class="text-start ps-3">اسم العرض الترويجي</th>
+                                    <th>تاريخ الصلاحية</th>
+                                    <th>الحالة</th>
+                                    <th>الأصناف المشمولة والأسعار</th>
+                                    <th>الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offerDispatchListBody">
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <div class="spinner-border text-orange mb-2" role="status"></div>
+                                        <div class="fw-bold">جاري تحميل عروض النظام من Dynamics...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. Section 2: Email Form & Editor -->
+                <div class="glass-card mb-4" id="offerEmailFormSection">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-envelope-open-text text-orange me-2"></i> الخطوة 2: صياغة وتجهيز رسالة التفعيل</h5>
+                            <small class="text-muted">تم بناء نص الرسالة تلقائياً بصيغتك المعتمدة. يمكنك مراجعة وتعديل أي جزء بحرية.</small>
+                        </div>
+                        <div id="offerSelectedBadgeContainer"></div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Subject Field -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-heading text-orange me-1"></i> موضوع الرسالة (Subject):</label>
+                            <input type="text" id="offerEmailSubject" class="form-control form-control-dark fw-bold" style="font-size: 1.05rem;" placeholder="مثال: تفعيل عرض مخدة كرسي...">
+                        </div>
+
+                        <!-- Recipients Field -->
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <label class="form-label fw-bold text-dark small mb-0"><i class="fa-solid fa-users text-orange me-1"></i> المستلمون (Recipients TO & CC):</label>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="selectAllShowroomsForOffer(true)"><i class="fa-solid fa-check-double me-1"></i> تحديد كافة المعارض (45+ فرع)</button>
+                                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="selectAllShowroomsForOffer(false)"><i class="fa-solid fa-xmark me-1"></i> إلغاء تحديد الكل</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAreaManagersForOffer()"><i class="fa-solid fa-user-tie me-1"></i> + مدراء المناطق</button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark" onclick="setOfferTestRecipientOnly()"><i class="fa-solid fa-flask me-1"></i> علاء فقط (تجريبي)</button>
+                                </div>
+                            </div>
+
+                            <!-- Recipients Count & Accordion / Drawer -->
+                            <div class="p-3 bg-light border rounded mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                                    <div>
+                                        <span class="fw-bold text-dark" id="offerRecipientsCountBadge">المستلمون المختارون: 0 معرض</span>
+                                        <span class="badge bg-secondary ms-2" id="offerRecipientsModeTag">وضع الإنتاج</span>
+                                    </div>
+                                    <button class="btn btn-link btn-sm text-decoration-none text-orange p-0" type="button" data-bs-toggle="collapse" data-bs-target="#offerShowroomsChecklistCollapse">
+                                        <i class="fa-solid fa-chevron-down me-1"></i> تخصيص / اختيار فروع محددة
+                                    </button>
+                                </div>
+
+                                <div class="collapse mt-2 pt-2 border-top" id="offerShowroomsChecklistCollapse">
+                                    <div class="input-group input-group-sm mb-2" style="max-width: 300px;">
+                                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                        <input type="text" id="offerShowroomFilterInput" class="form-control" placeholder="تصفية الفروع..." oninput="filterOfferShowroomCheckboxes()">
+                                    </div>
+                                    <div class="row g-2" style="max-height: 200px; overflow-y: auto;" id="offerShowroomsChecklistContainer">
+                                        <!-- Showroom checkboxes injected via JS -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Extra Custom Recipients / CC -->
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small mb-1">إيميلات إضافية مباشرة (To Extra):</label>
+                                    <input type="text" id="offerEmailExtraTo" class="form-control form-control-dark form-control-sm" placeholder="إيميلات مفصولة بفواصل أو مسافات...">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small mb-1">نسخة إلى (CC):</label>
+                                    <input type="text" id="offerEmailExtraCc" class="form-control form-control-dark form-control-sm" placeholder="مثال: radwan@..., mohannad@... (مفصولة بفواصل)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email Body (Text / HTML Editor) -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-pen-nib text-orange me-1"></i> نص الرسالة (Message Body):</label>
+                            <div class="alert alert-light border small text-muted py-2 mb-2">
+                                <i class="fa-solid fa-circle-info text-primary me-1"></i> يمكنك تعديل نص التفعيل أو إضافة أي تعليمات إضافية للفروع هنا. التوقيع الرسمي يُضاف تلقائياً في الأسفل.
+                            </div>
+                            <textarea id="offerEmailBodyText" class="form-control form-control-dark" rows="7" style="line-height: 1.7; font-family: Tahoma, Arial, sans-serif; font-size: 14px;" placeholder="اكتب نص الإيميل هنا..."></textarea>
+                        </div>
+
+                        <!-- Images Section -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-images text-orange me-1"></i> صور العرض المضمنة (Inline Product Images):</label>
+                            
+                            <!-- Catalog Match Prompt (Injected if matching catalog image found) -->
+                            <div id="offerCatalogImageNotice" class="alert alert-warning border-warning d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 mb-3" style="display:none !important;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-warning fs-5"></i>
+                                    <div>
+                                        <strong class="text-dark">صور الكتالوج التلقائية:</strong>
+                                        <span class="small text-muted" id="offerCatalogImageNoticeText">عثرنا على صور مطابقة لأصناف هذا العرض في الكتالوج.</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-orange-premium" id="btnAttachAllCatalogImages" onclick="attachAutoCatalogImages()">
+                                    <i class="fa-solid fa-paperclip me-1"></i> إدراج صور الكتالوج تلقائياً
+                                </button>
+                            </div>
+
+                            <!-- Drag & Drop Upload Zone -->
+                            <div class="p-4 border-2 border-dashed rounded text-center bg-light" id="offerImageDropZone" onclick="document.getElementById('offerImageFileInput').click()" style="border: 2px dashed #fe7900 !important; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="fa-solid fa-cloud-arrow-up fs-2 text-orange mb-2 d-block"></i>
+                                <div class="fw-bold text-dark">اضغط لاختيار صور من جهازك، أو اسحب وأفلت الصور هنا</div>
+                                <div class="small text-muted mt-1">يدعم أيضاً اللصق المباشر من الحافظة بـ <kbd>Ctrl + V</kbd> (JPG, PNG, WebP)</div>
+                                <input type="file" id="offerImageFileInput" accept="image/*" multiple style="display: none;" onchange="handleOfferImageFiles(this.files)">
+                            </div>
+
+                            <!-- Attached Images Preview Grid -->
+                            <div class="mt-3">
+                                <div class="small fw-bold text-muted mb-2" id="offerAttachedImagesCount">الصور المرفقة (0):</div>
+                                <div class="d-flex gap-3 flex-wrap align-items-center" id="offerImagesPreviewGrid">
+                                    <!-- Image thumbnails injected via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Bar Buttons -->
+                        <div class="col-12 mt-4 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetOfferDispatchForm()">
+                                <i class="fa-solid fa-rotate-left me-1"></i> إعادة تعيين النموذج
+                            </button>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-orange-premium px-4" onclick="openOfferEmailPreviewModal()">
+                                    <i class="fa-solid fa-eye me-1"></i> معاينة قبل الإرسال (Preview)
+                                </button>
+                                <button type="button" class="btn btn-orange-premium px-4 shadow" id="btnSendOfferEmailMain" onclick="submitSendOfferEmail()">
+                                    <i class="fa-solid fa-paper-plane me-1"></i> <span id="btnSendOfferEmailLabel">إرسال الرسالة الآن 🚀</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
 
     </div>
     <!-- Close mainContentWrapper -->
     </div>
     <!-- Close outer layout wrapper d-flex -->
+    </div>
+
+    <!-- Offer Email Live Preview Modal -->
+    <div class="modal fade" id="offerEmailPreviewModal" tabindex="-1" aria-hidden="true" style="color: var(--text-dark); direction: rtl;">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-white border" style="border-radius: 16px; border: 2px solid var(--orange) !important;">
+                <div class="modal-header border-bottom bg-light">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-envelope-circle-check text-orange fs-4"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">معاينة الإيميل قبل الإرسال الرسمي</h5>
+                            <small class="text-muted" id="previewModalSubtitle">تأكد من صياغة الرسالة والمستلمين والصور المضمنة</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="margin-right: auto; margin-left: 0;"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <!-- Envelope Summary Header -->
+                    <div class="p-3 bg-white border rounded mb-3 shadow-sm">
+                        <div class="row g-2 small">
+                            <div class="col-12 d-flex align-items-center">
+                                <strong class="text-muted" style="width: 80px;">من (From):</strong>
+                                <span class="fw-bold text-dark"><i class="fa-solid fa-user-circle text-orange me-1"></i> Alaa Wafae &lt;alaa.wafae@orangebedbath.com&gt;</span>
+                            </div>
+                            <div class="col-12 d-flex align-items-start">
+                                <strong class="text-muted" style="width: 80px;">إلى (To):</strong>
+                                <div class="flex-grow-1" id="previewModalRecipientsList"></div>
+                            </div>
+                            <div class="col-12 d-flex align-items-start" id="previewModalCcRow" style="display:none;">
+                                <strong class="text-muted" style="width: 80px;">نسخة (Cc):</strong>
+                                <div class="flex-grow-1" id="previewModalCcList"></div>
+                            </div>
+                            <div class="col-12 d-flex align-items-center">
+                                <strong class="text-muted" style="width: 80px;">الموضوع:</strong>
+                                <span class="fw-bold text-primary fs-6" id="previewModalSubject"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Simulated Client View -->
+                    <div class="p-4 bg-white border rounded shadow-sm" style="min-height: 400px; max-height: 60vh; overflow-y: auto;">
+                        <div id="previewModalRenderedBody"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-pen-to-square me-1"></i> تعديل الرسالة
+                    </button>
+                    <button type="button" class="btn btn-orange-premium px-4 shadow" onclick="confirmSendFromPreviewModal()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> تأكيد وإرسال الإيميل الآن 🚀
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bulk Import Targets Modal -->
