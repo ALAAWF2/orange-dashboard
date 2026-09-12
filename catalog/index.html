@@ -4096,12 +4096,12 @@
         const imageId = encodeURIComponent(
           (d.alias && String(d.alias).trim() !== '') ? String(d.alias).trim() : String(d.code)
         );
+        const jsdelivrSrc = d.image_path ? `https://cdn.jsdelivr.net/gh/ALAAWF2/catalog@main/images/${encodeURIComponent(d.image_path)}` : '';
+        const rawGithubSrc = d.image_path ? `https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/${encodeURIComponent(d.image_path)}` : '';
         const fallbackSrc = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/${imageId}.jpg`;
-        const imgSrc = d.image_path
-          ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + d.image_path
-          : fallbackSrc;
+        const imgSrc = jsdelivrSrc || fallbackSrc;
         const imgOnError = d.image_path
-          ? `if(this.dataset.fallback !== 'true'){this.dataset.fallback='true';this.src='${fallbackSrc}';}else{this.src='noimage.png';this.onerror=null;this.classList.add('error');}`
+          ? `if(this.dataset.step!=='2'&&'${rawGithubSrc}'){this.dataset.step='2';this.src='${rawGithubSrc}';}else if(this.dataset.step!=='3'){this.dataset.step='3';this.src='${fallbackSrc}';}else{this.src='noimage.png';this.onerror=null;this.classList.add('error');}`
           : `this.src='noimage.png';this.onerror=null;this.classList.add('error');`;
 
         const isNew = isNewArrival(d.code);
@@ -4291,14 +4291,21 @@
         if (isDeal) tableBadgesHtml += '<span class="table-badge badge-deal" title="عرض ترويجي نشط">🏷️ عرض</span>';
         if (smartRec.qty > 0) tableBadgesHtml += `<span class="table-badge badge-smart" title="كمية مقترحة: تغطية ${smartRec.daysCover} يوم">مقترح: ${smartRec.qty}</span>`;
 
-        const imgSrc = d.image_path
-          ? 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + d.image_path
-          : 'https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/' + ((d.alias && String(d.alias).trim() !== '') ? d.alias : d.code) + '.jpg';
+        const tableImgId = encodeURIComponent(
+          (d.alias && String(d.alias).trim() !== '') ? String(d.alias).trim() : String(d.code)
+        );
+        const tableJsdelivrSrc = d.image_path ? `https://cdn.jsdelivr.net/gh/ALAAWF2/catalog@main/images/${encodeURIComponent(d.image_path)}` : '';
+        const tableRawGithubSrc = d.image_path ? `https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/${encodeURIComponent(d.image_path)}` : '';
+        const tableFallbackSrc = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_500,q_auto,f_auto,d_noimage.png/${tableImgId}.jpg`;
+        const tableImgSrc = tableJsdelivrSrc || tableFallbackSrc;
+        const tableImgOnError = d.image_path
+          ? `if(this.dataset.step!=='2'&&'${tableRawGithubSrc}'){this.dataset.step='2';this.src='${tableRawGithubSrc}';}else if(this.dataset.step!=='3'){this.dataset.step='3';this.src='${tableFallbackSrc}';}else{this.src='noimage.png';this.onerror=null;this.classList.add('error');}`
+          : `this.src='noimage.png';this.onerror=null;this.classList.add('error');`;
 
         return `
           <tr>
             <td style="width:50px;">
-              <img src="${imgSrc}" alt="${safeName}" width="44" height="44" loading="lazy" style="width:44px; height:44px; object-fit:contain; border-radius:6px;" onerror="this.src='noimage.png'; this.onerror=null;">
+              <img src="${tableImgSrc}" alt="${safeName}" width="44" height="44" loading="lazy" style="width:44px; height:44px; object-fit:contain; border-radius:6px;" onerror="${tableImgOnError}">
             </td>
             <td>
               <div style="font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
@@ -4368,14 +4375,17 @@
 
       const imageId = (product.alias && String(product.alias).trim() !== '') ? product.alias : product.code;
       if (product.image_path) {
-        modalImage.src = 'https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + product.image_path;
+        modalImage.src = `https://cdn.jsdelivr.net/gh/ALAAWF2/catalog@main/images/${encodeURIComponent(product.image_path)}`;
       } else {
         modalImage.src = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_600,q_auto,f_auto,d_noimage.png/${imageId}.jpg`;
       }
-      modalImage.dataset.fallback = 'false';
+      modalImage.dataset.step = '1';
       modalImage.onerror = function() {
-        if (this.dataset.fallback !== 'true' && product.image_path) {
-          this.dataset.fallback = 'true';
+        if (this.dataset.step === '1' && product.image_path) {
+          this.dataset.step = '2';
+          this.src = `https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/${encodeURIComponent(product.image_path)}`;
+        } else if (this.dataset.step === '2') {
+          this.dataset.step = '3';
           this.src = `https://res.cloudinary.com/dsp8ysswh/image/upload/w_600,q_auto,f_auto,d_noimage.png/${imageId}.jpg`;
         } else {
           this.src = 'noimage.png';
@@ -5581,7 +5591,10 @@
           if (withImages && p.image_path) {
             row.height = 60;
             try {
-              const response = await fetch('https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + p.image_path);
+              let response = await fetch('https://cdn.jsdelivr.net/gh/ALAAWF2/catalog@main/images/' + encodeURIComponent(p.image_path));
+              if (!response.ok) {
+                response = await fetch('https://raw.githubusercontent.com/ALAAWF2/catalog/main/images/' + encodeURIComponent(p.image_path));
+              }
               if (response.ok) {
                 const blob = await response.blob();
                 const arrayBuffer = await blob.arrayBuffer();
