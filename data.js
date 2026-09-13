@@ -3431,7 +3431,7 @@ const EMPLOYEES = [
         "name": "حسين عيون السود",
         "startDate": "2024-11-17",
         "manager": "عبيدة السباعي",
-        "showroom": "1007-18-Al_Khayyat Center و 1009-53-Al Basateen Mall",
+        "showroom": "1007-18-Al_Khayyat Center",
         "showroomDetails": [
             {
                 "name": "1007-18-Al_Khayyat Center",
@@ -3440,17 +3440,9 @@ const EMPLOYEES = [
                     "1007-C",
                     "1007-E"
                 ]
-            },
-            {
-                "name": "1009-53-Al Basateen Mall",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1009-C",
-                    "1009-E"
-                ]
             }
         ],
-        "addressBooks": "1007-C;1007-E;1009-C;1009-E"
+        "addressBooks": "1007-C;1007-E"
     },
     {
         "employeeId": "4396-غيداء مكي",
