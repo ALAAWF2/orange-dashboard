@@ -2069,7 +2069,7 @@ const EMPLOYEES = [
         "name": "محمد ارشد ايليداث",
         "startDate": "2023-03-21",
         "manager": "محمدكلو",
-        "showroom": "1110-45- Riyadh Gallery Mall",
+        "showroom": "1110-45- Riyadh Gallery Mall و 1101-12-Al_Hamra Mall",
         "showroomDetails": [
             {
                 "name": "1110-45- Riyadh Gallery Mall",
@@ -2078,9 +2078,17 @@ const EMPLOYEES = [
                     "1110-C",
                     "1110-E"
                 ]
+            },
+            {
+                "name": "1101-12-Al_Hamra Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1101-C",
+                    "1101-E"
+                ]
             }
         ],
-        "addressBooks": "1110-C;1110-E"
+        "addressBooks": "1110-C;1110-E;1101-C;1101-E"
     },
     {
         "employeeId": "3588-محمد مونبار",
