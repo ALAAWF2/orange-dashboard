@@ -2069,16 +2069,8 @@ const EMPLOYEES = [
         "name": "محمد ارشد ايليداث",
         "startDate": "2023-03-21",
         "manager": "محمدكلو",
-        "showroom": "1110-45- Riyadh Gallery Mall و 1101-12-Al_Hamra Mall",
+        "showroom": "1101-12-Al_Hamra Mall و 1110-45- Riyadh Gallery Mall",
         "showroomDetails": [
-            {
-                "name": "1110-45- Riyadh Gallery Mall",
-                "manager": "محمدكلو",
-                "codes": [
-                    "1110-C",
-                    "1110-E"
-                ]
-            },
             {
                 "name": "1101-12-Al_Hamra Mall",
                 "manager": "محمدكلو",
@@ -2086,9 +2078,17 @@ const EMPLOYEES = [
                     "1101-C",
                     "1101-E"
                 ]
+            },
+            {
+                "name": "1110-45- Riyadh Gallery Mall",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1110-C",
+                    "1110-E"
+                ]
             }
         ],
-        "addressBooks": "1110-C;1110-E;1101-C;1101-E"
+        "addressBooks": "1101-C;1101-E;1110-C;1110-E"
     },
     {
         "employeeId": "3588-محمد مونبار",
@@ -2286,16 +2286,8 @@ const EMPLOYEES = [
         "name": "محمد هشير ماليكال",
         "startDate": "2023-09-13",
         "manager": "عبيدة السباعي",
-        "showroom": "1001-04-Andalos Mall و 1005-09-Al-Salam Mall",
+        "showroom": "1005-09-Al-Salam Mall",
         "showroomDetails": [
-            {
-                "name": "1001-04-Andalos Mall",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1001-C",
-                    "1001-E"
-                ]
-            },
             {
                 "name": "1005-09-Al-Salam Mall",
                 "manager": "عبيدة السباعي",
@@ -2305,7 +2297,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1001-C;1001-E;1005-C;1005-E"
+        "addressBooks": "1005-C;1005-E"
     },
     {
         "employeeId": "3735-شاجهان كورمبوتوثوديل",
@@ -4673,16 +4665,8 @@ const EMPLOYEES = [
         "name": "اصاله عزيز القرني",
         "startDate": "2025-09-11",
         "manager": "عبيدة السباعي",
-        "showroom": "1001-04-Andalos Mall و 1012-57-Sauq7",
+        "showroom": "1012-57-Sauq7",
         "showroomDetails": [
-            {
-                "name": "1001-04-Andalos Mall",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1001-C",
-                    "1001-E"
-                ]
-            },
             {
                 "name": "1012-57-Sauq7",
                 "manager": "عبيدة السباعي",
@@ -4692,7 +4676,7 @@ const EMPLOYEES = [
                 ]
             }
         ],
-        "addressBooks": "1001-C;1001-E;1012-C;1012-E"
+        "addressBooks": "1012-C;1012-E"
     },
     {
         "employeeId": "4705-مراد محمد مباركي",
@@ -6831,25 +6815,6 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1010-C;1010-E"
-    },
-    {
-        "employeeId": "4978-فاطمة مبارك",
-        "personnelNumber": "4978",
-        "name": "فاطمة مبارك",
-        "startDate": "2026-06-14",
-        "manager": "عبيدة السباعي",
-        "showroom": "1001-04-Andalos Mall",
-        "showroomDetails": [
-            {
-                "name": "1001-04-Andalos Mall",
-                "manager": "عبيدة السباعي",
-                "codes": [
-                    "1001-C",
-                    "1001-E"
-                ]
-            }
-        ],
-        "addressBooks": "1001-C;1001-E"
     },
     {
         "employeeId": "4977-اصايل عابد",
