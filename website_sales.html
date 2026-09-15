@@ -3153,6 +3153,7 @@
         // "All" Card
         const allCard = document.createElement('div');
         allCard.className = 'cat-card' + (SELECTED_CATEGORY === 'الكل' ? ' active' : '');
+        allCard.setAttribute('data-category', 'الكل');
         allCard.innerHTML = `
           <div class="cat-name">كل الفئات التجارية</div>
           <div class="cat-sales">إجمالي المعروض</div>
@@ -3164,9 +3165,10 @@
         categories.forEach(cat => {
           const card = document.createElement('div');
           card.className = 'cat-card' + (SELECTED_CATEGORY === cat.category_name ? ' active' : '');
+          card.setAttribute('data-category', cat.category_name);
           card.innerHTML = `
             <div class="cat-name" style="display:flex; align-items:center; justify-content:space-between;">
-              <span>${cat.category_name}</span>
+              <span class="cat-title-text">${cat.category_name}</span>
               <button class="kpi-info-btn" type="button" onclick="event.stopPropagation();" aria-label="معلومات فئة ${cat.category_name}">
                 i
                 <span class="tooltip-content">
@@ -3190,11 +3192,14 @@
       function filterCategory(catName) {
         SELECTED_CATEGORY = catName;
         document.querySelectorAll('.cat-card').forEach(el => {
-          el.classList.toggle('active', el.querySelector('.cat-name').textContent.trim() === catName || (catName === 'الكل' && el.querySelector('.cat-name').textContent.includes('كل الفئات')));
+          const c = el.getAttribute('data-category');
+          el.classList.toggle('active', c === catName);
         });
         document.getElementById('products-table-title').textContent = catName === 'الكل' ? 'قائمة المنتجات المباعة في الفترة' : `منتجات فئة: ${catName}`;
         
-        const filtered = catName === 'الكل' ? CACHED_PRODUCTS : CACHED_PRODUCTS.filter(p => p.category_name === catName);
+        const filtered = catName === 'الكل' 
+          ? CACHED_PRODUCTS 
+          : CACHED_PRODUCTS.filter(p => (p.category_name || 'غير مصنف').trim() === catName.trim());
         const query = document.getElementById('products-search-input').value.trim().toLowerCase();
         renderProductsTable(filtered.filter(product => !query || String(product.product_name || '').toLowerCase().includes(query) || String(product.sku || '').toLowerCase().includes(query)));
       }
