@@ -1130,6 +1130,34 @@
     let ordersTotalCount = 0;
     let sortState = { field: 'date', dir: 'desc' };
 
+    let gofrugalBarcodesMap = null;
+
+    async function loadGofrugalBarcodes() {
+      if (gofrugalBarcodesMap !== null) return gofrugalBarcodesMap;
+      try {
+        const res = await fetch('gofrugal_barcodes.json?_=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        gofrugalBarcodesMap = await res.json();
+      } catch (e) {
+        console.warn('Could not load gofrugal_barcodes.json:', e);
+        gofrugalBarcodesMap = {};
+      }
+      return gofrugalBarcodesMap;
+    }
+
+    function getGofrugalCode(code, alias) {
+      if (!gofrugalBarcodesMap) return '';
+      let c = String(code || '').trim();
+      if (c.toUpperCase().startsWith('KIT-')) {
+        c = c.substring(4);
+      }
+      let bc = gofrugalBarcodesMap[c] || (alias ? gofrugalBarcodesMap[String(alias).trim()] : null);
+      if (bc && String(bc).startsWith('0') && !(String(bc).length === 8 && String(bc).endsWith('44'))) {
+        return String(bc);
+      }
+      return '';
+    }
+
     function showToast(message, type = 'info', duration = 3500) {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
@@ -1451,7 +1479,9 @@
       return getItems(data).map(item => {
         const [nameAr, nameEn] = splitName(item.name);
         const codeVal = (item.code && /^\d+$/.test(String(item.code).trim()) && !String(item.code).trim().startsWith('0')) ? Number(item.code) : (item.code ?? '');
-        return [codeVal, String(item.gofrugal_code ?? ''), nameAr, nameEn, item.alias ?? '', item.qty];
+        const rawGf = getGofrugalCode(item.code, item.alias) || String(item.gofrugal_code ?? '');
+        const gfVal = (rawGf && /^\d+$/.test(String(rawGf).trim())) ? Number(rawGf) : (rawGf || '');
+        return [codeVal, gfVal, nameAr, nameEn, item.alias ?? '', item.qty];
       });
     }
 
@@ -1493,12 +1523,13 @@
       return wb;
     }
 
-    function downloadSelected() {
+    async function downloadSelected() {
       const selectedIds = [...document.querySelectorAll('.orderCheckbox:checked')].map(el => el.value);
       if (selectedIds.length === 0) {
         showToast('يرجى تحديد طلب واحد على الأقل', 'info');
         return;
       }
+      await loadGofrugalBarcodes();
       const selected = selectedIds.map(id => currentOrdersList.find(o => o.id === id)).filter(Boolean);
       XLSX.writeFile(createWorkbookForOrders(selected), 'selected_orders.xlsx');
       showToast(`تم تحميل ${selected.length} طلب`, 'success');
@@ -1514,6 +1545,7 @@
       exportBtn.disabled = true;
 
       try {
+        await loadGofrugalBarcodes();
         const warehouse = document.getElementById('warehouseFilter').value;
         const status = document.getElementById('statusFilter').value;
         const startDate = document.getElementById('startDateFilter').value;
@@ -1605,18 +1637,20 @@
       document.getElementById('modal').classList.remove('active');
     }
 
-    function downloadExcelDirect(docId) {
+    async function downloadExcelDirect(docId) {
       const data = currentOrdersList.find(o => o.id === docId);
       if (!data) return;
+      await loadGofrugalBarcodes();
       XLSX.writeFile(createWorkbookForOrders([data]), `order_${data.mall || 'item'}.xlsx`);
       showToast('تم تحميل الطلب', 'success');
     }
 
-    function downloadExcel() {
+    async function downloadExcel() {
       if (!currentOrder) {
         showToast('لم يتم اختيار طلب', 'info');
         return;
       }
+      await loadGofrugalBarcodes();
       XLSX.writeFile(createWorkbookForOrders([currentOrder]), `order_${currentOrder.mall || 'item'}.xlsx`);
       showToast('تم تحميل الطلب', 'success');
     }
@@ -2511,11 +2545,3 @@
       printWindow.document.write(html);
       printWindow.document.close();
     }
-
-    // Initial Load
-    loadOrders('first');
-  </script>
-
-</body>
-
-</html>
