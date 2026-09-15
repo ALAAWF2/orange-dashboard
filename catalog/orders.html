@@ -2021,7 +2021,9 @@
       return getItems(data).map(item => {
         const [nameAr, nameEn] = splitName(item.name);
         const codeVal = (item.code && /^\d+$/.test(String(item.code).trim()) && !String(item.code).trim().startsWith('0')) ? Number(item.code) : (item.code ?? '');
-        return [codeVal, '', nameAr, nameEn, item.alias ?? '', item.qty];
+        const rawGf = getGofrugalCode(item.code, item.alias);
+        const gfVal = (rawGf && /^\d+$/.test(String(rawGf).trim())) ? Number(rawGf) : (rawGf || '');
+        return [codeVal, gfVal, nameAr, nameEn, item.alias ?? '', item.qty];
       });
     }
 
@@ -2049,20 +2051,22 @@
       return wb;
     }
 
-    window.downloadSelectedTransfers = function () {
+    window.downloadSelectedTransfers = async function () {
       const selectedIds = [...document.querySelectorAll('.transferCheckbox:checked')].map(el => el.value);
       if (selectedIds.length === 0) {
         showToast('يرجى تحديد تحويل واحد على الأقل', 'info');
         return;
       }
+      await loadGofrugalBarcodes();
       const selected = selectedIds.map(id => currentTransfersList.find(t => t.id === id)).filter(Boolean);
       XLSX.writeFile(createWorkbookForTransfers(selected), 'selected_transfers.xlsx');
       showToast(`تم تحميل ${selected.length} تحويل`, 'success');
     };
 
-    window.downloadExcelTransferDirect = function (docId) {
+    window.downloadExcelTransferDirect = async function (docId) {
       const data = currentTransfersList.find(t => t.id === docId);
       if (!data) return;
+      await loadGofrugalBarcodes();
       XLSX.writeFile(createWorkbookForTransfers([data]), `transfer_${data.from_mall}_to_${data.to_mall}.xlsx`);
       showToast('تم تحميل التحويل', 'success');
     };
@@ -2077,6 +2081,7 @@
       exportBtn.disabled = true;
 
       try {
+        await loadGofrugalBarcodes();
         const fromMall = document.getElementById('transferFromFilter').value;
         const toMall = document.getElementById('transferToFilter').value;
         const status = document.getElementById('transferStatusFilter').value;
@@ -2545,3 +2550,12 @@
       printWindow.document.write(html);
       printWindow.document.close();
     }
+
+    // Initial Load
+    loadOrders('first');
+    loadGofrugalBarcodes();
+  </script>
+
+</body>
+
+</html>
