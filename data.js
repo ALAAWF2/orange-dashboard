@@ -7442,6 +7442,44 @@ const EMPLOYEES = [
             }
         ],
         "addressBooks": "1010-C;1010-E"
+    },
+    {
+        "employeeId": "5022-Hattan  Aldosari",
+        "personnelNumber": "5022",
+        "name": "Hattan  Aldosari",
+        "startDate": "2026-09-13",
+        "manager": "عبدالله السرداح",
+        "showroom": "1108-39-Salam Mall Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1108-39-Salam Mall Riyadh",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1108-C",
+                    "1108-E"
+                ]
+            }
+        ],
+        "addressBooks": "1108-C;1108-E"
+    },
+    {
+        "employeeId": "5021-Alanoud Alshmrani",
+        "personnelNumber": "5021",
+        "name": "Alanoud Alshmrani",
+        "startDate": "2026-09-13",
+        "manager": "عبدالله السرداح",
+        "showroom": "1102-15-Riyadh Othaim Mall",
+        "showroomDetails": [
+            {
+                "name": "1102-15-Riyadh Othaim Mall",
+                "manager": "عبدالله السرداح",
+                "codes": [
+                    "1102-C",
+                    "1102-E"
+                ]
+            }
+        ],
+        "addressBooks": "1102-C;1102-E"
     }
 ];
 
