@@ -1368,7 +1368,7 @@
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          <span id="custom-date-trigger-text">تاريخ أو نطاق مخصص ▾</span>
+          <span id="custom-date-trigger-text">تحديد فترة زمنية مخصصة ▾</span>
         </button>
         <div class="period-pills" id="period-pills-container">
           <!-- Injected via JavaScript -->
@@ -1911,7 +1911,7 @@
   <script>
     (function() {
       let DASHBOARD_DATA = null;
-      let CURRENT_PERIOD_KEY = 'last_30_days';
+      let CURRENT_PERIOD_KEY = '';
       let SELECTED_CATEGORY = 'الكل';
       let CACHED_PRODUCTS = [];
       let TREND_METRIC = 'net_sales';
@@ -1935,8 +1935,17 @@
           if (!resp.ok) throw new Error('Network error loading data: ' + resp.status);
           DASHBOARD_DATA = await resp.json();
           renderHeader();
+
+          // Always default to Current Month (e.g. 2026-09) if available, otherwise last_30_days
+          const now = new Date();
+          const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const defaultKey = DASHBOARD_DATA.periods[curMonthKey]
+            ? curMonthKey
+            : (DASHBOARD_DATA.periods['last_30_days'] ? 'last_30_days' : Object.keys(DASHBOARD_DATA.periods)[0]);
+
+          CURRENT_PERIOD_KEY = defaultKey;
           renderPeriodPills();
-          selectPeriod(DASHBOARD_DATA.periods['last_30_days'] ? 'last_30_days' : Object.keys(DASHBOARD_DATA.periods)[0]);
+          selectPeriod(defaultKey);
           setupTabs();
           document.getElementById('categories-grid-container').addEventListener('keydown', event => {
             if (event.target.matches('.cat-card') && (event.key === 'Enter' || event.key === ' ')) {
@@ -1999,18 +2008,25 @@
         container.innerHTML = '';
         const periods = DASHBOARD_DATA.periods || {};
         
-        // Priority order
-        const priority = ['last_30_days', 'last_7_days', 'yesterday', 'YTD_2026', '2026-08', '2026-07', 'Q3_2026', 'Q2_2026'];
-        const keys = Object.keys(periods).sort((a, b) => {
-          const idxA = priority.indexOf(a);
-          const idxB = priority.indexOf(b);
-          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-          if (idxA !== -1) return -1;
-          if (idxB !== -1) return 1;
-          return 0;
-        });
+        const now = new Date();
+        const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Priority order: Current Month first, then yesterday, last 7 days, last 30 days
+        const priority = [curMonthKey, 'yesterday', 'last_7_days', 'last_30_days'];
+        const allKeys = Object.keys(periods);
+        const monthKeys = allKeys.filter(k => /^\d{4}-\d{2}$/.test(k) && k !== curMonthKey).sort().reverse();
+        const quarterKeys = allKeys.filter(k => /^Q\d_\d{4}$/.test(k)).sort().reverse();
+        const ytdKeys = allKeys.filter(k => k.startsWith('YTD'));
+        const otherKeys = allKeys.filter(k => !priority.includes(k) && !monthKeys.includes(k) && !quarterKeys.includes(k) && !ytdKeys.includes(k));
 
-        keys.forEach(key => {
+        const orderedKeys = [];
+        priority.forEach(k => { if (periods[k] && !orderedKeys.includes(k)) orderedKeys.push(k); });
+        monthKeys.forEach(k => { if (periods[k] && !orderedKeys.includes(k)) orderedKeys.push(k); });
+        quarterKeys.forEach(k => { if (periods[k] && !orderedKeys.includes(k)) orderedKeys.push(k); });
+        ytdKeys.forEach(k => { if (periods[k] && !orderedKeys.includes(k)) orderedKeys.push(k); });
+        otherKeys.forEach(k => { if (periods[k] && !orderedKeys.includes(k)) orderedKeys.push(k); });
+
+        orderedKeys.forEach(key => {
           const p = periods[key];
           const btn = document.createElement('button');
           btn.className = 'btn-pill' + (key === CURRENT_PERIOD_KEY ? ' active' : '');
@@ -2036,7 +2052,7 @@
           const trigger = document.getElementById('btn-toggle-custom-date');
           const triggerText = document.getElementById('custom-date-trigger-text');
           if (trigger) trigger.classList.remove('active');
-          if (triggerText) triggerText.textContent = 'تاريخ أو نطاق مخصص ▾';
+          if (triggerText) triggerText.textContent = 'تحديد فترة زمنية مخصصة ▾';
         }
 
         const kpis = p.kpis || {};
@@ -2789,13 +2805,18 @@
         const yDate = new Date(yesterdayStr);
         const d3Start = new Date(yDate.getTime() - 2 * 86400000).toISOString().slice(0, 10);
         const d7Start = new Date(yDate.getTime() - 6 * 86400000).toISOString().slice(0, 10);
+        const nowObj = new Date();
+        const curMonthStart = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-01`;
+        const prevMonthDate = new Date(nowObj.getFullYear(), nowObj.getMonth() - 1, 1);
+        const prevMonthEnd = new Date(nowObj.getFullYear(), nowObj.getMonth(), 0).toISOString().slice(0, 10);
+        const prevMonthStart = prevMonthDate.toISOString().slice(0, 10);
 
         const shortcuts = [
           { label: 'أمس (' + yesterdayStr + ')', type: 'single', date: yesterdayStr },
           { label: 'آخر 3 أيام', type: 'range', start: d3Start, end: yesterdayStr },
           { label: 'آخر 7 أيام', type: 'range', start: d7Start, end: yesterdayStr },
-          { label: 'بداية سبتمبر حتى اليوم', type: 'range', start: '2026-09-01', end: maxDate },
-          { label: 'شهر أغسطس 2026', type: 'range', start: '2026-08-01', end: '2026-08-31' }
+          { label: 'الشهر الحالي حتى اليوم', type: 'range', start: curMonthStart, end: maxDate },
+          { label: 'الشهر السابق بالكامل', type: 'range', start: prevMonthStart, end: prevMonthEnd }
         ];
 
         shortcutsList.innerHTML = '';
