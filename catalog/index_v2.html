@@ -2595,6 +2595,127 @@
         return Number(p.branches['Warehouse']) || 0;
       }
     }
+
+    function getJeddahWarehouseStock(p) {
+      if (!p || !p.branches) return 0;
+      for (const b in p.branches) {
+        const k = b.toLowerCase().trim();
+        if (k === 'warehouse' || k === 'wh01' || k === 'جدة' || k.includes('مستودع جدة')) {
+          return Number(p.branches[b]) || 0;
+        }
+      }
+      return Number(p.branches['Warehouse']) || 0;
+    }
+
+    function getRiyadhWarehouseStock(p) {
+      if (!p || !p.branches) return 0;
+      for (const b in p.branches) {
+        const k = b.toLowerCase().trim();
+        if (k === 'warehouse riyadh' || k === 'wh02' || k === 'riyadh' || k.includes('مستودع الرياض')) {
+          return Number(p.branches[b]) || 0;
+        }
+      }
+      return Number(p.branches['warehouse riyadh']) || 0;
+    }
+
+    function getTotalWarehouseStock(p) {
+      return getJeddahWarehouseStock(p) + getRiyadhWarehouseStock(p);
+    }
+
+    function isSalesManagerSession() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('role') === 'sales_manager' || params.get('sm') === '1' || params.get('preview_sm') === '1') {
+          return true;
+        }
+      } catch (e) {}
+
+      try {
+        const dashUserStr = localStorage.getItem('currentUser');
+        if (dashUserStr) {
+          const dashUser = JSON.parse(dashUserStr);
+          const name = String(dashUser?.name || dashUser?.username || '').trim().toLowerCase();
+          const role = String(dashUser?.role || '').trim().toLowerCase();
+          if (
+            name === 'sales manager' ||
+            role === 'sales manager' ||
+            role === 'sales_manager' ||
+            name.includes('sales manager') ||
+            name === 'علاء' ||
+            role === 'admin'
+          ) {
+            return true;
+          }
+        }
+      } catch (e) {}
+
+      if (typeof currentUser !== 'undefined' && currentUser) {
+        const email = String(currentUser.email || '').trim().toLowerCase();
+        const role = String(typeof userRole !== 'undefined' ? userRole : '').trim().toLowerCase();
+        if (
+          email === 'm.hamadon@orangebedbath.com' ||
+          email === 'alaa.wafae@orangebedbath.com' ||
+          email.includes('sales') ||
+          role === 'sales_manager' ||
+          role === 'sales manager' ||
+          role === 'admin' ||
+          role === 'maintenance_admin'
+        ) {
+          return true;
+        }
+      }
+
+      try {
+        const savedEmail = String(localStorage.getItem('savedEmail') || '').trim().toLowerCase();
+        if (
+          savedEmail === 'm.hamadon@orangebedbath.com' ||
+          savedEmail === 'alaa.wafae@orangebedbath.com' ||
+          savedEmail.includes('sales')
+        ) {
+          return true;
+        }
+      } catch (e) {}
+
+      return false;
+    }
+
+    function updateSalesManagerSortOptions() {
+      const select = document.getElementById('sortFilter');
+      if (!select) return;
+
+      const isSM = isSalesManagerSession();
+      const existingJeddah = select.querySelector('option[value="stock-jeddah-desc"]');
+      const existingRiyadh = select.querySelector('option[value="stock-riyadh-desc"]');
+      const existingTotal = select.querySelector('option[value="stock-total-desc"]');
+
+      if (isSM) {
+        if (!existingJeddah) {
+          const optJeddah = document.createElement('option');
+          optJeddah.value = 'stock-jeddah-desc';
+          optJeddah.textContent = 'أعلى مخزون بمستودع جدة';
+          select.appendChild(optJeddah);
+        }
+        if (!existingRiyadh) {
+          const optRiyadh = document.createElement('option');
+          optRiyadh.value = 'stock-riyadh-desc';
+          optRiyadh.textContent = 'أعلى مخزون بمستودع الرياض';
+          select.appendChild(optRiyadh);
+        }
+        if (!existingTotal) {
+          const optTotal = document.createElement('option');
+          optTotal.value = 'stock-total-desc';
+          optTotal.textContent = 'أعلى مخزون (التوتال)';
+          select.appendChild(optTotal);
+        }
+      } else {
+        if (existingJeddah) existingJeddah.remove();
+        if (existingRiyadh) existingRiyadh.remove();
+        if (existingTotal) existingTotal.remove();
+        if (['stock-jeddah-desc', 'stock-riyadh-desc', 'stock-total-desc'].includes(select.value)) {
+          select.value = 'sales-desc';
+        }
+      }
+    }
   </script>
 
   <!-- Supabase Auth & Application State Engine -->
@@ -3263,6 +3384,7 @@
         if (checklistReportBtn) checklistReportBtn.style.display = (isManager || isAdmin) ? 'flex' : 'none';
         if (exportGuestBtn) exportGuestBtn.style.display = userWarehouse === 'TOTAL_WAREHOUSES' ? 'flex' : 'none';
 
+        updateSalesManagerSortOptions();
         renderProducts();
         resetLogoutTimer();
       } else {
@@ -3284,6 +3406,7 @@
         const banner = document.getElementById('galleryNameBanner');
         if (banner) banner.style.display = 'none';
 
+        updateSalesManagerSortOptions();
         renderProducts();
         const productContainer = document.getElementById('productContainer');
         if (productContainer) {
@@ -3321,7 +3444,7 @@
       const textSpan = document.getElementById('galleryNameText');
       if (textSpan) textSpan.textContent = userMall;
       const userInfo = document.getElementById('userInfo');
-      if (userInfo) userInfo.textContent = `مرحباً بك • خيارات مدير المنطقة (${userMall})`;
+      if (userInfo) userInfo.textContent = `مرحباً بك خيارات مدير المنطقة (${userMall})`;
 
       userWarehouse = 'Warehouse';
       try {
@@ -3350,6 +3473,7 @@
     };
 
     (async () => {
+      updateSalesManagerSortOptions();
       try {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         if (error) throw error;
@@ -3535,6 +3659,7 @@
     }
 
     function renderProducts() {
+      updateSalesManagerSortOptions();
       const spinner = document.getElementById('loadingSpinner');
       if (spinner) spinner.classList.add('active');
 
@@ -3598,6 +3723,9 @@
       else if (sortBy === 'price-asc') list.sort((a, b) => effectivePrice(a) - effectivePrice(b));
       else if (sortBy === 'price-desc') list.sort((a, b) => effectivePrice(b) - effectivePrice(a));
       else if (sortBy === 'stock-desc') list.sort((a, b) => (b.stock || 0) - (a.stock || 0));
+      else if (sortBy === 'stock-jeddah-desc') list.sort((a, b) => (getJeddahWarehouseStock(b) - getJeddahWarehouseStock(a)) || ((b.sales || 0) - (a.sales || 0)));
+      else if (sortBy === 'stock-riyadh-desc') list.sort((a, b) => (getRiyadhWarehouseStock(b) - getRiyadhWarehouseStock(a)) || ((b.sales || 0) - (a.sales || 0)));
+      else if (sortBy === 'stock-total-desc') list.sort((a, b) => (getTotalWarehouseStock(b) - getTotalWarehouseStock(a)) || ((b.sales || 0) - (a.sales || 0)));
 
       filteredProducts = list;
       
