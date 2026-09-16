@@ -7444,10 +7444,29 @@ const EMPLOYEES = [
         "addressBooks": "1010-C;1010-E"
     },
     {
+        "employeeId": "5020-وجدان الخرجي",
+        "personnelNumber": "5020",
+        "name": "وجدان الخرجي",
+        "startDate": "2026-09-13",
+        "manager": "محمدكلو",
+        "showroom": "1111-46-Khaleej Mall Riyadh",
+        "showroomDetails": [
+            {
+                "name": "1111-46-Khaleej Mall Riyadh",
+                "manager": "محمدكلو",
+                "codes": [
+                    "1111-C",
+                    "1111-E"
+                ]
+            }
+        ],
+        "addressBooks": "1111-C;1111-E"
+    },
+    {
         "employeeId": "5022-Hattan  Aldosari",
         "personnelNumber": "5022",
         "name": "Hattan  Aldosari",
-        "startDate": "2026-09-13",
+        "startDate": "2026-09-14",
         "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
@@ -7466,7 +7485,7 @@ const EMPLOYEES = [
         "employeeId": "5021-Alanoud Alshmrani",
         "personnelNumber": "5021",
         "name": "Alanoud Alshmrani",
-        "startDate": "2026-09-13",
+        "startDate": "2026-09-14",
         "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
