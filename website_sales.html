@@ -2979,41 +2979,6 @@
           <!-- Injected via JavaScript -->
         </div>
       </div>
-
-      <!-- Top Variations: Colors & Sizes -->
-      <div class="variations-grid-container">
-        <div class="card variation-card">
-          <div class="panel-heading">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:20px;">🎨</span>
-              <div>
-                <h3 style="margin:0; font-size:16px;">الألوان الأكثر طلباً</h3>
-                <p style="margin:0; font-size:12px; color:var(--text-muted);">الألوان الأكثر تحقيقاً لمبيعات القطع بالمتجر</p>
-              </div>
-            </div>
-            <span class="variation-badge">حسب القطع المباعة</span>
-          </div>
-          <div class="variation-list" id="top-colors-list">
-            <!-- Injected via JS -->
-          </div>
-        </div>
-
-        <div class="card variation-card">
-          <div class="panel-heading">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:20px;">📏</span>
-              <div>
-                <h3 style="margin:0; font-size:16px;">المقاسات الأكثر طلباً</h3>
-                <p style="margin:0; font-size:12px; color:var(--text-muted);">المقاسات الأكثر مبيعاً (أرواب، شراشف، مفارش)</p>
-              </div>
-            </div>
-            <span class="variation-badge">حسب القطع المباعة</span>
-          </div>
-          <div class="variation-list" id="top-sizes-list">
-            <!-- Injected via JS -->
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Tab 2: Marketing & Channels -->
@@ -3232,6 +3197,12 @@
           setupSearch();
           setupExport();
           setupCustomDatePicker();
+          const btnTreemap = document.getElementById('btn-view-treemap');
+          if (btnTreemap) btnTreemap.addEventListener('click', () => switchCategoryView('treemap'));
+          const btnGrid = document.getElementById('btn-view-grid');
+          if (btnGrid) btnGrid.addEventListener('click', () => switchCategoryView('grid'));
+          const btnCatReset = document.getElementById('btn-cat-reset');
+          if (btnCatReset) btnCatReset.addEventListener('click', () => filterCategory('الكل'));
           document.querySelectorAll('[data-trend]').forEach(button => button.addEventListener('click', () => {
             TREND_METRIC = button.dataset.trend;
             renderTrend(DASHBOARD_DATA.periods[CURRENT_PERIOD_KEY]);
@@ -4025,6 +3996,7 @@
           if (btnGrid) btnGrid.classList.add('active');
         }
       }
+      window.switchCategoryView = switchCategoryView;
 
       function squarifyTreemap(items, x, y, width, height) {
         const totalVal = items.reduce((sum, it) => sum + (it.val || 0), 0);
@@ -4266,6 +4238,7 @@
         const query = document.getElementById('products-search-input').value.trim().toLowerCase();
         renderProductsTable(filtered.filter(product => !query || String(product.product_name || '').toLowerCase().includes(query) || String(product.sku || '').toLowerCase().includes(query)));
       }
+      window.filterCategory = filterCategory;
 
       function renderProductsTable(products) {
         const tbody = document.getElementById('products-table-body');
