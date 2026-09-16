@@ -3892,7 +3892,7 @@
           tr.innerHTML = `
             <td><strong>${ch.channel_group}</strong></td>
             <td>${fmtNum(ch.sessions)}</td>
-            <td>${fmtNum(ch.total_users)}</td>
+            <td>${fmtNum(ch.total_users ?? ch.users ?? 0)}</td>
             <td>${fmtNum(ch.conversions)}</td>
             <td><strong>${fmtCurrency(ch.revenue)}</strong></td>
             <td>${ch.revenue_share_pct != null ? ch.revenue_share_pct + '%' : '—'}</td>
@@ -4449,7 +4449,7 @@
         const totalPaidGw = Object.values(payments).reduce((sum, g) => sum + g.amount, 0);
         const bnplSharePct = totalPaidGw > 0 ? (bnplTotal / totalPaidGw) * 100 : 0;
 
-        // Find closest v2_analytics
+        // Find closest v2_analytics fallback if needed
         let matchedV2 = null;
         for (const key of Object.keys(DASHBOARD_DATA.periods || {})) {
           const p = DASHBOARD_DATA.periods[key];
@@ -4461,6 +4461,353 @@
         if (!matchedV2) {
           matchedV2 = DASHBOARD_DATA.periods['last_30_days']?.v2_analytics || DASHBOARD_DATA.periods['YTD_2026']?.v2_analytics || {};
         }
+
+        // Dynamically compute exact v2_analytics from daily_analytics if available
+        let computedV2 = null;
+        const da = DASHBOARD_DATA.daily_analytics;
+        if (da) {
+          // 1. Marketing Channels
+          const chanMap = {};
+          let totalChanRev = 0;
+          for (const [dStr, dChans] of Object.entries(da.channels || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dChans.forEach(([chGroup, sess, usrs, convs, rev]) => {
+                if (!chanMap[chGroup]) {
+                  chanMap[chGroup] = { channel_group: chGroup, sessions: 0, total_users: 0, conversions: 0, revenue: 0 };
+                }
+                chanMap[chGroup].sessions += sess;
+                chanMap[chGroup].total_users += usrs;
+                chanMap[chGroup].conversions += convs;
+                chanMap[chGroup].revenue += rev;
+                totalChanRev += rev;
+              });
+            }
+          }
+          const dynamicChannels = Object.values(chanMap).map(c => ({
+            ...c,
+            revenue: Math.round(c.revenue * 100) / 100,
+            revenue_share_pct: totalChanRev > 0 ? Math.round((c.revenue / totalChanRev) * 10000) / 100 : 0
+          })).sort((a, b) => b.sessions - a.sessions);
+
+          // 2. Categories
+          const catMap = {};
+          let totalCatSales = 0;
+          for (const [dStr, dCats] of Object.entries(da.categories || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dCats.forEach(([catName, orders, units, sales]) => {
+                if (!catMap[catName]) {
+                  catMap[catName] = { category_name: catName, orders_count: 0, units_sold: 0, sales_amount: 0 };
+                }
+                catMap[catName].orders_count += orders;
+                catMap[catName].units_sold += units;
+                catMap[catName].sales_amount += sales;
+                totalCatSales += sales;
+              });
+            }
+          }
+          const dynamicCategories = Object.values(catMap).map(c => ({
+            ...c,
+            sales_amount: Math.round(c.sales_amount * 100) / 100,
+            share_pct: totalCatSales > 0 ? Math.round((c.sales_amount / totalCatSales) * 10000) / 100 : 0
+          })).sort((a, b) => b.sales_amount - a.sales_amount);
+
+          // 3. Products
+          const prodMap = {};
+          for (const [dStr, dProds] of Object.entries(da.products || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dProds.forEach(([pid, units, sales, orders]) => {
+                if (!prodMap[pid]) {
+                  const meta = (da.catalog && da.catalog[pid]) || {};
+                  prodMap[pid] = {
+                    product_id: pid,
+                    product_name: meta.name || ('منتج #' + pid),
+                    sku: meta.sku || '',
+                    category_name: meta.cat || 'غير مصنف',
+                    stock_quantity: meta.stock,
+                    image_url: meta.img,
+                    units_sold: 0,
+                    sales_amount: 0,
+                    orders_count: 0
+                  };
+                }
+                prodMap[pid].units_sold += units;
+                prodMap[pid].sales_amount += sales;
+                prodMap[pid].orders_count += orders;
+              });
+            }
+          }
+          const dynamicProducts = Object.values(prodMap).map(p => ({
+            ...p,
+            sales_amount: Math.round(p.sales_amount * 100) / 100,
+            aov: p.orders_count > 0 ? Math.round((p.sales_amount / p.orders_count) * 100) / 100 : 0
+          })).sort((a, b) => b.sales_amount - a.sales_amount);
+
+          // 4. Offers
+          const offerProdMap = {};
+          let totOfferUnits = 0, totOfferSales = 0, totOfferDiscount = 0, totOfferOrders = 0;
+          for (const [dStr, dOffs] of Object.entries(da.offers || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dOffs.forEach(([pid, units, sales, discount, orders]) => {
+                totOfferUnits += units;
+                totOfferSales += sales;
+                totOfferDiscount += discount;
+                totOfferOrders += orders;
+                if (!offerProdMap[pid]) {
+                  const meta = (da.catalog && da.catalog[pid]) || {};
+                  offerProdMap[pid] = {
+                    product_id: pid,
+                    product_name: meta.name || ('منتج #' + pid),
+                    sku: meta.sku || '',
+                    category_name: meta.cat || 'عام',
+                    stock_quantity: meta.stock,
+                    image_url: meta.img,
+                    units_sold: 0,
+                    sales_amount: 0,
+                    discount_amount: 0,
+                    orders_count: 0
+                  };
+                }
+                offerProdMap[pid].units_sold += units;
+                offerProdMap[pid].sales_amount += sales;
+                offerProdMap[pid].discount_amount += discount;
+                offerProdMap[pid].orders_count += orders;
+              });
+            }
+          }
+          const dynamicTopOfferProducts = Object.values(offerProdMap).map(p => ({
+            ...p,
+            sales_amount: Math.round(p.sales_amount * 100) / 100,
+            discount_amount: Math.round(p.discount_amount * 100) / 100
+          })).sort((a, b) => b.sales_amount - a.sales_amount).slice(0, 10);
+
+          const dynamicOfferSales = {
+            summary: {
+              total_orders: totOfferOrders,
+              total_units: totOfferUnits,
+              total_sales: Math.round(totOfferSales * 100) / 100,
+              total_discount: Math.round(totOfferDiscount * 100) / 100,
+              share_of_net_sales_pct: netSales > 0 ? Math.round((totOfferSales / netSales) * 1000) / 10 : 0
+            },
+            top_products: dynamicTopOfferProducts,
+            top_offers: []
+          };
+
+          // 5. Devices
+          const devMap = {};
+          let totalDevOrders = 0;
+          for (const [dStr, dDevs] of Object.entries(da.devices || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dDevs.forEach(([devType, orders, amt]) => {
+                if (!devMap[devType]) {
+                  const label_ar = devType.toLowerCase() === 'mobile' ? 'الجوال (Mobile)' : devType.toLowerCase() === 'desktop' ? 'الكمبيوتر (Desktop)' : devType;
+                  devMap[devType] = { device_type: devType, label_ar: label_ar, orders: 0, total_amount: 0 };
+                }
+                devMap[devType].orders += orders;
+                devMap[devType].total_amount += amt;
+                totalDevOrders += orders;
+              });
+            }
+          }
+          const dynamicDevices = Object.values(devMap).map(d => ({
+            ...d,
+            total_amount: Math.round(d.total_amount * 100) / 100,
+            orders_share_pct: totalDevOrders > 0 ? Math.round((d.orders / totalDevOrders) * 1000) / 10 : 0
+          })).sort((a, b) => b.orders - a.orders);
+
+          // 6. Hourly orders
+          const hourMap = {};
+          for (let h = 0; h < 24; h++) {
+            const label = h === 0 ? '12 ص' : h < 12 ? `${h} ص` : h === 12 ? '12 م' : `${h - 12} م`;
+            hourMap[h] = { hour: h, label: label, order_count: 0, total_amount: 0 };
+          }
+          for (const [dStr, dHours] of Object.entries(da.hourly || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dHours.forEach(([h, cnt, amt]) => {
+                if (hourMap[h]) {
+                  hourMap[h].order_count += cnt;
+                  hourMap[h].total_amount += amt;
+                }
+              });
+            }
+          }
+          const dynamicHourly = Object.values(hourMap);
+
+          // 7. Checkout Health & Status
+          let totalOrdersCnt = 0, totalOrdersAmt = 0;
+          let succCnt = 0, succAmt = 0, cancCnt = 0, cancAmt = 0, failCnt = 0, failAmt = 0;
+          const succStatuses = new Set(['completed', 'processing', 'on-hold', 'delivered']);
+          const cancStatuses = new Set(['cancelled']);
+          const statusMap = {};
+          for (const [dStr, dStat] of Object.entries(da.order_status || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dStat.forEach(([st, cnt, amt]) => {
+                totalOrdersCnt += cnt;
+                totalOrdersAmt += amt;
+                const low = st.toLowerCase();
+                if (succStatuses.has(low)) {
+                  succCnt += cnt;
+                  succAmt += amt;
+                } else if (cancStatuses.has(low)) {
+                  cancCnt += cnt;
+                  cancAmt += amt;
+                } else {
+                  failCnt += cnt;
+                  failAmt += amt;
+                }
+                statusMap[st] = (statusMap[st] || 0) + cnt;
+              });
+            }
+          }
+          const dynamicCheckoutHealth = {
+            total_orders: totalOrdersCnt,
+            total_amount: Math.round(totalOrdersAmt * 100) / 100,
+            successful_orders: succCnt,
+            successful_amount: Math.round(succAmt * 100) / 100,
+            success_rate_pct: totalOrdersCnt > 0 ? Math.round((succCnt / totalOrdersCnt) * 1000) / 10 : 0,
+            cancelled_orders: cancCnt,
+            cancelled_amount: Math.round(cancAmt * 100) / 100,
+            failed_orders: failCnt,
+            failed_amount: Math.round(failAmt * 100) / 100
+          };
+          const dynamicStatusBreakdown = Object.entries(statusMap).map(([st, cnt]) => ({ status: st, count: cnt })).sort((a, b) => b.count - a.count);
+
+          // 8. Cities
+          const cityMap = {};
+          let totalCitySessions = 0;
+          for (const [dStr, dCities] of Object.entries(da.cities || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dCities.forEach(([cName, sess, usrs, rev]) => {
+                if (!cityMap[cName]) {
+                  cityMap[cName] = { city: cName, sessions: 0, users: 0, revenue: 0 };
+                }
+                cityMap[cName].sessions += sess;
+                cityMap[cName].users += usrs;
+                cityMap[cName].revenue += rev;
+                totalCitySessions += sess;
+              });
+            }
+          }
+          const cityArMap = {
+            'Jeddah': 'جدة', 'Riyadh': 'الرياض', 'Dammam': 'الدمام', 'Madinah': 'المدينة المنورة',
+            'Medina': 'المدينة المنورة', 'Mecca': 'مكة المكرمة', 'Makkah': 'مكة المكرمة',
+            'Abha': 'أبها', 'Khobar': 'الخبر', 'Al Khobar': 'الخبر', 'Taif': 'الطائف',
+            'Tabuk': 'تبوك', 'Buraydah': 'بريدة', 'Buraidah': 'بريدة', 'Khamis Mushait': 'خميس مشيط',
+            'Jubail': 'الجبيل', 'Al Jubail': 'الجبيل', 'Hofuf': 'الهفوف', 'Al Hofuf': 'الهفوف',
+            'Hail': 'حائل', 'Najran': 'نجران', 'Yanbu': 'ينبع', 'Jazan': 'جازان',
+            'Qatif': 'القطيف', 'Hafar Al Batin': 'حفر الباطن', 'Al Ahsa': 'الأحساء',
+            'Unaizah': 'عنيزة', 'Dhahran': 'الظهران'
+          };
+          const dynamicCities = Object.values(cityMap).map(c => ({
+            ...c,
+            city_ar: cityArMap[c.city] || c.city,
+            sessions_share_pct: totalCitySessions > 0 ? Math.round((c.sessions / totalCitySessions) * 1000) / 10 : 0,
+            revenue: Math.round(c.revenue * 100) / 100
+          })).sort((a, b) => b.sessions - a.sessions).slice(0, 8);
+
+          // 9. Funnel
+          let fViewUsers = 0, fCartUsers = 0, fCheckUsers = 0;
+          for (const [dStr, dEvents] of Object.entries(da.funnel || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              if (dEvents.view_item) fViewUsers += (dEvents.view_item[1] || 0);
+              if (dEvents.add_to_cart) fCartUsers += (dEvents.add_to_cart[1] || 0);
+              if (dEvents.begin_checkout) fCheckUsers += (dEvents.begin_checkout[1] || 0);
+            }
+          }
+          const dynamicFunnel = {
+            sessions: visitors,
+            view_item_users: fViewUsers || Math.round(visitors * 0.44),
+            add_to_cart_users: fCartUsers || Math.round(visitors * 0.08),
+            begin_checkout_users: fCheckUsers || Math.round(visitors * 0.04),
+            purchase_users: saleBills
+          };
+
+          // 10. YoY Comparison
+          let prevNet = 0, prevOrders = 0, prevUnits = 0;
+          for (const [dStr, [pNet, pOrders, pUnits]] of Object.entries(da.yoy_2025 || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              prevNet += pNet;
+              prevOrders += pOrders;
+              prevUnits += pUnits;
+            }
+          }
+          const prevAov = prevOrders > 0 ? (prevNet / prevOrders) : null;
+          const prevUpt = prevOrders > 0 ? (prevUnits / prevOrders) : null;
+          let prevVisTotal = 0, hasVisYoy = false;
+          days.forEach(d => {
+            const k = d.kpis || {};
+            if (k.visitors != null && k.visitors_yoy_amount != null) {
+              prevVisTotal += (k.visitors - k.visitors_yoy_amount);
+              hasVisYoy = true;
+            }
+          });
+          const prevVis = hasVisYoy && prevVisTotal > 0 ? prevVisTotal : null;
+          const curAov = saleBills > 0 ? (netSales / saleBills) : null;
+          const curConv = visitors > 0 ? (saleBills / visitors * 100) : null;
+          const prevConv = (prevVis && prevOrders > 0) ? (prevOrders / prevVis * 100) : null;
+
+          const dynamicYoY = {
+            available: Boolean(prevOrders || prevNet || prevVis),
+            prev_orders: prevOrders,
+            orders_yoy_pct: prevOrders ? Math.round(((saleBills - prevOrders) / prevOrders) * 1000) / 10 : null,
+            prev_units: prevUnits,
+            units_yoy_pct: prevUnits ? Math.round(((saleUnits - prevUnits) / prevUnits) * 1000) / 10 : null,
+            prev_upt: prevUpt ? Math.round(prevUpt * 10) / 10 : null,
+            prev_aov: prevAov ? Math.round(prevAov * 100) / 100 : null,
+            aov_yoy_pct: (prevAov && curAov) ? Math.round(((curAov - prevAov) / prevAov) * 1000) / 10 : null,
+            prev_visitors: prevVis,
+            visitors_yoy_pct: (prevVis && visitors) ? Math.round(((visitors - prevVis) / prevVis) * 1000) / 10 : null,
+            prev_conversion_rate: prevConv ? Math.round(prevConv * 100) / 100 : null,
+            conv_yoy_diff_pct: (prevConv != null && curConv != null) ? Math.round((curConv - prevConv) * 100) / 100 : null,
+            prev_net_sales: Math.round(prevNet * 100) / 100,
+            sales_yoy_pct: prevNet ? Math.round(((netSales - prevNet) / prevNet) * 1000) / 10 : null
+          };
+
+          computedV2 = {
+            categories: dynamicCategories,
+            top_products: dynamicProducts,
+            offer_sales: dynamicOfferSales,
+            basket_affinity: matchedV2.basket_affinity || [],
+            stock_alerts: matchedV2.stock_alerts || [],
+            funnel: dynamicFunnel,
+            channels: dynamicChannels,
+            operations: {
+              gateway_breakdown: gatewayBreakdown,
+              status_breakdown: dynamicStatusBreakdown
+            },
+            hourly_orders: dynamicHourly,
+            top_variations: matchedV2.top_variations || {},
+            devices: dynamicDevices,
+            checkout_health: dynamicCheckoutHealth,
+            top_cities: dynamicCities,
+            yoy_comparison: dynamicYoY
+          };
+        }
+
+        const v2Final = computedV2 || {
+          categories: matchedV2.categories || [],
+          top_products: matchedV2.top_products || [],
+          offer_sales: matchedV2.offer_sales || { summary: {}, top_offers: [] },
+          basket_affinity: matchedV2.basket_affinity || [],
+          stock_alerts: matchedV2.stock_alerts || [],
+          funnel: {
+            sessions: visitors,
+            view_item_users: matchedV2.funnel?.view_item_users ? Math.round(visitors * 0.44) : 0,
+            add_to_cart_users: matchedV2.funnel?.add_to_cart_users ? Math.round(visitors * 0.08) : 0,
+            begin_checkout_users: matchedV2.funnel?.begin_checkout_users ? Math.round(visitors * 0.04) : 0,
+            purchase_users: saleBills
+          },
+          channels: matchedV2.channels || [],
+          operations: {
+            gateway_breakdown: gatewayBreakdown,
+            status_breakdown: matchedV2.operations?.status_breakdown || []
+          },
+          hourly_orders: matchedV2.hourly_orders || [],
+          top_variations: matchedV2.top_variations || {},
+          devices: matchedV2.devices || [],
+          checkout_health: matchedV2.checkout_health || {},
+          top_cities: matchedV2.top_cities || [],
+          yoy_comparison: matchedV2.yoy_comparison || {}
+        };
 
         const customPeriod = {
           period_key: periodKey,
@@ -4479,37 +4826,15 @@
             visitors: visitors,
             upt: saleBills > 0 ? (saleUnits / saleBills) : 0,
             online_share: orangeTotal > 0 ? (netSales / orangeTotal) : 0,
-            sales_yoy_rate: null
+            sales_yoy_rate: null,
+            yoy_comparison: v2Final.yoy_comparison
           },
           independent_new_kpis: {
             net_aov: saleBills > 0 ? (netSales / saleBills) : 0,
             prorated_sales_target: days.length * 46666.67,
             tamara_tabby_bnpl_share_pct: bnplSharePct
           },
-          v2_analytics: {
-            categories: matchedV2.categories || [],
-            top_products: matchedV2.top_products || [],
-            offer_sales: matchedV2.offer_sales || { summary: {}, top_offers: [] },
-            basket_affinity: matchedV2.basket_affinity || [],
-            stock_alerts: matchedV2.stock_alerts || [],
-            funnel: {
-              sessions: visitors,
-              view_item_users: matchedV2.funnel?.view_item_users ? Math.round(visitors * 0.44) : 0,
-              add_to_cart_users: matchedV2.funnel?.add_to_cart_users ? Math.round(visitors * 0.08) : 0,
-              begin_checkout_users: matchedV2.funnel?.begin_checkout_users ? Math.round(visitors * 0.04) : 0,
-              purchase_users: saleBills
-            },
-            channels: matchedV2.channels || [],
-            operations: {
-              gateway_breakdown: gatewayBreakdown,
-              status_breakdown: matchedV2.operations?.status_breakdown || []
-            },
-            hourly_orders: matchedV2.hourly_orders || [],
-            top_variations: matchedV2.top_variations || {},
-            devices: matchedV2.devices || [],
-            checkout_health: matchedV2.checkout_health || {},
-            top_cities: matchedV2.top_cities || []
-          }
+          v2_analytics: v2Final
         };
 
         DASHBOARD_DATA.periods[periodKey] = customPeriod;
@@ -4527,6 +4852,8 @@
           if (trigger) trigger.setAttribute('aria-expanded', 'false');
         }
       }
+
+      window.applyCustomDateRange = applyCustomDateRange;
 
       init();
     })();
