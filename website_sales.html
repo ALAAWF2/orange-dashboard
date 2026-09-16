@@ -962,21 +962,26 @@
     /* Executive Strategic Intelligence Grid (3 Cards) */
     .exec-intel-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: 1fr 1.35fr 1fr;
       gap: 16px;
       margin-bottom: 24px;
+    }
+    @media (max-width: 1100px) {
+      .exec-intel-grid {
+        grid-template-columns: 1fr;
+      }
     }
     .intel-card {
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      padding: 18px 20px;
+      padding: 16px 16px;
       box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       position: relative;
-      overflow: hidden;
+      overflow: visible;
     }
     .loyalty-card { border-top: 4px solid #10b981; }
     .health-card { border-top: 4px solid #6366f1; }
@@ -1120,52 +1125,67 @@
     }
     .seg-succ { background: #10b981; }
     .seg-canc { background: #f59e0b; }
+    .seg-pend { background: #0284c7; }
     .seg-fail { background: #ef4444; }
+    .seg-ref { background: #8b5cf6; }
 
     .health-stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
     }
     .health-stat-box {
       background: var(--surface-subtle);
       border-radius: 8px;
-      padding: 8px 10px;
+      padding: 8px 4px;
       border: 1px solid var(--line);
+      min-width: 0;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
     }
     .health-stat-label {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 700;
       color: var(--text-muted);
       display: flex;
       align-items: center;
-      gap: 4px;
-      margin-bottom: 3px;
+      justify-content: center;
+      gap: 3px;
+      margin-bottom: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .health-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       display: inline-block;
       flex-shrink: 0;
     }
     .dot-succ { background: #10b981; }
     .dot-canc { background: #f59e0b; }
+    .dot-pend { background: #0284c7; }
     .dot-fail { background: #ef4444; }
+    .dot-ref { background: #8b5cf6; }
     .health-stat-val {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       color: var(--text);
       font-variant-numeric: tabular-nums;
+      line-height: 1.15;
     }
     .health-stat-sub {
-      font-size: 11px;
+      font-size: 9.5px;
       color: var(--text-muted);
       font-variant-numeric: tabular-nums;
       margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Hourly Chart */
@@ -2699,17 +2719,33 @@
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="intel-icon">🛡️</span>
             <div>
-              <h3 class="intel-title">صحة عمليات الدفع والطلب</h3>
-              <span class="intel-sub">معدل نجاح الدفع والطلبات المؤكدة</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <h3 class="intel-title" style="margin:0;">صحة مسارات الطلبات والدفع</h3>
+                <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات صحة عمليات الدفع">
+                  i
+                  <span class="tooltip-content">
+                    <span class="tooltip-title">تصنيف مسارات الطلبات</span>
+                    • <strong>ناجحة ومؤكدة:</strong> المكتملة + المشحونة بالطريق + قيد التجهيز.<br>
+                    • <strong>ملغية:</strong> الملغاة من العميل أو المتجر أو تمارا.<br>
+                    • <strong>معلقة:</strong> سلال قيد انتظار الدفع (Pending).<br>
+                    • <strong>فشل دفع:</strong> العمليات المرفوضة من البنك أو تمارا.<br>
+                    • <strong>مرتجعات:</strong> طلبات وبوالص مسترجعة.
+                    <span class="tooltip-source">المصدر: <strong>website_wc_orders (status)</strong></span>
+                  </span>
+                </button>
+              </div>
+              <span class="intel-sub">التوزيع التشغيلي الدقيق لكافة طلبات المتجر</span>
             </div>
           </div>
           <span class="health-rate-badge" id="checkout-rate-badge">معدل النجاح: 0%</span>
         </div>
         <div class="health-bar-container">
           <div class="health-bar">
-            <div class="health-seg seg-succ" id="health-bar-succ" style="width: 60%;" title="ناجحة"></div>
-            <div class="health-seg seg-canc" id="health-bar-canc" style="width: 25%;" title="ملغية"></div>
-            <div class="health-seg seg-fail" id="health-bar-fail" style="width: 15%;" title="فاشلة/مرفوضة"></div>
+            <div class="health-seg seg-succ" id="health-bar-succ" style="width: 55%;" title="ناجحة ومؤكدة"></div>
+            <div class="health-seg seg-canc" id="health-bar-canc" style="width: 30%;" title="طلبات ملغية"></div>
+            <div class="health-seg seg-pend" id="health-bar-pend" style="width: 5%;" title="معلقة بانتظار الدفع"></div>
+            <div class="health-seg seg-fail" id="health-bar-fail" style="width: 5%;" title="فشل دفع / مرفوضة"></div>
+            <div class="health-seg seg-ref" id="health-bar-ref" style="width: 5%;" title="مرتجعات"></div>
           </div>
         </div>
         <div class="health-stats-grid">
@@ -2724,9 +2760,19 @@
             <div class="health-stat-sub" id="health-canc-amt">0.00 ر.س</div>
           </div>
           <div class="health-stat-box">
-            <div class="health-stat-label"><span class="health-dot dot-fail"></span> متعثرة / مرفوضة</div>
+            <div class="health-stat-label"><span class="health-dot dot-pend"></span> معلقة (Pending)</div>
+            <div class="health-stat-val" id="health-pend-count">0</div>
+            <div class="health-stat-sub" id="health-pend-amt">0.00 ر.س</div>
+          </div>
+          <div class="health-stat-box">
+            <div class="health-stat-label"><span class="health-dot dot-fail"></span> فشل دفع / مرفوضة</div>
             <div class="health-stat-val" id="health-fail-count">0</div>
             <div class="health-stat-sub" id="health-fail-amt">0.00 ر.س</div>
+          </div>
+          <div class="health-stat-box">
+            <div class="health-stat-label"><span class="health-dot dot-ref"></span> مرتجعات</div>
+            <div class="health-stat-val" id="health-ref-count">0</div>
+            <div class="health-stat-sub" id="health-ref-amt">0.00 ر.س</div>
           </div>
         </div>
       </div>
@@ -4405,46 +4451,68 @@
         const total = h.total_orders || 0;
         const succCount = h.successful_orders || 0;
         const cancCount = h.cancelled_orders || 0;
+        const pendCount = h.pending_orders || 0;
         const failCount = h.failed_orders || 0;
+        const refCount = h.refunded_orders || 0;
 
         const succRate = h.success_rate_pct != null ? h.success_rate_pct : (total > 0 ? (succCount / total) * 100 : 0);
         const succPct = total > 0 ? (succCount / total) * 100 : 0;
         const cancPct = total > 0 ? (cancCount / total) * 100 : 0;
+        const pendPct = total > 0 ? (pendCount / total) * 100 : 0;
         const failPct = total > 0 ? (failCount / total) * 100 : 0;
+        const refPct = total > 0 ? (refCount / total) * 100 : 0;
 
         const badge = document.getElementById('checkout-rate-badge');
         if (badge) badge.textContent = `معدل النجاح: ${succRate.toFixed(1)}%`;
 
         const barSucc = document.getElementById('health-bar-succ');
         const barCanc = document.getElementById('health-bar-canc');
+        const barPend = document.getElementById('health-bar-pend');
         const barFail = document.getElementById('health-bar-fail');
+        const barRef = document.getElementById('health-bar-ref');
 
         if (barSucc) {
           barSucc.style.width = `${succPct.toFixed(1)}%`;
-          barSucc.title = `ناجحة: ${fmtNum(succCount)} (${succPct.toFixed(1)}%)`;
+          barSucc.title = `ناجحة ومؤكدة: ${fmtNum(succCount)} (${succPct.toFixed(1)}%)`;
         }
         if (barCanc) {
           barCanc.style.width = `${cancPct.toFixed(1)}%`;
           barCanc.title = `ملغية: ${fmtNum(cancCount)} (${cancPct.toFixed(1)}%)`;
         }
+        if (barPend) {
+          barPend.style.width = `${pendPct.toFixed(1)}%`;
+          barPend.title = `معلقة بانتظار الدفع: ${fmtNum(pendCount)} (${pendPct.toFixed(1)}%)`;
+        }
         if (barFail) {
           barFail.style.width = `${failPct.toFixed(1)}%`;
-          barFail.title = `متعثرة: ${fmtNum(failCount)} (${failPct.toFixed(1)}%)`;
+          barFail.title = `فشل دفع / مرفوضة: ${fmtNum(failCount)} (${failPct.toFixed(1)}%)`;
+        }
+        if (barRef) {
+          barRef.style.width = `${refPct.toFixed(1)}%`;
+          barRef.title = `مرتجعات: ${fmtNum(refCount)} (${refPct.toFixed(1)}%)`;
         }
 
         const elSuccCount = document.getElementById('health-succ-count');
         const elSuccAmt = document.getElementById('health-succ-amt');
         const elCancCount = document.getElementById('health-canc-count');
         const elCancAmt = document.getElementById('health-canc-amt');
+        const elPendCount = document.getElementById('health-pend-count');
+        const elPendAmt = document.getElementById('health-pend-amt');
         const elFailCount = document.getElementById('health-fail-count');
         const elFailAmt = document.getElementById('health-fail-amt');
+        const elRefCount = document.getElementById('health-ref-count');
+        const elRefAmt = document.getElementById('health-ref-amt');
 
         if (elSuccCount) elSuccCount.textContent = fmtNum(succCount);
         if (elSuccAmt) elSuccAmt.textContent = fmtCurrency(h.successful_amount);
         if (elCancCount) elCancCount.textContent = fmtNum(cancCount);
         if (elCancAmt) elCancAmt.textContent = fmtCurrency(h.cancelled_amount);
+        if (elPendCount) elPendCount.textContent = fmtNum(pendCount);
+        if (elPendAmt) elPendAmt.textContent = fmtCurrency(h.pending_amount);
         if (elFailCount) elFailCount.textContent = fmtNum(failCount);
         if (elFailAmt) elFailAmt.textContent = fmtCurrency(h.failed_amount);
+        if (elRefCount) elRefCount.textContent = fmtNum(refCount);
+        if (elRefAmt) elRefAmt.textContent = fmtCurrency(h.refunded_amount);
       }
 
       function renderHourlyOrders(hourlyList) {
@@ -5067,9 +5135,12 @@
 
           // 7. Checkout Health & Status
           let totalOrdersCnt = 0, totalOrdersAmt = 0;
-          let succCnt = 0, succAmt = 0, cancCnt = 0, cancAmt = 0, failCnt = 0, failAmt = 0;
-          const succStatuses = new Set(['completed', 'processing', 'on-hold', 'delivered']);
-          const cancStatuses = new Set(['cancelled']);
+          let succCnt = 0, succAmt = 0, cancCnt = 0, cancAmt = 0, pendCnt = 0, pendAmt = 0, failCnt = 0, failAmt = 0, refCnt = 0, refAmt = 0;
+          const succStatuses = new Set(['completed', 'processing', 'on-hold', 'delivered', 'on-the-way']);
+          const cancStatuses = new Set(['cancelled', 'tamara-p-canceled', 'cancelrequested']);
+          const pendStatuses = new Set(['pending', 'draft']);
+          const failStatuses = new Set(['failed', 'tamara-c-failed', 'tamara-failed', 'tamara-p-failed']);
+          const refStatuses = new Set(['refunded', 'rtnawb', 'dokan-refunded']);
           const statusMap = {};
           for (const [dStr, dStat] of Object.entries(da.order_status || {})) {
             if (dStr >= startDate && dStr <= endDate) {
@@ -5083,6 +5154,15 @@
                 } else if (cancStatuses.has(low)) {
                   cancCnt += cnt;
                   cancAmt += amt;
+                } else if (pendStatuses.has(low)) {
+                  pendCnt += cnt;
+                  pendAmt += amt;
+                } else if (failStatuses.has(low)) {
+                  failCnt += cnt;
+                  failAmt += amt;
+                } else if (refStatuses.has(low)) {
+                  refCnt += cnt;
+                  refAmt += amt;
                 } else {
                   failCnt += cnt;
                   failAmt += amt;
@@ -5099,8 +5179,12 @@
             success_rate_pct: totalOrdersCnt > 0 ? Math.round((succCnt / totalOrdersCnt) * 1000) / 10 : 0,
             cancelled_orders: cancCnt,
             cancelled_amount: Math.round(cancAmt * 100) / 100,
+            pending_orders: pendCnt,
+            pending_amount: Math.round(pendAmt * 100) / 100,
             failed_orders: failCnt,
-            failed_amount: Math.round(failAmt * 100) / 100
+            failed_amount: Math.round(failAmt * 100) / 100,
+            refunded_orders: refCnt,
+            refunded_amount: Math.round(refAmt * 100) / 100
           };
           const dynamicStatusBreakdown = Object.entries(statusMap).map(([st, cnt]) => ({ status: st, count: cnt })).sort((a, b) => b.count - a.count);
 
