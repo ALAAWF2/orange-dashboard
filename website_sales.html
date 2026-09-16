@@ -2324,7 +2324,7 @@
               <span class="tooltip-content">
                 <span class="tooltip-title">مخروط مسار الشراء (Conversion Funnel Cone)</span>
                 متابعة تدفق المتسوقين عبر المراحل الخمس الرئيسية بشكل مخروطي تنازلي: الزوار ← تصفح المنتجات ← إضافة للسلة ← إدخال بيانات العميل ← إتمام الشراء، مع رصد نسب التحويل والتسرب بين كل مرحلة وأخرى.
-                <span class="tooltip-source">المصدر: <strong>Google Analytics 4 Ecommerce Events</strong></span>
+                <span class="tooltip-source">المصادر: المراحل 1 إلى 4 معتمدة من <strong>Google Analytics 4 Ecommerce Events</strong>، ومرحلة إتمام الشراء مطابقة لفواتير <strong>WooCommerce Orders</strong> الفعلية المدفوعة.</span>
               </span>
             </button>
           </div>
@@ -4433,6 +4433,7 @@
         const pLabel = customLabel || (isSingleDay ? `يوم ${startDate}` : `${startDate} إلى ${endDate}`);
 
         let grossSales = 0, refunds = 0, netSales = 0, saleBills = 0, returnBills = 0, saleUnits = 0, visitors = 0, orangeTotal = 0;
+        let newCustomers = 0, returnCustomers = 0;
         let payments = {
           tabby: { amount: 0, orders: 0 },
           tamara: { amount: 0, orders: 0 },
@@ -4451,6 +4452,8 @@
           saleUnits += (k.sale_units || 0);
           visitors += (k.visitors || 0);
           orangeTotal += (k.orange_total || 0);
+          newCustomers += (k.new_customers || 0);
+          returnCustomers += (k.return_customers || 0);
           if (k.payments) {
             for (const gw of ['tabby', 'tamara', 'applepay', 'mada', 'credit']) {
               if (k.payments[gw]) {
@@ -4857,6 +4860,8 @@
             return_bills: returnBills,
             sale_units: saleUnits,
             visitors: visitors,
+            new_customers: newCustomers,
+            return_customers: returnCustomers,
             upt: saleBills > 0 ? (saleUnits / saleBills) : 0,
             online_share: orangeTotal > 0 ? (netSales / orangeTotal) : 0,
             sales_yoy_rate: null,
