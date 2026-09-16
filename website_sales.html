@@ -2814,9 +2814,9 @@
             <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات القنوات التسويقية">
               i
               <span class="tooltip-content">
-                <span class="tooltip-title">القنوات التسويقية (Marketing Channels)</span>
-                تصنيف حركة الزيارات بحسب طريقة وصول العميل (بحث عضوي، إعلانات مدفوعة، تواصل اجتماعي، دخول مباشر).
-                <span class="tooltip-source">المصدر: <strong>Google Analytics 4 (Channel Grouping)</strong></span>
+                <span class="tooltip-title">أداء القنوات التسويقية (Marketing Channels)</span>
+                تصنيف حركة الزيارات والطلبات بحسب طريقة وصول العميل (بحث عضوي، إعلانات مدفوعة، تواصل اجتماعي، دخول مباشر).
+                <span class="tooltip-source">المصادر: <strong>WooCommerce (طلبات ومبيعات) + Google Analytics 4 (جلسات ومستخدمون)</strong></span>
               </span>
             </button>
           </div>
@@ -2825,11 +2825,13 @@
           <thead>
             <tr>
               <th>القناة التسويقية</th>
-              <th>الجلسات</th>
-              <th>المستخدمون</th>
-              <th>التحويلات</th>
-              <th>الإيراد المنسوب</th>
-              <th>حصة الإيراد</th>
+              <th>عدد الطلبات</th>
+              <th>قيمة الطلبات (ر.س)</th>
+              <th>متوسط الطلب (AOV)</th>
+              <th>معدل التحويل</th>
+              <th>الجلسات (GA4)</th>
+              <th>المستخدمون (GA4)</th>
+              <th>حصة المبيعات</th>
             </tr>
           </thead>
           <tbody id="channels-table-body">
@@ -3883,19 +3885,27 @@
         const tbody = document.getElementById('channels-table-body');
         tbody.innerHTML = '';
         if (!channels || channels.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">لا توجد بيانات قنوات تسويقية</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">لا توجد بيانات قنوات تسويقية</td></tr>';
           return;
         }
 
         channels.forEach(ch => {
           const tr = document.createElement('tr');
+          const ordersCount = ch.orders_count ?? 0;
+          const ordersAmount = ch.orders_amount ?? 0;
+          const aov = ch.aov ?? (ordersCount > 0 ? ordersAmount / ordersCount : 0);
+          const convRate = ch.conversion_rate_pct ?? (ch.sessions > 0 ? (ordersCount * 100 / ch.sessions) : 0);
+          const share = ch.sales_share_pct ?? ch.revenue_share_pct ?? 0;
+
           tr.innerHTML = `
             <td><strong>${ch.channel_group}</strong></td>
+            <td><span style="${ordersCount > 0 ? 'background:rgba(254,121,0,0.12); color:var(--primary); font-weight:700; padding:3px 8px; border-radius:6px; display:inline-block;' : 'color:var(--text-muted);'}">${fmtNum(ordersCount)} طلب</span></td>
+            <td><strong style="color:var(--text-dark);">${fmtCurrency(ordersAmount)}</strong></td>
+            <td style="color:var(--text-muted);">${aov > 0 ? fmtCurrency(aov) : '—'}</td>
+            <td><span style="font-weight:600; color:${convRate >= 1 ? 'var(--success)' : convRate > 0 ? 'var(--primary)' : 'var(--text-muted)'};">${convRate > 0 ? convRate.toFixed(2) + '%' : '0.00%'}</span></td>
             <td>${fmtNum(ch.sessions)}</td>
             <td>${fmtNum(ch.total_users ?? ch.users ?? 0)}</td>
-            <td>${fmtNum(ch.conversions)}</td>
-            <td><strong>${fmtCurrency(ch.revenue)}</strong></td>
-            <td>${ch.revenue_share_pct != null ? ch.revenue_share_pct + '%' : '—'}</td>
+            <td><span style="font-weight:700; color:var(--primary);">${share > 0 ? share.toFixed(1) + '%' : '0%'}</span></td>
           `;
           tbody.appendChild(tr);
         });
@@ -4466,28 +4476,39 @@
         let computedV2 = null;
         const da = DASHBOARD_DATA.daily_analytics;
         if (da) {
-          // 1. Marketing Channels
+          // 1. Marketing Channels (WooCommerce Orders + GA4 Sessions)
           const chanMap = {};
-          let totalChanRev = 0;
+          let totalChanSales = 0;
           for (const [dStr, dChans] of Object.entries(da.channels || {})) {
             if (dStr >= startDate && dStr <= endDate) {
-              dChans.forEach(([chGroup, sess, usrs, convs, rev]) => {
+              dChans.forEach(([chGroup, sess, usrs, convs, rev, ordCount, ordAmt]) => {
                 if (!chanMap[chGroup]) {
-                  chanMap[chGroup] = { channel_group: chGroup, sessions: 0, total_users: 0, conversions: 0, revenue: 0 };
+                  chanMap[chGroup] = { channel_group: chGroup, sessions: 0, total_users: 0, conversions: 0, revenue: 0, orders_count: 0, orders_amount: 0 };
                 }
-                chanMap[chGroup].sessions += sess;
-                chanMap[chGroup].total_users += usrs;
-                chanMap[chGroup].conversions += convs;
-                chanMap[chGroup].revenue += rev;
-                totalChanRev += rev;
+                chanMap[chGroup].sessions += (sess || 0);
+                chanMap[chGroup].total_users += (usrs || 0);
+                chanMap[chGroup].conversions += (convs || 0);
+                chanMap[chGroup].revenue += (rev || 0);
+                chanMap[chGroup].orders_count += (ordCount || 0);
+                chanMap[chGroup].orders_amount += (ordAmt || 0);
+                totalChanSales += (ordAmt || 0);
               });
             }
           }
-          const dynamicChannels = Object.values(chanMap).map(c => ({
-            ...c,
-            revenue: Math.round(c.revenue * 100) / 100,
-            revenue_share_pct: totalChanRev > 0 ? Math.round((c.revenue / totalChanRev) * 10000) / 100 : 0
-          })).sort((a, b) => b.sessions - a.sessions);
+          const dynamicChannels = Object.values(chanMap).map(c => {
+            const aov = c.orders_count > 0 ? Math.round((c.orders_amount / c.orders_count) * 100) / 100 : 0;
+            const convRate = c.sessions > 0 ? Math.round((c.orders_count / c.sessions) * 10000) / 100 : 0;
+            const sharePct = totalChanSales > 0 ? Math.round((c.orders_amount / totalChanSales) * 10000) / 100 : 0;
+            return {
+              ...c,
+              orders_amount: Math.round(c.orders_amount * 100) / 100,
+              aov: aov,
+              conversion_rate_pct: convRate,
+              revenue: Math.round(c.revenue * 100) / 100,
+              sales_share_pct: sharePct,
+              revenue_share_pct: sharePct
+            };
+          }).sort((a, b) => b.orders_amount - a.orders_amount || b.sessions - a.sessions);
 
           // 2. Categories
           const catMap = {};
