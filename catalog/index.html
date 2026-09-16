@@ -1906,8 +1906,13 @@
       </select>
 
       <!-- Category Filter -->
-      <select id="categoryFilter" onchange="resetFiltersAndRender()" class="styled-select" aria-label="تصفية حسب القسم">
+      <select id="categoryFilter" onchange="onCategoryFilterChange()" class="styled-select" aria-label="تصفية حسب القسم">
         <!-- Populated dynamically -->
+      </select>
+
+      <!-- Subcategory / Size Filter -->
+      <select id="subCategoryFilter" onchange="resetFiltersAndRender()" class="styled-select" aria-label="تصفية حسب المقاس أو النوع">
+        <option value="">جميع المقاسات / الأنواع</option>
       </select>
 
       <!-- Price Filter -->
@@ -3151,11 +3156,151 @@
       }
     });
 
+    const CATEGORY_TAXONOMY = {
+      'لحافات وكويلتات': {
+        subcategories: [
+          'لحافات كينغ',
+          'لحافات كوين',
+          'لحافات فل',
+          'لحافات توين',
+          'أطقم غطاء سرير (كويلتات) - كينغ',
+          'أطقم غطاء سرير (كويلتات) - فل',
+          'أطقم غطاء سرير (كويلتات) - توين',
+          'أكياس لحاف - كينغ',
+          'أكياس لحاف - كوين',
+          'أكياس لحاف - فل'
+        ]
+      },
+      'شراشف وأغطية': {
+        subcategories: [
+          'شراشف كينغ',
+          'شراشف كوين',
+          'شراشف فل',
+          'شراشف توين'
+        ]
+      },
+      'لباد ومخدات': {
+        subcategories: [
+          'لباد سرير - كينغ',
+          'لباد سرير - كوين',
+          'لباد سرير - فل',
+          'لباد سرير - توين',
+          'مخدات كينغ',
+          'مخدات ستاندرد',
+          'كيس مخدة - كينغ',
+          'كيس مخدة - ستاندرد'
+        ]
+      },
+      'بطانيات وشالات': {
+        subcategories: [
+          'بطانيات كينغ',
+          'بطانيات فل',
+          'شالات'
+        ]
+      },
+      'مناشف': {
+        subcategories: [
+          'مناشف حمام',
+          'مناشف مطبخ',
+          'مناشف مطرز',
+          'مناشف بحر',
+          'مناشف أخرى'
+        ]
+      },
+      'أرواب حمام': {
+        subcategories: [
+          'أرواب حمام - مفرد',
+          'أرواب حمام - أطفال',
+          'أرواب حمام - عرائسي'
+        ]
+      },
+      'دعاسات': {
+        subcategories: [
+          'دعاسات حمام',
+          'دعاسات مدخل',
+          'دعاسات مطبخ',
+          'دعاسات منزل'
+        ]
+      },
+      'سليبرات': {
+        subcategories: [
+          'سليبرات'
+        ]
+      },
+      'معطرات': {
+        subcategories: [
+          'معطرات فواحة',
+          'معطرات معطر غرف'
+        ]
+      },
+      'أدوات منزلية ومطبخ': {
+        subcategories: [
+          'اكواب حرارية',
+          'مطبخ'
+        ]
+      },
+      'ألعاب وحقائب سفر': {
+        subcategories: [
+          'دمى اطفال',
+          'شنط سفر'
+        ]
+      },
+      'أخرى وغير مصنف': {
+        subcategories: [
+          'كما هي',
+          'أخرى',
+          'UNCATEGORIZED'
+        ]
+      }
+    };
+
+    function getMainCategory(cat) {
+      if (!cat) return 'أخرى وغير مصنف';
+      for (const [mainCat, conf] of Object.entries(CATEGORY_TAXONOMY)) {
+        if (conf.subcategories.includes(cat)) return mainCat;
+      }
+      return 'أخرى وغير مصنف';
+    }
+
+    function updateSubCategoryDropdown(selectedMainCat) {
+      const subSelect = document.getElementById('subCategoryFilter');
+      if (!subSelect) return;
+      const currentVal = subSelect.value;
+
+      let html = '<option value="">جميع المقاسات / الأنواع</option>';
+
+      if (!selectedMainCat) {
+        const genericSizes = ['كينغ', 'كوين', 'فل', 'توين', 'أطفال', 'عرائسي'];
+        genericSizes.forEach(s => {
+          html += `<option value="${s}">${s}</option>`;
+        });
+      } else if (CATEGORY_TAXONOMY[selectedMainCat]) {
+        const subs = CATEGORY_TAXONOMY[selectedMainCat].subcategories;
+        subs.forEach(sub => {
+          html += `<option value="${sub}">${sub}</option>`;
+        });
+      }
+
+      subSelect.innerHTML = html;
+      if (currentVal && Array.from(subSelect.options).some(o => o.value === currentVal)) {
+        subSelect.value = currentVal;
+      } else {
+        subSelect.value = '';
+      }
+    }
+
+    function onCategoryFilterChange() {
+      const mainCat = document.getElementById('categoryFilter')?.value || '';
+      updateSubCategoryDropdown(mainCat);
+      resetFiltersAndRender();
+    }
+
     function renderCategoryPills() {
       const pillsContainer = document.getElementById('categoryPills');
       if (!pillsContainer) return;
-      const categories = [...new Set((window.data || []).map(d => d.category))].filter(Boolean).sort();
-      
+
+      const mainCategories = Object.keys(CATEGORY_TAXONOMY);
+
       const currentCat = document.getElementById('categoryFilter')?.value || '';
       const newOnly = document.getElementById('newOnly')?.checked;
       const topMoversOnly = document.getElementById('topMoversOnly')?.checked;
@@ -3163,10 +3308,10 @@
       const promoOnly = document.getElementById('promoOnly')?.checked;
       const favOnly = document.getElementById('favOnly')?.checked;
       const showroomStockOnly = document.getElementById('showroomStockOnly')?.checked;
-      
+
       const isAllActive = !currentCat && !newOnly && !topMoversOnly && !lowStockOnly && !promoOnly && !favOnly && !showroomStockOnly;
       let html = `<button type="button" class="pill-btn ${isAllActive ? 'active' : ''}" onclick="selectCategoryPill('')">عرض الكل</button>`;
-      
+
       html += `<button type="button" class="pill-btn ${newOnly ? 'active' : ''}" onclick="togglePillCheckbox('newOnly')">✨ الجديد</button>`;
       html += `<button type="button" class="pill-btn ${topMoversOnly ? 'active' : ''}" onclick="togglePillCheckbox('topMoversOnly')">الأكثر طلباً</button>`;
       html += `<button type="button" class="pill-btn ${lowStockOnly ? 'active' : ''}" onclick="togglePillCheckbox('lowStockOnly')">نفاد وشيك</button>`;
@@ -3174,8 +3319,8 @@
       if (!isGuestMode) {
         html += `<button type="button" class="pill-btn ${favOnly ? 'active' : ''}" onclick="togglePillCheckbox('favOnly')">⭐ المفضلة</button>`;
       }
-      
-      categories.forEach(cat => {
+
+      mainCategories.forEach(cat => {
         const isActive = currentCat === cat;
         const safeCat = cat.replace(/'/g, "\\'");
         html += `<button type="button" class="pill-btn ${isActive ? 'active' : ''}" onclick="selectCategoryPill('${safeCat}')">${cat}</button>`;
@@ -3187,6 +3332,7 @@
     function selectCategoryPill(category) {
       const select = document.getElementById('categoryFilter');
       if (select) select.value = category;
+      updateSubCategoryDropdown(category);
       resetFiltersAndRender();
     }
 
@@ -3201,6 +3347,8 @@
     function resetAllFilters() {
       const sb = document.getElementById('searchBar'); if (sb) sb.value = '';
       const cat = document.getElementById('categoryFilter'); if (cat) cat.value = '';
+      const subCat = document.getElementById('subCategoryFilter'); if (subCat) subCat.value = '';
+      updateSubCategoryDropdown('');
       const price = document.getElementById('priceFilter'); if (price) price.value = '';
       const sort = document.getElementById('sortFilter'); if (sort) sort.value = 'sales-desc';
       ['newOnly', 'topMoversOnly', 'lowStockOnly', 'promoOnly', 'favOnly', 'showroomStockOnly', 'smartReplenishOnly'].forEach(id => {
@@ -3235,6 +3383,7 @@
 
       const searchVal = (document.getElementById('searchBar')?.value || '').trim();
       const cat = document.getElementById('categoryFilter')?.value || '';
+      const subCat = document.getElementById('subCategoryFilter')?.value || '';
       const price = document.getElementById('priceFilter')?.value || '';
       const newOnly = document.getElementById('newOnly')?.checked;
       const topMoversOnly = document.getElementById('topMoversOnly')?.checked;
@@ -3250,6 +3399,7 @@
       const activeTags = [];
       if (searchVal) activeTags.push(`بحث: "${searchVal}"`);
       if (cat) activeTags.push(`قسم: "${cat}"`);
+      if (subCat) activeTags.push(`مقاس/فرعي: "${subCat}"`);
       if (price) activeTags.push(`سعر: "${price}"`);
       if (newOnly) activeTags.push(`✨ جديد`);
       if (topMoversOnly) activeTags.push(`أكثر طلباً`);
@@ -4045,11 +4195,12 @@
     );
 
     function populateFilters() {
-      const categories = [...new Set((window.data || []).map(d => d.category))].filter(Boolean).sort();
       const select = document.getElementById('categoryFilter');
       if (select) {
-        select.innerHTML = '<option value="">جميع الأقسام</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        const mainCategories = Object.keys(CATEGORY_TAXONOMY);
+        select.innerHTML = '<option value="">جميع الأقسام</option>' + mainCategories.map(c => `<option value="${c}">${c}</option>`).join('');
       }
+      updateSubCategoryDropdown(select?.value || '');
       renderCategoryPills();
     }
 
@@ -4115,6 +4266,7 @@
       if (spinner) spinner.classList.add('active');
 
       const category = document.getElementById('categoryFilter')?.value || '';
+      const subCategory = document.getElementById('subCategoryFilter')?.value || '';
       const priceRange = document.getElementById('priceFilter')?.value || '';
       const sortBy = document.getElementById('sortFilter')?.value || 'sales-desc';
       const searchVal = (document.getElementById('searchBar')?.value || '').trim().toLowerCase();
@@ -4132,7 +4284,17 @@
         list = list.filter(d => d.stock > 20);
       }
 
-      if (category) list = list.filter(p => p.category === category);
+      if (category) {
+        list = list.filter(p => getMainCategory(p.category) === category);
+      }
+      if (subCategory) {
+        list = list.filter(p => {
+          if (p.category === subCategory) return true;
+          const pCat = String(p.category || '');
+          const pName = String(p.name || '');
+          return pCat.includes(subCategory) || pName.includes(subCategory);
+        });
+      }
       if (newOnly) list = list.filter(p => isNewArrival(p.code));
       if (topMoversOnly) list = list.filter(p => isTopMover(p));
       if (lowStockOnly) list = list.filter(p => isLowCentralStock(p));
@@ -4469,8 +4631,10 @@
     function updateTotalSales() {
       const total = filteredProducts.reduce((sum, p) => sum + getSalesInMall(p.code), 0);
       const count = filteredProducts.length;
-      const category = document.getElementById('categoryFilter').value;
-      const label = category ? `إجمالي الكميات المباعة لتصنيف "${category}"` : "إجمالي الكميات المباعة للمنتجات المعروضة";
+      const category = document.getElementById('categoryFilter')?.value || '';
+      const subCategory = document.getElementById('subCategoryFilter')?.value || '';
+      const selectedLabel = subCategory ? `${category ? category + ' - ' : ''}${subCategory}` : category;
+      const label = selectedLabel ? `إجمالي الكميات المباعة لتصنيف "${selectedLabel}"` : "إجمالي الكميات المباعة للمنتجات المعروضة";
       document.getElementById("totalSales").textContent = `${label}: ${total.toLocaleString()} من ${count} منتج`;
     }
 
