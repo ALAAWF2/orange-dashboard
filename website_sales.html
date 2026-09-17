@@ -1811,56 +1811,64 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .pt-badge {
-      font-size: 15px;
+      font-size: 15.5px;
       font-weight: 800;
-      padding: 6px 14px;
-      border-radius: 8px;
+      padding: 7px 16px;
+      border-radius: 9px;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 8px;
+      letter-spacing: -0.2px;
     }
-    .pt-badge-range {
+    .pt-badge bdi {
       direction: ltr;
-      unicode-bidi: embed;
       font-weight: 800;
-      font-size: 15px;
-      display: inline-block;
-    }
-    .pt-badge-curr {
-      font-size: 12.5px;
-      font-weight: 700;
+      font-size: 16px;
     }
     .pt-share-badge {
-      font-size: 13.5px;
+      font-size: 14px;
       font-weight: 800;
-      padding: 5px 12px;
-      border-radius: 12px;
+      padding: 6px 14px;
+      border-radius: 14px;
       display: inline-flex;
       align-items: center;
+      white-space: nowrap;
+    }
+    .pt-metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .pt-metric-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #64748b;
     }
     .pt-card-val {
       font-size: 28px;
       font-weight: 900;
-      color: var(--text);
+      color: #0f172a;
       letter-spacing: -0.5px;
-      margin: 8px 0 12px 0;
       font-variant-numeric: tabular-nums;
       display: flex;
       align-items: baseline;
       gap: 6px;
+      margin: 0;
     }
     .pt-card-val .pt-currency {
       font-size: 15px;
       font-weight: 700;
-      color: var(--text-muted);
+      color: #64748b;
     }
     .pt-tier-bar {
       height: 6px;
       border-radius: 4px;
       background: #f1f5f9;
+      margin-top: 8px;
       margin-bottom: 16px;
       overflow: hidden;
     }
@@ -1873,11 +1881,12 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      padding: 14px 10px;
+      padding: 14px 12px;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 10px;
+      border-radius: 12px;
       text-align: center;
+      margin-top: auto;
     }
     .pt-stat-item {
       display: flex;
@@ -1887,16 +1896,16 @@
       justify-content: center;
     }
     .pt-stat-num {
-      font-size: 19px;
+      font-size: 21px;
       font-weight: 800;
       color: #0f172a;
       font-variant-numeric: tabular-nums;
       line-height: 1.2;
     }
     .pt-stat-lbl {
-      font-size: 13.5px;
+      font-size: 14px;
       font-weight: 700;
-      color: #475569;
+      color: #334155;
       white-space: nowrap;
     }
 
@@ -5324,7 +5333,7 @@
                 seg.style.background = PT_COLORS[pt.price_category] || '#64748b';
                 seg.title = `شريحة ${pt.price_category} ر.س: ${fmtCurrency(pt.sales_amount)} (${share.toFixed(1)}%)`;
                 if (share >= 6) {
-                  seg.innerHTML = `<span dir="ltr">${pt.price_category}</span> (${share.toFixed(0)}%)`;
+                  seg.innerHTML = `<bdi dir="ltr">${pt.price_category}</bdi> (${share.toFixed(0)}%)`;
                 }
                 seg.onclick = () => filterPriceTier(pt.price_category);
                 stripContainer.appendChild(seg);
@@ -5342,8 +5351,8 @@
             pill.className = 'pt-legend-pill';
             pill.innerHTML = `
               <span class="pt-legend-dot" style="background:${color};"></span>
-              <span class="pt-badge-range">${pt.price_category}</span>
-              <span style="font-size:12px; font-weight:700;">ر.س</span>
+              <bdi dir="ltr" style="font-weight:800; font-size:13.5px;">${pt.price_category}</bdi>
+              <span style="font-size:12px; font-weight:700; margin: 0 2px;">ر.س</span>
               <span style="color:var(--text-muted); font-size:12px; font-weight:700;">(${pt.share_pct}%)</span>
             `;
             pill.onclick = () => filterPriceTier(pt.price_category);
@@ -5368,16 +5377,19 @@
                 <div class="pt-card-top">
                   <span class="pt-badge" style="background:${color}15; color:${color}; border:1px solid ${color}35;">
                     <span style="width:7px; height:7px; border-radius:50%; background:${color}; display:inline-block;"></span>
-                    <span class="pt-badge-range">${pt.price_category}</span>
-                    <span class="pt-badge-curr">ر.س</span>
+                    <bdi dir="ltr">${pt.price_category}</bdi>
+                    <span style="font-size:13px; font-weight:700;">ر.س</span>
                   </span>
                   <span class="pt-share-badge" style="color:${color}; background:${color}12; border:1px solid ${color}25;">
                     ${share}% من المبيعات
                   </span>
                 </div>
-                <div class="pt-card-val">
-                  ${fmtCurrency(pt.sales_amount)}
-                  <span class="pt-currency">ر.س</span>
+                <div class="pt-metric-row">
+                  <span class="pt-metric-label">صافي المبيعات</span>
+                  <div class="pt-card-val">
+                    ${fmtCurrency(pt.sales_amount)}
+                    <span class="pt-currency">ر.س</span>
+                  </div>
                 </div>
                 <div class="pt-tier-bar">
                   <div class="pt-tier-fill" style="width:${Math.min(100, share)}%; background:${color};"></div>
@@ -5386,15 +5398,15 @@
               <div class="pt-card-stats">
                 <div class="pt-stat-item">
                   <span class="pt-stat-num">${fmtNum(pt.units_sold)}</span>
-                  <span class="pt-stat-lbl">قطع مباعة</span>
+                  <span class="pt-stat-lbl">القطع المباعة</span>
                 </div>
                 <div class="pt-stat-item">
                   <span class="pt-stat-num">${fmtNum(pt.orders_count)}</span>
-                  <span class="pt-stat-lbl">طلب مؤكد</span>
+                  <span class="pt-stat-lbl">عدد الطلبات</span>
                 </div>
                 <div class="pt-stat-item">
                   <span class="pt-stat-num">${fmtNum(pt.products_count)}</span>
-                  <span class="pt-stat-lbl">صنف بالشيت</span>
+                  <span class="pt-stat-lbl">أصناف بالشيت</span>
                 </div>
               </div>
             `;
