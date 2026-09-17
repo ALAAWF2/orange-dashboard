@@ -3293,6 +3293,7 @@
             <tr><td colspan="9" style="text-align:center; padding: 24px;">جاري تحميل المنتجات...</td></tr>
           </tbody>
         </table>
+      </div>
     </div>
 
     <!-- Tab 2: Price Categories (الفئات السعرية) -->
@@ -5314,7 +5315,8 @@
         const tbody = document.getElementById('price-tier-products-tbody');
         if (!tbody) return;
 
-        let list = [...(products || CACHED_PRODUCTS || [])];
+        const VALID_TIERS = ['< 100', '100 - 199', '200 - 299', '300 - 499', '500 - 799', '> 799'];
+        let list = [...(products || CACHED_PRODUCTS || [])].filter(p => p.price_category && VALID_TIERS.includes((p.price_category || '').trim()));
 
         // Filter by Price Tier
         if (SELECTED_PRICE_TIER && SELECTED_PRICE_TIER !== 'الكل') {
@@ -5399,8 +5401,10 @@
         const tierTotals = { '< 100': 0, '100 - 199': 0, '200 - 299': 0, '300 - 499': 0, '500 - 799': 0, '> 799': 0, total: 0 };
 
         (products || CACHED_PRODUCTS || []).forEach(p => {
+          const tier = (p.price_category || '').trim();
+          if (!tier || !tiers.includes(tier)) return; // Strictly products that have a price category from the sheet
+
           const cat = p.category_name || 'غير مصنف';
-          const tier = p.price_category || 'غير محدد';
           const sales = Number(p.sales_amount) || 0;
 
           if (!matrix[cat]) {
@@ -5438,9 +5442,11 @@
         const trTotal = document.createElement('tr');
         trTotal.style.background = 'var(--surface-hover)';
         trTotal.style.fontWeight = '800';
-        let totalCells = `<td>المجموع الكلي</td>`;
+        let totalCells = `<td style="font-weight:800; color:var(--text);">الإجمالي الكلي</td>`;
         tiers.forEach(t => {
-          totalCells += `<td style="text-align:center; color:var(--text);">${fmtCurrency(tierTotals[t])}</td>`;
+          const val = tierTotals[t] || 0;
+          const style = val > 0 ? 'font-weight:700; text-align:center;' : 'color:#cbd5e1; text-align:center;';
+          totalCells += `<td style="${style}">${val > 0 ? fmtCurrency(val) : '—'}</td>`;
         });
         totalCells += `<td style="text-align:center; color:var(--primary); font-size:15px;">${fmtCurrency(tierTotals.total)}</td>`;
         trTotal.innerHTML = totalCells;
@@ -5453,7 +5459,8 @@
           return;
         }
 
-        let list = [...(CACHED_PRODUCTS || [])];
+        const VALID_TIERS = ['< 100', '100 - 199', '200 - 299', '300 - 499', '500 - 799', '> 799'];
+        let list = [...(CACHED_PRODUCTS || [])].filter(p => p.price_category && VALID_TIERS.includes((p.price_category || '').trim()));
         if (SELECTED_PRICE_TIER && SELECTED_PRICE_TIER !== 'الكل') {
           list = list.filter(p => (p.price_category || '').trim() === SELECTED_PRICE_TIER.trim());
         }
