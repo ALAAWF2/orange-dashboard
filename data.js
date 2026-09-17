@@ -7425,6 +7425,25 @@ const EMPLOYEES = [
         "addressBooks": "1010-C;1010-E"
     },
     {
+        "employeeId": "5023-مي عبداللطيف",
+        "personnelNumber": "5023",
+        "name": "مي عبداللطيف",
+        "startDate": "2026-09-15",
+        "manager": "جهاد ايوبي",
+        "showroom": "2102-28-Al Nakheel Mall Dammam",
+        "showroomDetails": [
+            {
+                "name": "2102-28-Al Nakheel Mall Dammam",
+                "manager": "جهاد ايوبي",
+                "codes": [
+                    "2102-C",
+                    "2102-E"
+                ]
+            }
+        ],
+        "addressBooks": "2102-C;2102-E"
+    },
+    {
         "employeeId": "5020-وجدان الخرجي",
         "personnelNumber": "5020",
         "name": "وجدان الخرجي",
