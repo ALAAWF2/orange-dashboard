@@ -1704,6 +1704,63 @@
       border-radius: 6px;
       background: #e2e8f0;
     }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    th.sortable:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    th.sortable.active-sort {
+      color: var(--primary);
+      background: #fff7ed;
+    }
+    .sort-icon {
+      display: inline-block;
+      margin-right: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      vertical-align: middle;
+      transition: color 0.15s ease;
+    }
+    th.sortable.active-sort .sort-icon {
+      color: var(--primary);
+      font-weight: bold;
+    }
+    .prod-link {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.15s ease;
+      display: inline-block;
+    }
+    .prod-link:hover {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    .prod-img-link {
+      display: inline-block;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      border-radius: 6px;
+    }
+    .prod-img-link:hover {
+      transform: scale(1.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .sku-code-link {
+      color: #475569;
+      text-decoration: none;
+      transition: color 0.15s ease, background 0.15s ease;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .sku-code-link:hover {
+      color: var(--primary);
+      background: var(--primary-light);
+      text-decoration: underline;
+    }
 
     /* Affinity Card */
     .affinity-box {
@@ -2942,12 +2999,12 @@
           <thead>
             <tr>
               <th>صورة</th>
-              <th>المنتج</th>
-              <th>الـ SKU</th>
-              <th>الفئة التجارية</th>
-              <th>
-                القطع المباعة
-                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات القطع المباعة">
+              <th class="sortable" data-sort="product_name" onclick="handleSortProducts('product_name')">المنتج <span class="sort-icon" id="sort-icon-product_name">↕</span></th>
+              <th class="sortable" data-sort="sku" onclick="handleSortProducts('sku')">الـ SKU <span class="sort-icon" id="sort-icon-sku">↕</span></th>
+              <th class="sortable" data-sort="category_name" onclick="handleSortProducts('category_name')">الفئة التجارية <span class="sort-icon" id="sort-icon-category_name">↕</span></th>
+              <th class="sortable" data-sort="units_sold" onclick="handleSortProducts('units_sold')">
+                القطع المباعة <span class="sort-icon" id="sort-icon-units_sold">↕</span>
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات القطع المباعة" onclick="event.stopPropagation()">
                   i
                   <span class="tooltip-content">
                     <span class="tooltip-title">القطع المباعة (Units Sold)</span>
@@ -2956,9 +3013,9 @@
                   </span>
                 </button>
               </th>
-              <th>
-                صافي المبيعات
-                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات صافي مبيعات المنتج">
+              <th class="sortable active-sort" data-sort="sales_amount" onclick="handleSortProducts('sales_amount')">
+                صافي المبيعات <span class="sort-icon" id="sort-icon-sales_amount">▼</span>
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات صافي مبيعات المنتج" onclick="event.stopPropagation()">
                   i
                   <span class="tooltip-content">
                     <span class="tooltip-title">صافي مبيعات المنتج</span>
@@ -2967,9 +3024,9 @@
                   </span>
                 </button>
               </th>
-              <th>
-                الطلبات
-                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات عدد طلبات المنتج">
+              <th class="sortable" data-sort="orders_count" onclick="handleSortProducts('orders_count')">
+                الطلبات <span class="sort-icon" id="sort-icon-orders_count">↕</span>
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات عدد طلبات المنتج" onclick="event.stopPropagation()">
                   i
                   <span class="tooltip-content">
                     <span class="tooltip-title">عدد الطلبات</span>
@@ -2978,9 +3035,9 @@
                   </span>
                 </button>
               </th>
-              <th>
-                المخزون مع شرشف
-                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون مع شرشف">
+              <th class="sortable" data-sort="stock_with_sheet" onclick="handleSortProducts('stock_with_sheet')">
+                المخزون مع شرشف <span class="sort-icon" id="sort-icon-stock_with_sheet">↕</span>
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون مع شرشف" onclick="event.stopPropagation()">
                   i
                   <span class="tooltip-content">
                     <span class="tooltip-title">المخزون مع شرشف</span>
@@ -2989,9 +3046,9 @@
                   </span>
                 </button>
               </th>
-              <th>
-                المخزون بدون شرشف
-                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون بدون شرشف">
+              <th class="sortable" data-sort="stock_without_sheet" onclick="handleSortProducts('stock_without_sheet')">
+                المخزون بدون شرشف <span class="sort-icon" id="sort-icon-stock_without_sheet">↕</span>
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون بدون شرشف" onclick="event.stopPropagation()">
                   i
                   <span class="tooltip-content">
                     <span class="tooltip-title">المخزون بدون شرشف</span>
@@ -3202,6 +3259,8 @@
       let CURRENT_PERIOD_KEY = '';
       let SELECTED_CATEGORY = 'الكل';
       let CACHED_PRODUCTS = [];
+      let PRODUCT_SORT_COLUMN = 'sales_amount';
+      let PRODUCT_SORT_DIR = 'desc';
       let TREND_METRIC = 'net_sales';
       let TREND_DAYS = [];
 
@@ -3538,9 +3597,11 @@
 
         // 5. Categories & Products
         SELECTED_CATEGORY = 'الكل';
+        document.getElementById('products-search-input').value = '';
+        document.getElementById('products-table-title').textContent = 'قائمة المنتجات المباعة في الفترة';
         renderCategories(v2.categories || []);
         CACHED_PRODUCTS = v2.top_products || [];
-        renderProductsTable(CACHED_PRODUCTS);
+        refreshProductsView();
 
         // 6. Basket Affinity & Variations
         renderAffinity(v2.basket_affinity || []);
@@ -3556,8 +3617,6 @@
 
         // 9. Daily Records
         renderDailyRecords(p.start_date, p.end_date);
-        document.getElementById('products-search-input').value = '';
-        document.getElementById('products-table-title').textContent = 'قائمة المنتجات المباعة في الفترة';
         renderTrend(p);
         renderPeakRecords(p);
       }
@@ -3756,15 +3815,27 @@
           const item = document.createElement('div');
           item.className = 'top5-item';
           
-          const imgHtml = prod.image_url 
+          const prodUrl = prod.slug 
+            ? `https://www.orangebedbath.com/product/${prod.slug}/` 
+            : (prod.product_id ? `https://www.orangebedbath.com/?p=${prod.product_id}` : null);
+
+          const rawImg = prod.image_url 
             ? `<img src="${prod.image_url}" class="top5-img" alt="${prod.product_name}" onerror="this.style.display='none';">`
             : `<div class="top5-img" style="display:flex;align-items:center;justify-content:center;font-size:14px;color:#94a3b8;">📦</div>`;
+
+          const imgHtml = prodUrl
+            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-img-link" title="فتح صفحة المنتج في المتجر">${rawImg}</a>`
+            : rawImg;
+
+          const nameHtml = prodUrl
+            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-link" title="فتح صفحة المنتج في المتجر"><span class="top5-name">${prod.product_name}</span></a>`
+            : `<span class="top5-name" title="${prod.product_name}">${prod.product_name}</span>`;
 
           item.innerHTML = `
             <span class="top5-rank">${idx + 1}</span>
             ${imgHtml}
             <div class="top5-info">
-              <span class="top5-name" title="${prod.product_name}">${prod.product_name}</span>
+              ${nameHtml}
               <span class="top5-cat">${prod.category_name || 'عام'} • المتبقي بالمستودع: ${fmtNum(prod.stock_quantity || 0)}</span>
             </div>
             <div class="top5-stats">
@@ -4278,14 +4349,79 @@
         }
 
         document.getElementById('products-table-title').textContent = catName === 'الكل' ? 'قائمة المنتجات المباعة في الفترة' : `منتجات فئة: ${catName}`;
-        
-        const filtered = catName === 'الكل' 
-          ? CACHED_PRODUCTS 
-          : CACHED_PRODUCTS.filter(p => (p.category_name || 'غير مصنف').trim() === catName.trim());
-        const query = document.getElementById('products-search-input').value.trim().toLowerCase();
-        renderProductsTable(filtered.filter(product => !query || String(product.product_name || '').toLowerCase().includes(query) || String(product.sku || '').toLowerCase().includes(query)));
+        refreshProductsView();
       }
       window.filterCategory = filterCategory;
+
+      function handleSortProducts(col) {
+        if (PRODUCT_SORT_COLUMN === col) {
+          PRODUCT_SORT_DIR = PRODUCT_SORT_DIR === 'desc' ? 'asc' : 'desc';
+        } else {
+          PRODUCT_SORT_COLUMN = col;
+          const isText = ['product_name', 'sku', 'category_name'].includes(col);
+          PRODUCT_SORT_DIR = isText ? 'asc' : 'desc';
+        }
+        refreshProductsView();
+      }
+      window.handleSortProducts = handleSortProducts;
+
+      function updateSortHeaders() {
+        const table = document.getElementById('products-table');
+        if (!table) return;
+        const ths = table.querySelectorAll('th.sortable');
+        ths.forEach(th => {
+          const col = th.getAttribute('data-sort');
+          const icon = th.querySelector('.sort-icon');
+          if (col === PRODUCT_SORT_COLUMN) {
+            th.classList.add('active-sort');
+            if (icon) icon.textContent = PRODUCT_SORT_DIR === 'desc' ? '▼' : '▲';
+          } else {
+            th.classList.remove('active-sort');
+            if (icon) icon.textContent = '↕';
+          }
+        });
+      }
+
+      function refreshProductsView() {
+        const query = (document.getElementById('products-search-input')?.value || '').trim().toLowerCase();
+        let list = SELECTED_CATEGORY === 'الكل'
+          ? [...CACHED_PRODUCTS]
+          : CACHED_PRODUCTS.filter(p => (p.category_name || 'غير مصنف').trim() === SELECTED_CATEGORY.trim());
+
+        if (query) {
+          list = list.filter(p =>
+            String(p.product_name || '').toLowerCase().includes(query) ||
+            String(p.sku || '').toLowerCase().includes(query)
+          );
+        }
+
+        list.sort((a, b) => {
+          const col = PRODUCT_SORT_COLUMN;
+          const isText = ['product_name', 'sku', 'category_name'].includes(col);
+          if (isText) {
+            const strA = (a[col] || '').toString().trim();
+            const strB = (b[col] || '').toString().trim();
+            if (!strA && !strB) return 0;
+            if (!strA) return 1;
+            if (!strB) return -1;
+            const cmp = strA.localeCompare(strB, 'ar', { numeric: true, sensitivity: 'base' });
+            return PRODUCT_SORT_DIR === 'asc' ? cmp : -cmp;
+          } else {
+            const valA = a[col];
+            const valB = b[col];
+            const numA = (valA !== null && valA !== undefined && !isNaN(Number(valA))) ? Number(valA) : null;
+            const numB = (valB !== null && valB !== undefined && !isNaN(Number(valB))) ? Number(valB) : null;
+            if (numA === null && numB === null) return 0;
+            if (numA === null) return 1;
+            if (numB === null) return -1;
+            return PRODUCT_SORT_DIR === 'asc' ? numA - numB : numB - numA;
+          }
+        });
+
+        updateSortHeaders();
+        renderProductsTable(list);
+      }
+      window.refreshProductsView = refreshProductsView;
 
       function renderProductsTable(products) {
         const tbody = document.getElementById('products-table-body');
@@ -4297,14 +4433,30 @@
 
         products.forEach(p => {
           const tr = document.createElement('tr');
-          const imgHtml = p.image_url ? `<img class="prod-img" src="${p.image_url}" alt="${p.product_name}" loading="lazy">` : '<div class="prod-img"></div>';
+          const prodUrl = p.slug 
+            ? `https://www.orangebedbath.com/product/${p.slug}/` 
+            : (p.product_id ? `https://www.orangebedbath.com/?p=${p.product_id}` : null);
+
+          const rawImg = p.image_url ? `<img class="prod-img" src="${p.image_url}" alt="${p.product_name}" loading="lazy">` : '<div class="prod-img"></div>';
+          const imgHtml = prodUrl 
+            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-img-link" title="فتح صفحة المنتج في المتجر">${rawImg}</a>` 
+            : rawImg;
+
+          const nameHtml = prodUrl 
+            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-link" title="فتح صفحة المنتج في المتجر"><strong>${p.product_name}</strong></a>` 
+            : `<strong>${p.product_name}</strong>`;
+
+          const skuHtml = (p.sku && prodUrl)
+            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="sku-code-link" title="فتح صفحة المنتج في المتجر"><code>${p.sku}</code></a>`
+            : `<code>${p.sku || '—'}</code>`;
+
           const swText = p.stock_with_sheet != null ? fmtNum(p.stock_with_sheet) : '—';
           const sbText = p.stock_without_sheet != null ? fmtNum(p.stock_without_sheet) : '—';
           
           tr.innerHTML = `
             <td>${imgHtml}</td>
-            <td><strong>${p.product_name}</strong></td>
-            <td><code>${p.sku || '—'}</code></td>
+            <td>${nameHtml}</td>
+            <td>${skuHtml}</td>
             <td><span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${p.category_name || 'غير مصنف'}</span></td>
             <td>${fmtNum(p.units_sold)}</td>
             <td><strong>${fmtCurrency(p.sales_amount)}</strong></td>
@@ -4721,16 +4873,11 @@
 
       function setupSearch() {
         const input = document.getElementById('products-search-input');
-        input.addEventListener('input', (e) => {
-          const q = e.target.value.toLowerCase().trim();
-          let baseList = SELECTED_CATEGORY === 'الكل' ? CACHED_PRODUCTS : CACHED_PRODUCTS.filter(p => p.category_name === SELECTED_CATEGORY);
-          if (!q) {
-            renderProductsTable(baseList);
-            return;
-          }
-          const matches = baseList.filter(p => (p.product_name && p.product_name.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q)));
-          renderProductsTable(matches);
-        });
+        if (input) {
+          input.addEventListener('input', () => {
+            refreshProductsView();
+          });
+        }
       }
 
       function setupExport() {
@@ -5025,6 +5172,7 @@
                     product_id: pid,
                     product_name: meta.name || ('منتج #' + pid),
                     sku: meta.sku || '',
+                    slug: meta.slug || '',
                     category_name: meta.cat || 'غير مصنف',
                     stock_quantity: meta.stock,
                     stock_with_sheet: meta.stock_with_sheet,
@@ -5063,6 +5211,7 @@
                     product_id: pid,
                     product_name: meta.name || ('منتج #' + pid),
                     sku: meta.sku || '',
+                    slug: meta.slug || '',
                     category_name: meta.cat || 'عام',
                     stock_quantity: meta.stock,
                     stock_with_sheet: meta.stock_with_sheet,
