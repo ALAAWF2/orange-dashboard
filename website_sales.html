@@ -3432,10 +3432,11 @@
         const curVisitors = kpis.visitors ?? v2.funnel?.visitors ?? v2.funnel?.sessions;
         document.getElementById('kpi-visitors').textContent = fmtNum(curVisitors);
         
-        // True GA4 conversion rate based on actual visitors (Purchases / Visitors)
+        // Conversion rate based on actual WooCommerce paid orders (Paid Orders / Visitors)
         const funnel = v2.funnel || {};
         const trueVis = curVisitors || funnel.visitors || funnel.sessions;
-        const trueConv = trueVis > 0 && funnel.purchase_users != null ? ((funnel.purchase_users / trueVis) * 100).toFixed(2) + '%' : '—';
+        const paidOrders = (kpis && kpis.sale_bills != null) ? kpis.sale_bills : (funnel.purchase_users || 0);
+        const trueConv = trueVis > 0 ? ((paidOrders / trueVis) * 100).toFixed(2) + '%' : '—';
         document.getElementById('kpi-conversion-rate').textContent = trueConv;
 
         // Online Share
@@ -3527,7 +3528,7 @@
         renderHourlyOrders(v2.hourly_orders || []);
 
         // 2. Customer Journey Tunnel KPI (Hero Section)
-        renderFunnelTunnel(funnel);
+        renderFunnelTunnel(funnel, kpis);
 
         // 3. Promotional & Offer Sales
         renderOfferSales(v2.offer_sales, kpis.net_sales);
@@ -3561,7 +3562,7 @@
         renderPeakRecords(p);
       }
 
-      function renderFunnelTunnel(funnel) {
+      function renderFunnelTunnel(funnel, kpis) {
         const container = document.getElementById('tunnel-pipeline-container');
         const overallBadge = document.getElementById('tunnel-overall-conv');
         if (!container) return;
@@ -3576,7 +3577,7 @@
         const vCount = funnel.view_item_users || 0;
         const aCount = funnel.add_to_cart_users || 0;
         const bCount = funnel.begin_checkout_users || 0;
-        const pCount = funnel.purchase_users || 0;
+        const pCount = (kpis && kpis.sale_bills != null) ? kpis.sale_bills : (funnel.purchase_users || 0);
 
         const overallPct = ((pCount / visCount) * 100).toFixed(2);
         if (overallBadge) {
