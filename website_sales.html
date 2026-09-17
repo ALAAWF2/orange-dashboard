@@ -2979,24 +2979,24 @@
                 </button>
               </th>
               <th>
-                المخزون الحالي
-                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون">
+                المخزون مع شرشف
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون مع شرشف">
                   i
                   <span class="tooltip-content">
-                    <span class="tooltip-title">المخزون المتاح (مستودع WH01)</span>
-                    الرصيد الفعلي المتوفر بمستودع المتجر الرئيسي WH01 المعتمد من واقع Dynamics 365.
-                    <span class="tooltip-source">المصدر: <strong>Dynamics 365 (WH01)</strong></span>
+                    <span class="tooltip-title">المخزون مع شرشف</span>
+                    رصيد الأطقم الكاملة الجاهزة مع شرشف مغاط (حزم الـ Kit) في مستودع WH01 الرئيسي وفقاً لداينامكس.
+                    <span class="tooltip-source">المصدر: <strong>Dynamics 365 (WH01 - Kit)</strong></span>
                   </span>
                 </button>
               </th>
               <th>
-                حالة التغطية
-                <button class="kpi-info-btn tooltip-bottom tooltip-align-left" type="button" aria-label="معلومات حالة التغطية">
+                المخزون بدون شرشف
+                <button class="kpi-info-btn tooltip-bottom" type="button" aria-label="معلومات المخزون بدون شرشف">
                   i
                   <span class="tooltip-content">
-                    <span class="tooltip-title">حالة التغطية والتنبيه</span>
-                    تقييم آلي: تنبيه باللون الأحمر إذا كان المخزون 3 قطع أو أقل لتفادي نفاد المنتجات الأكثر مبيعاً.
-                    <span class="tooltip-source">المصدر: <strong>محرك التحليلات v2</strong></span>
+                    <span class="tooltip-title">المخزون بدون شرشف</span>
+                    رصيد الأطقم الأساسية بدون شرشف في مستودع WH01 الرئيسي، والمتاحة أيضاً للتجهيز.
+                    <span class="tooltip-source">المصدر: <strong>Dynamics 365 (WH01 - Base)</strong></span>
                   </span>
                 </button>
               </th>
@@ -4298,7 +4298,8 @@
         products.forEach(p => {
           const tr = document.createElement('tr');
           const imgHtml = p.image_url ? `<img class="prod-img" src="${p.image_url}" alt="${p.product_name}" loading="lazy">` : '<div class="prod-img"></div>';
-          const runwayTag = p.stock_quantity != null ? (p.stock_quantity <= 3 ? `<span style="color:var(--red); font-weight:700;">حرج (${p.stock_quantity} ق)</span>` : `${p.stock_quantity} ق`) : 'غير محدد';
+          const swText = p.stock_with_sheet != null ? fmtNum(p.stock_with_sheet) : '—';
+          const sbText = p.stock_without_sheet != null ? fmtNum(p.stock_without_sheet) : '—';
           
           tr.innerHTML = `
             <td>${imgHtml}</td>
@@ -4308,8 +4309,8 @@
             <td>${fmtNum(p.units_sold)}</td>
             <td><strong>${fmtCurrency(p.sales_amount)}</strong></td>
             <td>${fmtNum(p.orders_count)}</td>
-            <td>${p.stock_quantity != null ? fmtNum(p.stock_quantity) : '—'}</td>
-            <td>${runwayTag}</td>
+            <td style="font-weight:600; color:var(--primary);">${swText}</td>
+            <td style="font-weight:600;">${sbText}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -5026,6 +5027,8 @@
                     sku: meta.sku || '',
                     category_name: meta.cat || 'غير مصنف',
                     stock_quantity: meta.stock,
+                    stock_with_sheet: meta.stock_with_sheet,
+                    stock_without_sheet: meta.stock_without_sheet,
                     image_url: meta.img,
                     units_sold: 0,
                     sales_amount: 0,
@@ -5062,6 +5065,8 @@
                     sku: meta.sku || '',
                     category_name: meta.cat || 'عام',
                     stock_quantity: meta.stock,
+                    stock_with_sheet: meta.stock_with_sheet,
+                    stock_without_sheet: meta.stock_without_sheet,
                     image_url: meta.img,
                     units_sold: 0,
                     sales_amount: 0,
