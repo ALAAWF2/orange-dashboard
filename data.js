@@ -3331,25 +3331,6 @@ const EMPLOYEES = [
         "addressBooks": "1901-C;1901-E"
     },
     {
-        "employeeId": "4366-نوره هوساوي",
-        "personnelNumber": "4366",
-        "name": "نوره هوساوي",
-        "startDate": "2024-10-20",
-        "manager": "رضوان عطيوي",
-        "showroom": "1302-14-Al Kamal Mall",
-        "showroomDetails": [
-            {
-                "name": "1302-14-Al Kamal Mall",
-                "manager": "رضوان عطيوي",
-                "codes": [
-                    "1302-C",
-                    "1302-E"
-                ]
-            }
-        ],
-        "addressBooks": "1302-C;1302-E"
-    },
-    {
         "employeeId": "4369-ابتسام الزهراني",
         "personnelNumber": "4369",
         "name": "ابتسام الزهراني",
