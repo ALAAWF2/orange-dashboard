@@ -1768,34 +1768,6 @@
       text-decoration: underline;
     }
 
-    /* Affinity Card */
-    .affinity-box {
-      margin-top: 24px;
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 20px;
-    }
-    .affinity-box h3 {
-      font-size: 16px;
-      margin-bottom: 14px;
-      font-weight: 700;
-    }
-    .affinity-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 12px;
-    }
-    .affinity-item {
-      padding: 12px 14px;
-      background: var(--surface-subtle);
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-    }
-
     /* Gateways / Operations Grid */
     .two-col-grid {
       display: grid;
@@ -2381,7 +2353,6 @@
     td { padding:15px 16px; font-size:13px; } tr:last-child td { border-bottom:0; }
     .prod-img { border-radius:10px; width:50px; height:50px; object-fit:contain; }
     .search-input { background:var(--surface-subtle); width:290px; max-width:100%; }
-    .affinity-item { border:1px solid var(--line); background:var(--surface-subtle); }
     .status-banner { border:1px solid var(--primary-border); background:var(--primary-light); padding:14px 20px; border-radius:12px; margin-top:18px; }
     .tooltip-content { display:none; }
     .kpi-info-btn:hover .tooltip-content,.kpi-info-btn:focus .tooltip-content { display:block; }
@@ -3074,24 +3045,6 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Basket Affinity -->
-      <div class="affinity-box">
-        <div style="display:flex; align-items:center;">
-          <h3 style="margin-bottom:0;">🛒 منتجات تُشترى معاً في نفس السلة (Market Basket Affinity)</h3>
-          <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات ارتباط السلال">
-            i
-            <span class="tooltip-content">
-              <span class="tooltip-title">ارتباط السلال (Basket Affinity)</span>
-              المنتجات التي تكرر شراؤها معاً في نفس فاتورة الطلب لاستخدامها في العروض والحزم المشتركة.
-              <span class="tooltip-source">المصدر: <strong>تحليل سطور الطلبات المشتركة</strong></span>
-            </span>
-          </button>
-        </div>
-        <div class="affinity-list" id="affinity-list-container" style="margin-top:14px;">
-          <!-- Injected via JavaScript -->
-        </div>
-      </div>
     </div>
 
     <!-- Tab 2: Marketing & Channels -->
@@ -3633,8 +3586,7 @@
         CACHED_PRODUCTS = v2.top_products || [];
         refreshProductsView();
 
-        // 6. Basket Affinity & Variations
-        renderAffinity(v2.basket_affinity || []);
+        // 6. Variations
         renderTopVariations(v2.top_variations || {});
 
         // 7. Channels, Devices & Top Cities
@@ -4503,28 +4455,6 @@
             <td style="font-weight:600;">${sbText}</td>
           `;
           tbody.appendChild(tr);
-        });
-      }
-
-      function renderAffinity(affinityList) {
-        const container = document.getElementById('affinity-list-container');
-        container.innerHTML = '';
-        if (!affinityList || affinityList.length === 0) {
-          container.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">لا توجد ارتباطات سلال كافية لهذه الفترة</div>';
-          return;
-        }
-
-        affinityList.forEach(item => {
-          const div = document.createElement('div');
-          div.className = 'affinity-item';
-          div.innerHTML = `
-            <div>
-              <strong>${item.prod1}</strong> + <br>
-              <span style="color:var(--text-muted);">${item.prod2}</span>
-            </div>
-            <strong style="color:var(--primary); font-size:14px;">${item.shared_baskets} سلة</strong>
-          `;
-          container.appendChild(div);
         });
       }
 
