@@ -780,10 +780,16 @@
       background: var(--surface-subtle);
       border-radius: 8px;
       border: 1px solid var(--line);
-      transition: background 0.2s ease;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+      cursor: pointer;
     }
     .top5-item:hover {
-      background: #e2e8f0;
+      background: #fff7ed;
+      border-color: var(--primary-border);
+      transform: translateX(-3px);
+    }
+    .top5-item:hover .top5-name {
+      color: var(--primary);
     }
     .top5-rank {
       width: 24px;
@@ -2535,21 +2541,25 @@
           </div>
 
           <div class="target-progress-box">
-            <div class="target-row">
-              <div style="display:flex; align-items:center;">
-                <span id="kpi-target-pct">0% من المستهدف</span>
+            <div class="target-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span id="kpi-full-target-badge" style="display:inline-flex; align-items:center; gap:4px; background:rgba(254,121,0,0.18); border:1px solid rgba(254,121,0,0.35); padding:3px 10px; border-radius:6px; font-size:13px; color:#fff;">
+                  🎯 <span>تارجت الشهر الكامل:</span> <strong id="kpi-full-target-val" style="color:var(--primary); font-size:14px;">1,400,000.00</strong> ر.س
+                </span>
+                <span id="kpi-target-pct" style="font-weight:600;">65% من المستهدف المتراكم (793,333.33)</span>
                 <button class="kpi-info-btn tooltip-align-right" type="button" aria-label="معلومات المستهدف">
                   i
-                  <span class="tooltip-content">
-                    <span class="tooltip-title">المستهدف التناسبي (Prorated Target)</span>
-                    المستهدف المبيعي التناسبي المحسوب بدقة بناءً على الأيام المنقضية من الشهر حتى تاريخ اليوم.
-                    <span class="tooltip-source">المصدر: <strong>محرك الحسابات + جدول المستهدفات</strong></span>
+                  <span class="tooltip-content" id="kpi-target-tooltip">
+                    <span class="tooltip-title">المستهدف الكلي والتناسبي</span>
+                    <strong>تارجت الشهر الكامل:</strong> إجمالي المستهدف المبيعي المعتمد للشهر (1,400,000 ر.س).<br>
+                    <strong>المستهدف المتراكم (Prorated Target):</strong> المستهدف التناسبي المحسوب بدقة بناءً على الأيام المنقضية حتى اليوم.<br>
+                    <span class="tooltip-source">المصدر: <strong>جدول المستهدفات المعتمد</strong></span>
                   </span>
                 </button>
               </div>
-              <span class="text-muted" id="kpi-target-remaining">المتبقي: 0</span>
+              <div id="kpi-target-remaining" style="font-size:12.5px; color:#becac0;">المتبقي: 0</div>
             </div>
-            <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="margin-top:8px;">
               <div class="progress-fill" id="kpi-target-fill" style="width: 0%;"></div>
             </div>
           </div>
@@ -3421,17 +3431,37 @@
         document.getElementById('kpi-gross-refunds').textContent = `(قبل المرتجع: ${fmtCurrency(kpis.gross_sales)} | المرتجعات: ${fmtCurrency(kpis.refunds)})`;
         
         // Target
-        const targetVal = newKpis.prorated_sales_target ?? kpis.sales_target ?? 0;
-        const targetPct = targetVal ? Math.round((kpis.net_sales / targetVal) * 100) : 0;
-        const remaining = Math.max(0, targetVal - kpis.net_sales);
-        document.getElementById('kpi-target-pct').textContent = `${targetPct}% من المستهدف المتراكم (${fmtCurrency(targetVal)})`;
-        document.getElementById('kpi-target-remaining').textContent = `المتبقي: ${fmtCurrency(remaining)}`;
-        document.getElementById('kpi-target-fill').style.width = `${Math.min(100, Math.max(0, targetPct))}%`;
+        const fullTarget = kpis.sales_target || 0;
+        const proratedTarget = newKpis.prorated_sales_target ?? fullTarget;
+        const netSales = kpis.net_sales || 0;
 
-        document.querySelector('.progress-track').setAttribute('aria-valuenow', String(Math.min(100, Math.max(0, targetPct))));
-        if (!targetVal) {
+        const targetPct = proratedTarget > 0 ? Math.round((netSales / proratedTarget) * 100) : 0;
+        const fullTargetPct = fullTarget > 0 ? Math.round((netSales / fullTarget) * 100) : 0;
+
+        const remainingProrated = Math.max(0, proratedTarget - netSales);
+        const remainingFull = Math.max(0, fullTarget - netSales);
+
+        const fullTargetBadge = document.getElementById('kpi-full-target-badge');
+        const fullTargetVal = document.getElementById('kpi-full-target-val');
+
+        if (fullTarget > 0) {
+          if (fullTargetBadge) fullTargetBadge.style.display = 'inline-flex';
+          if (fullTargetVal) fullTargetVal.textContent = fmtCurrency(fullTarget);
+
+          if (proratedTarget && Math.abs(proratedTarget - fullTarget) > 10) {
+            document.getElementById('kpi-target-pct').textContent = `${targetPct}% من المستهدف المتراكم (${fmtCurrency(proratedTarget)})`;
+            document.getElementById('kpi-target-remaining').innerHTML = `المتبقي للمتراكم: <strong>${fmtCurrency(remainingProrated)}</strong> <span style="opacity:0.5; margin:0 4px;">|</span> المتبقي للشهر: <strong>${fmtCurrency(remainingFull)}</strong>`;
+          } else {
+            document.getElementById('kpi-target-pct').textContent = `${fullTargetPct}% من المستهدف (${fmtCurrency(fullTarget)})`;
+            document.getElementById('kpi-target-remaining').textContent = `المتبقي: ${fmtCurrency(remainingFull)}`;
+          }
+          document.getElementById('kpi-target-fill').style.width = `${Math.min(100, Math.max(0, targetPct))}%`;
+          document.querySelector('.progress-track').setAttribute('aria-valuenow', String(Math.min(100, Math.max(0, targetPct))));
+        } else {
+          if (fullTargetBadge) fullTargetBadge.style.display = 'none';
           document.getElementById('kpi-target-pct').textContent = 'المستهدف غير متاح لهذه الفترة';
           document.getElementById('kpi-target-remaining').textContent = '—';
+          document.getElementById('kpi-target-fill').style.width = '0%';
         }
         // Executive 5 KPIs Row (Same Period 2025 YoY Comparison)
         const yoy = v2.yoy_comparison || kpis.yoy_comparison || {};
@@ -3819,23 +3849,21 @@
             ? `https://www.orangebedbath.com/product/${prod.slug}/` 
             : (prod.product_id ? `https://www.orangebedbath.com/?p=${prod.product_id}` : null);
 
-          const rawImg = prod.image_url 
+          if (prodUrl) {
+            item.style.cursor = 'pointer';
+            item.title = 'فتح صفحة المنتج في المتجر';
+            item.onclick = () => window.open(prodUrl, '_blank', 'noopener,noreferrer');
+          }
+
+          const imgHtml = prod.image_url 
             ? `<img src="${prod.image_url}" class="top5-img" alt="${prod.product_name}" onerror="this.style.display='none';">`
             : `<div class="top5-img" style="display:flex;align-items:center;justify-content:center;font-size:14px;color:#94a3b8;">📦</div>`;
-
-          const imgHtml = prodUrl
-            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-img-link" title="فتح صفحة المنتج في المتجر">${rawImg}</a>`
-            : rawImg;
-
-          const nameHtml = prodUrl
-            ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-link" title="فتح صفحة المنتج في المتجر"><span class="top5-name">${prod.product_name}</span></a>`
-            : `<span class="top5-name" title="${prod.product_name}">${prod.product_name}</span>`;
 
           item.innerHTML = `
             <span class="top5-rank">${idx + 1}</span>
             ${imgHtml}
             <div class="top5-info">
-              ${nameHtml}
+              <span class="top5-name" title="${prod.product_name}">${prod.product_name}</span>
               <span class="top5-cat">${prod.category_name || 'عام'} • المتبقي بالمستودع: ${fmtNum(prod.stock_quantity || 0)}</span>
             </div>
             <div class="top5-stats">
@@ -4052,6 +4080,16 @@
         topProducts.slice(0, 5).forEach((prod, idx) => {
           const item = document.createElement('div');
           item.className = 'top5-item';
+
+          const prodUrl = prod.slug 
+            ? `https://www.orangebedbath.com/product/${prod.slug}/` 
+            : (prod.product_id ? `https://www.orangebedbath.com/?p=${prod.product_id}` : null);
+
+          if (prodUrl) {
+            item.style.cursor = 'pointer';
+            item.title = 'فتح صفحة المنتج في المتجر';
+            item.onclick = () => window.open(prodUrl, '_blank', 'noopener,noreferrer');
+          }
 
           const imgHtml = prod.image_url 
             ? `<img src="${prod.image_url}" class="top5-img" alt="${prod.product_name}" onerror="this.style.display='none';">`
