@@ -1657,6 +1657,82 @@
       justify-content: space-between;
     }
 
+    /* Price Tiers Grid & Cards */
+    .pt-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .pt-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .pt-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(254, 121, 0, 0.12);
+    }
+    .pt-card.active {
+      border-color: var(--primary);
+      background: rgba(254, 121, 0, 0.04);
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+    .pt-badge {
+      font-size: 13px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 8px;
+      display: inline-block;
+      direction: ltr;
+    }
+    .pt-tier-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: #e2e8f0;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+    .pt-tier-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .pt-strip {
+      display: flex;
+      height: 28px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .pt-strip-seg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      transition: opacity 0.15s ease;
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      direction: ltr;
+    }
+    .pt-strip-seg:hover {
+      opacity: 0.88;
+    }
+
     /* Tables */
     .table-container {
       background: var(--surface);
@@ -3097,11 +3173,13 @@
     <!-- Specialized Tabs -->
     <nav class="nav-tabs" aria-label="تبويبات التحليل">
       <button class="nav-tab-btn active" data-tab="tab-categories">المنتجات المباعة والتصنيفات</button>
+      <button class="nav-tab-btn" data-tab="tab-price-tiers">الفئات السعرية</button>
       <button class="nav-tab-btn" data-tab="tab-catalog">قائمة المنتجات (الكتالوج)</button>
       <button class="nav-tab-btn" data-tab="tab-marketing">التسويق والقنوات الإعلانية</button>
       <button class="nav-tab-btn" data-tab="tab-gateways">بوابات الدفع والتشغيل</button>
       <button class="nav-tab-btn" data-tab="tab-daily">السجل اليومي والتسوية</button>
     </nav>
+
 
     <!-- Tab 1: Categories & Products -->
     <div class="tab-pane active" id="tab-categories">
@@ -3215,11 +3293,120 @@
             <tr><td colspan="9" style="text-align:center; padding: 24px;">جاري تحميل المنتجات...</td></tr>
           </tbody>
         </table>
+    </div>
+
+    <!-- Tab 2: Price Categories (الفئات السعرية) -->
+    <div class="tab-pane" id="tab-price-tiers">
+      <!-- Price Tiers Section Header -->
+      <div class="cat-section-header">
+        <div class="cat-header-title">
+          <span class="cat-header-badge" style="background:#fff3e0; color:var(--primary); border:1px solid rgba(254,121,0,0.3);">🏷️ شرائح الأسعار</span>
+          <div>
+            <h3 style="font-size:15px; font-weight:800; margin:0;">تحليل المبيعات حسب الفئات السعرية الرقمية</h3>
+            <span style="font-size:12px; color:var(--text-muted);">تصنيف مبيعات المتجر والكميات وفق الشرائح السعرية المعتمدة — اضغط على أي شريحة لتصفية قائمة المنتجات</span>
+          </div>
+        </div>
+        <div class="cat-view-controls">
+          <button type="button" class="cat-reset-btn" id="btn-pt-reset" onclick="filterPriceTier('الكل')" style="display:none;">
+            ✕ إظهار كل الفئات السعرية
+          </button>
+        </div>
+      </div>
+
+      <!-- Price Tiers Visual Revenue Share Strip -->
+      <div class="panel" style="padding:16px; margin-bottom:20px; border-radius:12px; border:1px solid var(--line); background:var(--surface);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <span style="font-size:13px; font-weight:700;">التوزيع النسبي للمبيعات عبر الشرائح السعرية:</span>
+          <span style="font-size:12px; font-weight:700; color:var(--primary);" id="pt-strip-total-sales">الإجمالي: —</span>
+        </div>
+        <div class="pt-strip" id="price-tiers-visual-strip">
+          <!-- Injected via JavaScript -->
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:12px; justify-content:center; margin-top:8px;" id="price-tiers-legend">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+
+      <!-- Price Tiers KPI Grid (6 Cards) -->
+      <div class="pt-grid" id="price-tiers-grid-container">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Price Tier Products Table -->
+      <div class="table-container">
+        <div class="table-tools">
+          <div>
+            <div style="font-weight:700; font-size:16px;" id="price-tier-products-title">قائمة المنتجات عبر كافة الفئات السعرية</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;" id="price-tier-products-subtitle">عرض المنتجات ومبيعاتها ومخزونها للشريحة المحددة</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <select class="filter-select" id="pt-filter-tier-select" onchange="handlePriceTierDropdownChange(this.value)" style="padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-family:inherit; font-size:13px; background:var(--surface); color:var(--text);">
+              <option value="الكل">كل الفئات السعرية</option>
+              <option value="< 100">&lt; 100 ر.س</option>
+              <option value="100 - 199">100 - 199 ر.س</option>
+              <option value="200 - 299">200 - 299 ر.س</option>
+              <option value="300 - 499">300 - 499 ر.س</option>
+              <option value="500 - 799">500 - 799 ر.س</option>
+              <option value="> 799">&gt; 799 ر.س</option>
+            </select>
+            <input type="text" class="search-input" id="price-tier-search-input" placeholder="ابحث باسم المنتج، SKU، أو الفئة..." oninput="handlePriceTierSearch(this.value)">
+            <button type="button" class="btn-export-excel" id="btn-export-pt-products" onclick="exportPriceTierProductsExcel()" title="تصدير جدول المنتجات حسب الفئات السعرية إلى إكسل">📥 تصدير Excel</button>
+          </div>
+        </div>
+        <table id="price-tier-products-table">
+          <thead>
+            <tr>
+              <th>صورة</th>
+              <th class="sortable" onclick="handleSortPTProducts('product_name')">المنتج <span class="sort-icon" id="pt-sort-product_name">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('sku')">الـ SKU <span class="sort-icon" id="pt-sort-sku">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('price_category')">الفئة السعرية <span class="sort-icon" id="pt-sort-price_category">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('category_name')">الفئة التجارية <span class="sort-icon" id="pt-sort-category_name">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('list_price')">سعر البيع <span class="sort-icon" id="pt-sort-list_price">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('units_sold')">القطع المباعة <span class="sort-icon" id="pt-sort-units_sold">↕</span></th>
+              <th class="sortable active-sort" onclick="handleSortPTProducts('sales_amount')">صافي المبيعات <span class="sort-icon" id="pt-sort-sales_amount">▼</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('orders_count')">الطلبات <span class="sort-icon" id="pt-sort-orders_count">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('aov')">متوسط الطلب <span class="sort-icon" id="pt-sort-aov">↕</span></th>
+              <th class="sortable" onclick="handleSortPTProducts('stock_quantity')">مخزون WH01 <span class="sort-icon" id="pt-sort-stock_quantity">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="price-tier-products-tbody">
+            <tr><td colspan="11" style="text-align:center; padding: 24px;">جاري تحميل المنتجات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Commercial Category x Price Tier Matrix Table -->
+      <div class="table-container" style="margin-top:28px;">
+        <div class="table-tools">
+          <div>
+            <div style="font-weight:700; font-size:16px;">مصفوفة الفئات التجارية مقابل الفئات السعرية</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">توزيع صافي مبيعات كل فئة تجارية (بالريال) عبر مختلف الشرائح السعرية الرقمية</div>
+          </div>
+          <button type="button" class="btn-export-excel" onclick="exportPriceTierMatrixExcel()" title="تصدير مصفوفة الفئات السعرية إلى إكسل">📥 تصدير المصفوفة Excel</button>
+        </div>
+        <table id="price-tier-matrix-table">
+          <thead>
+            <tr>
+              <th>الفئة التجارية</th>
+              <th style="text-align:center;">&lt; 100 ر.س</th>
+              <th style="text-align:center;">100 - 199 ر.س</th>
+              <th style="text-align:center;">200 - 299 ر.س</th>
+              <th style="text-align:center;">300 - 499 ر.س</th>
+              <th style="text-align:center;">500 - 799 ر.س</th>
+              <th style="text-align:center;">&gt; 799 ر.س</th>
+              <th style="text-align:center; font-weight:800;">إجمالي مبيعات الفئة</th>
+            </tr>
+          </thead>
+          <tbody id="price-tier-matrix-tbody">
+            <tr><td colspan="8" style="text-align:center; padding: 24px;">جاري تحميل المصفوفة...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- Tab: Complete Product Catalog & Stock -->
     <div class="tab-pane" id="tab-catalog">
+
       <!-- Summary Strip -->
       <div class="catalog-summary-grid">
         <div class="catalog-stat-card">
@@ -3861,12 +4048,21 @@
         renderTop5QuickPreview(v2.top_products || []);
 
         // 5. Categories & Products
+
         SELECTED_CATEGORY = 'الكل';
-        document.getElementById('products-search-input').value = '';
+        SELECTED_PRICE_TIER = 'الكل';
+        if (document.getElementById('products-search-input')) document.getElementById('products-search-input').value = '';
+        if (document.getElementById('price-tier-search-input')) document.getElementById('price-tier-search-input').value = '';
         document.getElementById('products-table-title').textContent = 'قائمة المنتجات المباعة في الفترة';
         renderCategories(v2.categories || []);
         CACHED_PRODUCTS = v2.top_products || [];
         refreshProductsView();
+
+        // 5b. Price Categories Tab
+        renderPriceTiersView(v2.price_categories || [], CACHED_PRODUCTS);
+
+
+
 
         // 6. Variations
         renderTopVariations(v2.top_variations || {});
@@ -4921,8 +5117,441 @@
       }
 
       // ==========================================
+      // Price Tiers (الفئات السعرية) Module
+      // ==========================================
+      let CACHED_PRICE_CATEGORIES = [];
+      let SELECTED_PRICE_TIER = 'الكل';
+      let PT_SORT_FIELD = 'sales_amount';
+      let PT_SORT_DIR = 'desc';
+      let PT_SEARCH_QUERY = '';
+
+      const PT_COLORS = {
+        '< 100': '#3b82f6',
+        '100 - 199': '#06b6d4',
+        '200 - 299': '#10b981',
+        '300 - 499': '#f59e0b',
+        '500 - 799': '#fe7900',
+        '> 799': '#8b5cf6'
+      };
+
+      function renderPriceTiersView(priceCategories, products) {
+        CACHED_PRICE_CATEGORIES = priceCategories || [];
+        const container = document.getElementById('price-tiers-grid-container');
+        const stripContainer = document.getElementById('price-tiers-visual-strip');
+        const legendContainer = document.getElementById('price-tiers-legend');
+        const stripTotalSales = document.getElementById('pt-strip-total-sales');
+
+        const totalSales = (CACHED_PRICE_CATEGORIES || []).reduce((acc, c) => acc + (Number(c.sales_amount) || 0), 0);
+        if (stripTotalSales) {
+          stripTotalSales.textContent = `إجمالي مبيعات الشرائح: ${fmtCurrency(totalSales)}`;
+        }
+
+        // 1. Render Visual Share Strip
+        if (stripContainer) {
+          stripContainer.innerHTML = '';
+          if (totalSales > 0) {
+            CACHED_PRICE_CATEGORIES.forEach(pt => {
+              const share = totalSales > 0 ? (pt.sales_amount / totalSales * 100) : 0;
+              if (share > 0) {
+                const seg = document.createElement('div');
+                seg.className = 'pt-strip-seg';
+                seg.style.width = `${share}%`;
+                seg.style.background = PT_COLORS[pt.price_category] || '#64748b';
+                seg.title = `شريحة ${pt.price_category} ر.س: ${fmtCurrency(pt.sales_amount)} (${share.toFixed(1)}%)`;
+                if (share >= 6) {
+                  seg.textContent = `${pt.price_category} (${share.toFixed(0)}%)`;
+                }
+                seg.onclick = () => filterPriceTier(pt.price_category);
+                stripContainer.appendChild(seg);
+              }
+            });
+          }
+        }
+
+        // 2. Render Legend
+        if (legendContainer) {
+          legendContainer.innerHTML = '';
+          CACHED_PRICE_CATEGORIES.forEach(pt => {
+            const color = PT_COLORS[pt.price_category] || '#64748b';
+            const item = document.createElement('div');
+            item.style.display = 'flex';
+            item.style.alignItems = 'center';
+            item.style.gap = '6px';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+              <span style="width:10px; height:10px; border-radius:50%; background:${color}; display:inline-block;"></span>
+              <span><strong>${pt.price_category} ر.س</strong>: ${fmtCurrency(pt.sales_amount)} (${pt.share_pct}%)</span>
+            `;
+            item.onclick = () => filterPriceTier(pt.price_category);
+            legendContainer.appendChild(item);
+          });
+        }
+
+        // 3. Render Price Tier KPI Cards
+        if (container) {
+          container.innerHTML = '';
+          CACHED_PRICE_CATEGORIES.forEach(pt => {
+            const card = document.createElement('div');
+            const isActive = SELECTED_PRICE_TIER === pt.price_category;
+            card.className = 'pt-card' + (isActive ? ' active' : '');
+            card.setAttribute('data-tier', pt.price_category);
+
+            const color = PT_COLORS[pt.price_category] || '#64748b';
+            const share = pt.share_pct || 0;
+            const avgPrice = pt.units_sold > 0 ? (pt.sales_amount / pt.units_sold) : 0;
+
+            card.innerHTML = `
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span class="pt-badge" style="background:${color}18; color:${color}; border:1px solid ${color}40;">
+                    ${pt.price_category} ر.س
+                  </span>
+                  <span style="font-size:12px; font-weight:700; color:${color}; background:${color}12; padding:2px 8px; border-radius:12px;">
+                    ${share}% من المبيعات
+                  </span>
+                </div>
+                <div style="font-size:22px; font-weight:800; color:var(--text); margin-bottom:12px; font-variant-numeric:tabular-nums;">
+                  ${fmtCurrency(pt.sales_amount)}
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; color:var(--text-muted); padding-top:8px; border-top:1px solid var(--line);">
+                  <div>القطع المباعة: <strong style="color:var(--text);">${fmtNum(pt.units_sold)}</strong></div>
+                  <div>الطلبات: <strong style="color:var(--text);">${fmtNum(pt.orders_count)}</strong></div>
+                  <div>المنتجات: <strong style="color:var(--text);">${fmtNum(pt.products_count)}</strong></div>
+                  <div>متوسط القطعة: <strong style="color:var(--text);">${fmtCurrency(avgPrice)}</strong></div>
+                </div>
+              </div>
+              <div class="pt-tier-bar">
+                <div class="pt-tier-fill" style="width:${Math.min(100, share)}%; background:${color};"></div>
+              </div>
+            `;
+            card.onclick = () => filterPriceTier(pt.price_category);
+            container.appendChild(card);
+          });
+        }
+
+        // 4. Refresh Products Table in Price Tiers Tab
+        refreshPriceTierProductsTable(products);
+
+        // 5. Render Commercial Category x Price Tier Matrix
+        renderPriceTierMatrix(products);
+      }
+      window.renderPriceTiersView = renderPriceTiersView;
+
+      function filterPriceTier(tier) {
+        if (SELECTED_PRICE_TIER === tier) {
+          SELECTED_PRICE_TIER = 'الكل';
+        } else {
+          SELECTED_PRICE_TIER = tier;
+        }
+
+        // Update card active classes
+        document.querySelectorAll('.pt-card').forEach(el => {
+          const t = el.getAttribute('data-tier');
+          el.classList.toggle('active', t === SELECTED_PRICE_TIER);
+        });
+
+        // Update select dropdown
+        const select = document.getElementById('pt-filter-tier-select');
+        if (select) select.value = SELECTED_PRICE_TIER;
+
+        // Reset button
+        const resetBtn = document.getElementById('btn-pt-reset');
+        if (resetBtn) resetBtn.style.display = SELECTED_PRICE_TIER === 'الكل' ? 'none' : 'inline-flex';
+
+        // Update titles
+        const titleEl = document.getElementById('price-tier-products-title');
+        if (titleEl) {
+          titleEl.textContent = SELECTED_PRICE_TIER === 'الكل'
+            ? 'قائمة المنتجات عبر كافة الفئات السعرية'
+            : `المنتجات المباعة في الفئة السعرية: ${SELECTED_PRICE_TIER} ر.س`;
+        }
+
+        refreshPriceTierProductsTable(CACHED_PRODUCTS);
+      }
+      window.filterPriceTier = filterPriceTier;
+
+      function handlePriceTierDropdownChange(val) {
+        filterPriceTier(val);
+      }
+      window.handlePriceTierDropdownChange = handlePriceTierDropdownChange;
+
+      function handlePriceTierSearch(val) {
+        PT_SEARCH_QUERY = (val || '').trim().toLowerCase();
+        refreshPriceTierProductsTable(CACHED_PRODUCTS);
+      }
+      window.handlePriceTierSearch = handlePriceTierSearch;
+
+      function handleSortPTProducts(col) {
+        if (PT_SORT_FIELD === col) {
+          PT_SORT_DIR = PT_SORT_DIR === 'desc' ? 'asc' : 'desc';
+        } else {
+          PT_SORT_FIELD = col;
+          const isText = ['product_name', 'sku', 'category_name', 'price_category'].includes(col);
+          PT_SORT_DIR = isText ? 'asc' : 'desc';
+        }
+        updatePTSortHeaders();
+        refreshPriceTierProductsTable(CACHED_PRODUCTS);
+      }
+      window.handleSortPTProducts = handleSortPTProducts;
+
+      function updatePTSortHeaders() {
+        const table = document.getElementById('price-tier-products-table');
+        if (!table) return;
+        table.querySelectorAll('th.sortable').forEach(th => {
+          const icon = th.querySelector('.sort-icon');
+          th.classList.remove('active-sort');
+          if (icon) icon.textContent = '↕';
+        });
+        const activeTh = table.querySelector(`th.sortable[onclick*="'${PT_SORT_FIELD}'"]`);
+        if (activeTh) {
+          activeTh.classList.add('active-sort');
+          const icon = activeTh.querySelector('.sort-icon');
+          if (icon) icon.textContent = PT_SORT_DIR === 'desc' ? '▼' : '▲';
+        }
+      }
+
+      function refreshPriceTierProductsTable(products) {
+        const tbody = document.getElementById('price-tier-products-tbody');
+        if (!tbody) return;
+
+        let list = [...(products || CACHED_PRODUCTS || [])];
+
+        // Filter by Price Tier
+        if (SELECTED_PRICE_TIER && SELECTED_PRICE_TIER !== 'الكل') {
+          list = list.filter(p => (p.price_category || '').trim() === SELECTED_PRICE_TIER.trim());
+        }
+
+        // Filter by Search Query
+        if (PT_SEARCH_QUERY) {
+          list = list.filter(p =>
+            String(p.product_name || '').toLowerCase().includes(PT_SEARCH_QUERY) ||
+            String(p.sku || '').toLowerCase().includes(PT_SEARCH_QUERY) ||
+            String(p.category_name || '').toLowerCase().includes(PT_SEARCH_QUERY) ||
+            String(p.price_category || '').toLowerCase().includes(PT_SEARCH_QUERY)
+          );
+        }
+
+        // Sorting
+        list.sort((a, b) => {
+          const col = PT_SORT_FIELD;
+          const isText = ['product_name', 'sku', 'category_name', 'price_category'].includes(col);
+          if (isText) {
+            const strA = (a[col] || '').toString().trim();
+            const strB = (b[col] || '').toString().trim();
+            if (!strA && !strB) return 0;
+            if (!strA) return 1;
+            if (!strB) return -1;
+            const cmp = strA.localeCompare(strB, 'ar', { numeric: true, sensitivity: 'base' });
+            return PT_SORT_DIR === 'asc' ? cmp : -cmp;
+          }
+          const numA = Number(a[col] ?? 0);
+          const numB = Number(b[col] ?? 0);
+          return PT_SORT_DIR === 'asc' ? numA - numB : numB - numA;
+        });
+
+        tbody.innerHTML = '';
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:var(--text-muted);">لا توجد منتجات مطابقة في هذه الفئة السعرية</td></tr>';
+          return;
+        }
+
+        list.forEach(p => {
+          const tr = document.createElement('tr');
+          const prodUrl = p.slug 
+            ? `https://www.orangebedbath.com/product/${p.slug}/` 
+            : (p.product_id ? `https://www.orangebedbath.com/?p=${p.product_id}` : null);
+
+          const rawImg = p.image_url ? `<img class="prod-img" src="${p.image_url}" alt="${p.product_name}" loading="lazy">` : '<div class="prod-img"></div>';
+          const imgHtml = prodUrl ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-img-link" title="فتح صفحة المنتج">${rawImg}</a>` : rawImg;
+          const nameHtml = prodUrl ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="prod-link" title="فتح صفحة المنتج"><strong>${p.product_name}</strong></a>` : `<strong>${p.product_name}</strong>`;
+          const skuHtml = (p.sku && prodUrl) ? `<a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="sku-code-link" title="فتح صفحة المنتج"><code>${p.sku}</code></a>` : `<code>${p.sku || '—'}</code>`;
+
+          const pcat = p.price_category || 'غير محدد';
+          const pcatColor = PT_COLORS[pcat] || '#64748b';
+          const tierBadge = `<span class="badge" style="background:${pcatColor}15; color:${pcatColor}; border:1px solid ${pcatColor}40; font-weight:700; direction:ltr;">${pcat}</span>`;
+          const catBadge = `<span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${p.category_name || 'غير مصنف'}</span>`;
+          const listPriceText = (p.list_price != null && p.list_price > 0) ? fmtCurrency(p.list_price) : '—';
+          const stockText = p.stock_quantity != null ? fmtNum(p.stock_quantity) : '—';
+
+          tr.innerHTML = `
+            <td>${imgHtml}</td>
+            <td>${nameHtml}</td>
+            <td>${skuHtml}</td>
+            <td>${tierBadge}</td>
+            <td>${catBadge}</td>
+            <td style="font-weight:600;">${listPriceText}</td>
+            <td>${fmtNum(p.units_sold)}</td>
+            <td><strong>${fmtCurrency(p.sales_amount)}</strong></td>
+            <td>${fmtNum(p.orders_count)}</td>
+            <td>${fmtCurrency(p.aov || 0)}</td>
+            <td style="font-weight:600; color:var(--primary);">${stockText}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderPriceTierMatrix(products) {
+        const tbody = document.getElementById('price-tier-matrix-tbody');
+        if (!tbody) return;
+
+        const tiers = ['< 100', '100 - 199', '200 - 299', '300 - 499', '500 - 799', '> 799'];
+        const matrix = {};
+        const tierTotals = { '< 100': 0, '100 - 199': 0, '200 - 299': 0, '300 - 499': 0, '500 - 799': 0, '> 799': 0, total: 0 };
+
+        (products || CACHED_PRODUCTS || []).forEach(p => {
+          const cat = p.category_name || 'غير مصنف';
+          const tier = p.price_category || 'غير محدد';
+          const sales = Number(p.sales_amount) || 0;
+
+          if (!matrix[cat]) {
+            matrix[cat] = { total: 0 };
+            tiers.forEach(t => matrix[cat][t] = 0);
+          }
+          if (matrix[cat][tier] !== undefined) {
+            matrix[cat][tier] += sales;
+          }
+          matrix[cat].total += sales;
+
+          if (tierTotals[tier] !== undefined) {
+            tierTotals[tier] += sales;
+          }
+          tierTotals.total += sales;
+        });
+
+        const sortedCats = Object.entries(matrix).sort((a, b) => b[1].total - a[1].total);
+
+        tbody.innerHTML = '';
+        sortedCats.forEach(([cat, data]) => {
+          const tr = document.createElement('tr');
+          let cells = `<td style="font-weight:700;">${cat}</td>`;
+          tiers.forEach(t => {
+            const val = data[t] || 0;
+            const style = val > 0 ? 'font-weight:600; text-align:center;' : 'color:#cbd5e1; text-align:center;';
+            cells += `<td style="${style}">${val > 0 ? fmtCurrency(val) : '—'}</td>`;
+          });
+          cells += `<td style="text-align:center; font-weight:800; color:var(--primary);">${fmtCurrency(data.total)}</td>`;
+          tr.innerHTML = cells;
+          tbody.appendChild(tr);
+        });
+
+        // Grand Total Row
+        const trTotal = document.createElement('tr');
+        trTotal.style.background = 'var(--surface-hover)';
+        trTotal.style.fontWeight = '800';
+        let totalCells = `<td>المجموع الكلي</td>`;
+        tiers.forEach(t => {
+          totalCells += `<td style="text-align:center; color:var(--text);">${fmtCurrency(tierTotals[t])}</td>`;
+        });
+        totalCells += `<td style="text-align:center; color:var(--primary); font-size:15px;">${fmtCurrency(tierTotals.total)}</td>`;
+        trTotal.innerHTML = totalCells;
+        tbody.appendChild(trTotal);
+      }
+
+      function exportPriceTierProductsExcel() {
+        if (typeof XLSX === 'undefined') {
+          alert('جاري تحميل مكتبة التصدير، يرجى المحاولة بعد قليل...');
+          return;
+        }
+
+        let list = [...(CACHED_PRODUCTS || [])];
+        if (SELECTED_PRICE_TIER && SELECTED_PRICE_TIER !== 'الكل') {
+          list = list.filter(p => (p.price_category || '').trim() === SELECTED_PRICE_TIER.trim());
+        }
+        if (PT_SEARCH_QUERY) {
+          list = list.filter(p =>
+            String(p.product_name || '').toLowerCase().includes(PT_SEARCH_QUERY) ||
+            String(p.sku || '').toLowerCase().includes(PT_SEARCH_QUERY) ||
+            String(p.category_name || '').toLowerCase().includes(PT_SEARCH_QUERY) ||
+            String(p.price_category || '').toLowerCase().includes(PT_SEARCH_QUERY)
+          );
+        }
+
+        const dataRows = [
+          ['تقرير مبيعات المنتجات حسب الفئات السعرية - متجر أورانج الإلكتروني'],
+          [`الفئة السعرية المحددة: ${SELECTED_PRICE_TIER}`],
+          [`تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}`],
+          [],
+          ['اسم المنتج', 'رمز المنتج (SKU)', 'الفئة السعرية', 'الفئة التجارية', 'سعر البيع (ر.س)', 'القطع المباعة', 'صافي المبيعات (ر.س)', 'عدد الطلبات', 'متوسط الطلب AOV (ر.س)', 'مخزون مستودع 01']
+        ];
+
+        list.forEach(p => {
+          dataRows.push([
+            p.product_name || '',
+            p.sku || '',
+            p.price_category || '',
+            p.category_name || '',
+            p.list_price || 0,
+            p.units_sold || 0,
+            p.sales_amount || 0,
+            p.orders_count || 0,
+            p.aov || 0,
+            p.stock_quantity || 0
+          ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(dataRows);
+        setSheetRTL(ws);
+        sheetAutoWidths(ws, dataRows);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'المنتجات_حسب_الفئة_السعرية');
+        XLSX.writeFile(wb, `Orange_Products_PriceTiers_${new Date().toISOString().slice(0,10)}.xlsx`);
+      }
+      window.exportPriceTierProductsExcel = exportPriceTierProductsExcel;
+
+      function exportPriceTierMatrixExcel() {
+        if (typeof XLSX === 'undefined') {
+          alert('جاري تحميل مكتبة التصدير، يرجى المحاولة بعد قليل...');
+          return;
+        }
+        const tiers = ['< 100', '100 - 199', '200 - 299', '300 - 499', '500 - 799', '> 799'];
+        const matrix = {};
+        (CACHED_PRODUCTS || []).forEach(p => {
+          const cat = p.category_name || 'غير مصنف';
+          const tier = p.price_category || 'غير محدد';
+          const sales = Number(p.sales_amount) || 0;
+          if (!matrix[cat]) {
+            matrix[cat] = { total: 0 };
+            tiers.forEach(t => matrix[cat][t] = 0);
+          }
+          if (matrix[cat][tier] !== undefined) matrix[cat][tier] += sales;
+          matrix[cat].total += sales;
+        });
+
+        const dataRows = [
+          ['مصفوفة الفئات التجارية مقابل الفئات السعرية - متجر أورانج الإلكتروني'],
+          [`تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}`],
+          [],
+          ['الفئة التجارية', '< 100 ر.س', '100 - 199 ر.س', '200 - 299 ر.س', '300 - 499 ر.س', '500 - 799 ر.س', '> 799 ر.س', 'إجمالي مبيعات الفئة (ر.س)']
+        ];
+
+        Object.entries(matrix).sort((a, b) => b[1].total - a[1].total).forEach(([cat, data]) => {
+          dataRows.push([
+            cat,
+            Math.round(data['< 100'] * 100) / 100,
+            Math.round(data['100 - 199'] * 100) / 100,
+            Math.round(data['200 - 299'] * 100) / 100,
+            Math.round(data['300 - 499'] * 100) / 100,
+            Math.round(data['500 - 799'] * 100) / 100,
+            Math.round(data['> 799'] * 100) / 100,
+            Math.round(data.total * 100) / 100
+          ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(dataRows);
+        setSheetRTL(ws);
+        sheetAutoWidths(ws, dataRows);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'مصفوفة_الفئات_السعرية');
+        XLSX.writeFile(wb, `Orange_Price_Category_Matrix_${new Date().toISOString().slice(0,10)}.xlsx`);
+      }
+      window.exportPriceTierMatrixExcel = exportPriceTierMatrixExcel;
+
+      // ==========================================
       // Product Catalog (الكتالوج الشامل) Module
       // ==========================================
+
       let CACHED_CATALOG_PRODUCTS = [];
       let CATALOG_STATUS_FILTER = 'all'; // 'all' | 'publish' | 'draft'
       let CATALOG_STOCK_ONLY = false;
@@ -5898,7 +6527,9 @@
             'م': idx + 1,
             'اسم المنتج': item.product_name || '—',
             'رمز الصنف (SKU)': item.sku || '—',
+            'الفئة السعرية': item.price_category || 'غير محدد',
             'الفئة التجارية': item.category_name || 'غير مصنف',
+            'سعر البيع (ر.س)': item.list_price != null ? Number(item.list_price) : 0,
             'القطع المباعة': Number(item.units_sold || 0),
             'صافي المبيعات (ر.س)': Number(Number(item.sales_amount || 0).toFixed(2)),
             'عدد الطلبات': Number(item.orders_count || 0),
@@ -5908,6 +6539,22 @@
           }));
           const wsProducts = makeWorksheet(pRows);
           XLSX.utils.book_append_sheet(wb, wsProducts, 'المنتجات المباعة');
+        }
+
+        // 2b. Price Categories Sheet
+        const priceCats = v2.price_categories || [];
+        if (priceCats && priceCats.length > 0) {
+          const ptRows = priceCats.map((pt, idx) => ({
+            'م': idx + 1,
+            'الفئة السعرية': pt.price_category || '—',
+            'صافي المبيعات (ر.س)': Number(Number(pt.sales_amount || 0).toFixed(2)),
+            'حصة المبيعات (%)': pt.share_pct != null ? Number(Number(pt.share_pct).toFixed(1)) : 0,
+            'القطع المباعة': Number(pt.units_sold || 0),
+            'عدد الطلبات': Number(pt.orders_count || 0),
+            'عدد المنتجات المباعة': Number(pt.products_count || 0)
+          }));
+          const wsPt = makeWorksheet(ptRows);
+          XLSX.utils.book_append_sheet(wb, wsPt, 'الفئات السعرية');
         }
 
         // 3. Daily Records Sheet
@@ -6253,6 +6900,23 @@
             share_pct: totalCatSales > 0 ? Math.round((c.sales_amount / totalCatSales) * 10000) / 100 : 0
           })).sort((a, b) => b.sales_amount - a.sales_amount);
 
+          // 2.1 Price Categories
+          const priceCatMap = {};
+          let totalPriceCatSales = 0;
+          for (const [dStr, dPCats] of Object.entries(da.price_categories || {})) {
+            if (dStr >= startDate && dStr <= endDate) {
+              dPCats.forEach(([tierName, orders, units, sales]) => {
+                if (!priceCatMap[tierName]) {
+                  priceCatMap[tierName] = { price_category: tierName, orders_count: 0, units_sold: 0, sales_amount: 0 };
+                }
+                priceCatMap[tierName].orders_count += orders;
+                priceCatMap[tierName].units_sold += units;
+                priceCatMap[tierName].sales_amount += sales;
+                totalPriceCatSales += sales;
+              });
+            }
+          }
+
           // 3. Products
           const prodMap = {};
           for (const [dStr, dProds] of Object.entries(da.products || {})) {
@@ -6266,6 +6930,8 @@
                     sku: meta.sku || '',
                     slug: meta.slug || '',
                     category_name: meta.cat || 'غير مصنف',
+                    price_category: meta.price_cat || 'غير محدد',
+                    list_price: meta.list_price || 0,
                     stock_quantity: meta.stock,
                     stock_with_sheet: meta.stock_with_sheet,
                     stock_without_sheet: meta.stock_without_sheet,
@@ -6286,6 +6952,25 @@
             sales_amount: Math.round(p.sales_amount * 100) / 100,
             aov: p.orders_count > 0 ? Math.round((p.sales_amount / p.orders_count) * 100) / 100 : 0
           })).sort((a, b) => b.sales_amount - a.sales_amount);
+
+          // Count products per price category and sort tiers
+          const ptProdCount = {};
+          Object.values(prodMap).forEach(p => {
+            const pt = p.price_category || 'غير محدد';
+            ptProdCount[pt] = (ptProdCount[pt] || 0) + 1;
+          });
+
+          const ORDER = ['< 100', '100 - 199', '200 - 299', '300 - 499', '500 - 799', '> 799'];
+          const dynamicPriceCategories = Object.values(priceCatMap).map(c => ({
+            ...c,
+            products_count: ptProdCount[c.price_category] || 0,
+            sales_amount: Math.round(c.sales_amount * 100) / 100,
+            share_pct: totalPriceCatSales > 0 ? Math.round((c.sales_amount / totalPriceCatSales) * 10000) / 100 : 0
+          })).sort((a, b) => {
+            const idxA = ORDER.indexOf(a.price_category);
+            const idxB = ORDER.indexOf(b.price_category);
+            return (idxA >= 0 && idxB >= 0) ? idxA - idxB : b.sales_amount - a.sales_amount;
+          });
 
           // 4. Offers
           const offerProdMap = {};
@@ -6528,6 +7213,7 @@
 
           computedV2 = {
             categories: dynamicCategories,
+            price_categories: dynamicPriceCategories,
             top_products: dynamicProducts,
             offer_sales: dynamicOfferSales,
             basket_affinity: matchedV2.basket_affinity || [],
@@ -6549,6 +7235,7 @@
 
         const v2Final = computedV2 || {
           categories: matchedV2.categories || [],
+          price_categories: matchedV2.price_categories || [],
           top_products: matchedV2.top_products || [],
           offer_sales: matchedV2.offer_sales || { summary: {}, top_offers: [] },
           basket_affinity: matchedV2.basket_affinity || [],
