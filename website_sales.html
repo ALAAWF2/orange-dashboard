@@ -3340,6 +3340,7 @@
               </span>
             </button>
           </div>
+          <button type="button" class="btn-export-excel" id="btn-export-channels" onclick="exportMarketingExcel()" title="تصدير القنوات والمدن والأجهزة إلى إكسل">📥 تصدير القنوات والمدن Excel</button>
         </div>
         <table>
           <thead>
@@ -3399,6 +3400,9 @@
 
     <!-- Tab 3: Payment Gateways & Operations -->
     <div class="tab-pane" id="tab-gateways">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+        <button type="button" class="btn-export-excel" id="btn-export-gateways" onclick="exportOperationsExcel()" title="تصدير بوابات الدفع وحالات التشغيل إلى إكسل">📥 تصدير بوابات الدفع والتشغيل Excel</button>
+      </div>
       <div class="two-col-grid">
         <div class="card">
           <h3 style="margin-bottom:16px; font-size:16px; font-weight:700; display:flex; align-items:center;">
@@ -3469,7 +3473,10 @@
               </span>
             </button>
           </div>
-          <button class="btn-pill" id="btn-export-csv">تصدير CSV</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="btn-export-excel" id="btn-export-daily-excel" onclick="exportDailyExcel()" title="تصدير السجل اليومي المعتمد إلى إكسل">📥 تصدير السجل اليومي Excel</button>
+            <button class="btn-pill" id="btn-export-csv" title="تصدير بصيغة CSV">تصدير CSV</button>
+          </div>
         </div>
         <table>
           <thead>
@@ -5565,27 +5572,427 @@
         }
       }
 
-      function setupExport() {
-        document.getElementById('btn-export-csv').addEventListener('click', () => {
-          const days = DASHBOARD_DATA.daily_records || [];
-          const p = DASHBOARD_DATA.periods[CURRENT_PERIOD_KEY];
-          if (!p) return;
-          const filtered = days.filter(d => d.date >= p.start_date && d.date <= p.end_date);
-          
-          let csv = 'Date,Gross_Sales,Refunds,Net_Sales,Paid_Orders,Visitors,Conversion,AOV,Units\n';
-          filtered.forEach(d => {
-            const k = d.kpis || {};
-            csv += `${d.date},${k.gross_sales || 0},${k.refunds || 0},${k.net_sales || 0},${k.sale_bills || 0},${k.visitors || 0},${k.conversion_rate || 0},${k.aov || 0},${k.sale_units || 0}\n`;
-          });
+      // ==========================================
+      // Excel Export Engine (SheetJS XLSX)
+      // ==========================================
 
-          const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `orange_website_sales_${p.start_date}_to_${p.end_date}.csv`;
-          link.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
+      function getExportPeriod() {
+        return (DASHBOARD_DATA && DASHBOARD_DATA.periods && DASHBOARD_DATA.periods[CURRENT_PERIOD_KEY]) ? DASHBOARD_DATA.periods[CURRENT_PERIOD_KEY] : {
+          start_date: new Date().toISOString().slice(0, 10),
+          end_date: new Date().toISOString().slice(0, 10),
+          label: 'الفترة الحالية',
+          kpis: {},
+          v2_analytics: {}
+        };
+      }
+
+      function autoFitColumns(rows, defaultHeaders) {
+        if (!rows || rows.length === 0) return [];
+        const keys = defaultHeaders || Object.keys(rows[0]);
+        const widths = keys.map(k => ({
+          wch: Math.max(String(k).length * 1.8, 12)
+        }));
+        rows.forEach(r => {
+          keys.forEach((k, i) => {
+            const val = r[k];
+            const len = val != null ? String(val).length * 1.3 : 0;
+            if (len > widths[i].wch) {
+              widths[i].wch = Math.min(Math.ceil(len), 60);
+            }
+          });
         });
+        return widths;
+      }
+
+      function makeWorksheet(dataRows, defaultHeaders) {
+        const ws = XLSX.utils.json_to_sheet(dataRows);
+        ws['!cols'] = autoFitColumns(dataRows, defaultHeaders);
+        if (!ws['!views']) ws['!views'] = [];
+        ws['!views'].push({ RTL: true });
+        return ws;
+      }
+
+      function saveWorkbook(wb, filename) {
+        if (typeof XLSX !== 'undefined' && XLSX.writeFile) {
+          XLSX.writeFile(wb, filename);
+        } else {
+          alert('تعذر تحميل مكتبة تصدير الإكسل. يرجى التأكد من اتصال الإنترنت أو تحديث الصفحة.');
+        }
+      }
+
+      // 1. Export Products Sold
+      function getFilteredProductsData() {
+        const query = (document.getElementById('products-search-input')?.value || '').trim().toLowerCase();
+        let list = SELECTED_CATEGORY === 'الكل'
+          ? [...CACHED_PRODUCTS]
+          : CACHED_PRODUCTS.filter(p => (p.category_name || 'غير مصنف').trim() === SELECTED_CATEGORY.trim());
+
+        if (query) {
+          list = list.filter(p =>
+            String(p.product_name || '').toLowerCase().includes(query) ||
+            String(p.sku || '').toLowerCase().includes(query)
+          );
+        }
+        return list;
+      }
+
+      function exportProductsExcel() {
+        const p = getExportPeriod();
+        const list = getFilteredProductsData();
+        if (!list || list.length === 0) {
+          alert('لا توجد منتجات مباعة في الفترة المحددة لتصديرها.');
+          return;
+        }
+
+        const excelRows = list.map((item, index) => ({
+          'م': index + 1,
+          'اسم المنتج': item.product_name || '—',
+          'رمز الصنف (SKU)': item.sku || '—',
+          'الفئة التجارية': item.category_name || 'غير مصنف',
+          'القطع المباعة': Number(item.units_sold || 0),
+          'صافي المبيعات (ر.س)': Number(Number(item.sales_amount || 0).toFixed(2)),
+          'عدد الطلبات': Number(item.orders_count || 0),
+          'متوسط سعر البيع (ر.س)': item.units_sold ? Number((item.sales_amount / item.units_sold).toFixed(2)) : 0,
+          'المخزون مع شرشف': item.stock_with_sheet != null ? Number(item.stock_with_sheet) : '—',
+          'المخزون بدون شرشف': item.stock_without_sheet != null ? Number(item.stock_without_sheet) : '—',
+          'رابط المنتج': item.slug ? `https://www.orangebedbath.com/product/${item.slug}/` : (item.product_id ? `https://www.orangebedbath.com/?p=${item.product_id}` : '—')
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = makeWorksheet(excelRows);
+        XLSX.utils.book_append_sheet(wb, ws, 'المنتجات المباعة');
+        const filename = `مبيعات_المنتجات_${p.start_date}_إلى_${p.end_date}.xlsx`;
+        saveWorkbook(wb, filename);
+      }
+      window.exportProductsExcel = exportProductsExcel;
+
+      // 2. Export Catalog Products
+      function getFilteredCatalogData() {
+        const query = (document.getElementById('catalog-search-input')?.value || '').trim().toLowerCase();
+        let list = [...CACHED_CATALOG_PRODUCTS];
+
+        if (CATALOG_STATUS_FILTER === 'publish') {
+          list = list.filter(p => p.status === 'publish');
+        } else if (CATALOG_STATUS_FILTER === 'draft') {
+          list = list.filter(p => p.status !== 'publish');
+        }
+
+        if (CATALOG_STOCK_ONLY) {
+          list = list.filter(p => (p.total_stock || 0) > 0);
+        }
+
+        if (CATALOG_CATEGORY_FILTER !== 'الكل') {
+          list = list.filter(p => (p.category_name || 'غير مصنف').trim() === CATALOG_CATEGORY_FILTER.trim());
+        }
+
+        if (query) {
+          list = list.filter(p =>
+            String(p.product_name || '').toLowerCase().includes(query) ||
+            String(p.sku || '').toLowerCase().includes(query)
+          );
+        }
+        return list;
+      }
+
+      function exportCatalogExcel() {
+        const list = getFilteredCatalogData();
+        if (!list || list.length === 0) {
+          alert('لا توجد منتجات بالكتالوج تطابق الفلاتر المحددة.');
+          return;
+        }
+
+        const excelRows = list.map((item, index) => {
+          const price = item.sale_price != null ? item.sale_price : (item.price != null ? item.price : item.regular_price);
+          return {
+            'م': index + 1,
+            'اسم المنتج': item.product_name || '—',
+            'رمز الصنف (SKU)': item.sku || '—',
+            'الفئة التجارية': item.category_name || 'غير مصنف',
+            'حالة العرض': item.status === 'publish' ? 'معروض للشراء' : 'غير معروض / مسودة',
+            'السعر (ر.س)': price != null ? Number(Number(price).toFixed(2)) : '—',
+            'المخزون مع شرشف': item.stock_with_sheet != null ? Number(item.stock_with_sheet) : 0,
+            'المخزون بدون شرشف': item.stock_without_sheet != null ? Number(item.stock_without_sheet) : 0,
+            'إجمالي مستودع WH01': item.total_stock != null ? Number(item.total_stock) : 0,
+            'رابط المنتج': item.slug ? `https://www.orangebedbath.com/product/${item.slug}/` : (item.id ? `https://www.orangebedbath.com/?p=${item.id}` : '—')
+          };
+        });
+
+        const wb = XLSX.utils.book_new();
+        const ws = makeWorksheet(excelRows);
+        XLSX.utils.book_append_sheet(wb, ws, 'كتالوج المنتجات والمخزون');
+        const today = new Date().toISOString().slice(0, 10);
+        saveWorkbook(wb, `كتالوج_منتجات_المتجر_${today}.xlsx`);
+      }
+      window.exportCatalogExcel = exportCatalogExcel;
+
+      // 3. Export Daily Records
+      function exportDailyExcel() {
+        const days = DASHBOARD_DATA.daily_records || [];
+        const p = getExportPeriod();
+        const filtered = days.filter(d => d.date >= p.start_date && d.date <= p.end_date);
+
+        if (!filtered || filtered.length === 0) {
+          alert('لا توجد سجلات يومية في الفترة المحددة.');
+          return;
+        }
+
+        const excelRows = filtered.map((d, index) => {
+          const k = d.kpis || {};
+          return {
+            'م': index + 1,
+            'التاريخ': d.date,
+            'المبيعات قبل المرتجع (ر.س)': Number(Number(k.gross_sales || 0).toFixed(2)),
+            'المرتجعات (ر.س)': Number(Number(k.refunds || 0).toFixed(2)),
+            'صافي المبيعات (ر.س)': Number(Number(k.net_sales || 0).toFixed(2)),
+            'الطلبات المدفوعة': Number(k.sale_bills || 0),
+            'عدد الزوار': Number(k.visitors || 0),
+            'معدل التحويل / كثافة الطلبات (%)': k.conversion_rate != null ? Number((k.conversion_rate * 100).toFixed(2)) : 0,
+            'متوسط قيمة الطلب (AOV)': Number(Number(k.aov || 0).toFixed(2)),
+            'القطع المباعة (Units)': Number(k.sale_units || 0),
+            'مبيعات المعارض (ر.س)': k.showroom_sales != null ? Number(Number(k.showroom_sales).toFixed(2)) : '—',
+            'إجمالي مبيعات أورانج (ر.س)': k.orange_total != null ? Number(Number(k.orange_total).toFixed(2)) : '—',
+            'حصة الموقع (%)': k.online_share != null ? Number((k.online_share * 100).toFixed(1)) : '—'
+          };
+        });
+
+        const wb = XLSX.utils.book_new();
+        const ws = makeWorksheet(excelRows);
+        XLSX.utils.book_append_sheet(wb, ws, 'السجل اليومي والتسوية');
+        saveWorkbook(wb, `سجل_الأداء_اليومي_${p.start_date}_إلى_${p.end_date}.xlsx`);
+      }
+      window.exportDailyExcel = exportDailyExcel;
+
+      // 4. Export Marketing & Cities
+      function exportMarketingExcel() {
+        const p = getExportPeriod();
+        const v2 = p.v2_analytics || {};
+        const channels = v2.channels || [];
+        const cities = v2.top_cities || [];
+        const devices = v2.devices || [];
+
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: Channels
+        const chRows = channels.map((c, i) => ({
+          'م': i + 1,
+          'القناة التسويقية': c.channel_group_ar || c.channel_group || '—',
+          'عدد الطلبات': Number(c.orders || 0),
+          'قيمة الطلبات (ر.س)': Number(Number(c.revenue || 0).toFixed(2)),
+          'متوسط الطلب AOV (ر.س)': Number(Number(c.aov || 0).toFixed(2)),
+          'معدل التحويل (%)': c.conversion_rate != null ? Number((c.conversion_rate * 100).toFixed(2)) : 0,
+          'الجلسات (GA4)': Number(c.sessions || 0),
+          'المستخدمون (GA4)': Number(c.users || 0),
+          'حصة المبيعات (%)': c.sales_share != null ? Number((c.sales_share * 100).toFixed(1)) : 0
+        }));
+        const wsCh = makeWorksheet(chRows.length ? chRows : [{ 'ملاحظة': 'لا توجد بيانات قنوات' }]);
+        XLSX.utils.book_append_sheet(wb, wsCh, 'القنوات التسويقية');
+
+        // Sheet 2: Cities
+        const cityRows = cities.map((c, i) => ({
+          'م': i + 1,
+          'المدينة': c.city_ar || c.city || '—',
+          'المبيعات (ر.س)': Number(Number(c.revenue || 0).toFixed(2)),
+          'الزيارات والجلسات': Number(c.sessions || 0),
+          'الحصة من الزيارات (%)': Number(c.sessions_share_pct || 0)
+        }));
+        const wsCities = makeWorksheet(cityRows.length ? cityRows : [{ 'ملاحظة': 'لا توجد بيانات مدن' }]);
+        XLSX.utils.book_append_sheet(wb, wsCities, 'أعلى المدن شراءً وزيارة');
+
+        // Sheet 3: Devices
+        const devRows = devices.map((d, i) => ({
+          'م': i + 1,
+          'نوع الجهاز': d.device_type_ar || d.device_type || '—',
+          'عدد الجلسات': Number(d.sessions || 0),
+          'النسبة (%)': Number(d.share_pct || 0)
+        }));
+        const wsDev = makeWorksheet(devRows.length ? devRows : [{ 'ملاحظة': 'لا توجد بيانات أجهزة' }]);
+        XLSX.utils.book_append_sheet(wb, wsDev, 'أجهزة المتسوقين');
+
+        saveWorkbook(wb, `القنوات_التسويقية_والمدن_${p.start_date}_إلى_${p.end_date}.xlsx`);
+      }
+      window.exportMarketingExcel = exportMarketingExcel;
+
+      // 5. Export Operations & Gateways
+      function exportOperationsExcel() {
+        const p = getExportPeriod();
+        const v2 = p.v2_analytics || {};
+        const ops = v2.operations || {};
+        const gateways = ops.gateways || [];
+        const statuses = ops.statuses || [];
+
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: Gateways
+        const gwRows = gateways.map((g, i) => ({
+          'م': i + 1,
+          'وسيلة الدفع': g.gateway_name_ar || g.gateway || '—',
+          'عدد الطلبات': Number(g.orders || 0),
+          'إجمالي المبيعات (ر.س)': Number(Number(g.amount || 0).toFixed(2)),
+          'حصة المبيعات (%)': g.share_pct != null ? Number(Number(g.share_pct).toFixed(1)) : 0
+        }));
+        const wsGw = makeWorksheet(gwRows.length ? gwRows : [{ 'ملاحظة': 'لا توجد بيانات بوابات دفع' }]);
+        XLSX.utils.book_append_sheet(wb, wsGw, 'بوابات ووسائل الدفع');
+
+        // Sheet 2: Order Statuses
+        const stRows = statuses.map((s, i) => ({
+          'م': i + 1,
+          'حالة الطلب': s.status_ar || s.status || '—',
+          'عدد الطلبات': Number(s.orders || 0),
+          'إجمالي القيمة (ر.س)': Number(Number(s.amount || 0).toFixed(2))
+        }));
+        const wsSt = makeWorksheet(stRows.length ? stRows : [{ 'ملاحظة': 'لا توجد بيانات حالات طلبات' }]);
+        XLSX.utils.book_append_sheet(wb, wsSt, 'حالات الطلبات والتشغيل');
+
+        saveWorkbook(wb, `بوابات_الدفع_وحالات_التشغيل_${p.start_date}_إلى_${p.end_date}.xlsx`);
+      }
+      window.exportOperationsExcel = exportOperationsExcel;
+
+      // 6. Master Export: Comprehensive Multi-Sheet Workbook
+      function exportFullReportExcel() {
+        const p = getExportPeriod();
+        const kpis = p.kpis || {};
+        const v2 = p.v2_analytics || {};
+        const yoy = v2.yoy_comparison || {};
+        const funnel = v2.ga4_funnel || {};
+
+        const wb = XLSX.utils.book_new();
+
+        // 1. Executive Summary Sheet
+        const summaryRows = [
+          { 'المؤشر': 'الفترة المحددة', 'القيمة': p.label || `${p.start_date} إلى ${p.end_date}`, 'ملاحظات': '' },
+          { 'المؤشر': 'تاريخ البداية', 'القيمة': p.start_date, 'ملاحظات': '' },
+          { 'المؤشر': 'تاريخ النهاية', 'القيمة': p.end_date, 'ملاحظات': '' },
+          { 'المؤشر': 'عدد الأيام', 'القيمة': p.days_count || 1, 'ملاحظات': '' },
+          { 'المؤشر': '-------------------------', 'القيمة': '-------------------------', 'ملاحظات': '' },
+          { 'المؤشر': 'صافي المبيعات (ر.س)', 'القيمة': Number(Number(kpis.net_sales || 0).toFixed(2)), 'ملاحظات': 'المبيعات بعد خصم المرتجعات' },
+          { 'المؤشر': 'المبيعات قبل المرتجع (ر.س)', 'القيمة': Number(Number(kpis.gross_sales || 0).toFixed(2)), 'ملاحظات': 'إجمالي فواتير البيع' },
+          { 'المؤشر': 'قيمة المرتجعات (ر.س)', 'القيمة': Number(Number(kpis.refunds || 0).toFixed(2)), 'ملاحظات': 'مرتجعات مستودع GoFrugal تقرير 3002' },
+          { 'المؤشر': 'عدد الطلبات المدفوعة', 'القيمة': Number(kpis.sale_bills || 0), 'ملاحظات': 'طلبات مؤكدة الدفع' },
+          { 'المؤشر': 'عدد فواتير المرتجع', 'القيمة': Number(kpis.return_bills || 0), 'ملاحظات': '' },
+          { 'المؤشر': 'إجمالي القطع المباعة (Units)', 'القيمة': Number(kpis.sale_units || 0), 'ملاحظات': '' },
+          { 'المؤشر': 'متوسط قيمة الطلب AOV (ر.س)', 'القيمة': Number(Number(kpis.aov || 0).toFixed(2)), 'ملاحظات': 'صافي المبيعات ÷ عدد الطلبات' },
+          { 'المؤشر': 'متوسط القطع لكل طلب (UPT)', 'القيمة': Number(Number(kpis.upt || 0).toFixed(2)), 'ملاحظات': 'القطع ÷ الطلبات' },
+          { 'المؤشر': '-------------------------', 'القيمة': '-------------------------', 'ملاحظات': '' },
+          { 'المؤشر': 'عدد زوار المتجر (GA4)', 'القيمة': Number(kpis.visitors || 0), 'ملاحظات': 'إجمالي المستخدمين' },
+          { 'المؤشر': 'معدل التحويل الكلي (%)', 'القيمة': kpis.conversion_rate != null ? Number((kpis.conversion_rate * 100).toFixed(2)) : 0, 'ملاحظات': 'الطلبات ÷ الزوار' },
+          { 'المؤشر': 'حصة مبيعات الموقع من التجزئة (%)', 'القيمة': kpis.online_share != null ? Number((kpis.online_share * 100).toFixed(1)) : 0, 'ملاحظات': '' },
+          { 'المؤشر': 'مبيعات معارض أورانج (ر.س)', 'القيمة': kpis.showroom_sales != null ? Number(Number(kpis.showroom_sales).toFixed(2)) : '—', 'ملاحظات': 'Dynamics 365 POS' },
+          { 'المؤشر': 'إجمالي مبيعات الشركة (ر.س)', 'القيمة': kpis.orange_total != null ? Number(Number(kpis.orange_total).toFixed(2)) : '—', 'ملاحظات': 'المعارض + المتجر' },
+          { 'المؤشر': '-------------------------', 'القيمة': '-------------------------', 'ملاحظات': '' },
+          { 'المؤشر': 'مسار الشراء: زوار المتجر', 'القيمة': Number(funnel.visitors || kpis.visitors || 0), 'ملاحظات': '100% قاعدة الانطلاق' },
+          { 'المؤشر': 'مسار الشراء: تصفح المنتجات', 'القيمة': Number(funnel.view_item_users || 0), 'ملاحظات': 'view_item' },
+          { 'المؤشر': 'مسار الشراء: إضافة للسلة', 'القيمة': Number(funnel.add_to_cart_users || 0), 'ملاحظات': 'add_to_cart' },
+          { 'المؤشر': 'مسار الشراء: بيانات العميل والبدء بالدفع', 'القيمة': Number(funnel.begin_checkout_users || 0), 'ملاحظات': 'begin_checkout' },
+          { 'المؤشر': 'مسار الشراء: إتمام الشراء', 'القيمة': Number(funnel.purchase_users || kpis.sale_bills || 0), 'ملاحظات': 'purchase' },
+          { 'المؤشر': '-------------------------', 'القيمة': '-------------------------', 'ملاحظات': '' },
+          { 'المؤشر': 'مقارنة 2025: مبيعات نفس الفترة 2025', 'القيمة': yoy.prev_net_sales != null ? Number(Number(yoy.prev_net_sales).toFixed(2)) : '—', 'ملاحظات': '' },
+          { 'المؤشر': 'مقارنة 2025: نمو المبيعات السنوي (%)', 'القيمة': yoy.net_sales_yoy_pct != null ? Number(Number(yoy.net_sales_yoy_pct).toFixed(1)) : '—', 'ملاحظات': '' }
+        ];
+        const wsSummary = makeWorksheet(summaryRows, ['المؤشر', 'القيمة', 'ملاحظات']);
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص التنفيذي');
+
+        // 2. Sold Products Sheet
+        const productsList = getFilteredProductsData();
+        if (productsList && productsList.length > 0) {
+          const pRows = productsList.map((item, idx) => ({
+            'م': idx + 1,
+            'اسم المنتج': item.product_name || '—',
+            'رمز الصنف (SKU)': item.sku || '—',
+            'الفئة التجارية': item.category_name || 'غير مصنف',
+            'القطع المباعة': Number(item.units_sold || 0),
+            'صافي المبيعات (ر.س)': Number(Number(item.sales_amount || 0).toFixed(2)),
+            'عدد الطلبات': Number(item.orders_count || 0),
+            'متوسط السعر': item.units_sold ? Number((item.sales_amount / item.units_sold).toFixed(2)) : 0,
+            'مخزون مع شرشف': item.stock_with_sheet != null ? Number(item.stock_with_sheet) : '—',
+            'مخزون بدون شرشف': item.stock_without_sheet != null ? Number(item.stock_without_sheet) : '—'
+          }));
+          const wsProducts = makeWorksheet(pRows);
+          XLSX.utils.book_append_sheet(wb, wsProducts, 'المنتجات المباعة');
+        }
+
+        // 3. Daily Records Sheet
+        const days = DASHBOARD_DATA.daily_records || [];
+        const filteredDays = days.filter(d => d.date >= p.start_date && d.date <= p.end_date);
+        if (filteredDays && filteredDays.length > 0) {
+          const dRows = filteredDays.map((d, idx) => {
+            const k = d.kpis || {};
+            return {
+              'م': idx + 1,
+              'التاريخ': d.date,
+              'المبيعات قبل المرتجع (ر.س)': Number(Number(k.gross_sales || 0).toFixed(2)),
+              'المرتجعات (ر.س)': Number(Number(k.refunds || 0).toFixed(2)),
+              'صافي المبيعات (ر.س)': Number(Number(k.net_sales || 0).toFixed(2)),
+              'الطلبات المدفوعة': Number(k.sale_bills || 0),
+              'الزوار': Number(k.visitors || 0),
+              'معدل التحويل (%)': k.conversion_rate != null ? Number((k.conversion_rate * 100).toFixed(2)) : 0,
+              'متوسط السلة AOV': Number(Number(k.aov || 0).toFixed(2)),
+              'القطع المباعة': Number(k.sale_units || 0)
+            };
+          });
+          const wsDaily = makeWorksheet(dRows);
+          XLSX.utils.book_append_sheet(wb, wsDaily, 'السجل اليومي');
+        }
+
+        // 4. Marketing Channels Sheet
+        const channels = v2.channels || [];
+        if (channels && channels.length > 0) {
+          const cRows = channels.map((c, idx) => ({
+            'م': idx + 1,
+            'القناة التسويقية': c.channel_group_ar || c.channel_group || '—',
+            'الطلبات': Number(c.orders || 0),
+            'المبيعات (ر.س)': Number(Number(c.revenue || 0).toFixed(2)),
+            'متوسط الطلب AOV': Number(Number(c.aov || 0).toFixed(2)),
+            'معدل التحويل (%)': c.conversion_rate != null ? Number((c.conversion_rate * 100).toFixed(2)) : 0,
+            'الجلسات (GA4)': Number(c.sessions || 0),
+            'حصة المبيعات (%)': c.sales_share != null ? Number((c.sales_share * 100).toFixed(1)) : 0
+          }));
+          const wsCh = makeWorksheet(cRows);
+          XLSX.utils.book_append_sheet(wb, wsCh, 'القنوات التسويقية');
+        }
+
+        // 5. Payment Gateways & Operations Sheet
+        const ops = v2.operations || {};
+        const gateways = ops.gateways || [];
+        if (gateways && gateways.length > 0) {
+          const gRows = gateways.map((g, idx) => ({
+            'م': idx + 1,
+            'وسيلة الدفع': g.gateway_name_ar || g.gateway || '—',
+            'عدد الطلبات': Number(g.orders || 0),
+            'المبيعات (ر.س)': Number(Number(g.amount || 0).toFixed(2)),
+            'حصة المبيعات (%)': g.share_pct != null ? Number(Number(g.share_pct).toFixed(1)) : 0
+          }));
+          const wsGw = makeWorksheet(gRows);
+          XLSX.utils.book_append_sheet(wb, wsGw, 'بوابات الدفع');
+        }
+
+        const filename = `التقرير_الشامل_لمتجر_أورانج_${p.start_date}_إلى_${p.end_date}.xlsx`;
+        saveWorkbook(wb, filename);
+      }
+      window.exportFullReportExcel = exportFullReportExcel;
+
+      function setupExport() {
+        const btnCsv = document.getElementById('btn-export-csv');
+        if (btnCsv) {
+          btnCsv.addEventListener('click', () => {
+            const days = DASHBOARD_DATA.daily_records || [];
+            const p = getExportPeriod();
+            const filtered = days.filter(d => d.date >= p.start_date && d.date <= p.end_date);
+            
+            let csv = 'Date,Gross_Sales,Refunds,Net_Sales,Paid_Orders,Visitors,Conversion,AOV,Units\n';
+            filtered.forEach(d => {
+              const k = d.kpis || {};
+              csv += `${d.date},${k.gross_sales || 0},${k.refunds || 0},${k.net_sales || 0},${k.sale_bills || 0},${k.visitors || 0},${k.conversion_rate || 0},${k.aov || 0},${k.sale_units || 0}\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `orange_website_sales_${p.start_date}_to_${p.end_date}.csv`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          });
+        }
       }
 
       function setupCustomDatePicker() {
