@@ -15,7 +15,7 @@ const MANAGERS = [
         "outlets": []
     },
     {
-        "username": "بدون مدير",
+        "username": "عبدالله السرداح",
         "password": "0000",
         "outlets": []
     },
@@ -38,6 +38,11 @@ const MANAGERS = [
         "username": "اماني عسيري",
         "password": "0000",
         "outlets": []
+    },
+    {
+        "username": "بدون مدير",
+        "password": "0000",
+        "outlets": []
     }
 ];
 
@@ -48,7 +53,7 @@ const EMPLOYEES = [
         "name": "KHALED MAKAWI1",
         "startDate": "2013-07-14",
         "manager": "عبيدة السباعي",
-        "showroom": "1001-04-Andalos Mall و 1005-09-Al-Salam Mall و 1007-18-Al_Khayyat Center و 1009-53-Al Basateen Mall و 1012-57-Sauq7 و 1002-05-Haifa Mall و 1003-06-Red Sea Mall و 1004-07-Arab Mall و 1006-13-Al-Yasmin Mall و 1008-48 - Jeddah Park و 1010-54-THE VILLAGE و 1011-56- Aziz Mall 2 و 1101-12-Al_Hamra Mall و 1104-29-Al Nakheel Mall Riyadh و 1106-32-Atyaf Mall Riyadh و 1107-38-Al_Riyadh Park و 1110-45- Riyadh Gallery Mall و 1111-46-Khaleej Mall Riyadh و 1113-51-Park Avenue Riyadh و 1114-1114-Malgha Mall و 1115-1115-Alrabie Mall و 1102-15-Riyadh Othaim Mall و 1103-25-Rabwa Othaim Mall و 1105-30-Tala Mall Riyadh و 1108-39-Salam Mall Riyadh و 1109-40-Hayat Mall Riyad و 1112-50-Meem Plaza Riyadh و 1801-19-Hail Othaim Mall و 2401-47-Al-Nakheel Plaza و 1201-08-Makkah Mall و 1202-20-Sitten Street Makkah و 1203-55- Jabl Omar و 1301-11-Jouri Mall و 1302-14-Al Kamal Mall و 1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah و 1501-24-Yanbu Dana Mall و 1701-17-Arar Othaim Mall و 2001-22-Tabuk Park و 2301-44-Al-Jouf Center و 1601-16-Ehsa Othaim Mall و 1602-49-AlAhsa Mall و 2101-27-Dhahran Mall khobar و 2102-28-Al Nakheel Mall Dammam و 2103-42-Dareen Mall Dammam و 2201-36-Al jubail Mall و 1901-21-Abha Al_Rashid Mall New و 1902-KHAMIS AVENUE و 1903-43-Mujan Park و 1904-52-Al_Baha Mall و 1906-1906-LAVANDA PARK",
+        "showroom": "1001-04-Andalos Mall و 1005-09-Al-Salam Mall و 1007-18-Al_Khayyat Center و 1009-53-Al Basateen Mall و 1012-57-Sauq7 و 1002-05-Haifa Mall و 1003-06-Red Sea Mall و 1004-07-Arab Mall و 1006-13-Al-Yasmin Mall و 1008-48 - Jeddah Park و 1010-54-THE VILLAGE و 1011-56- Aziz Mall 2 و 1101-12-Al_Hamra Mall و 1104-29-Al Nakheel Mall Riyadh و 1106-32-Atyaf Mall Riyadh و 1107-38-Al_Riyadh Park و 1110-45- Riyadh Gallery Mall و 1111-46-Khaleej Mall Riyadh و 1113-51-Park Avenue Riyadh و 1114-1114-Malgha Mall و 1115-1115-Alrabie Mall و 1102-15-Riyadh Othaim Mall و 1103-25-Rabwa Othaim Mall و 1105-30-Tala Mall Riyadh و 1108-39-Salam Mall Riyadh و 1109-40-Hayat Mall Riyad و 1112-50-Meem Plaza Riyadh و 1801-19-Hail Othaim Mall و 1201-08-Makkah Mall و 1202-20-Sitten Street Makkah و 1203-55- Jabl Omar و 1301-11-Jouri Mall و 1302-14-Al Kamal Mall و 1401-23-Alia Mall Madinah و 1402-26-Al-Noor Mall Madinah و 1501-24-Yanbu Dana Mall و 1701-17-Arar Othaim Mall و 2001-22-Tabuk Park و 2301-44-Al-Jouf Center و 1601-16-Ehsa Othaim Mall و 1602-49-AlAhsa Mall و 2101-27-Dhahran Mall khobar و 2102-28-Al Nakheel Mall Dammam و 2103-42-Dareen Mall Dammam و 2201-36-Al jubail Mall و 1901-21-Abha Al_Rashid Mall New و 1902-KHAMIS AVENUE و 1903-43-Mujan Park و 1904-52-Al_Baha Mall و 1906-1906-LAVANDA PARK و 2401-47-Al-Nakheel Plaza",
         "showroomDetails": [
             {
                 "name": "1001-04-Andalos Mall",
@@ -220,7 +225,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
@@ -228,7 +233,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -236,7 +241,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1105-30-Tala Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1105-C",
                     "1105-E"
@@ -244,7 +249,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -252,7 +257,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -260,7 +265,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1112-C",
                     "1112-E"
@@ -268,18 +273,10 @@ const EMPLOYEES = [
             },
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
-                ]
-            },
-            {
-                "name": "2401-47-Al-Nakheel Plaza",
-                "manager": "بدون مدير",
-                "codes": [
-                    "2401-C",
-                    "2401-E"
                 ]
             },
             {
@@ -456,6 +453,14 @@ const EMPLOYEES = [
                 "codes": [
                     "1906-C",
                     "1906-E"
+                ]
+            },
+            {
+                "name": "2401-47-Al-Nakheel Plaza",
+                "manager": "بدون مدير",
+                "codes": [
+                    "2401-C",
+                    "2401-E"
                 ]
             }
         ],
@@ -642,12 +647,12 @@ const EMPLOYEES = [
         "personnelNumber": "0198",
         "name": "معتصم اسماعيل العامر",
         "startDate": "2017-05-06",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1112-50-Meem Plaza Riyadh",
         "showroomDetails": [
             {
                 "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1112-C",
                     "1112-E"
@@ -1097,12 +1102,12 @@ const EMPLOYEES = [
         "personnelNumber": "1485",
         "name": "الجوهره سليمان العنز",
         "startDate": "2021-07-05",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -1135,12 +1140,12 @@ const EMPLOYEES = [
         "personnelNumber": "1543",
         "name": "صالح",
         "startDate": "2021-08-02",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -1257,12 +1262,12 @@ const EMPLOYEES = [
         "personnelNumber": "1590",
         "name": "محمد نسيل كونغاث",
         "startDate": "2021-08-21",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -1276,12 +1281,12 @@ const EMPLOYEES = [
         "personnelNumber": "1592",
         "name": "محمد محسن",
         "startDate": "2021-08-20",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -1295,12 +1300,12 @@ const EMPLOYEES = [
         "personnelNumber": "1593",
         "name": "نافاز باثاري",
         "startDate": "2021-08-20",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -1626,12 +1631,12 @@ const EMPLOYEES = [
         "personnelNumber": "2821",
         "name": "عبدالسليم كابيل",
         "startDate": "2021-12-26",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -1843,12 +1848,12 @@ const EMPLOYEES = [
         "personnelNumber": "3341",
         "name": "محمد فيفاز",
         "startDate": "2022-10-23",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1105-30-Tala Mall Riyadh و 1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1105-30-Tala Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1105-C",
                     "1105-E"
@@ -1856,7 +1861,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -1965,12 +1970,12 @@ const EMPLOYEES = [
         "personnelNumber": "3373",
         "name": "محمد رافسال فينجاسير",
         "startDate": "2022-10-30",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -2228,12 +2233,12 @@ const EMPLOYEES = [
         "personnelNumber": "3728",
         "name": "سالمانول فارس مداثيب",
         "startDate": "2023-09-12",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
@@ -2380,12 +2385,12 @@ const EMPLOYEES = [
         "personnelNumber": "3780",
         "name": "شيخة لافي الرشيدي",
         "startDate": "2023-10-01",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -2947,12 +2952,12 @@ const EMPLOYEES = [
         "personnelNumber": "4198",
         "name": "دول دول لينشاد",
         "startDate": "2024-06-06",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1105-30-Tala Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1105-C",
                     "1105-E"
@@ -3468,12 +3473,12 @@ const EMPLOYEES = [
         "personnelNumber": "4408",
         "name": "روابي الهوساوي",
         "startDate": "2024-11-24",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -3929,12 +3934,12 @@ const EMPLOYEES = [
         "personnelNumber": "4533",
         "name": "Motar Mokhtar Alhasa",
         "startDate": "2025-03-02",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1112-50-Meem Plaza Riyadh",
         "showroomDetails": [
             {
                 "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1112-C",
                     "1112-E"
@@ -4070,12 +4075,12 @@ const EMPLOYEES = [
         "personnelNumber": "4586",
         "name": "ريناد عبدالله",
         "startDate": "2025-05-15",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
@@ -4203,12 +4208,12 @@ const EMPLOYEES = [
         "personnelNumber": "4577",
         "name": "رنيم اليزيدي",
         "startDate": "2025-05-08",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1103-25-Rabwa Othaim Mall و 1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -4216,7 +4221,7 @@ const EMPLOYEES = [
             },
             {
                 "name": "1105-30-Tala Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1105-C",
                     "1105-E"
@@ -4447,12 +4452,12 @@ const EMPLOYEES = [
         "personnelNumber": "4668",
         "name": "جميله محمد سفياني",
         "startDate": "2025-08-12",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -4531,12 +4536,12 @@ const EMPLOYEES = [
         "personnelNumber": "4678",
         "name": "عبدالفتاح محمد هيثم",
         "startDate": "2025-08-28",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1112-50-Meem Plaza Riyadh",
         "showroomDetails": [
             {
                 "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1112-C",
                     "1112-E"
@@ -4588,12 +4593,12 @@ const EMPLOYEES = [
         "personnelNumber": "4684",
         "name": "عريب فرج القحطاني",
         "startDate": "2025-09-03",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -4664,12 +4669,12 @@ const EMPLOYEES = [
         "personnelNumber": "4705",
         "name": "مراد محمد مباركي",
         "startDate": "2025-09-17",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1112-50-Meem Plaza Riyadh",
         "showroomDetails": [
             {
                 "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1112-C",
                     "1112-E"
@@ -4778,12 +4783,12 @@ const EMPLOYEES = [
         "personnelNumber": "4734",
         "name": "مهند محمد ال مرعي",
         "startDate": "2025-10-15",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -4911,12 +4916,12 @@ const EMPLOYEES = [
         "personnelNumber": "4773",
         "name": "Nuha Alhamdan",
         "startDate": "2025-11-20",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -5006,12 +5011,12 @@ const EMPLOYEES = [
         "personnelNumber": "4746",
         "name": "Maram Muhsen",
         "startDate": "2025-10-23",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -5223,12 +5228,12 @@ const EMPLOYEES = [
         "personnelNumber": "4691",
         "name": "محمد باسيل",
         "startDate": "2025-09-10",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -5318,12 +5323,12 @@ const EMPLOYEES = [
         "personnelNumber": "4812",
         "name": "ريهام رغفاوي",
         "startDate": "2026-01-06",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -5543,12 +5548,12 @@ const EMPLOYEES = [
         "personnelNumber": "4842",
         "name": "راويه احمد المطيري",
         "startDate": "2026-02-01",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -5771,12 +5776,12 @@ const EMPLOYEES = [
         "personnelNumber": "4877",
         "name": "نوره الحربي",
         "startDate": "2026-02-15",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall و 2401-47-Al-Nakheel Plaza",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
@@ -5901,12 +5906,12 @@ const EMPLOYEES = [
         "personnelNumber": "4899",
         "name": "فارس محسن",
         "startDate": "2026-03-01",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
@@ -5920,12 +5925,12 @@ const EMPLOYEES = [
         "personnelNumber": "4900",
         "name": "ابتهال خليوي",
         "startDate": "2026-03-03",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -6224,12 +6229,12 @@ const EMPLOYEES = [
         "personnelNumber": "4910",
         "name": "أنجا تيناري",
         "startDate": "2026-03-12",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1103-25-Rabwa Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1103-25-Rabwa Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1103-C",
                     "1103-E"
@@ -6414,12 +6419,12 @@ const EMPLOYEES = [
         "personnelNumber": "4942",
         "name": "رهام جابر",
         "startDate": "2026-04-16",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
@@ -6433,12 +6438,12 @@ const EMPLOYEES = [
         "personnelNumber": "4946",
         "name": "ولاء غانم",
         "startDate": "2026-04-20",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -6452,12 +6457,12 @@ const EMPLOYEES = [
         "personnelNumber": "4944",
         "name": "منال هلال",
         "startDate": "2026-04-19",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1105-30-Tala Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1105-C",
                     "1105-E"
@@ -6726,12 +6731,12 @@ const EMPLOYEES = [
         "personnelNumber": "4972",
         "name": "مرام المطيري",
         "startDate": "2026-06-01",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1105-30-Tala Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1105-30-Tala Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1105-C",
                     "1105-E"
@@ -6745,12 +6750,12 @@ const EMPLOYEES = [
         "personnelNumber": "4973",
         "name": "خلود هزازي",
         "startDate": "2026-06-02",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -6954,12 +6959,12 @@ const EMPLOYEES = [
         "personnelNumber": "4990",
         "name": "Wafaa Alrshidi",
         "startDate": "2026-07-02",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1801-19-Hail Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1801-19-Hail Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1801-C",
                     "1801-E"
@@ -6973,12 +6978,12 @@ const EMPLOYEES = [
         "personnelNumber": "4987",
         "name": "حسن الحميدي",
         "startDate": "2026-07-02",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1112-50-Meem Plaza Riyadh",
         "showroomDetails": [
             {
                 "name": "1112-50-Meem Plaza Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1112-C",
                     "1112-E"
@@ -6992,12 +6997,12 @@ const EMPLOYEES = [
         "personnelNumber": "4994",
         "name": "4994 - Renad Sultan",
         "startDate": "2026-07-05",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1109-40-Hayat Mall Riyad",
         "showroomDetails": [
             {
                 "name": "1109-40-Hayat Mall Riyad",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1109-C",
                     "1109-E"
@@ -7467,12 +7472,12 @@ const EMPLOYEES = [
         "personnelNumber": "5022",
         "name": "Hattan  Aldosari",
         "startDate": "2026-09-14",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1108-39-Salam Mall Riyadh",
         "showroomDetails": [
             {
                 "name": "1108-39-Salam Mall Riyadh",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1108-C",
                     "1108-E"
@@ -7486,12 +7491,12 @@ const EMPLOYEES = [
         "personnelNumber": "5021",
         "name": "Alanoud Alshmrani",
         "startDate": "2026-09-14",
-        "manager": "بدون مدير",
+        "manager": "عبدالله السرداح",
         "showroom": "1102-15-Riyadh Othaim Mall",
         "showroomDetails": [
             {
                 "name": "1102-15-Riyadh Othaim Mall",
-                "manager": "بدون مدير",
+                "manager": "عبدالله السرداح",
                 "codes": [
                     "1102-C",
                     "1102-E"
