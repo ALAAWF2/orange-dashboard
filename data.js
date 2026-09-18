@@ -7428,7 +7428,7 @@ const EMPLOYEES = [
         "employeeId": "5023-مي عبداللطيف",
         "personnelNumber": "5023",
         "name": "مي عبداللطيف",
-        "startDate": "2026-09-15",
+        "startDate": "2026-09-16",
         "manager": "جهاد ايوبي",
         "showroom": "2102-28-Al Nakheel Mall Dammam",
         "showroomDetails": [
