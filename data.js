@@ -7373,18 +7373,18 @@ const EMPLOYEES = [
         "name": "محمد عوض القحطاني",
         "startDate": "2026-09-07",
         "manager": "جهاد ايوبي",
-        "showroom": "2102-28-Al Nakheel Mall Dammam",
+        "showroom": "2103-42-Dareen Mall Dammam",
         "showroomDetails": [
             {
-                "name": "2102-28-Al Nakheel Mall Dammam",
+                "name": "2103-42-Dareen Mall Dammam",
                 "manager": "جهاد ايوبي",
                 "codes": [
-                    "2102-C",
-                    "2102-E"
+                    "2103-C",
+                    "2103-E"
                 ]
             }
         ],
-        "addressBooks": "2102-C;2102-E"
+        "addressBooks": "2103-C;2103-E"
     },
     {
         "employeeId": "5018-نهله محمد العنزي",
